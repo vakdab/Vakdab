@@ -62,7 +62,6 @@ import { showTop100 } from './pages/top100.js';
 
 // Router
 import { Router, showViewMode } from './router/router.js';
-import { handleNavVisibility } from './ui/navigation.js';
 
 // --- ОБРОБНИКИ ПОДІЙ + ХОТКЕЇ + INIT ---
         // ====================================================================

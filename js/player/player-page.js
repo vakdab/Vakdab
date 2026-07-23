@@ -10,7 +10,6 @@ import { Storage } from '../storage/storage.js';
 import { safeQuery, safeQueryAll } from '../utils/dom.js';
 import { showToast } from '../ui/toast.js';
 import { escapeHtml } from '../utils/helpers.js';
-import { toggleBookmark } from '../features/bookmarks.js';
 // showViewMode accessed via window (avoids circular import)
 
         // ====================================================================
