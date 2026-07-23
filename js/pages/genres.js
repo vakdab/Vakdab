@@ -152,6 +152,9 @@ export async function loadGenrePageContent() {
                 if (!list.length) {
                     content.innerHTML =
                         '<div class="loader" style="grid-column:1/-1;">Нічого не знайдено в цьому жанрі</div>';
+import { fetchAnimeuaByCategory } from '../api/animeua.js';
+import { openPlayerPage } from '../player/player-page.js';
+import { loadGenres } from '../ui/leftdock.js';
                     pagination.innerHTML = '';
                     return;
                 }

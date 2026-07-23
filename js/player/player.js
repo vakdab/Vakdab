@@ -3,6 +3,7 @@
 
 import { getProxyUrl } from '../api/fetch.js';
 import { PROXY_URL } from '../config/api.js';
+import { isEmbedUrl } from '../api/fetch.js';
 
         // ====================================================================
         //  ПЛЕЄР — ПОВНИЙ КАСТОМНИЙ ПЛЕЄР З КОНТРОЛЯМИ

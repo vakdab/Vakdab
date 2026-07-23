@@ -4,6 +4,8 @@
 import { auth, db } from '../config/firebase.js';
 import { doc, getDoc, setDoc, collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { Storage } from '../storage/storage.js';
+import { calcTotalXP, getLevel, getXPProgress } from './xp-system.js';
+import { getProfile } from '../pages/profile.js';
 
 export function getUserRankInfo(episodes, watchHours) {
             if (watchHours >= 200) return { label: 'Легенда аніме',  color: 'var(--accent)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 16h14"/></svg>' };
@@ -63,7 +65,7 @@ export function initRatingPage() {
                         document.body.classList.add('community-active');
                         const nav = document.getElementById('bottomNav');
                         if (nav) nav.classList.add('hidden-nav');
-                        initCommunity();
+                        window.initCommunity();
                         setTimeout(() => {
                             const msgs = document.getElementById('comMessages');
                             if (msgs) msgs.scrollTop = msgs.scrollHeight;
@@ -74,7 +76,7 @@ export function initRatingPage() {
                         const nav = document.getElementById('bottomNav');
                         if (nav) nav.classList.remove('hidden-nav');
                         loadMyStats();
-                        _renderDailyTasks();
+                        window._renderDailyTasks();
                         loadLeaderboard();
                     }
                 });
@@ -92,7 +94,7 @@ export function initRatingPage() {
             });
 
             loadMyStats();
-            _renderDailyTasks();
+            window._renderDailyTasks();
             loadLeaderboard();
         }
 
@@ -335,3 +337,6 @@ export function renderLeaderboard(lb, users, sortKey) {
 
 export async function loadRatingPage() { initRatingPage(); }
 export async function loadRatingList() { initRatingPage(); }
+
+// Expose to window for cross-module access (circular dep resolution)
+window.loadMyStats = loadMyStats;

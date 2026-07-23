@@ -131,7 +131,7 @@ export function renderProfilePage() {
             const container = document.getElementById('profilePageContainer');
             if (!container) return;
             if (!window.Auth?.isAuthenticated() && !window.Auth?.isGuest()) {
-                renderAuthPage();
+                window.renderAuthPage();
                 return;
             }
             const isGuestMode = window.Auth?.isGuest();
@@ -237,7 +237,7 @@ export function renderProfilePage() {
                     logoutBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Увійти';
                     logoutBtn.onclick = () => {
                         window.Auth?.setGuest(false);
-                        renderAuthPage();
+                        window.renderAuthPage();
                     };
                 }
             }
@@ -426,6 +426,8 @@ export function profileEditBio() {
             textarea.value = current;
             textarea.style.cssText =
                 'font-size:13px;line-height:1.6;color:var(--text-secondary);background:var(--tag-bg);border:1px solid var(--border);border-radius:8px;padding:6px 8px;outline:none;width:100%;font-family:inherit;resize:vertical;min-height:60px;';
+import { openPlayerPage } from '../player/player-page.js';
+import { syncLeftdockActive } from '../ui/leftdock.js';
             if (document.body.classList.contains('dark-mode')) {
                 textarea.style.background = '#1a1a1a';
                 textarea.style.color = '#cfcfcf';
@@ -492,3 +494,6 @@ export function profileEditBio() {
 
 
 window.getProfileStats = getProfileStats;
+
+// Expose to window for cross-module access (circular dep resolution)
+window.renderProfilePage = renderProfilePage;

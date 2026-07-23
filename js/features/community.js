@@ -8,6 +8,10 @@ import { escapeHtml } from '../utils/helpers.js';
 import { getMyEarnedAchievements } from './achievements.js';
 import { loadRatingList } from './rating.js';
 import { loadRatingPage } from './rating.js';
+import { loadAnimeuaDetail, searchAnimeua } from '../api/animeua.js';
+import { getProfile } from '../pages/profile.js';
+import { openPlayerPage } from '../player/player-page.js';
+import { showToast } from '../ui/toast.js';
 
 export function _renderReplyBanner() {
             const wrap = document.getElementById('comReplyBannerWrap');
@@ -757,3 +761,6 @@ export function _subscribeToChat(currentUser) {
 
 
 
+
+// Expose to window for cross-module access (circular dep resolution)
+window.initCommunity = initCommunity;

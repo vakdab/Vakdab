@@ -107,6 +107,8 @@ export function setAuthMode(mode) {
                     sub.textContent = 'Увійдіть, щоб продовжити роботу з акаунтом.';
                     footNote.innerHTML =
                         'Ще немає акаунта? <button type="button" id="authFootToggle">Зареєструватися</button>';
+import { syncLeftdockActive } from '../ui/leftdock.js';
+import { showToast } from '../ui/toast.js';
                 } else {
                     title.textContent = 'Створити акаунт';
                     sub.textContent = 'Зареєструйтеся, щоб почати користуватися сервісом.';
@@ -142,7 +144,7 @@ export function setAuthMode(mode) {
                 if (!result.success) {
                     errorEl.textContent = result.error || 'Помилка входу';
                 } else {
-                    renderProfilePage();
+                    window.renderProfilePage();
                 }
             });
 
@@ -164,7 +166,7 @@ export function setAuthMode(mode) {
                 if (!result.success) {
                     errorEl.textContent = result.error || 'Помилка реєстрації';
                 } else {
-                    renderProfilePage();
+                    window.renderProfilePage();
                 }
             });
 
@@ -185,7 +187,7 @@ export function setAuthMode(mode) {
                 if (!result.success) {
                     document.getElementById('authError').textContent = result.error || 'Помилка Google входу';
                 } else {
-                    renderProfilePage();
+                    window.renderProfilePage();
                 }
             });
 
@@ -200,3 +202,6 @@ export function setAuthMode(mode) {
             syncLeftdockActive();
         }
 
+
+// Expose to window for cross-module access (circular dep resolution)
+window.renderAuthPage = renderAuthPage;

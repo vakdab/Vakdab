@@ -6,6 +6,8 @@ import { safeQuery } from '../utils/dom.js';
 import { showToast } from '../ui/toast.js';
 import { escapeHtml } from '../utils/helpers.js';
 import { showTop100 } from './top100.js';
+import { fetchAnimeuaByCategory, fetchAnimeuaTop100, searchAnimeua } from '../api/animeua.js';
+import { openPlayerPage } from '../player/player-page.js';
 
 
 
@@ -114,3 +116,6 @@ export function openRandomAnime() {
             showToast('Випадкове аніме');
         }
 
+
+// Expose to window for cross-module access (circular dep resolution)
+window.loadContent = loadContent;

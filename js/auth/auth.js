@@ -18,6 +18,8 @@ import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firest
 import { Storage } from '../storage/storage.js';
 import { calcTotalXP, getLevel } from '../features/xp-system.js';
 import { getDefaultProfile } from '../pages/profile.js';
+import { renderProfilePage } from '../pages/profile.js';
+import { showToast } from '../ui/toast.js';
 
         //  СИСТЕМА АВТОРИЗАЦІЇ
         // ====================================================================
@@ -30,7 +32,7 @@ export const Auth = {
             _loadingData: false,
             _authResolved: false,
 
-            init() {
+            window.init() {
                 if (!firebaseInitialized) {
                     console.warn('Firebase not available, auth disabled');
                     return;
@@ -81,7 +83,7 @@ export const Auth = {
                         if (window.Router?.currentRoute === 'profile') {
                             const profContainer = document.getElementById('profilePageContainer');
                             if (profContainer && profContainer.classList.contains('active')) {
-                                renderAuthPage();
+                                window.renderAuthPage();
                             }
                         }
                     }

@@ -4,8 +4,6 @@
 import { loadAnimeuaDetail } from '../api/animeua.js';
 import { LampaPlayer } from './player.js';
 import { buildSeasonRow, getCurrentEpisodes, buildEpisodeViews, playEpisode } from './episodes.js';
-import { updateBookmarkButton, toggleBookmark } from '../features/bookmarks.js';
-import { updateLikeButton, updateDislikeButton, toggleLike, toggleDislike } from '../features/likes.js';
 import { Storage } from '../storage/storage.js';
 import { safeQuery, safeQueryAll } from '../utils/dom.js';
 import { showToast } from '../ui/toast.js';
@@ -59,9 +57,9 @@ export async function openPlayerPage(url) {
             document.getElementById('playerSynopsis').textContent = '';
             document.getElementById('synopsisMoreBtn').style.display = 'none';
             document.getElementById('playerTopbarTitle').textContent = '';
-            updateLikeButton();
-            updateDislikeButton();
-            updateBookmarkButton(url);
+            window.updateLikeButton();
+            window.updateDislikeButton();
+            window.updateBookmarkButton(url);
             modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
             modal.querySelector('.modal-content').scrollTop = 0;
@@ -110,8 +108,9 @@ export async function openPlayerPage(url) {
                 if (seasons.length === 0 || Object.keys(anime.seasons || {}).length === 0) {
                     document.getElementById('episodeViewGrid').innerHTML =
                         '<div class="episode-empty"><i class="fas fa-search"></i> Серії не знайдені на джерелі. Спробуйте інше аніме.</div>';
+import { updateFilterChip, updateSourceChip } from './episodes.js';
                 }
-                buildBottomSheetData();
+                window.buildBottomSheetData();
             } catch (err) {
                 // Якщо запит скасовано (юзер закрив плеєр або відкрив інше) — мовчки ігноруємо
                 if (_thisSignal.aborted || modal.style.display === 'none') return;
@@ -181,7 +180,7 @@ export function closePlayerPage() {
             document.getElementById('playerVideoContainer').classList.remove('active');
             document.getElementById('playerPageVideo').innerHTML = '';
             document.getElementById('episodePanel').classList.remove('visible');
-            if (window.Router?.currentRoute === 'profile') renderProfilePage();
+            if (window.Router?.currentRoute === 'profile') window.renderProfilePage();
         }
 
 

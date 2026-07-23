@@ -3,6 +3,7 @@
 
 import { Storage } from '../storage/storage.js';
 import { applyTheme, toggleTheme } from '../utils/helpers.js';
+import { syncLeftdockActive } from '../ui/leftdock.js';
 
         // ====================================================================
         //  СТОРІНКА НАЛАШТУВАНЬ

@@ -44,6 +44,8 @@ export function buildBottomSheetData() {
                         playerPageCurrentQuality = q;
                         qualityRow.querySelectorAll('.bottom-sheet-quality-btn').forEach(b => b.classList.remove(
                             'active-q'));
+import { buildEpisodeViews, updateFilterChip, updateSourceChip } from './episodes.js';
+import { showToast } from '../ui/toast.js';
                         btn.classList.add('active-q');
                         buildEpisodeViews();
                         showToast(`Якість: ${q}`);
@@ -134,3 +136,6 @@ export function closeBottomSheet() {
             document.getElementById('bottomSheetOverlay').classList.remove('open');
         }
 
+
+// Expose to window for cross-module access (circular dep resolution)
+window.buildBottomSheetData = buildBottomSheetData;

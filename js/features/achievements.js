@@ -4,6 +4,7 @@
 import { auth, db } from '../config/firebase.js';
 import { doc, getDoc } from "firebase/firestore";
 import { Storage } from '../storage/storage.js';
+import { calcTotalXP, getLevel } from './xp-system.js';
 // getProfileStats accessed via window (avoids circular import)
 
 export function getMyEarnedAchievements() {

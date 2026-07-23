@@ -35,7 +35,7 @@ export function buildSeasonRow(seasons) {
                     btn.classList.add('active');
                     buildEpisodeViews();
                     updateFilterChip();
-                    buildBottomSheetData();
+                    window.buildBottomSheetData();
                 });
             });
         }

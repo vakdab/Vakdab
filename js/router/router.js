@@ -17,7 +17,7 @@ export const Router = {
             currentRoute: 'main',
             params: {},
 
-            init() {
+            window.init() {
                 window.addEventListener('hashchange', () => this.handleRoute());
                 this.handleRoute();
             },
@@ -91,6 +91,8 @@ export const Router = {
                 } else if (route === 'settings') {
                     document.querySelector('.agnative-leftdock__item.selector[data-action="settings"]')?.classList.add(
                         'is-active');
+import { loadAndDisplayGenreSections, renderGenrePage } from '../pages/genres.js';
+import { syncLeftdockActive } from '../ui/leftdock.js';
                     this.showSettings();
                 } else if (route === 'genres') {
                     this.showGenres();
@@ -137,14 +139,14 @@ export const Router = {
                             if (window.Auth?.isAuthenticated() || window.Auth?.isGuest()) {
                                 renderProfilePage();
                             } else {
-                                renderAuthPage();
+                                window.renderAuthPage();
                             }
                         }
                     }, 1500);
                 } else if (window.Auth?.isAuthenticated() || window.Auth?.isGuest()) {
                     renderProfilePage();
                 } else {
-                    renderAuthPage();
+                    window.renderAuthPage();
                 }
                 syncLeftdockActive();
             },

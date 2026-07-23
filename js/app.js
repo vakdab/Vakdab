@@ -354,4 +354,5 @@ export async function init() {
             handleNavVisibility(Router.currentRoute || 'main');
         })();
 
+window.init = init;
 init();

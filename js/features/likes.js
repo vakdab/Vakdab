@@ -4,6 +4,8 @@
 import { auth, db } from '../config/firebase.js';
 import { doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { Storage } from '../storage/storage.js';
+import { renderProfilePage } from '../pages/profile.js';
+import { showToast } from '../ui/toast.js';
 
         // ====================================================================
         //  ЛАЙК / ДИЗЛАЙК
@@ -74,3 +76,9 @@ export function toggleDislike() {
             if (window.Router?.currentRoute === 'profile') renderProfilePage();
         }
 
+
+// Expose to window for cross-module access (circular dep resolution)
+window.updateLikeButton = updateLikeButton;
+window.updateDislikeButton = updateDislikeButton;
+window.toggleLike = toggleLike;
+window.toggleDislike = toggleDislike;

@@ -15,6 +15,7 @@ export function updateBookmarkButton(url) {
             btn.innerHTML = isBookmarked ?
                 '<i class="fas fa-heart" style="color:#ffd700;"></i>' :
                 '<i class="fas fa-heart"></i>';
+import { renderProfilePage } from '../pages/profile.js';
         }
 
 export function toggleBookmark() {
@@ -48,3 +49,7 @@ export function toggleBookmark() {
             if (window.Router?.currentRoute === 'profile') renderProfilePage();
         }
 
+
+// Expose to window for cross-module access (circular dep resolution)
+window.updateBookmarkButton = updateBookmarkButton;
+window.toggleBookmark = toggleBookmark;

@@ -5,6 +5,7 @@ import { fetchAnimeuaTop100 } from '../api/animeua.js';
 import { ANIMEUA_BASE } from '../config/api.js';
 import { openPlayerPage } from '../player/player-page.js';
 import { showToast } from '../ui/toast.js';
+import { syncLeftdockActive } from '../ui/leftdock.js';
 
 export function showTop100() {
             currentTab = 'top100';
@@ -13,7 +14,7 @@ export function showTop100() {
             currentCategory = '';
             document.querySelectorAll('.action-pill').forEach(p => p.classList.remove('active-pill'));
             document.getElementById('top100Btn')?.classList.add('active-pill');
-            if (window.Router?.currentRoute === 'main') loadContent();
+            if (window.Router?.currentRoute === 'main') window.loadContent();
             syncLeftdockActive();
             showToast('ТОП 100 аніме');
         }

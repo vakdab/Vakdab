@@ -4,6 +4,8 @@
 import { searchAnimeua } from '../api/animeua.js';
 import { safeQuery } from '../utils/dom.js';
 import { escapeHtml } from '../utils/helpers.js';
+import { openPlayerPage } from '../player/player-page.js';
+import { syncLeftdockActive } from '../ui/leftdock.js';
 
         // ====================================================================
         //  СТОРІНКА ПОШУКУ
