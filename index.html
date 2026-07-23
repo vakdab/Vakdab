@@ -5,70 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>VakDab • твій аніме каталог</title>
 
-    <!-- ===== ЗОВНІШНІ ЗАЛЕЖНОСТІ ===== -->
-    <!-- Google Fonts (Inter) -->
+    <!-- Preconnect & Fonts -->
+    <link rel="preconnect" href="https://monoanime.animegran8.workers.dev" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800;900&display=swap" as="style" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet" />
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-    <!-- HLS.js -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
-    <!-- Favicon -->
-    <link rel="icon" href="assets/favicon.ico" type="image/x-icon" />
-    <meta name="theme-color" content="#0d0d0d" />
 
-    <!-- OG Meta -->
+    <!-- Meta -->
     <meta property="og:title" content="VakDab - твій аніме каталог" />
     <meta property="og:description" content="Сучасна платформа для перегляду аніме" />
     <meta property="og:type" content="website" />
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
+    <meta name="theme-color" content="#0d0d0d" />
+
+    <!-- HLS.js -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+
+    <!-- Import Map for Firebase -->
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase/app": "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js",
+                "firebase/auth": "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js",
+                "firebase/firestore": "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"
+            }
+        }
+    </script>
 
     <!-- ===== CSS ===== -->
-    <link rel="stylesheet" href="styles/variables.css?v=2" />
-    <link rel="stylesheet" href="styles/base.css?v=2" />
-    <link rel="stylesheet" href="styles/hero.css?v=2" />
-    <link rel="stylesheet" href="styles/header.css?v=2" />
-    <link rel="stylesheet" href="styles/components.css?v=2" />
-    <link rel="stylesheet" href="styles/player.css?v=2" />
-    <link rel="stylesheet" href="styles/bottom-sheet.css?v=2" />
-    <link rel="stylesheet" href="styles/rating.css?v=2" />
-    <link rel="stylesheet" href="styles/community.css?v=2" />
-    <link rel="stylesheet" href="styles/profile.css?v=2" />
-    <link rel="stylesheet" href="styles/settings.css?v=2" />
-    <link rel="stylesheet" href="styles/genres.css?v=2" />
-    <link rel="stylesheet" href="styles/navigation.css?v=2" />
-    <link rel="stylesheet" href="styles/responsive.css?v=2" />
-
-    <!-- ===== FIREBASE IMPORTMAP ===== -->
-    <script type="importmap">
-    {
-        "imports": {
-            "firebase/app": "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js",
-            "firebase/auth": "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js",
-            "firebase/firestore": "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"
-        }
-    }
-    </script>
+    <link rel="stylesheet" href="styles/variables.css" />
+    <link rel="stylesheet" href="styles/base.css" />
+    <link rel="stylesheet" href="styles/header.css" />
+    <link rel="stylesheet" href="styles/hero.css" />
+    <link rel="stylesheet" href="styles/components.css" />
+    <link rel="stylesheet" href="styles/player.css" />
+    <link rel="stylesheet" href="styles/bottom-sheet.css" />
+    <link rel="stylesheet" href="styles/rating.css" />
+    <link rel="stylesheet" href="styles/community.css" />
+    <link rel="stylesheet" href="styles/profile.css" />
+    <link rel="stylesheet" href="styles/settings.css" />
+    <link rel="stylesheet" href="styles/genres.css" />
+    <link rel="stylesheet" href="styles/navigation.css" />
+    <link rel="stylesheet" href="styles/responsive.css" />
 </head>
 <body class="appletv-agnative-topnav">
-<div id="__debugLog" style="position:fixed;top:0;left:0;right:0;z-index:999999;background:#000;color:#0f0;font-size:11px;max-height:40vh;overflow:auto;white-space:pre-wrap;padding:6px;font-family:monospace;"></div>
-<script>
-  window.__dbg = function(msg){ 
-    var el = document.getElementById('__debugLog');
-    if (el) el.textContent += msg + "
-";
-  };
-  window.addEventListener('error', function(e) {
-    window.__dbg('ERROR: ' + e.message + ' @ ' + e.filename + ':' + e.lineno + ':' + e.colno);
-  });
-  window.addEventListener('unhandledrejection', function(e) {
-    window.__dbg('UNHANDLED REJECTION: ' + (e.reason && e.reason.stack ? e.reason.stack : e.reason));
-  });
-  window.__dbg('debug listeners attached');
-</script>
 
-    <!-- ===== HTML-КАРКАС (оригінальні рядки L5475-L5624) ===== -->
     <div class="app-container" id="appRoot">
+
+        <!-- ===== HEADER ===== -->
         <header class="header">
             <div class="header-left">
                 <div class="logo" id="logoHome" title="На головну">
@@ -87,6 +72,7 @@
             <div class="agnative-topnav-clock" id="agnativeTopnavClock">00:00</div>
         </header>
 
+        <!-- ===== HERO BANNER ===== -->
         <div class="hero-wrapper" id="heroWrapper">
             <div id="heroSlidesContainer"></div>
             <button class="hero-nav hero-nav-prev" id="heroPrevBtn" aria-label="Попередній"><i class="fas fa-chevron-left"></i></button>
@@ -95,16 +81,17 @@
             <div class="hero-progress-bar"><div class="hero-progress-fill" id="heroProgressFill"></div></div>
         </div>
 
+        <!-- ===== ACTIONS ROW ===== -->
         <div class="actions-row" id="actionsRow">
             <button class="action-pill" id="top100Btn" title="ТОП 100 аніме"><i class="fas fa-crown"></i> ТОП 100</button>
             <button class="action-pill" id="randomBtn" title="Випадкове аніме (R)"><i class="fas fa-dice-d6"></i> Випадкове</button>
         </div>
 
+        <!-- ===== CONTENT CONTAINERS ===== -->
         <div id="genreSectionsContainer"></div>
         <div id="animeContainer" class="anime-grid" style="display:none;">
             <div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження аніме...</div>
         </div>
-
         <div id="searchPageContainer"></div>
         <div id="settingsPageContainer"></div>
         <div id="profilePageContainer"></div>
@@ -117,13 +104,15 @@
         <footer><span>VAKDAB 2026 — Усі права захищено • Клавіші: / пошук, M меню, T тема, R випадкове, Esc закрити</span></footer>
     </div>
 
+    <!-- ===== BACK TO TOP ===== -->
     <button class="back-to-top" id="backToTopBtn" title="Нагору" aria-label="Прокрутити нагору">
         <i class="fas fa-chevron-up"></i>
     </button>
 
+    <!-- ===== TOAST ===== -->
     <div class="toast" id="toast"></div>
 
-    <!-- Player Modal -->
+    <!-- ===== PLAYER MODAL ===== -->
     <div id="playerPageModal" class="modal" role="dialog" aria-modal="true">
         <div class="modal-content">
             <div class="player-blur-bg" id="playerBlurBg"></div>
@@ -141,6 +130,7 @@
                     <span class="player-filter-chip" id="playerFilterChip">Сезон 1</span>
                 </button>
             </div>
+
             <div class="player-poster-block" id="playerPosterBlock">
                 <img class="poster-img" id="playerPosterImg" src="" alt="" />
                 <div class="poster-title" id="playerPosterTitle"></div>
@@ -155,12 +145,14 @@
                     </button>
                 </div>
             </div>
+
             <div class="player-video-container" id="playerVideoContainer">
                 <div id="playerPageVideo" style="width:100%;height:100%;min-height:200px;position:relative;"></div>
-                <button class="player-fullscreen-btn" id="playerFullscreenBtn" title="Повний екран" style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,0.5);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;">
+                <button class="player-fullscreen-btn" id="playerFullscreenBtn" title="Повний екран" style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,0.7);border:none;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;z-index:9999;pointer-events:auto;transition:background 0.2s;">
                     <i class="fas fa-expand" style="font-size:16px;"></i>
                 </button>
             </div>
+
             <div class="episode-panel" id="episodePanel">
                 <div class="episode-glass-panel">
                     <div class="episode-view-tabs" id="episodeViewTabs">
@@ -179,7 +171,7 @@
         </div>
     </div>
 
-    <!-- Bottom Sheet -->
+    <!-- ===== BOTTOM SHEET ===== -->
     <div class="bottom-sheet-overlay" id="bottomSheetOverlay">
         <div class="bottom-sheet" id="bottomSheet">
             <div class="bottom-sheet-handle"></div>
@@ -204,34 +196,45 @@
         </div>
     </div>
 
+    <!-- ===== FILE INPUTS ===== -->
     <input type="file" id="avatarFileInput" class="hidden-file-input" accept="image/*" />
     <input type="file" id="bannerFileInput" class="hidden-file-input" accept="image/*" />
 
-    <!-- ===== JS ===== -->
-    <script type="module" src="js/app.js?v=2"></script>
-
     <!-- ===== BOTTOM NAV ===== -->
     <nav class="bottom-nav" id="bottomNav" role="navigation" aria-label="Навігація">
-        <!-- Назад -->
-        <button class="bottom-nav-item" id="navBack" title="Назад">
-            <i class="fas fa-arrow-left"></i>
+        <button class="bn-item" id="bnBack" title="Назад" aria-label="Назад">
+            <div class="bn-pill">
+                <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+                <span class="bn-label">Назад</span>
+            </div>
         </button>
-        <!-- Головна -->
-        <button class="bottom-nav-item" id="navHome" title="Головна">
-            <i class="fas fa-home"></i>
+        <button class="bn-item active" id="bnHome" data-route="main" title="Головна" aria-label="Головна">
+            <div class="bn-pill">
+                <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z"/><polyline points="9 21 9 12 15 12 15 21"/></svg>
+                <span class="bn-label">Головна</span>
+            </div>
         </button>
-        <!-- Рейтинг -->
-        <button class="bottom-nav-item" id="navRating" title="Рейтинг">
-            <i class="fas fa-trophy"></i>
+        <button class="bn-item" id="bnTop" data-route="rating" title="Рейтинг" aria-label="Рейтинг">
+            <div class="bn-pill">
+                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span class="bn-label">Рейтинг</span>
+            </div>
         </button>
-        <!-- Профіль -->
-        <button class="bottom-nav-item" id="navProfile" title="Профіль">
-            <i class="fas fa-user"></i>
+        <button class="bn-item" id="bnProfile" data-route="profile" title="Профіль" aria-label="Профіль">
+            <div class="bn-pill">
+                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span class="bn-label">Профіль</span>
+            </div>
         </button>
-        <!-- Меню -->
-        <button class="bottom-nav-item" id="navMenu" title="Меню">
-            <i class="fas fa-bars"></i>
+        <button class="bn-item" id="bnMenu" data-route="genres" title="Меню" aria-label="Меню">
+            <div class="bn-pill">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                <span class="bn-label">Меню</span>
+            </div>
         </button>
     </nav>
+
+    <!-- ===== MAIN APP ENTRY ===== -->
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
