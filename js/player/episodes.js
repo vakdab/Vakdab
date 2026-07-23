@@ -3,6 +3,7 @@
 
 import { Storage } from '../storage/storage.js';
 import { safeQuery } from '../utils/dom.js';
+// showViewMode accessed via window (avoids circular import)
 
 export function updateSourceChip() {
             const label = document.getElementById('playerSourceLabel');
@@ -129,7 +130,7 @@ export function buildEpisodeViews() {
                         }
                     });
                 });
-            showViewMode(playerPageCurrentView);
+            window.showViewMode(playerPageCurrentView);
         }
 
 export function playEpisode(file, epNum) {
@@ -137,17 +138,5 @@ export function playEpisode(file, epNum) {
         // ====================================================================
         //  ПОКАЗ ВИГЛЯДУ ЕПІЗОДІВ
         // ====================================================================
-export function showViewMode(mode) {
-            const grid = document.getElementById('episodeViewGrid');
-            const compact = document.getElementById('episodeViewCompact');
-            const classic = document.getElementById('episodeViewClassic');
-            grid.classList.toggle('hidden', mode !== 'grid');
-            compact.classList.toggle('hidden', mode !== 'compact');
-            classic.classList.toggle('hidden', mode !== 'classic');
-            document.querySelectorAll('.episode-view-tab').forEach(tab => {
-                tab.classList.toggle('active', tab.dataset.view === mode);
-            });
-            playerPageCurrentView = mode;
-        }
         window.showViewMode = showViewMode;
 

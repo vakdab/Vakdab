@@ -6,6 +6,8 @@ import { collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp,
 import { Storage } from '../storage/storage.js';
 import { escapeHtml } from '../utils/helpers.js';
 import { getMyEarnedAchievements } from './achievements.js';
+import { loadRatingList } from './rating.js';
+import { loadRatingPage } from './rating.js';
 
 export function _renderReplyBanner() {
             const wrap = document.getElementById('comReplyBannerWrap');
@@ -50,16 +52,6 @@ export function _highlightMentions(escapedText) {
             return escapedText.replace(re, '<span class="com-mention">@$1</span>');
         }
 
-export function getMyEarnedAchievements() {
-            const history   = Storage.getHistory()   || [];
-            const bookmarks = Storage.getBookmarks() || [];
-            const watchSec  = Storage.getWatchTime() || 0;
-            const episodes  = history.length;
-            const totalXP   = calcTotalXP();
-            const xpLvl     = getLevel(totalXP);
-            const achStats  = { episodes, watchTime: watchSec, bookmarks: bookmarks.length, xp: totalXP, level: xpLvl, posts: DailyStats.getTotalPosts(), ratings: DailyStats.getTotalRatings() };
-            return ACHIEVEMENTS.filter(a => achStats[a.field] >= a.need);
-        }
 
 export function initCommunity() {
             const panel = document.getElementById('rgPanelCommunity');
@@ -762,11 +754,6 @@ export function _subscribeToChat(currentUser) {
             }
         }
 
-export async function loadRatingPage() { initRatingPage(); }
-export async function loadRatingList() { initRatingPage(); }
 
-export function escapeHtml(str) {
-            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
-        }
 
 

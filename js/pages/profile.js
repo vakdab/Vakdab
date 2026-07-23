@@ -6,6 +6,7 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { Storage } from '../storage/storage.js';
 import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../config/api.js';
 import { showToast } from '../ui/toast.js';
+import { getAchievements } from '../features/achievements.js';
 
         // ====================================================================
         //  ПРОФІЛЬ
@@ -55,30 +56,6 @@ export function getProfileStats() {
             };
         }
 
-export function getAchievements(history, bookmarks, uniqueCount, totalEpisodes, totalWatchTime) {
-            const xp = calcTotalXP();
-            const lvl = getLevel(xp);
-            const stats = {
-                episodes: totalEpisodes,
-                watchTime: totalWatchTime,
-                bookmarks: bookmarks.length,
-                xp: xp,
-                level: lvl,
-                posts: DailyStats.getTotalPosts(),
-                ratings: DailyStats.getTotalRatings()
-            };
-            return ACHIEVEMENTS.map(a => {
-                const val = stats[a.field] || 0;
-                return {
-                    id: a.id,
-                    name: a.name,
-                    description: a.req,
-                    unlocked: val >= a.need,
-                    progress: Math.min(Math.floor(val / a.need * 100), 100),
-                    icon: a.icon
-                };
-            });
-        }
 
         
         // Стиснення зображення перед збереженням (щоб Firestore не падав)
@@ -513,3 +490,5 @@ export function profileEditBio() {
             e.target.value = '';
         });
 
+
+window.getProfileStats = getProfileStats;

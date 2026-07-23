@@ -28,8 +28,8 @@ import { saveParseDiagnostic } from './api/diagnostics.js';
 
 // Player
 import { LampaPlayer, lpFmtTime } from './player/player.js';
-import { buildSeasonRow, getCurrentEpisodes, getEpisodeProgress, buildEpisodeViews, playEpisode, showViewMode } from './player/episodes.js';
-import { openPlayerPage, closePlayerPage, updateSourceChip, updateFilterChip } from './player/player-page.js';
+import { buildSeasonRow, getCurrentEpisodes, getEpisodeProgress, buildEpisodeViews, playEpisode, updateSourceChip, updateFilterChip } from './player/episodes.js';
+import { openPlayerPage, closePlayerPage } from './player/player-page.js';
 import { buildBottomSheetData, openBottomSheet, closeBottomSheet } from './player/bottom-sheet.js';
 
 // Hero
@@ -62,6 +62,7 @@ import { showTop100 } from './pages/top100.js';
 
 // Router
 import { Router, showViewMode } from './router/router.js';
+import { handleNavVisibility } from './ui/navigation.js';
 
 // --- ОБРОБНИКИ ПОДІЙ + ХОТКЕЇ + INIT ---
         // ====================================================================
@@ -183,26 +184,12 @@ import { Router, showViewMode } from './router/router.js';
         // ====================================================================
         const backToTopBtn = document.getElementById('backToTopBtn');
 
-export function updateBackToTop() { if (window.scrollY > 500) backToTopBtn.classList.add('visible');
-            else backToTopBtn.classList.remove('visible'); }
         backToTopBtn.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
         window.addEventListener('scroll', updateBackToTop, { passive: true });
 
         // ====================================================================
         //  ПОКАЗ ВИГЛЯДУ ЕПІЗОДІВ
         // ====================================================================
-export function showViewMode(mode) {
-            const grid = document.getElementById('episodeViewGrid');
-            const compact = document.getElementById('episodeViewCompact');
-            const classic = document.getElementById('episodeViewClassic');
-            grid.classList.toggle('hidden', mode !== 'grid');
-            compact.classList.toggle('hidden', mode !== 'compact');
-            classic.classList.toggle('hidden', mode !== 'classic');
-            document.querySelectorAll('.episode-view-tab').forEach(tab => {
-                tab.classList.toggle('active', tab.dataset.view === mode);
-            });
-            playerPageCurrentView = mode;
-        }
         window.showViewMode = showViewMode;
 
         // ====================================================================
@@ -321,16 +308,6 @@ export async function init() {
             });
 
             // Оновлення активного стану при зміні роуту
-export function updateBottomNav(route) {
-                const items = nav.querySelectorAll('.bn-item[data-route]');
-                items.forEach(item => {
-                    item.classList.remove('active');
-                    if (item.dataset.route === route) {
-                        item.classList.add('active');
-                    }
-                });
-                // rating активний для route === 'rating'
-            }
 
             // Router.goTo використовує hashchange → updateBottomNav спрацює автоматично
 
@@ -348,21 +325,6 @@ export function updateBottomNav(route) {
             };
 
             // Ховати nav при заході в Суспільне, показувати на Рейтингу
-export function handleNavVisibility(route) {
-                // community — під-вкладка рейтингу: ховаємо nav
-                // перевіряємо активну вкладку на сторінці rating
-                const isCommunityActive = () => {
-                    const panel = document.getElementById('rgPanelCommunity');
-                    return panel && panel.classList.contains('active');
-                };
-
-                if (route === 'rating' && isCommunityActive()) {
-                    nav.classList.add('hidden-nav');
-                } else {
-                    nav.classList.remove('hidden-nav');
-                }
-                updateBottomNav(route);
-            }
 
             // Слухаємо кліки по вкладках рейтингу (Рейтинг ↔ Суспільне)
             document.addEventListener('click', e => {

@@ -7,7 +7,7 @@ import { renderProfilePage } from '../pages/profile.js';
 import { renderGenresPage } from '../pages/genres.js';
 import { initRatingPage } from '../features/rating.js';
 import { initCommunity } from '../features/community.js';
-import { closePlayerPage } from '../player/player-page.js';
+// closePlayerPage accessed via window (avoids circular import)
 import { showToast } from '../ui/toast.js';
 
         // ====================================================================

@@ -5,10 +5,8 @@ import { fetchAnimeuaMain } from '../api/animeua.js';
 import { safeQuery } from '../utils/dom.js';
 import { showToast } from '../ui/toast.js';
 import { escapeHtml } from '../utils/helpers.js';
+import { showTop100 } from './top100.js';
 
-export function escapeHtml(str) {
-            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
-        }
 
 
         // ====================================================================
@@ -110,17 +108,6 @@ export function renderPagination() {
             loadContent();
         };
 
-export function showTop100() {
-            currentTab = 'top100';
-            currentPage = 1;
-            currentSearchQuery = '';
-            currentCategory = '';
-            document.querySelectorAll('.action-pill').forEach(p => p.classList.remove('active-pill'));
-            document.getElementById('top100Btn')?.classList.add('active-pill');
-            if (window.Router?.currentRoute === 'main') loadContent();
-            syncLeftdockActive();
-            showToast('ТОП 100 аніме');
-        }
 
 export function openRandomAnime() {
             openPlayerPage(`${ANIMEUA_BASE}/index.php?do=rand`);
