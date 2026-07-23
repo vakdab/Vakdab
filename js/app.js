@@ -190,7 +190,6 @@ import { handleNavVisibility } from './ui/navigation.js';
         // ====================================================================
         //  ПОКАЗ ВИГЛЯДУ ЕПІЗОДІВ
         // ====================================================================
-        window.showViewMode = showViewMode;
 
         // ====================================================================
         //  ІНІЦІАЛІЗАЦІЯ
@@ -278,7 +277,6 @@ export async function init() {
         window.buildHeroBanner = buildHeroBanner;
         window.Auth = Auth;
         window.Storage = Storage;
-        window.showViewMode = showViewMode;
     
         // ====================================================================
         //  BOTTOM NAV — логіка
