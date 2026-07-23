@@ -395,3 +395,4 @@ export function handleNavVisibility(route) {
             handleNavVisibility(Router.currentRoute || 'main');
         })();
 
+init();

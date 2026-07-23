@@ -332,3 +332,6 @@ export function renderLeaderboard(lb, users, sortKey) {
         let replyingTo = null;
         let _refreshComposeExtra = null;
 
+
+export async function loadRatingPage() { initRatingPage(); }
+export async function loadRatingList() { initRatingPage(); }
