@@ -51,6 +51,22 @@
     </script>
 </head>
 <body class="appletv-agnative-topnav">
+<div id="__debugLog" style="position:fixed;top:0;left:0;right:0;z-index:999999;background:#000;color:#0f0;font-size:11px;max-height:40vh;overflow:auto;white-space:pre-wrap;padding:6px;font-family:monospace;"></div>
+<script>
+  window.__dbg = function(msg){ 
+    var el = document.getElementById('__debugLog');
+    if (el) el.textContent += msg + "
+";
+  };
+  window.addEventListener('error', function(e) {
+    window.__dbg('ERROR: ' + e.message + ' @ ' + e.filename + ':' + e.lineno + ':' + e.colno);
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    window.__dbg('UNHANDLED REJECTION: ' + (e.reason && e.reason.stack ? e.reason.stack : e.reason));
+  });
+  window.__dbg('debug listeners attached');
+</script>
+
     <!-- ===== HTML-КАРКАС (оригінальні рядки L5475-L5624) ===== -->
     <div class="app-container" id="appRoot">
         <header class="header">
