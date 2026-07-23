@@ -6,7 +6,7 @@ import { safeQuery } from '../utils/dom.js';
 import { showToast } from '../ui/toast.js';
 import { escapeHtml } from '../utils/helpers.js';
 
-        export function escapeHtml(str) {
+export function escapeHtml(str) {
             return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
         }
 
@@ -19,14 +19,14 @@ import { escapeHtml } from '../utils/helpers.js';
             currentSearchQuery = '',
             currentCategory = '';
 
-        export async function fetchContent() {
+export async function fetchContent() {
             if (currentTab === 'top100') { return await fetchAnimeuaTop100(); }
             if (currentSearchQuery) { return await searchAnimeua(currentSearchQuery, currentPage); }
             if (currentCategory) { return await fetchAnimeuaByCategory(currentCategory, currentPage); }
             return await fetchAnimeuaMain(currentPage);
         }
 
-        export function showSkeleton() {
+export function showSkeleton() {
             const container = document.getElementById('animeContainer');
             if (!container) return;
             const cols = 2;
@@ -37,10 +37,10 @@ import { escapeHtml } from '../utils/helpers.js';
             container.innerHTML = html;
         }
 
-        export async function loadContent() {
+export async function loadContent() {
             const container = document.getElementById('animeContainer');
             if (!container) return;
-            if (Router.currentRoute !== 'main') return;
+            if (window.Router?.currentRoute !== 'main') return;
             document.getElementById('genreSectionsContainer').style.display = 'none';
             document.getElementById('animeContainer').style.display = 'grid';
             document.getElementById('profilePageContainer').classList.remove('active');
@@ -61,7 +61,7 @@ import { escapeHtml } from '../utils/helpers.js';
             }
         }
 
-        export function renderCards(list) {
+export function renderCards(list) {
             const container = document.getElementById('animeContainer');
             if (!container) return;
             if (!list.length) {
@@ -92,7 +92,7 @@ import { escapeHtml } from '../utils/helpers.js';
             renderPagination();
         }
 
-        export function renderPagination() {
+export function renderPagination() {
             const row = document.getElementById('paginationRow');
             if (!row) return;
             const prevDisabled = currentPage <= 1 ? 'disabled' : '';
@@ -110,19 +110,19 @@ import { escapeHtml } from '../utils/helpers.js';
             loadContent();
         };
 
-        export function showTop100() {
+export function showTop100() {
             currentTab = 'top100';
             currentPage = 1;
             currentSearchQuery = '';
             currentCategory = '';
             document.querySelectorAll('.action-pill').forEach(p => p.classList.remove('active-pill'));
             document.getElementById('top100Btn')?.classList.add('active-pill');
-            if (Router.currentRoute === 'main') loadContent();
+            if (window.Router?.currentRoute === 'main') loadContent();
             syncLeftdockActive();
             showToast('ТОП 100 аніме');
         }
 
-        export function openRandomAnime() {
+export function openRandomAnime() {
             openPlayerPage(`${ANIMEUA_BASE}/index.php?do=rand`);
             showToast('Випадкове аніме');
         }

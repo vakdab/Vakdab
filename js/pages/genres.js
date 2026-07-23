@@ -11,7 +11,7 @@ import { escapeHtml } from '../utils/helpers.js';
         // ====================================================================
         const genreList = Object.entries(GENRE_MAP).map(([name, slug]) => ({ name, slug }));
 
-        export async function loadAndDisplayGenreSections() {
+export async function loadAndDisplayGenreSections() {
             const container = document.getElementById('genreSectionsContainer');
             if (!container) return;
             container.innerHTML = '<div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження секцій...</div>';
@@ -98,7 +98,7 @@ import { escapeHtml } from '../utils/helpers.js';
         // ====================================================================
         let genrePageState = { slug: '', name: '', page: 1, list: [] };
 
-        export async function renderGenresPage() {
+export async function renderGenresPage() {
             const container = document.getElementById('genresPageContainer');
             if (!container) return;
             const genres = loadGenres();
@@ -117,13 +117,13 @@ import { escapeHtml } from '../utils/helpers.js';
                 card.addEventListener('click', () => {
                     const slug = card.dataset.slug;
                     const name = card.dataset.name;
-                    Router.goTo('genre', { slug, name });
+                    window.Router?.goTo('genre', { slug, name });
                 });
             });
         }
 
 
-        export async function renderGenrePage(slug, name) {
+export async function renderGenrePage(slug, name) {
             const container = document.getElementById('genrePageContainer');
             if (!container) return;
             genrePageState.slug = slug;
@@ -141,7 +141,7 @@ import { escapeHtml } from '../utils/helpers.js';
             await loadGenrePageContent();
         }
 
-        export async function loadGenrePageContent() {
+export async function loadGenrePageContent() {
             const content = document.getElementById('genrePageContent');
             const pagination = document.getElementById('genrePagePagination');
             if (!content) return;

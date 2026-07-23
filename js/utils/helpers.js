@@ -5,7 +5,7 @@ import { Storage } from '../storage/storage.js';
 
         //  ДОПОМІЖНІ ФУНКЦІЇ
         // ====================================================================
-        export function applyTheme(theme) {
+export function applyTheme(theme) {
             if (theme === 'dark') {
                 document.body.classList.add('dark-mode');
             } else {
@@ -19,12 +19,12 @@ import { Storage } from '../storage/storage.js';
             }
         }
 
-        export function toggleTheme() {
+export function toggleTheme() {
             const next = Storage.getTheme() === 'dark' ? 'light' : 'dark';
             Storage.setTheme(next);
             applyTheme(next);
             showToast(next === 'dark' ? 'Темний режим' : 'Світлий режим');
-            if (Router.currentRoute === 'settings') {
+            if (window.Router?.currentRoute === 'settings') {
                 renderSettingsPage();
             }
         }

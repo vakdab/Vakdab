@@ -1,9 +1,10 @@
 // ===== HERO BANNER =====
 // Оригінальні рядки: L7181-L7423
 
-import { fetchAnimeuaMain, fetchAnimeuaTop100 } from '../api/animeua.js';
+import { fetchAnimeuaMain, fetchAnimeuaTop100, loadAnimeuaDetail } from '../api/animeua.js';
 import { safeQuery } from '../utils/dom.js';
 import { showToast } from '../ui/toast.js';
+// openPlayerPage is accessed via window.openPlayerPage (circular dep avoided)
 
                 // ====================================================================
         //  ГЕРО БАНЕР
@@ -12,7 +13,7 @@ import { showToast } from '../ui/toast.js';
             heroCurrentIndex = 0,
             heroRotationTimer = null;
 
-        export async function buildHeroBanner() {
+export async function buildHeroBanner() {
             const wrapper = document.getElementById('heroWrapper');
             if (!wrapper) return;
 
@@ -40,7 +41,7 @@ import { showToast } from '../ui/toast.js';
                 wrapper.style.display = 'none';
                 return;
             }
-            if (Router.currentRoute !== 'main') {
+            if (window.Router?.currentRoute !== 'main') {
                 wrapper.style.display = 'none';
                 return;
             }
@@ -64,7 +65,7 @@ import { showToast } from '../ui/toast.js';
             }
         }
 
-        export async function loadHeroItemDetails(idx) {
+export async function loadHeroItemDetails(idx) {
             if (idx < 0 || idx >= heroItems.length) return;
             const item = heroItems[idx];
             if (item.detailsLoaded) return;
@@ -88,7 +89,7 @@ import { showToast } from '../ui/toast.js';
             }
         }
 
-        export function renderHeroSlide(item) {
+export function renderHeroSlide(item) {
             const container = document.getElementById('heroSlidesContainer');
             if (!container || !item) return;
             const poster = item.images?.jpg?.large_image_url || '';
@@ -162,14 +163,14 @@ import { showToast } from '../ui/toast.js';
 
             slide.querySelector('.hero-slide-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
-                if (item.url) openPlayerPage(item.url);
+                if (item.url) window.openPlayerPage(item.url);
             });
             slide.addEventListener('click', () => {
-                if (item.url) openPlayerPage(item.url);
+                if (item.url) window.openPlayerPage(item.url);
             });
         }
 
-        export function buildHeroIndicators() {
+export function buildHeroIndicators() {
             const dotsContainer = document.getElementById('heroDots');
             if (!dotsContainer) return;
             dotsContainer.innerHTML = '';
@@ -181,14 +182,14 @@ import { showToast } from '../ui/toast.js';
             });
         }
 
-        export function updateHeroIndicators() {
+export function updateHeroIndicators() {
             const dots = document.querySelectorAll('.hero-dot');
             dots.forEach((dot, idx) => {
                 dot.classList.toggle('active', idx === heroCurrentIndex);
             });
         }
 
-        export async function goToSlide(idx) {
+export async function goToSlide(idx) {
             if (idx < 0 || idx >= heroItems.length) return;
             if (idx === heroCurrentIndex) return;
             heroCurrentIndex = idx;
@@ -209,18 +210,18 @@ import { showToast } from '../ui/toast.js';
             }
         }
 
-        export function nextSlide() {
+export function nextSlide() {
             goToSlide((heroCurrentIndex + 1) % heroItems.length);
         }
 
-        export function prevSlide() {
+export function prevSlide() {
             goToSlide((heroCurrentIndex - 1 + heroItems.length) % heroItems.length);
         }
 
         let heroProgressInterval = null;
         const HERO_SLIDE_DURATION = 6000;
 
-        export function startHeroRotation() {
+export function startHeroRotation() {
             stopHeroRotation();
             if (heroItems.length < 2) return;
             const fill = document.getElementById('heroProgressFill');
@@ -233,14 +234,14 @@ import { showToast } from '../ui/toast.js';
             heroRotationTimer = setTimeout(nextSlide, HERO_SLIDE_DURATION);
         }
 
-        export function stopHeroRotation() {
+export function stopHeroRotation() {
             if (heroRotationTimer) { clearTimeout(heroRotationTimer); heroRotationTimer = null; }
             if (heroProgressInterval) { clearInterval(heroProgressInterval); heroProgressInterval = null; }
             const fill = document.getElementById('heroProgressFill');
             if (fill) fill.style.width = '0%';
         }
 
-        export function resetHeroTimer() {
+export function resetHeroTimer() {
             stopHeroRotation();
             startHeroRotation();
         }

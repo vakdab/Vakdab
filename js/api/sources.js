@@ -4,7 +4,7 @@
 import { ANIMEUA_BASE } from '../config/api.js';
 import { safeQuery, safeQueryAll } from '../utils/dom.js';
 
-        export function extractPlayerIframeUrls(doc) {
+export function extractPlayerIframeUrls(doc) {
             const selectors = ['.video-responsive iframe', '.player-responsive iframe', '#player iframe',
                 '.pmovie__player iframe', 'iframe[src]', 'iframe[data-src]'
             ];
@@ -33,7 +33,7 @@ import { safeQuery, safeQueryAll } from '../utils/dom.js';
             return [...new Set(urls)];
         }
 
-        export function extractSourcesFromText(text, providerName) {
+export function extractSourcesFromText(text, providerName) {
             let sources = [];
             // Покращений regex для Playerjs file:'[...]'
             let jsonMatch = null;

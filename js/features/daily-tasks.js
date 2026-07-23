@@ -6,11 +6,11 @@ import { Storage } from '../storage/storage.js';
         // ====================================================================
         //  DAILY STATS / TASKS TRACKING
         // ====================================================================
-        export function _todayStr() {
+export function _todayStr() {
             const d = new Date();
             return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate();
         }
-        export function _loadDailyState() {
+export function _loadDailyState() {
             let st;
             try { st = JSON.parse(localStorage.getItem('vakdab_daily_state') || 'null'); } catch { st = null; }
             const today = _todayStr();
@@ -31,13 +31,13 @@ import { Storage } from '../storage/storage.js';
             }
             return st;
         }
-        export function _saveDailyState(st) {
+export function _saveDailyState(st) {
             localStorage.setItem('vakdab_daily_state', JSON.stringify(st));
         }
-        export function _getTotalCounter(key) {
+export function _getTotalCounter(key) {
             try { return parseInt(localStorage.getItem(key) || '0', 10) || 0; } catch { return 0; }
         }
-        export function _incTotalCounter(key, by = 1) {
+export function _incTotalCounter(key, by = 1) {
             const v = _getTotalCounter(key) + by;
             try { localStorage.setItem(key, String(v)); } catch {}
             return v;
@@ -77,15 +77,15 @@ import { Storage } from '../storage/storage.js';
                 if (earned > 0) {
                     _saveDailyState(st);
                     _addDailyXPBonus(xpGain);
-                    if (Auth.isAuthenticated()) Auth.syncUserData().catch(() => {});
+                    if (window.Auth?.isAuthenticated()) window.Auth?.syncUserData().catch(() => {});
                     showToast(`Завдання виконано! +${xpGain} XP`);
                     if (document.getElementById('rgDailyTasks')) _renderDailyTasks();
-                    if (Router.currentRoute === 'rating') loadMyStats();
+                    if (window.Router?.currentRoute === 'rating') loadMyStats();
                 }
             }
         };
 
-        export function _renderDailyTasks() {
+export function _renderDailyTasks() {
             const el = document.getElementById('rgDailyTasks');
             if (!el) return;
             const st = _loadDailyState();

@@ -2,10 +2,10 @@
 // Оригінальні рядки: L8019-L8345
 
 import { auth, db } from '../config/firebase.js';
-import { doc, getDoc, setDoc, collection, query, orderBy, limit, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { Storage } from '../storage/storage.js';
 
-        export function getUserRankInfo(episodes, watchHours) {
+export function getUserRankInfo(episodes, watchHours) {
             if (watchHours >= 200) return { label: 'Легенда аніме',  color: 'var(--accent)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 16h14"/></svg>' };
             if (watchHours >= 100) return { label: 'Майстер',        color: 'var(--text)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>' };
             if (watchHours >= 50)  return { label: 'Ветеран',        color: 'var(--text-secondary)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>' };
@@ -14,7 +14,7 @@ import { Storage } from '../storage/storage.js';
             return                        { label: 'Новачок',        color: 'var(--text-muted)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' };
         }
 
-        export function initRatingPage() {
+export function initRatingPage() {
             const wrap = document.getElementById('ratingPageContainer');
             if (!wrap || wrap.dataset.init) return;
             wrap.dataset.init = '1';
@@ -96,7 +96,7 @@ import { Storage } from '../storage/storage.js';
             loadLeaderboard();
         }
 
-        export function loadMyStats() {
+export function loadMyStats() {
             const statsEl = document.getElementById('rgMyStats');
             const achEl   = document.getElementById('rgAchievements');
             if (!statsEl || !achEl) return;
@@ -167,7 +167,7 @@ import { Storage } from '../storage/storage.js';
             bookmarks: { unit: 'зак.',  getVal: u => u.bookmarks }
         };
 
-        export async function loadLeaderboard() {
+export async function loadLeaderboard() {
             const lb = document.getElementById('rgLeaderboard');
             if (!lb) return;
 
@@ -210,13 +210,13 @@ import { Storage } from '../storage/storage.js';
             // інакше вже залогінений через Google юзер на мить виглядає як "не автентифікований"
             // (onAuthStateChanged ще не встиг відпрацювати) і потрапляє у гостьову гілку нижче.
             waited = 0;
-            while (!Auth._authResolved && waited < 4000) {
+            while (!window.Auth?._authResolved && waited < 4000) {
                 await new Promise(res => setTimeout(res, 150));
                 waited += 150;
             }
             // Гостям (справді неавторизованим) намагаємось видати анонімний Firebase-сеанс,
             // щоб рейтинг був доступний без входу
-            if (!Auth.isAuthenticated()) {
+            if (!window.Auth?.isAuthenticated()) {
                 try {
                     await signInAnonymously(auth);
                 } catch (e) {
@@ -275,12 +275,12 @@ import { Storage } from '../storage/storage.js';
             }
         }
 
-        export function renderLeaderboard(lb, users, sortKey) {
+export function renderLeaderboard(lb, users, sortKey) {
             sortKey = sortKey || _lbSortKey || 'xp';
             const cfg = LB_SORT_CONFIG[sortKey] || LB_SORT_CONFIG.xp;
             const sorted = [...users].sort((a, b) => cfg.getVal(b) - cfg.getVal(a));
 
-            const myUid = Auth.isAuthenticated() ? Auth._user?.uid : null;
+            const myUid = window.Auth?.isAuthenticated() ? window.Auth?._user?.uid : null;
             let html = '';
 
             if (sorted.length >= 3) {

@@ -7,7 +7,7 @@ import { safeQuery, safeQueryAll } from '../utils/dom.js';
 import { extractPlayerIframeUrls, extractSourcesFromText } from './sources.js';
 import { saveParseDiagnostic } from './diagnostics.js';
 
-        export function parseAnimeuaCards(doc) {
+export function parseAnimeuaCards(doc) {
             const cards = safeQueryAll('.poster', doc);
             if (cards.length) return cards.map(card => {
                 const linkEl = card.tagName === 'A' ? card : safeQuery('a', card);
@@ -46,29 +46,29 @@ import { saveParseDiagnostic } from './diagnostics.js';
             });
         }
 
-        export async function fetchAnimeuaMain(page) { const doc = await fetchUA(`${ANIMEUA_BASE}/page/${page}/`); return parseAnimeuaCards(
+export async function fetchAnimeuaMain(page) { const doc = await fetchUA(`${ANIMEUA_BASE}/page/${page}/`); return parseAnimeuaCards(
                 doc); }
 
-        export async function searchAnimeua(query, page) { const doc = await fetchUA(
+export async function searchAnimeua(query, page) { const doc = await fetchUA(
                 `${ANIMEUA_BASE}/index.php?do=search&subaction=search&story=${encodeURIComponent(query)}&page=${page}`);
             return parseAnimeuaCards(doc); }
 
-        export async function fetchAnimeuaByCategory(categorySlug, page) {
+export async function fetchAnimeuaByCategory(categorySlug, page) {
             const url = page > 1 ? `${ANIMEUA_BASE}/${categorySlug}/page/${page}/` : `${ANIMEUA_BASE}/${categorySlug}/`;
             const doc = await fetchUA(url);
             return parseAnimeuaCards(doc);
         }
 
-        export async function fetchAnimeuaTop100() { const doc = await fetchUA(`${ANIMEUA_BASE}/top.html`); return parseAnimeuaCards(
+export async function fetchAnimeuaTop100() { const doc = await fetchUA(`${ANIMEUA_BASE}/top.html`); return parseAnimeuaCards(
                 doc); }
 
-        export async function fetchAnimeuaByGenre(genreSlug, page) {
+export async function fetchAnimeuaByGenre(genreSlug, page) {
             const url = page > 1 ? `${ANIMEUA_BASE}/${genreSlug}/page/${page}/` : `${ANIMEUA_BASE}/${genreSlug}/`;
             const doc = await fetchUA(url);
             return parseAnimeuaCards(doc);
         }
 
-        export async function loadAnimeuaDetail(animeUrl) {
+export async function loadAnimeuaDetail(animeUrl) {
             const doc = await fetchUA(animeUrl);
             
             // Перевіряємо чи сторінка є реальною сторінкою аніме (не 404/головна)

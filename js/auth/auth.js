@@ -21,7 +21,7 @@ import { getDefaultProfile } from '../pages/profile.js';
 
         //  СИСТЕМА АВТОРИЗАЦІЇ
         // ====================================================================
-        export const Auth = {
+export const Auth = {
             _user: null,
             _listeners: [],
             _initialized: false,
@@ -53,7 +53,7 @@ import { getDefaultProfile } from '../pages/profile.js';
                     if (user) {
                         // РЕНДЕРИМО ПРОФІЛЬ ОДРАЗУ з поточними localStorage даними
                         // — не чекаємо _loadUserData (який може висіти на Firestore)
-                        if (Router.currentRoute === 'profile') {
+                        if (window.Router?.currentRoute === 'profile') {
                             const profContainer = document.getElementById('profilePageContainer');
                             if (profContainer && profContainer.classList.contains('active')) {
                                 renderProfilePage();
@@ -66,7 +66,7 @@ import { getDefaultProfile } from '../pages/profile.js';
                         // Завантажуємо з Firestore в фоні — оновимо профіль коли дані прийдуть
                         try {
                             await this._loadUserData(user.uid);
-                            if (Router.currentRoute === 'profile') {
+                            if (window.Router?.currentRoute === 'profile') {
                                 const profContainer = document.getElementById('profilePageContainer');
                                 if (profContainer && profContainer.classList.contains('active')) {
                                     renderProfilePage();
@@ -78,7 +78,7 @@ import { getDefaultProfile } from '../pages/profile.js';
                     } else {
                         this._welcomeShown = false;
                         // ТІЛЬКИ якщо ми на сторінці профілю показуємо форму входу
-                        if (Router.currentRoute === 'profile') {
+                        if (window.Router?.currentRoute === 'profile') {
                             const profContainer = document.getElementById('profilePageContainer');
                             if (profContainer && profContainer.classList.contains('active')) {
                                 renderAuthPage();
@@ -246,7 +246,7 @@ import { getDefaultProfile } from '../pages/profile.js';
                     await this._loadUserData(cred.user.uid);
                     this._notifyListeners();
                     showToast('Успішний вхід');
-                    if (Router.currentRoute === 'profile') renderProfilePage();
+                    if (window.Router?.currentRoute === 'profile') renderProfilePage();
                     return { success: true };
                 } catch (e) {
                     console.warn('Login error:', e);
@@ -272,7 +272,7 @@ import { getDefaultProfile } from '../pages/profile.js';
                     this._createUserDoc(cred.user.uid).catch(e => console.warn('Register _createUserDoc:', e.message));
                     this._notifyListeners();
                     showToast('Акаунт створено');
-                    if (Router.currentRoute === 'profile') renderProfilePage();
+                    if (window.Router?.currentRoute === 'profile') renderProfilePage();
                     return { success: true };
                 } catch (e) {
                     console.warn('Register error:', e);
@@ -331,7 +331,7 @@ import { getDefaultProfile } from '../pages/profile.js';
                 try { await signOut(auth); } catch(e) {}
 
                 showToast('Ви вийшли з акаунту');
-                Router.showProfile();
+                window.Router?.showProfile();
                 return { success: true };
             },
 
@@ -342,7 +342,7 @@ import { getDefaultProfile } from '../pages/profile.js';
                     Storage.clear();
                     this._notifyListeners();
                     showToast('Гостевий сеанс завершено');
-                    Router.showProfile();
+                    window.Router?.showProfile();
                 } else {
                     // Юзер — повний logout
                     this.logout().catch(e => console.warn('Logout error:', e));
@@ -433,3 +433,5 @@ import { getDefaultProfile } from '../pages/profile.js';
             }
         };
 
+
+window.Auth = Auth;

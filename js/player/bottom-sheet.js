@@ -8,7 +8,7 @@ import { safeQuery, safeQueryAll } from '../utils/dom.js';
         // ====================================================================
         let bottomSheetMode = 'full';
 
-        export function buildBottomSheetData() {
+export function buildBottomSheetData() {
             if (!playerPageAnime) return;
             const sources = playerPageSources || ['Основне'];
             const sourceList = document.getElementById('bsSourceList');
@@ -124,13 +124,13 @@ import { safeQuery, safeQueryAll } from '../utils/dom.js';
             }
         }
 
-        export function openBottomSheet(mode) {
+export function openBottomSheet(mode) {
             bottomSheetMode = mode || 'full';
             buildBottomSheetData();
             document.getElementById('bottomSheetOverlay').classList.add('open');
         }
 
-        export function closeBottomSheet() {
+export function closeBottomSheet() {
             document.getElementById('bottomSheetOverlay').classList.remove('open');
         }
 

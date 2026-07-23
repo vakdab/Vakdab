@@ -6,7 +6,7 @@ import { doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { Storage } from '../storage/storage.js';
 import { showToast } from '../ui/toast.js';
 
-        export function updateBookmarkButton(url) {
+export function updateBookmarkButton(url) {
             const btn = document.getElementById('playerBookmarkBtn');
             if (!btn) return;
             const bookmarks = Storage.getBookmarks();
@@ -17,7 +17,7 @@ import { showToast } from '../ui/toast.js';
                 '<i class="fas fa-heart"></i>';
         }
 
-        export function toggleBookmark() {
+export function toggleBookmark() {
             const url = playerPageCurrentAnimeUrl;
             if (!url) { showToast('Немає аніме для закладки'); return; }
             const bookmarks = Storage.getBookmarks();
@@ -27,7 +27,7 @@ import { showToast } from '../ui/toast.js';
                 Storage.setBookmarks(bookmarks);
                 showToast('Видалено з закладок');
                 updateBookmarkButton(url);
-                if (Router.currentRoute === 'profile') renderProfilePage();
+                if (window.Router?.currentRoute === 'profile') renderProfilePage();
                 return;
             }
             const anime = playerPageAnime;
@@ -45,6 +45,6 @@ import { showToast } from '../ui/toast.js';
             DailyStats.increment('bookmarksToday', 1);
             showToast('Додано до закладок');
             updateBookmarkButton(url);
-            if (Router.currentRoute === 'profile') renderProfilePage();
+            if (window.Router?.currentRoute === 'profile') renderProfilePage();
         }
 

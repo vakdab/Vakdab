@@ -8,7 +8,7 @@ import { Storage } from '../storage/storage.js';
         // ====================================================================
         //  ЛАЙК / ДИЗЛАЙК
         // ====================================================================
-        export function updateLikeButton() {
+export function updateLikeButton() {
             const btn = document.getElementById('likeBtn');
             if (!btn) return;
             const likes = Storage.getLikes();
@@ -22,7 +22,7 @@ import { Storage } from '../storage/storage.js';
             }
         }
 
-        export function updateDislikeButton() {
+export function updateDislikeButton() {
             const btn = document.getElementById('dislikeBtn');
             if (!btn) return;
             const likes = Storage.getLikes();
@@ -36,7 +36,7 @@ import { Storage } from '../storage/storage.js';
             }
         }
 
-        export function toggleLike() {
+export function toggleLike() {
             const url = playerPageCurrentAnimeUrl;
             if (!url) { showToast('Немає аніме для оцінки'); return; }
             const likes = Storage.getLikes();
@@ -53,10 +53,10 @@ import { Storage } from '../storage/storage.js';
             }
             updateLikeButton();
             updateDislikeButton();
-            if (Router.currentRoute === 'profile') renderProfilePage();
+            if (window.Router?.currentRoute === 'profile') renderProfilePage();
         }
 
-        export function toggleDislike() {
+export function toggleDislike() {
             const url = playerPageCurrentAnimeUrl;
             if (!url) { showToast('Немає аніме для оцінки'); return; }
             const likes = Storage.getLikes();
@@ -71,6 +71,6 @@ import { Storage } from '../storage/storage.js';
             }
             updateLikeButton();
             updateDislikeButton();
-            if (Router.currentRoute === 'profile') renderProfilePage();
+            if (window.Router?.currentRoute === 'profile') renderProfilePage();
         }
 

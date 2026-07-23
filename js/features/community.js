@@ -7,7 +7,7 @@ import { Storage } from '../storage/storage.js';
 import { escapeHtml } from '../utils/helpers.js';
 import { getMyEarnedAchievements } from './achievements.js';
 
-        export function _renderReplyBanner() {
+export function _renderReplyBanner() {
             const wrap = document.getElementById('comReplyBannerWrap');
             if (!wrap) return;
             if (!replyingTo) { wrap.innerHTML = ''; return; }
@@ -26,13 +26,13 @@ import { getMyEarnedAchievements } from './achievements.js';
             });
         }
 
-        export function _setReplyTo(m) {
+export function _setReplyTo(m) {
             replyingTo = { id: m.id, authorName: m.authorName || 'Аніматор', text: (m.text || (m.media?.length ? '📎 медіа' : (m.animeData ? '🎬 ' + m.animeData.title : (m.achData ? '🏆 ' + m.achData.name : '')))).slice(0, 100) };
             _renderReplyBanner();
             document.getElementById('comInput')?.focus();
         }
 
-        export function _uniqueCommunityAuthors() {
+export function _uniqueCommunityAuthors() {
             const seen = new Map();
             _comMsgsCache.forEach(m => {
                 if (m.authorName && !seen.has(m.authorName)) seen.set(m.authorName, m.authorPhoto || '');
@@ -40,7 +40,7 @@ import { getMyEarnedAchievements } from './achievements.js';
             return Array.from(seen.entries()).map(([name, photo]) => ({ name, photo }));
         }
 
-        export function _highlightMentions(escapedText) {
+export function _highlightMentions(escapedText) {
             const authors = _uniqueCommunityAuthors();
             if (!authors.length || !escapedText) return escapedText;
             const names = authors.map(a => a.name).sort((a, b) => b.length - a.length);
@@ -50,7 +50,7 @@ import { getMyEarnedAchievements } from './achievements.js';
             return escapedText.replace(re, '<span class="com-mention">@$1</span>');
         }
 
-        export function getMyEarnedAchievements() {
+export function getMyEarnedAchievements() {
             const history   = Storage.getHistory()   || [];
             const bookmarks = Storage.getBookmarks() || [];
             const watchSec  = Storage.getWatchTime() || 0;
@@ -61,12 +61,12 @@ import { getMyEarnedAchievements } from './achievements.js';
             return ACHIEVEMENTS.filter(a => achStats[a.field] >= a.need);
         }
 
-        export function initCommunity() {
+export function initCommunity() {
             const panel = document.getElementById('rgPanelCommunity');
             if (!panel || panel.dataset.init) return;
             panel.dataset.init = '1';
 
-            const user    = Auth.isAuthenticated() ? Auth._user : null;
+            const user    = window.Auth?.isAuthenticated() ? window.Auth?._user : null;
             const profile = getProfile();
             const avHtml  = profile.avatar
                 ? `<img src="${profile.avatar}" alt="">`
@@ -121,7 +121,7 @@ import { getMyEarnedAchievements } from './achievements.js';
                     <div class="com-login-wall">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>
                         <p>Увійдіть в акаунт, щоб бачити повідомлення та писати в спільноті</p>
-                        <button onclick="Router.goTo('profile')">Увійти</button>
+                        <button onclick="window.Router?.goTo('profile')">Увійти</button>
                     </div>
                     `}
                 </div>
@@ -145,7 +145,7 @@ import { getMyEarnedAchievements } from './achievements.js';
             _subscribeToChat(user);
         }
 
-        export function _setupCompose(user) {
+export function _setupCompose(user) {
             const inp        = document.getElementById('comInput');
             const sendBtn    = document.getElementById('comSendBtn');
             const attachBtn  = document.getElementById('comAttachBtn');
@@ -161,7 +161,7 @@ import { getMyEarnedAchievements } from './achievements.js';
             let pendingAchievement = null;
             let animeSearchTimer = null;
 
-            export function updateInputVisibility() {
+export function updateInputVisibility() {
                 if (comPostType === 'anime') {
                     inp.style.display = 'none';
                     if (attachBtn) attachBtn.style.display = 'none';
@@ -173,7 +173,7 @@ import { getMyEarnedAchievements } from './achievements.js';
                 }
             }
 
-            export function refreshExtra() {
+export function refreshExtra() {
                 updateInputVisibility();
                 if (!extraBox) return;
                 if (comPostType === 'anime') {
@@ -277,7 +277,7 @@ import { getMyEarnedAchievements } from './achievements.js';
                 }
             }
 
-            export function doSend() {
+export function doSend() {
                 if (comPostType === 'anime' && !pendingAnime) {
                     showToast('Спочатку обери аніме для рекомендації');
                     return;
@@ -346,7 +346,7 @@ import { getMyEarnedAchievements } from './achievements.js';
             refreshExtra();
         }
 
-        export function _renderMediaPreview(media, container) {
+export function _renderMediaPreview(media, container) {
             if (!container) return;
             if (!media.length) { container.classList.remove('active'); container.innerHTML = ''; return; }
             container.classList.add('active');
@@ -369,7 +369,7 @@ import { getMyEarnedAchievements } from './achievements.js';
             });
         }
 
-        export async function _sendMessage(user, extra, onSent) {
+export async function _sendMessage(user, extra, onSent) {
             const inp     = document.getElementById('comInput');
             const sendBtn = document.getElementById('comSendBtn');
             if (!inp) return;
@@ -464,7 +464,7 @@ import { getMyEarnedAchievements } from './achievements.js';
         };
         const COM_TYPE_LABELS = { anime: 'Рекомендація', ach: 'Досягнення' };
 
-        export function _renderComMessages(currentUser) {
+export function _renderComMessages(currentUser) {
             const box = document.getElementById('comMessages');
             if (!box) return;
             const filtered = comFilterType === 'text'
@@ -661,7 +661,7 @@ import { getMyEarnedAchievements } from './achievements.js';
             });
         }
 
-        export async function _toggleReaction(msgId, emoji, currentUser) {
+export async function _toggleReaction(msgId, emoji, currentUser) {
             if (!currentUser) { showToast('Увійдіть, щоб реагувати'); return; }
             const m = _comMsgsCache.find(x => x.id === msgId);
             const already = !!(m?.reactions?.[emoji] || []).includes(currentUser.uid);
@@ -672,12 +672,12 @@ import { getMyEarnedAchievements } from './achievements.js';
             } catch (e) { showToast('Помилка: ' + e.message); }
         }
 
-        export function _closeMsgContextMenu() {
+export function _closeMsgContextMenu() {
             document.getElementById('comCtxOverlay')?.remove();
             document.querySelector('.com-ctx-menu')?.remove();
         }
 
-        export function _showMsgContextMenu(m, currentUser, x, y) {
+export function _showMsgContextMenu(m, currentUser, x, y) {
             _closeMsgContextMenu();
             const isMe = currentUser && m.uid === currentUser.uid;
             const overlay = document.createElement('div');
@@ -741,7 +741,7 @@ import { getMyEarnedAchievements } from './achievements.js';
             });
         }
 
-        export function _subscribeToChat(currentUser) {
+export function _subscribeToChat(currentUser) {
             const box = document.getElementById('comMessages');
             if (!box) return;
             if (comUnsub) { comUnsub(); comUnsub = null; }
@@ -762,10 +762,10 @@ import { getMyEarnedAchievements } from './achievements.js';
             }
         }
 
-        export async function loadRatingPage() { initRatingPage(); }
-        export async function loadRatingList() { initRatingPage(); }
+export async function loadRatingPage() { initRatingPage(); }
+export async function loadRatingList() { initRatingPage(); }
 
-        export function escapeHtml(str) {
+export function escapeHtml(str) {
             return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
         }
 

@@ -13,7 +13,7 @@ import { showToast } from '../ui/toast.js';
         // ====================================================================
         //  РОУТЕР
         // ====================================================================
-        const Router = {
+export const Router = {
             currentRoute: 'main',
             params: {},
 
@@ -127,21 +127,21 @@ import { showToast } from '../ui/toast.js';
                 const container = document.getElementById('profilePageContainer');
                 container.style.display = 'block';
                 container.classList.add('active');
-                if (!Auth._authResolved) {
+                if (!window.Auth?._authResolved) {
                     // Firebase ще не перевірив сесію — показуємо заглушку
                     container.innerHTML = '<div class="loader" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;gap:1rem;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i><p>Перевірка сесії...</p></div>';
                     // Fallback: якщо Firebase не відповів за 3 секунди — показуємо сторінку
                     setTimeout(() => {
-                        if (!Auth._authResolved && Router.currentRoute === 'profile') {
-                            Auth._authResolved = true;
-                            if (Auth.isAuthenticated() || Auth.isGuest()) {
+                        if (!window.Auth?._authResolved && Router.currentRoute === 'profile') {
+                            window.Auth?._authResolved = true;
+                            if (window.Auth?.isAuthenticated() || window.Auth?.isGuest()) {
                                 renderProfilePage();
                             } else {
                                 renderAuthPage();
                             }
                         }
                     }, 1500);
-                } else if (Auth.isAuthenticated() || Auth.isGuest()) {
+                } else if (window.Auth?.isAuthenticated() || window.Auth?.isGuest()) {
                     renderProfilePage();
                 } else {
                     renderAuthPage();
@@ -196,3 +196,5 @@ import { showToast } from '../ui/toast.js';
             }
         };
 
+// Make Router globally accessible
+window.Router = Router;

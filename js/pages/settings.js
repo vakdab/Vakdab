@@ -7,7 +7,7 @@ import { applyTheme, toggleTheme } from '../utils/helpers.js';
         // ====================================================================
         //  СТОРІНКА НАЛАШТУВАНЬ
         // ====================================================================
-        export function renderSettingsPage() {
+export function renderSettingsPage() {
             const container = document.getElementById('settingsPageContainer');
             if (!container) return;
             const theme = Storage.getTheme();

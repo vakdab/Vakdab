@@ -3,7 +3,7 @@
 
         //  СХОВИЩЕ
         // ====================================================================
-        export const Storage = {
+export const Storage = {
             _syncTimer: null,
             _debounceSync() {
                 if (this._syncTimer) clearTimeout(this._syncTimer);
@@ -101,3 +101,5 @@
             }
         };
 
+
+window.Storage = Storage;

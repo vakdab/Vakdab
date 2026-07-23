@@ -7,7 +7,7 @@ import { Auth } from '../auth/auth.js';
         // ====================================================================
         //  СТОРІНКА АВТОРИЗАЦІЇ
         // ====================================================================
-        export function renderAuthPage() {
+export function renderAuthPage() {
             const container = document.getElementById('profilePageContainer');
             if (!container) return;
             container.innerHTML = `
@@ -96,7 +96,7 @@ import { Auth } from '../auth/auth.js';
             const footNote = document.getElementById('authFootNote');
             const footToggle = document.getElementById('authFootToggle');
 
-            export function setAuthMode(mode) {
+export function setAuthMode(mode) {
                 btnLogin.classList.toggle('active', mode === 'login');
                 btnRegister.classList.toggle('active', mode === 'register');
                 switcher.classList.toggle('mode-register', mode === 'register');
@@ -192,9 +192,9 @@ import { Auth } from '../auth/auth.js';
             document.getElementById('authGuestBtn').addEventListener('click', () => {
                 Auth.setGuest(true);
                 showToast('Продовжуємо як гість');
-                // Не використовуємо Router.goTo — хеш вже #profile і hashchange не спрацює
+                // Не використовуємо window.Router?.goTo — хеш вже #profile і hashchange не спрацює
                 // Викликаємо showProfile напряму, який перевірить isGuest() і покаже профіль
-                Router.showProfile();
+                window.Router?.showProfile();
             });
 
             syncLeftdockActive();

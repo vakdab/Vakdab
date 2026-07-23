@@ -5,7 +5,7 @@ import { auth, db } from '../config/firebase.js';
 import { doc, getDoc } from "firebase/firestore";
 import { Storage } from '../storage/storage.js';
 
-        export function getMyEarnedAchievements() {
+export function getMyEarnedAchievements() {
             const history   = Storage.getHistory()   || [];
             const bookmarks = Storage.getBookmarks() || [];
             const watchSec  = Storage.getWatchTime() || 0;
@@ -17,7 +17,7 @@ import { Storage } from '../storage/storage.js';
         }
 
 
-        export function getProfileStats() {
+export function getProfileStats() {
             const history = Storage.getHistory();
             const bookmarks = Storage.getBookmarks();
             const uniqueAnime = new Set(history.map(h => h.animeId || h.title));
@@ -41,7 +41,7 @@ import { Storage } from '../storage/storage.js';
             };
         }
 
-        export function getAchievements(history, bookmarks, uniqueCount, totalEpisodes, totalWatchTime) {
+export function getAchievements(history, bookmarks, uniqueCount, totalEpisodes, totalWatchTime) {
             const xp = calcTotalXP();
             const lvl = getLevel(xp);
             const stats = {

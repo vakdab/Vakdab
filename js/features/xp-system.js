@@ -9,17 +9,17 @@ import { Storage } from '../storage/storage.js';
         // ====================================================================
         //  XP / LEVEL SYSTEM
         // ====================================================================
-        export function _getDailyXPBonus() {
+export function _getDailyXPBonus() {
             try { return parseInt(localStorage.getItem('vakdab_daily_xp_total') || '0', 10) || 0; }
             catch { return 0; }
         }
-        export function _addDailyXPBonus(amount) {
+export function _addDailyXPBonus(amount) {
             const cur = _getDailyXPBonus();
             const next = cur + amount;
             try { localStorage.setItem('vakdab_daily_xp_total', String(next)); } catch {}
             return next;
         }
-        export function calcTotalXP() {
+export function calcTotalXP() {
             const history   = Storage.getHistory()   || [];
             const bookmarks = Storage.getBookmarks() || [];
             const watchSec  = Storage.getWatchTime() || 0;
@@ -30,13 +30,13 @@ import { Storage } from '../storage/storage.js';
             const baseXP = Math.floor(episodes * 30 + watchHours * 15 + bookmarks.length * 10 + earnedCount * 100);
             return baseXP + _getDailyXPBonus();
         }
-        export function getLevel(xp) {
+export function getLevel(xp) {
             return Math.floor(Math.sqrt(xp / 50)) + 1;
         }
-        export function getXPForLevel(level) {
+export function getXPForLevel(level) {
             return Math.pow(level - 1, 2) * 50;
         }
-        export function getXPProgress(xp) {
+export function getXPProgress(xp) {
             const level = getLevel(xp);
             const currentLevelXP = getXPForLevel(level);
             const nextLevelXP = getXPForLevel(level + 1);

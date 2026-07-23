@@ -32,7 +32,7 @@ import { escapeHtml } from '../utils/helpers.js';
 
         const QUALITY_OPTIONS = ['Максимальна', '2160p (4K)', '1440p', '1080p', '720p', '480p', '360p'];
 
-        export async function openPlayerPage(url) {
+export async function openPlayerPage(url) {
             const modal = document.getElementById('playerPageModal');
             if (!modal) return;
             // Скасувати попереднє завантаження якщо є
@@ -153,17 +153,17 @@ import { escapeHtml } from '../utils/helpers.js';
             }
         }
 
-        export function updateSourceChip() {
+export function updateSourceChip() {
             const label = document.getElementById('playerSourceLabel');
             if (label) label.textContent = playerPageCurrentSource || 'Джерело';
         }
 
-        export function updateFilterChip() {
+export function updateFilterChip() {
             const chip = document.getElementById('playerFilterChip');
             if (chip) chip.textContent = `Сезон ${playerPageCurrentSeason} · ${playerPageCurrentDub}`;
         }
 
-        export function buildSeasonRow(seasons) {
+export function buildSeasonRow(seasons) {
             const row = document.getElementById('episodeSeasonRow');
             if (!row) return;
             let html = `<span class="episode-season-label">Сезон</span>`;
@@ -188,20 +188,20 @@ import { escapeHtml } from '../utils/helpers.js';
             });
         }
 
-        export function getCurrentEpisodes() {
+export function getCurrentEpisodes() {
             if (!playerPageAnime) return [];
             const eps = playerPageAnime.seasons?.[playerPageCurrentSeason]?.[playerPageCurrentDub] || [];
             return eps;
         }
 
-        export function getEpisodeProgress(episode) {
+export function getEpisodeProgress(episode) {
             const history = Storage.getHistory();
             const animeUrl = playerPageCurrentAnimeUrl;
             const found = history.find(h => h.url === animeUrl && h.episode === episode);
             return found ? Math.min(found.progress || 0, 100) : 0;
         }
 
-        export function buildEpisodeViews() {
+export function buildEpisodeViews() {
             const episodes = getCurrentEpisodes();
             playerPageEpisodes = episodes;
             const gridContainer = document.getElementById('episodeViewGrid');
@@ -281,7 +281,7 @@ import { escapeHtml } from '../utils/helpers.js';
             showViewMode(playerPageCurrentView);
         }
 
-        export function playEpisode(file, epNum) {
+export function playEpisode(file, epNum) {
             if (!file) { showToast('Немає файлу для відтворення'); return; }
             playerPageActiveEpisodeFile = file;
             playerPageCurrentEpisodeNum = epNum || '1';
@@ -355,7 +355,7 @@ import { escapeHtml } from '../utils/helpers.js';
             setTimeout(() => { videoContainer.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150);
         }
 
-        export function closePlayerPage() {
+export function closePlayerPage() {
             const modal = document.getElementById('playerPageModal');
             if (!modal) return;
             // Скасувати активне завантаження — щоб catch не показував помилку
@@ -375,10 +375,10 @@ import { escapeHtml } from '../utils/helpers.js';
             document.getElementById('playerVideoContainer').classList.remove('active');
             document.getElementById('playerPageVideo').innerHTML = '';
             document.getElementById('episodePanel').classList.remove('visible');
-            if (Router.currentRoute === 'profile') renderProfilePage();
+            if (window.Router?.currentRoute === 'profile') renderProfilePage();
         }
 
-        export function updateBookmarkButton(url) {
+export function updateBookmarkButton(url) {
             const btn = document.getElementById('playerBookmarkBtn');
             if (!btn) return;
             const bookmarks = Storage.getBookmarks();
@@ -389,7 +389,7 @@ import { escapeHtml } from '../utils/helpers.js';
                 '<i class="fas fa-heart"></i>';
         }
 
-        export function toggleBookmark() {
+export function toggleBookmark() {
             const url = playerPageCurrentAnimeUrl;
             if (!url) { showToast('Немає аніме для закладки'); return; }
             const bookmarks = Storage.getBookmarks();
@@ -399,7 +399,7 @@ import { escapeHtml } from '../utils/helpers.js';
                 Storage.setBookmarks(bookmarks);
                 showToast('Видалено з закладок');
                 updateBookmarkButton(url);
-                if (Router.currentRoute === 'profile') renderProfilePage();
+                if (window.Router?.currentRoute === 'profile') renderProfilePage();
                 return;
             }
             const anime = playerPageAnime;
@@ -417,6 +417,9 @@ import { escapeHtml } from '../utils/helpers.js';
             DailyStats.increment('bookmarksToday', 1);
             showToast('Додано до закладок');
             updateBookmarkButton(url);
-            if (Router.currentRoute === 'profile') renderProfilePage();
+            if (window.Router?.currentRoute === 'profile') renderProfilePage();
         }
 
+
+// Make openPlayerPage globally accessible
+window.openPlayerPage = openPlayerPage;

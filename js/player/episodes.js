@@ -4,17 +4,17 @@
 import { Storage } from '../storage/storage.js';
 import { safeQuery } from '../utils/dom.js';
 
-        export function updateSourceChip() {
+export function updateSourceChip() {
             const label = document.getElementById('playerSourceLabel');
             if (label) label.textContent = playerPageCurrentSource || 'Джерело';
         }
 
-        export function updateFilterChip() {
+export function updateFilterChip() {
             const chip = document.getElementById('playerFilterChip');
             if (chip) chip.textContent = `Сезон ${playerPageCurrentSeason} · ${playerPageCurrentDub}`;
         }
 
-        export function buildSeasonRow(seasons) {
+export function buildSeasonRow(seasons) {
             const row = document.getElementById('episodeSeasonRow');
             if (!row) return;
             let html = `<span class="episode-season-label">Сезон</span>`;
@@ -39,20 +39,20 @@ import { safeQuery } from '../utils/dom.js';
             });
         }
 
-        export function getCurrentEpisodes() {
+export function getCurrentEpisodes() {
             if (!playerPageAnime) return [];
             const eps = playerPageAnime.seasons?.[playerPageCurrentSeason]?.[playerPageCurrentDub] || [];
             return eps;
         }
 
-        export function getEpisodeProgress(episode) {
+export function getEpisodeProgress(episode) {
             const history = Storage.getHistory();
             const animeUrl = playerPageCurrentAnimeUrl;
             const found = history.find(h => h.url === animeUrl && h.episode === episode);
             return found ? Math.min(found.progress || 0, 100) : 0;
         }
 
-        export function buildEpisodeViews() {
+export function buildEpisodeViews() {
             const episodes = getCurrentEpisodes();
             playerPageEpisodes = episodes;
             const gridContainer = document.getElementById('episodeViewGrid');
@@ -132,12 +132,12 @@ import { safeQuery } from '../utils/dom.js';
             showViewMode(playerPageCurrentView);
         }
 
-        export function playEpisode(file, epNum) {
+export function playEpisode(file, epNum) {
 
         // ====================================================================
         //  ПОКАЗ ВИГЛЯДУ ЕПІЗОДІВ
         // ====================================================================
-        export function showViewMode(mode) {
+export function showViewMode(mode) {
             const grid = document.getElementById('episodeViewGrid');
             const compact = document.getElementById('episodeViewCompact');
             const classic = document.getElementById('episodeViewClassic');

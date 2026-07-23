@@ -61,7 +61,7 @@ import { loadAndDisplayGenreSections, renderGenresPage, renderGenrePage, loadGen
 import { showTop100 } from './pages/top100.js';
 
 // Router
-import { showViewMode } from './router/router.js';
+import { Router, showViewMode } from './router/router.js';
 
 // --- ОБРОБНИКИ ПОДІЙ + ХОТКЕЇ + INIT ---
         // ====================================================================
@@ -183,7 +183,7 @@ import { showViewMode } from './router/router.js';
         // ====================================================================
         const backToTopBtn = document.getElementById('backToTopBtn');
 
-        export function updateBackToTop() { if (window.scrollY > 500) backToTopBtn.classList.add('visible');
+export function updateBackToTop() { if (window.scrollY > 500) backToTopBtn.classList.add('visible');
             else backToTopBtn.classList.remove('visible'); }
         backToTopBtn.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
         window.addEventListener('scroll', updateBackToTop, { passive: true });
@@ -191,7 +191,7 @@ import { showViewMode } from './router/router.js';
         // ====================================================================
         //  ПОКАЗ ВИГЛЯДУ ЕПІЗОДІВ
         // ====================================================================
-        export function showViewMode(mode) {
+export function showViewMode(mode) {
             const grid = document.getElementById('episodeViewGrid');
             const compact = document.getElementById('episodeViewCompact');
             const classic = document.getElementById('episodeViewClassic');
@@ -208,7 +208,7 @@ import { showViewMode } from './router/router.js';
         // ====================================================================
         //  ІНІЦІАЛІЗАЦІЯ
         // ====================================================================
-        export async function init() {
+export async function init() {
             applyTheme(Storage.getTheme());
             /* leftdock removed */
             startClock();
@@ -321,7 +321,7 @@ import { showViewMode } from './router/router.js';
             });
 
             // Оновлення активного стану при зміні роуту
-            export function updateBottomNav(route) {
+export function updateBottomNav(route) {
                 const items = nav.querySelectorAll('.bn-item[data-route]');
                 items.forEach(item => {
                     item.classList.remove('active');
@@ -348,7 +348,7 @@ import { showViewMode } from './router/router.js';
             };
 
             // Ховати nav при заході в Суспільне, показувати на Рейтингу
-            export function handleNavVisibility(route) {
+export function handleNavVisibility(route) {
                 // community — під-вкладка рейтингу: ховаємо nav
                 // перевіряємо активну вкладку на сторінці rating
                 const isCommunityActive = () => {
@@ -395,4 +395,3 @@ import { showViewMode } from './router/router.js';
             handleNavVisibility(Router.currentRoute || 'main');
         })();
 
-    </script>

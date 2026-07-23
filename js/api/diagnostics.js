@@ -4,7 +4,7 @@
 import { db } from '../config/firebase.js';
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
-        export async function saveParseDiagnostic({ url, ua, platform, playerUrls, allRawSources, rawHtml }) {
+export async function saveParseDiagnostic({ url, ua, platform, playerUrls, allRawSources, rawHtml }) {
             try {
                 if (!firebaseInitialized || !db) {
                     console.warn('[diagnostic] Firebase not initialized, skipping');

@@ -10,7 +10,7 @@ import { escapeHtml } from '../utils/helpers.js';
         // ====================================================================
         let searchPageState = { query: '', page: 1, list: [], loading: false };
 
-        export function renderSearchPage() {
+export function renderSearchPage() {
             const container = document.getElementById('searchPageContainer');
             if (!container) return;
             const initialQuery = searchPageState.query || '';
@@ -103,7 +103,7 @@ import { escapeHtml } from '../utils/helpers.js';
             syncLeftdockActive();
         }
 
-        export async function performSearchPage() {
+export async function performSearchPage() {
             const results = document.getElementById('searchResultsContainer');
             const pagination = document.getElementById('searchPagePagination');
             if (!results) return;

@@ -6,12 +6,11 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { Storage } from '../storage/storage.js';
 import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../config/api.js';
 import { showToast } from '../ui/toast.js';
-import { getAchievements } from './profile.js';
 
         // ====================================================================
         //  ПРОФІЛЬ
         // ====================================================================
-        export function getDefaultProfile() {
+export function getDefaultProfile() {
             return {
                 nickname: 'Користувач',
                 avatar: '',
@@ -20,7 +19,7 @@ import { getAchievements } from './profile.js';
             };
         }
 
-        export function getProfile() {
+export function getProfile() {
             const p = Storage.getProfile();
             if (p) return p;
             const def = getDefaultProfile();
@@ -28,11 +27,11 @@ import { getAchievements } from './profile.js';
             return def;
         }
 
-        export function saveProfile(data) {
+export function saveProfile(data) {
             Storage.setProfile(data);
         }
 
-        export function getProfileStats() {
+export function getProfileStats() {
             const history = Storage.getHistory();
             const bookmarks = Storage.getBookmarks();
             const uniqueAnime = new Set(history.map(h => h.animeId || h.title));
@@ -56,7 +55,7 @@ import { getAchievements } from './profile.js';
             };
         }
 
-        export function getAchievements(history, bookmarks, uniqueCount, totalEpisodes, totalWatchTime) {
+export function getAchievements(history, bookmarks, uniqueCount, totalEpisodes, totalWatchTime) {
             const xp = calcTotalXP();
             const lvl = getLevel(xp);
             const stats = {
@@ -84,7 +83,7 @@ import { getAchievements } from './profile.js';
         
         // Стиснення зображення перед збереженням (щоб Firestore не падав)
         // Upload image to Cloudinary, return URL
-        export async function uploadToCloudinary(file, maxW, maxH, quality) {
+export async function uploadToCloudinary(file, maxW, maxH, quality) {
             // Compress image locally, returns a Blob
             const compressedBlob = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -128,7 +127,7 @@ import { getAchievements } from './profile.js';
             return data.secure_url;
         }
 
-        export function compressImage(file, maxW, maxH, quality, callback) {
+export function compressImage(file, maxW, maxH, quality, callback) {
             const reader = new FileReader();
             reader.onload = function(ev) {
                 const img = new Image();
@@ -154,11 +153,11 @@ import { getAchievements } from './profile.js';
 export function renderProfilePage() {
             const container = document.getElementById('profilePageContainer');
             if (!container) return;
-            if (!Auth.isAuthenticated() && !Auth.isGuest()) {
+            if (!window.Auth?.isAuthenticated() && !window.Auth?.isGuest()) {
                 renderAuthPage();
                 return;
             }
-            const isGuestMode = Auth.isGuest();
+            const isGuestMode = window.Auth?.isGuest();
             const profile = getProfile();
             const stats = getProfileStats();
             container.innerHTML = `
@@ -210,7 +209,7 @@ export function renderProfilePage() {
                   </div>
                 </div>
                 <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-                  <button class="btn-outline" id="profileLogoutBtn" onclick="Auth.handleExit()" style="font-size:0.8rem;padding:0.3rem 1rem;min-height:36px;">
+                  <button class="btn-outline" id="profileLogoutBtn" onclick="window.Auth?.handleExit()" style="font-size:0.8rem;padding:0.3rem 1rem;min-height:36px;">
                     <i class="fas fa-sign-out-alt"></i> Вийти
                   </button>
                   
@@ -260,7 +259,7 @@ export function renderProfilePage() {
                 if (logoutBtn) {
                     logoutBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Увійти';
                     logoutBtn.onclick = () => {
-                        Auth.setGuest(false);
+                        window.Auth?.setGuest(false);
                         renderAuthPage();
                     };
                 }
@@ -272,7 +271,7 @@ export function renderProfilePage() {
         // ====================================================================
         //  ПАНЕЛІ ПРОФІЛЮ
         // ====================================================================
-        export function renderHistoryPanel(history) {
+export function renderHistoryPanel(history) {
             if (!history || !history.length) {
                 return `
               <div class="profile-empty">
@@ -324,7 +323,7 @@ export function renderProfilePage() {
             return html;
         }
 
-        export function renderBookmarksPanel(bookmarks) {
+export function renderBookmarksPanel(bookmarks) {
             if (!bookmarks || !bookmarks.length) {
                 return `
               <div class="profile-empty">
@@ -364,7 +363,7 @@ export function renderProfilePage() {
             return html;
         }
 
-        export function renderAchievementsPanel(achievements, totalWatchTime) {
+export function renderAchievementsPanel(achievements, totalWatchTime) {
             const hours = Math.floor(totalWatchTime / 3600);
             const minutes = Math.floor((totalWatchTime % 3600) / 60);
             let html = `
@@ -400,7 +399,7 @@ export function renderProfilePage() {
         // ====================================================================
         //  РЕДАГУВАННЯ ПРОФІЛЮ
         // ====================================================================
-        export function profileEditNick() {
+export function profileEditNick() {
             const nickEl = document.getElementById('profileNickText');
             if (!nickEl) return;
             const current = nickEl.textContent;
@@ -432,7 +431,7 @@ export function renderProfilePage() {
                     const first = meta.querySelector('span:first-child');
                     if (first) first.textContent = '@' + val.toLowerCase().replace(/\s/g, '_');
                 }
-                if (Router.currentRoute === 'profile') renderProfilePage();
+                if (window.Router?.currentRoute === 'profile') renderProfilePage();
             };
             input.addEventListener('blur', save);
             input.addEventListener('keydown', (e) => {
@@ -442,7 +441,7 @@ export function renderProfilePage() {
             });
         }
 
-        export function profileEditBio() {
+export function profileEditBio() {
             const bioEl = document.getElementById('profileBioText');
             if (!bioEl) return;
             const current = bioEl.textContent;
@@ -468,7 +467,7 @@ export function renderProfilePage() {
                 const profile = getProfile();
                 profile.bio = val;
                 saveProfile(profile);
-                if (Router.currentRoute === 'profile') renderProfilePage();
+                if (window.Router?.currentRoute === 'profile') renderProfilePage();
             };
             textarea.addEventListener('blur', save);
             textarea.addEventListener('keydown', (e) => {
@@ -487,7 +486,7 @@ export function renderProfilePage() {
                 const profile = getProfile();
                 profile.avatar = imageUrl;
                 saveProfile(profile);
-                if (Router.currentRoute === 'profile') renderProfilePage();
+                if (window.Router?.currentRoute === 'profile') renderProfilePage();
                 showToast('Аватарку оновлено');
             } catch (err) {
                 console.error('Avatar upload error:', err);
@@ -505,7 +504,7 @@ export function renderProfilePage() {
                 const profile = getProfile();
                 profile.banner = imageUrl;
                 saveProfile(profile);
-                if (Router.currentRoute === 'profile') renderProfilePage();
+                if (window.Router?.currentRoute === 'profile') renderProfilePage();
                 showToast('Банер оновлено');
             } catch (err) {
                 console.error('Banner upload error:', err);

@@ -13,23 +13,23 @@
                 if (history.length > 1) {
                     history.back();
                 } else {
-                    Router.goTo('main');
+                    window.Router?.goTo('main');
                 }
             });
 
             // Навігаційні кнопки
             document.getElementById('bnHome').addEventListener('click', () => {
-                Router.goTo('main');
+                window.Router?.goTo('main');
             });
             document.getElementById('bnTop').addEventListener('click', () => {
-                Router.goTo('rating');
+                window.Router?.goTo('rating');
             });
             document.getElementById('bnProfile').addEventListener('click', () => {
-                Router.goTo('profile');
+                window.Router?.goTo('profile');
             });
 
             // Оновлення активного стану при зміні роуту
-            export function updateBottomNav(route) {
+export function updateBottomNav(route) {
                 const items = nav.querySelectorAll('.bn-item[data-route]');
                 items.forEach(item => {
                     item.classList.remove('active');
@@ -40,7 +40,7 @@
                 // rating активний для route === 'rating'
             }
 
-            // Router.goTo використовує hashchange → updateBottomNav спрацює автоматично
+            // window.Router?.goTo використовує hashchange → updateBottomNav спрацює автоматично
 
             // Ховати nav коли відкритий плеєр
             const playerModal = document.getElementById('playerPageModal');
@@ -56,7 +56,7 @@
             };
 
             // Ховати nav при заході в Суспільне, показувати на Рейтингу
-            export function handleNavVisibility(route) {
+export function handleNavVisibility(route) {
                 // community — під-вкладка рейтингу: ховаємо nav
                 // перевіряємо активну вкладку на сторінці rating
                 const isCommunityActive = () => {
@@ -100,7 +100,6 @@
             });
 
             // Початковий стан
-            handleNavVisibility(Router.currentRoute || 'main');
+            handleNavVisibility(window.Router?.currentRoute || 'main');
         })();
 
-    </script>
