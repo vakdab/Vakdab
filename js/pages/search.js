@@ -165,10 +165,12 @@ export async function performSearchPage() {
             }
         }
 
-        window.changeSearchPage = (p) => {
+        export function changeSearchPage(p) {
             if (p < 1) return;
             searchPageState.page = p;
             window.scrollTo({ top: 0, behavior: 'smooth' });
             performSearchPage();
-        };
+        }
+
+        window.changeSearchPage = changeSearchPage;
 

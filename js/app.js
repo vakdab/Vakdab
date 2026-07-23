@@ -53,11 +53,11 @@ import { getAchievements, getMyEarnedAchievements } from './features/achievement
 
 // Pages
 import { fetchContent, showSkeleton, loadContent, renderCards, renderPagination, openRandomAnime } from './pages/home.js';
-import { renderSearchPage, performSearchPage } from './pages/search.js';
+import { renderSearchPage, performSearchPage, changeSearchPage } from './pages/search.js';
 import { renderSettingsPage } from './pages/settings.js';
 import { getDefaultProfile, getProfile, saveProfile, getProfileStats, renderProfilePage, renderHistoryPanel, renderBookmarksPanel, renderAchievementsPanel, profileEditNick, profileEditBio, uploadToCloudinary, compressImage } from './pages/profile.js';
 import { renderAuthPage, setAuthMode } from './pages/auth-page.js';
-import { loadAndDisplayGenreSections, renderGenresPage, renderGenrePage, loadGenrePageContent } from './pages/genres.js';
+import { loadAndDisplayGenreSections, renderGenresPage, renderGenrePage, loadGenrePageContent, changeGenrePage } from './pages/genres.js';
 import { showTop100 } from './pages/top100.js';
 
 // Router
@@ -67,7 +67,7 @@ import { Router, showViewMode } from './router/router.js';
         // ====================================================================
         //  ОБРОБНИКИ ПОДІЙ
         // ====================================================================
-        document.getElementById('bnMenu')?.addEventListener('click', (e) => { e.stopPropagation();
+        document.getElementById('navMenu')?.addEventListener('click', (e) => { e.stopPropagation();
             Router.goTo('genres'); });
 
         document.getElementById('searchCircleBtn').addEventListener('click', () => {
@@ -267,7 +267,7 @@ export async function init() {
         window.performSearchPage = performSearchPage;
         window.changeSearchPage = changeSearchPage;
         window.renderSettingsPage = renderSettingsPage;
-        window.openSearchPage = openSearchPage;
+
         window.openBottomSheet = openBottomSheet;
         window.closeBottomSheet = closeBottomSheet;
         window.toggleLike = toggleLike;
@@ -284,7 +284,7 @@ export async function init() {
             if (!nav) return;
 
             // Кнопка назад
-            document.getElementById('bnBack').addEventListener('click', () => {
+            document.getElementById('navBack').addEventListener('click', () => {
                 if (history.length > 1) {
                     history.back();
                 } else {
@@ -293,13 +293,13 @@ export async function init() {
             });
 
             // Навігаційні кнопки
-            document.getElementById('bnHome').addEventListener('click', () => {
+            document.getElementById('navHome').addEventListener('click', () => {
                 Router.goTo('main');
             });
-            document.getElementById('bnTop').addEventListener('click', () => {
+            document.getElementById('navRating').addEventListener('click', () => {
                 Router.goTo('rating');
             });
-            document.getElementById('bnProfile').addEventListener('click', () => {
+            document.getElementById('navProfile').addEventListener('click', () => {
                 Router.goTo('profile');
             });
 

@@ -188,10 +188,12 @@ import { loadGenres } from '../ui/leftdock.js';
             }
         }
 
-        window.changeGenrePage = (p) => {
+        export function changeGenrePage(p) {
             if (p < 1) return;
             genrePageState.page = p;
             window.scrollTo({ top: 0, behavior: 'smooth' });
             loadGenrePageContent();
-        };
+        }
+
+        window.changeGenrePage = changeGenrePage;
 
