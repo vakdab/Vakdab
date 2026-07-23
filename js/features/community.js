@@ -157,7 +157,7 @@ export function _setupCompose(user) {
             let pendingAchievement = null;
             let animeSearchTimer = null;
 
-export function updateInputVisibility() {
+            function updateInputVisibility() {
                 if (comPostType === 'anime') {
                     inp.style.display = 'none';
                     if (attachBtn) attachBtn.style.display = 'none';
@@ -169,7 +169,7 @@ export function updateInputVisibility() {
                 }
             }
 
-export function refreshExtra() {
+            function refreshExtra() {
                 updateInputVisibility();
                 if (!extraBox) return;
                 if (comPostType === 'anime') {
@@ -273,7 +273,7 @@ export function refreshExtra() {
                 }
             }
 
-export function doSend() {
+            function doSend() {
                 if (comPostType === 'anime' && !pendingAnime) {
                     showToast('Спочатку обери аніме для рекомендації');
                     return;
