@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>VakDab • твій аніме каталог</title>
+
+    <!-- ===== ЗОВНІШНІ ЗАЛЕЖНОСТІ ===== -->
+    <!-- Google Fonts (Inter) -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800;900&display=swap" as="style" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <!-- HLS.js -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+    <!-- Favicon -->
+    <link rel="icon" href="assets/favicon.ico" type="image/x-icon" />
+    <meta name="theme-color" content="#0d0d0d" />
+
+    <!-- OG Meta -->
+    <meta property="og:title" content="VakDab - твій аніме каталог" />
+    <meta property="og:description" content="Сучасна платформа для перегляду аніме" />
+    <meta property="og:type" content="website" />
+
+    <!-- ===== CSS ===== -->
+    <link rel="stylesheet" href="styles/variables.css" />
+    <link rel="stylesheet" href="styles/base.css" />
+    <link rel="stylesheet" href="styles/hero.css" />
+    <link rel="stylesheet" href="styles/header.css" />
+    <link rel="stylesheet" href="styles/components.css" />
+    <link rel="stylesheet" href="styles/player.css" />
+    <link rel="stylesheet" href="styles/bottom-sheet.css" />
+    <link rel="stylesheet" href="styles/rating.css" />
+    <link rel="stylesheet" href="styles/community.css" />
+    <link rel="stylesheet" href="styles/profile.css" />
+    <link rel="stylesheet" href="styles/settings.css" />
+    <link rel="stylesheet" href="styles/genres.css" />
+    <link rel="stylesheet" href="styles/navigation.css" />
+    <link rel="stylesheet" href="styles/responsive.css" />
+
+    <!-- ===== FIREBASE IMPORTMAP ===== -->
+    <script type="importmap">
+    {
+        "imports": {
+            "firebase/app": "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js",
+            "firebase/auth": "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js",
+            "firebase/firestore": "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"
+        }
+    }
+    </script>
+</head>
+<body class="appletv-agnative-topnav">
+    <!-- ===== HTML-КАРКАС (оригінальні рядки L5475-L5624) ===== -->
+    <div class="app-container" id="appRoot">
+        <header class="header">
+            <div class="header-left">
+                <div class="logo" id="logoHome" title="На головну">
+                    <div class="logo-text">
+                        <div class="logo-title-row">
+                            <h1>VakDab</h1>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="search-circle-btn" id="searchCircleBtn" title="Пошук (/)">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="agnative-topnav-clock" id="agnativeTopnavClock">00:00</div>
+        </header>
+
+        <div class="hero-wrapper" id="heroWrapper">
+            <div id="heroSlidesContainer"></div>
+            <button class="hero-nav hero-nav-prev" id="heroPrevBtn" aria-label="Попередній"><i class="fas fa-chevron-left"></i></button>
+            <button class="hero-nav hero-nav-next" id="heroNextBtn" aria-label="Наступний"><i class="fas fa-chevron-right"></i></button>
+            <div class="hero-dots" id="heroDots"></div>
+            <div class="hero-progress-bar"><div class="hero-progress-fill" id="heroProgressFill"></div></div>
+        </div>
+
+        <div class="actions-row" id="actionsRow">
+            <button class="action-pill" id="top100Btn" title="ТОП 100 аніме"><i class="fas fa-crown"></i> ТОП 100</button>
+            <button class="action-pill" id="randomBtn" title="Випадкове аніме (R)"><i class="fas fa-dice-d6"></i> Випадкове</button>
+        </div>
+
+        <div id="genreSectionsContainer"></div>
+        <div id="animeContainer" class="anime-grid" style="display:none;">
+            <div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження аніме...</div>
+        </div>
+
+        <div id="searchPageContainer"></div>
+        <div id="settingsPageContainer"></div>
+        <div id="profilePageContainer"></div>
+        <div id="genrePageContainer"></div>
+        <div id="genresPageContainer"></div>
+        <div id="ratingPageContainer"></div>
+
+        <div class="pagination-row" id="paginationRow"></div>
+
+        <footer><span>VAKDAB 2026 — Усі права захищено • Клавіші: / пошук, M меню, T тема, R випадкове, Esc закрити</span></footer>
+    </div>
+
+    <button class="back-to-top" id="backToTopBtn" title="Нагору" aria-label="Прокрутити нагору">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- Player Modal -->
+    <div id="playerPageModal" class="modal" role="dialog" aria-modal="true">
+        <div class="modal-content">
+            <div class="player-blur-bg" id="playerBlurBg"></div>
+            <div class="player-topbar">
+                <button class="player-back-btn" id="closePlayerPageBtn" title="Назад">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="player-topbar-title" id="playerTopbarTitle"></div>
+                <div class="player-source-chip" id="playerSourceChip" title="Джерело">
+                    <span class="dot"></span>
+                    <span id="playerSourceLabel">Джерело</span>
+                </div>
+                <button class="player-filter-btn" id="playerFilterBtn" title="Фільтр">
+                    <i class="fas fa-sliders-h"></i>
+                    <span class="player-filter-chip" id="playerFilterChip">Сезон 1</span>
+                </button>
+            </div>
+            <div class="player-poster-block" id="playerPosterBlock">
+                <img class="poster-img" id="playerPosterImg" src="" alt="" />
+                <div class="poster-title" id="playerPosterTitle"></div>
+                <div class="poster-meta" id="playerPosterMeta"></div>
+                <div class="poster-synopsis" id="playerSynopsis"></div>
+                <button class="synopsis-more-btn" id="synopsisMoreBtn">більше</button>
+                <div class="player-actions-block">
+                    <button class="like-btn" id="likeBtn" title="Лайк"><i class="fas fa-thumbs-up"></i></button>
+                    <button class="dislike-btn" id="dislikeBtn" title="Дизлайк"><i class="fas fa-thumbs-down"></i></button>
+                    <button class="player-bookmark-btn" id="playerBookmarkBtn" title="Додати до закладок">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="player-video-container" id="playerVideoContainer">
+                <div id="playerPageVideo" style="width:100%;height:100%;min-height:200px;position:relative;"></div>
+                <button class="player-fullscreen-btn" id="playerFullscreenBtn" title="Повний екран" style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,0.5);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;">
+                    <i class="fas fa-expand" style="font-size:16px;"></i>
+                </button>
+            </div>
+            <div class="episode-panel" id="episodePanel">
+                <div class="episode-glass-panel">
+                    <div class="episode-view-tabs" id="episodeViewTabs">
+                        <button class="episode-view-tab active" data-view="grid">Сітка</button>
+                        <button class="episode-view-tab" data-view="compact">Компактний</button>
+                        <button class="episode-view-tab" data-view="classic">Класичний</button>
+                    </div>
+                    <div class="episode-season-row" id="episodeSeasonRow">
+                        <span class="episode-season-label">Сезон</span>
+                    </div>
+                    <div id="episodeViewGrid" class="episode-grid-view"></div>
+                    <div id="episodeViewCompact" class="episode-compact-view hidden"></div>
+                    <div id="episodeViewClassic" class="episode-classic-view hidden"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Sheet -->
+    <div class="bottom-sheet-overlay" id="bottomSheetOverlay">
+        <div class="bottom-sheet" id="bottomSheet">
+            <div class="bottom-sheet-handle"></div>
+            <div class="bottom-sheet-title" id="bsTitle">Фільтри</div>
+            <div class="bottom-sheet-section" id="bsSourceSection">
+                <div class="bottom-sheet-section-title">Джерело</div>
+                <div id="bsSourceList"></div>
+            </div>
+            <div class="bottom-sheet-section" id="bsQualitySection">
+                <div class="bottom-sheet-section-title">Якість</div>
+                <div class="bottom-sheet-quality-row" id="bsQualityRow"></div>
+            </div>
+            <div class="bottom-sheet-section" id="bsDubSection">
+                <div class="bottom-sheet-section-title">Озвучка</div>
+                <div id="bsDubList"></div>
+            </div>
+            <div class="bottom-sheet-section" id="bsSeasonSection">
+                <div class="bottom-sheet-section-title">Сезон</div>
+                <div id="bsSeasonList"></div>
+            </div>
+            <button class="bottom-sheet-apply" id="bsApplyBtn">Застосувати</button>
+        </div>
+    </div>
+
+    <input type="file" id="avatarFileInput" class="hidden-file-input" accept="image/*" />
+    <input type="file" id="bannerFileInput" class="hidden-file-input" accept="image/*" />
+
+    <!-- ===== JS ===== -->
+    <script type="module" src="js/app.js"></script>
+
+    <!-- ===== BOTTOM NAV ===== -->
+    <nav class="bottom-nav" id="bottomNav" role="navigation" aria-label="Навігація">
+        <!-- Назад -->
+        <button class="bottom-nav-item" id="navBack" title="Назад">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <!-- Головна -->
+        <button class="bottom-nav-item" id="navHome" title="Головна">
+            <i class="fas fa-home"></i>
+        </button>
+        <!-- Рейтинг -->
+        <button class="bottom-nav-item" id="navRating" title="Рейтинг">
+            <i class="fas fa-trophy"></i>
+        </button>
+        <!-- Профіль -->
+        <button class="bottom-nav-item" id="navProfile" title="Профіль">
+            <i class="fas fa-user"></i>
+        </button>
+        <!-- Меню -->
+        <button class="bottom-nav-item" id="navMenu" title="Меню">
+            <i class="fas fa-bars"></i>
+        </button>
+    </nav>
+</body>
+</html>
