@@ -192,7 +192,27 @@
     <input type="file" id="bannerFileInput" class="hidden-file-input" accept="image/*" />
 
     <!-- ===== JS ===== -->
-    <script type="module" src="js/app.js?v=2"></script>
+    <script>
+window.__errors = [];
+window.addEventListener('error', function(e) {
+    window.__errors.push({
+        message: e.message,
+        filename: e.filename,
+        lineno: e.lineno,
+        colno: e.colno,
+        error: e.error ? e.error.stack : null
+    });
+    console.error('CAPTURED:', e.message, e.filename, e.lineno);
+});
+window.addEventListener('unhandledrejection', function(e) {
+    window.__errors.push({
+        type: 'unhandledrejection',
+        message: e.reason ? (e.reason.message || e.reason) : 'unknown',
+        stack: e.reason ? (e.reason.stack || null) : null
+    });
+});
+</script>
+<script type="module" src="js/app.js?v=3"></script>
 
     <!-- ===== BOTTOM NAV ===== -->
     <nav class="bottom-nav" id="bottomNav" role="navigation" aria-label="Навігація">
