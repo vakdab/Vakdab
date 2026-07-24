@@ -1,0 +1,88 @@
+/* === Налаштування === (оригінальні рядки пошук за селекторами) */
+        .settings-page-header {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+        }
+        .settings-page-header h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--text);
+        }
+        @media (min-width:480px) {
+
+            .settings-page-header h2 { font-size: 1.6rem; }
+}
+        @media (min-width:768px) {
+
+            .settings-page-header h2 { font-size: 1.8rem; }
+}
+        .settings-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            padding: 1.2rem 1.4rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all var(--transition);
+        }
+        @media (min-width:480px) {
+
+            .settings-card { padding: 1.4rem 1.8rem; }
+}
+        .settings-card:hover {
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-md);
+        }
+        .settings-card-left {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        .settings-card-left i {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+            width: 2rem;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .settings-card-left .label {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+        .settings-card-left .desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .settings-toggle-btn {
+            background: var(--tag-bg);
+            border: 2px solid var(--border);
+            color: var(--text);
+            border-radius: var(--radius-xl);
+            padding: 0.4rem 1rem;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            min-height: 44px;
+        }
+        .settings-toggle-btn:hover {
+            background: var(--accent);
+            color: var(--accent-text);
+            border-color: var(--accent);
+            transform: scale(1.04);
+            box-shadow: 0 4px 16px var(--accent-glow);
+        }
+        .settings-toggle-btn .theme-icon {
+            font-size: 0.9rem;
+        }
