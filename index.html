@@ -5393,8 +5393,8 @@
                     <div class="hero-slide-bg" style="background: linear-gradient(135deg, #1a1a1a, #2d2d2d);"></div>
                     <div class="hero-slide-overlay"></div>
                     <div class="hero-slide-content">
-                        <div class="hero-slide-title">VakDab — твій аніме-простір</div>
-                        <div class="hero-slide-desc">Завантаження даних тимчасово недоступне. Увійдіть для перегляду улюблених тайтлів.</div>
+                        <div class="hero-slide-title">Завантаження аніме...</div>
+                        <div class="hero-slide-desc">Готуємо для вас найкращі аніме...</div>
                         <div class="hero-slide-tags">
                             <span class="hero-tag">У розробці</span>
                             <span class="hero-tag genre-tag">Аніме</span>
@@ -5425,9 +5425,8 @@
 
         <div id="genreSectionsContainer">
             <div class="loader" style="grid-column:1/-1; padding: 3rem 1rem;">
-                <i class="fas fa-info-circle"></i>
-                <p>Дані аніме тимчасово не завантажуються.</p>
-                <p style="font-size:0.8rem; margin-top:0.5rem; color:var(--text-muted);">Скористайтеся пошуком або особистими закладками.</p>
+                <i class="fas fa-spinner fa-pulse" style="font-size:1.5rem;"></i>
+                <p style="margin-top:0.5rem;">Завантаження аніме з TMDB...</p>
             </div>
         </div>
         <div id="animeContainer" class="anime-grid" style="display:none;"></div>
@@ -5596,6 +5595,153 @@
         // ====================================================================
         const CLOUDINARY_CLOUD_NAME = 'w1a1sqp0';
         const CLOUDINARY_UPLOAD_PRESET = 'VakDab';
+
+        // ====================================================================
+        //  TMDB API КОНФІГУРАЦІЯ
+        // ====================================================================
+        const TMDB_API_KEY = '38fef08bc6a49bdd5a69c336d34a7954';
+        const TMDB_BASE = 'https://api.themoviedb.org/3';
+        const TMDB_IMG = 'https://image.tmdb.org/t/p';
+        const ANIME_KW = '210024|287501';
+        const ANIME_GENRE_ID = 16;
+
+        const ANIME_SECTIONS = [
+            { id: 'popular',      title: 'Популярне зараз',       genres: '16',        sort: 'popularity.desc' },
+            { id: 'top_rated',    title: 'Найвищий рейтинг',      genres: '16',        sort: 'vote_average.desc', extra: '&vote_count.gte=100' },
+            { id: 'action',       title: 'Екшн та пригоди',        genres: '16,10759',  sort: 'popularity.desc' },
+            { id: 'comedy',        title: 'Комедії',               genres: '16,35',     sort: 'popularity.desc' },
+            { id: 'drama',         title: 'Драма',                 genres: '16,18',     sort: 'popularity.desc' },
+            { id: 'scifi',         title: 'Sci-Fi та фентезі',     genres: '16,10765',  sort: 'popularity.desc' },
+            { id: 'mystery',       title: 'Містика',               genres: '16,9648',   sort: 'popularity.desc' },
+            { id: 'airing_today',  title: 'Зараз у ефірі',         genres: '16',        sort: 'popularity.desc', extra: '&air_date.gte=2026-07-01' },
+        ];
+
+        const ANIME_GENRE_LIST = [
+            { id: 10759, name: 'Екшн та пригоди' },
+            { id: 35,    name: 'Комедія' },
+            { id: 18,    name: 'Драма' },
+            { id: 10765, name: 'Sci-Fi та фентезі' },
+            { id: 9648,  name: 'Містика' },
+            { id: 10751, name: 'Сімейне' },
+            { id: 80,    name: 'Кримінал' },
+        ];
+
+        async function tmdbFetch(endpoint, params = {}) {
+            const url = new URL(TMDB_BASE + endpoint);
+            url.searchParams.set('api_key', TMDB_API_KEY);
+            url.searchParams.set('language', 'en-US');
+            url.searchParams.set('include_adult', 'false');
+            for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+            const resp = await fetch(url.toString());
+            if (!resp.ok) throw new Error('TMDB: ' + resp.status);
+            return resp.json();
+        }
+
+        async function fetchAnimeSection(section, page = 1) {
+            let url = TMDB_BASE + '/discover/tv?api_key=' + TMDB_API_KEY +
+                '&language=en-US&include_adult=false' +
+                '&with_genres=' + section.genres +
+                '&with_keywords=' + ANIME_KW +
+                '&sort_by=' + section.sort +
+                '&page=' + page;
+            if (section.extra) url += section.extra;
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error('TMDB: ' + resp.status);
+            return resp.json();
+        }
+
+        async function searchAnime(query, page = 1) {
+            return tmdbFetch('/search/tv', { query, page });
+        }
+
+        async function fetchAnimeDetail(id) {
+            return tmdbFetch('/tv/' + id, { append_to_response: 'recommendations' });
+        }
+
+        function tmdbPoster(path, size = 'w342') {
+            return path ? TMDB_IMG + '/' + size + path : '';
+        }
+
+        function tmdbBackdrop(path, size = 'original') {
+            return path ? TMDB_IMG + '/' + size + path : '';
+        }
+
+        function tmdbYear(dateStr) {
+            return dateStr ? dateStr.substring(0, 4) : '';
+        }
+
+        function createAnimeCard(item) {
+            const poster = tmdbPoster(item.poster_path);
+            const title = item.name || item.title || 'Невідомо';
+            const year = tmdbYear(item.first_air_date || item.release_date);
+            const rating = (item.vote_average || 0).toFixed(1);
+            return `<div class="anime-card" onclick="openAnimeDetail(${item.id})" data-id="${item.id}">
+                <div class="anime-poster">
+                    ${poster ? `<img src="${poster}" alt="${title}" loading="lazy" onerror="this.style.display='none';this.parentElement.style.background='var(--border-light)';">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:0.8rem;">Немає постера</div>`}
+                    <div style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.7);color:#fff;font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:50px;backdrop-filter:blur(4px);">★ ${rating}</div>
+                </div>
+                <div style="padding:0.5rem 0.6rem;">
+                    <div style="font-size:0.82rem;font-weight:600;color:var(--text);line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${title}</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.2rem;">${year || '—'}</div>
+                </div>
+            </div>`;
+        }
+
+        function createSkeletonCard() {
+            return `<div class="anime-card" style="animation:skeletonShimmer 1.5s infinite linear;background:var(--border-light);min-height:200px;"></div>`;
+        }
+
+        async function openAnimeDetail(id) {
+            const modal = document.getElementById('playerPageModal');
+            if (!modal) return;
+            modal.classList.add('active');
+            document.getElementById('playerTopbarTitle').textContent = 'Завантаження...';
+            document.getElementById('playerSourceLabel').textContent = 'TMDB';
+            try {
+                const data = await fetchAnimeDetail(id);
+                const title = data.name || data.original_name || 'Аніме';
+                const backdrop = tmdbBackdrop(data.backdrop_path);
+                const poster = tmdbPoster(data.poster_path, 'w500');
+                const year = tmdbYear(data.first_air_date);
+                const rating = (data.vote_average || 0).toFixed(1);
+                const overview = data.overview || 'Опис недоступний.';
+                const genres = (data.genres || []).map(g => g.name).join(' • ');
+                const episodes = data.number_of_episodes || '?';
+                const seasons = data.number_of_seasons || '?';
+                const status = data.status || '';
+                document.getElementById('playerTopbarTitle').textContent = title;
+                const blur = document.getElementById('playerBlurBg');
+                if (blur && backdrop) blur.style.backgroundImage = `url(${backdrop})`;
+                const vc = document.getElementById('playerVideoContainer');
+                if (vc) {
+                    vc.innerHTML = `
+                        <div style="width:100%;height:auto;background:var(--surface);border-radius:var(--radius);overflow:hidden;">
+                            ${backdrop ? `<div style="width:100%;height:280px;background-image:url(${backdrop});background-size:cover;background-position:center top;position:relative;"><div style="position:absolute;inset:0;background:linear-gradient(to top,var(--surface),transparent);"></div></div>` : ''}
+                            <div style="padding:1.5rem;display:flex;gap:1.5rem;flex-wrap:wrap;">
+                                ${poster ? `<img src="${poster}" style="width:140px;border-radius:var(--radius-sm);box-shadow:var(--shadow-md);flex-shrink:0;" alt="${title}">` : ''}
+                                <div style="flex:1;min-width:200px;">
+                                    <h2 style="font-size:1.5rem;font-weight:800;margin-bottom:0.5rem;">${title}</h2>
+                                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.8rem;">
+                                        <span style="background:var(--accent);color:var(--accent-text);padding:4px 12px;border-radius:50px;font-size:0.8rem;font-weight:700;">★ ${rating}</span>
+                                        <span style="background:var(--tag-bg);color:var(--text-secondary);padding:4px 12px;border-radius:50px;font-size:0.8rem;">${year}</span>
+                                        <span style="background:var(--tag-bg);color:var(--text-secondary);padding:4px 12px;border-radius:50px;font-size:0.8rem;">${seasons} сез.</span>
+                                        <span style="background:var(--tag-bg);color:var(--text-secondary);padding:4px 12px;border-radius:50px;font-size:0.8rem;">${episodes} еп.</span>
+                                        ${status ? `<span style="background:var(--tag-bg);color:var(--text-secondary);padding:4px 12px;border-radius:50px;font-size:0.8rem;">${status}</span>` : ''}
+                                    </div>
+                                    ${genres ? `<p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.8rem;font-weight:500;">${genres}</p>` : ''}
+                                    <p style="font-size:0.9rem;line-height:1.6;color:var(--text);">${overview}</p>
+                                </div>
+                            </div>
+                            ${(data.recommendations?.results || []).length > 0 ? `<div style="padding:0 1.5rem 1.5rem;"><h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.8rem;">Рекомендуємо</h3><div style="display:flex;gap:0.8rem;overflow-x:auto;padding-bottom:0.5rem;">${(data.recommendations.results.slice(0, 10)).map(r => createAnimeCard(r)).join('')}</div></div>` : ''}
+                        </div>`;
+                }
+            } catch(e) {
+                console.error('Detail error:', e);
+                showToast('Помилка завантаження деталей');
+                document.getElementById('playerTopbarTitle').textContent = 'Помилка';
+            }
+        }
+        window.openAnimeDetail = openAnimeDetail;
 
         // ====================================================================
         //  ІНІЦІАЛІЗАЦІЯ FIREBASE
@@ -8178,19 +8324,27 @@
         async function renderGenrePage(slug, name) {
             const container = document.getElementById('genrePageContainer');
             if (!container) return;
+            const genreId = parseInt(slug);
             container.innerHTML = `
-                <div class="genre-page-header">
-                    <h2>${name || slug}</h2>
-                </div>
-                <div id="genrePageContent" class="grid-3cols">
-                    <div class="loader" style="grid-column:1/-1;">
-                        <i class="fas fa-info-circle"></i>
-                        <p>Аніме в цьому жанрі не завантажуються.</p>
-                        <p style="font-size:0.8rem;color:var(--text-muted);">Дані відсутні. Скористайтеся пошуком або закладками.</p>
-                    </div>
-                </div>
+                <div class="genre-page-header"><h2>${name || slug}</h2></div>
+                <div id="genrePageContent" class="grid-3cols">${Array(9).fill(createSkeletonCard()).join('')}</div>
                 <div class="pagination-row" id="genrePagePagination"></div>
             `;
+            try {
+                const data = await fetchAnimeSection({ genres: '16,' + genreId, sort: 'popularity.desc' }, 1);
+                const c = document.getElementById('genrePageContent');
+                if (c) {
+                    if (data.results && data.results.length > 0) {
+                        c.innerHTML = data.results.map(item => createAnimeCard(item)).join('');
+                    } else {
+                        c.innerHTML = '<div class="loader" style="grid-column:1/-1;"><i class="fas fa-info-circle"></i><p>Аніме не знайдено.</p></div>';
+                    }
+                }
+            } catch(e) {
+                console.error('Genre page error:', e);
+                const c = document.getElementById('genrePageContent');
+                if (c) c.innerHTML = '<div class="loader" style="grid-column:1/-1;"><i class="fas fa-info-circle"></i><p>Помилка завантаження.</p></div>';
+            }
         }
 
         // ====================================================================
@@ -8200,9 +8354,7 @@
             const container = document.getElementById('searchPageContainer');
             if (!container) return;
             container.innerHTML = `
-                <div class="search-page-header">
-                    <h2>Пошук аніме</h2>
-                </div>
+                <div class="search-page-header"><h2>Пошук аніме</h2></div>
                 <div class="search-page-input-wrap">
                     <i class="fas fa-search"></i>
                     <input type="text" id="searchPageInput" placeholder="Назва аніме..." autocomplete="off" />
@@ -8211,36 +8363,54 @@
                 <div id="searchResultsContainer" class="search-results-grid">
                     <div class="search-empty">
                         <i class="fas fa-search"></i>
-                        <p>Пошук аніме тимчасово недоступний</p>
-                        <p class="sub">Скористайтеся закладками або історією переглядів.</p>
+                        <p>Введіть назву аніме для пошуку</p>
+                        <p class="sub">Пошук працює через базу TMDB</p>
                     </div>
                 </div>
                 <div class="pagination-row" id="searchPagePagination"></div>
             `;
             const input = document.getElementById('searchPageInput');
             const clearBtn = document.getElementById('searchPageClearBtn');
+            let searchTimer = null;
+            async function doSearch(query) {
+                const rc = document.getElementById('searchResultsContainer');
+                if (!rc) return;
+                if (!query || query.length < 2) {
+                    rc.innerHTML = '<div class="search-empty"><i class="fas fa-search"></i><p>Введіть назву аніме для пошуку</p><p class="sub">Пошук працює через базу TMDB</p></div>';
+                    return;
+                }
+                rc.innerHTML = Array(9).fill(createSkeletonCard()).join('');
+                try {
+                    const data = await searchAnime(query);
+                    if (data.results && data.results.length > 0) {
+                        const animeResults = data.results.filter(r => r.genre_ids && r.genre_ids.includes(16));
+                        if (animeResults.length > 0) {
+                            rc.innerHTML = animeResults.map(item => createAnimeCard(item)).join('');
+                        } else {
+                            rc.innerHTML = '<div class="search-empty"><i class="fas fa-info-circle"></i><p>Аніме не знайдено за запитом "' + query + '"</p></div>';
+                        }
+                    } else {
+                        rc.innerHTML = '<div class="search-empty"><i class="fas fa-info-circle"></i><p>Нічого не знайдено</p></div>';
+                    }
+                } catch(e) {
+                    console.error('Search error:', e);
+                    rc.innerHTML = '<div class="search-empty"><i class="fas fa-exclamation-triangle"></i><p>Помилка пошуку</p></div>';
+                }
+            }
             if (input) {
                 input.addEventListener('input', () => {
                     const q = input.value.trim();
-                    if (clearBtn) {
-                        if (q.length > 0) clearBtn.classList.add('visible');
-                        else clearBtn.classList.remove('visible');
-                    }
+                    if (clearBtn) { q.length > 0 ? clearBtn.classList.add('visible') : clearBtn.classList.remove('visible'); }
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(() => doSearch(q), 500);
                 });
                 input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        showToast('Пошук тимчасово недоступний.');
-                    }
+                    if (e.key === 'Enter') { clearTimeout(searchTimer); doSearch(input.value.trim()); }
                 });
             }
             if (clearBtn) {
                 clearBtn.addEventListener('click', () => {
-                    const inp = document.getElementById('searchPageInput');
-                    if (inp) {
-                        inp.value = '';
-                        inp.focus();
-                        clearBtn.classList.remove('visible');
-                    }
+                    if (input) { input.value = ''; input.focus(); clearBtn.classList.remove('visible'); doSearch(''); }
                 });
             }
         }
@@ -8557,14 +8727,7 @@
                 document.getElementById('genreSectionsContainer').style.display = 'flex';
                 document.getElementById('animeContainer').style.display = 'none';
                 document.getElementById('paginationRow').innerHTML = '';
-                // Заглушка
-                document.getElementById('genreSectionsContainer').innerHTML = `
-                    <div class="loader" style="grid-column:1/-1; padding: 3rem 1rem;">
-                        <i class="fas fa-info-circle"></i>
-                        <p>Дані аніме тимчасово не завантажуються.</p>
-                        <p style="font-size:0.8rem; margin-top:0.5rem; color:var(--text-muted);">Скористайтеся пошуком або особистими закладками.</p>
-                    </div>
-                `;
+                loadMainSections();
                 currentTab = 'main';
                 currentSearchQuery = '';
                 currentCategory = '';
@@ -8667,11 +8830,32 @@
             Router.goTo('search');
         });
 
-        document.getElementById('top100Btn').addEventListener('click', () => {
-            showToast('ТОП 100 тимчасово недоступний');
+        document.getElementById('top100Btn').addEventListener('click', async () => {
+            showToast('Завантажуємо ТОП 100...');
+            const c = document.getElementById('genreSectionsContainer');
+            const hero = document.getElementById('heroWrapper');
+            const actions = document.getElementById('actionsRow');
+            if (hero) hero.style.display = 'none';
+            if (actions) actions.style.display = 'none';
+            if (c) {
+                c.style.display = 'flex';
+                c.innerHTML = '<div class="loader" style="grid-column:1/-1;padding:3rem 1rem;"><i class="fas fa-spinner fa-pulse" style="font-size:1.5rem;"></i><p style="margin-top:0.5rem;">Завантаження ТОП 100...</p></div>';
+                try {
+                    const data = await fetchAnimeSection({ genres: '16', sort: 'vote_average.desc', extra: '&vote_count.gte=200' }, 1);
+                    const d2 = await fetchAnimeSection({ genres: '16', sort: 'vote_average.desc', extra: '&vote_count.gte=200' }, 2);
+                    const top100 = [...(data.results||[]), ...(d2.results||[])].slice(0, 100);
+                    c.innerHTML = '<div class="genre-section"><h2 class="genre-title"><span class="genre-name">ТОП 100 аніме</span></h2><div class="genre-carousel">' + top100.map(item => createAnimeCard(item)).join('') + '</div></div>';
+                } catch(e) { c.innerHTML = '<div class="loader" style="grid-column:1/-1;"><i class="fas fa-info-circle"></i><p>Помилка завантаження.</p></div>'; }
+            }
         });
-        document.getElementById('randomBtn').addEventListener('click', () => {
-            showToast('Випадкове аніме недоступне');
+        document.getElementById('randomBtn').addEventListener('click', async () => {
+            showToast('Шукаємо випадкове аніме...');
+            try {
+                const pg = Math.floor(Math.random() * 50) + 1;
+                const data = await fetchAnimeSection({ genres: '16', sort: 'popularity.desc' }, pg);
+                const results = data.results || [];
+                if (results.length > 0) openAnimeDetail(results[Math.floor(Math.random() * results.length)].id);
+            } catch(e) { showToast('Помилка. Спробуйте ще раз.'); }
         });
         document.getElementById('logoHome').addEventListener('click', () => Router.goTo('main'));
 
@@ -8743,23 +8927,104 @@
         // ====================================================================
         //  ІНІЦІАЛІЗАЦІЯ
         // ====================================================================
-        async function init() {
+        async 
+        // ====================================================================
+        //  HERO СЛАЙДИ + ГЛАВНІ СЕКЦІЇ (TMDB)
+        // ====================================================================
+        let heroSlides = [];
+        let heroIndex = 0;
+        let heroTimer = null;
+
+        async function loadHeroSlides() {
+            try {
+                const data = await fetchAnimeSection({ genres: '16', sort: 'popularity.desc' }, 1);
+                heroSlides = (data.results || []).slice(0, 6);
+                renderHeroSlides();
+            } catch(e) { console.error('Hero slides error:', e); }
+        }
+
+        function renderHeroSlides() {
+            const container = document.getElementById('heroSlidesContainer');
+            if (!container || heroSlides.length === 0) return;
+            container.innerHTML = heroSlides.map((item, i) => {
+                const backdrop = tmdbBackdrop(item.backdrop_path);
+                const title = item.name || item.title || '';
+                const overview = item.overview ? item.overview.substring(0, 160) + (item.overview.length > 160 ? '...' : '') : '';
+                const rating = (item.vote_average || 0).toFixed(1);
+                const year = tmdbYear(item.first_air_date);
+                return `<div class="hero-slide ${i===0?'active':''}" data-index="${i}">
+                    ${backdrop ? `<div class="hero-slide-bg" style="background-image:url('${backdrop}');"></div>` : '<div class="hero-slide-bg" style="background:linear-gradient(135deg,#1a1a1a,#2d2d2d);"></div>'}
+                    <div class="hero-slide-overlay"></div>
+                    <div class="hero-slide-content">
+                        <div class="hero-slide-title">${title}</div>
+                        ${overview ? `<div class="hero-slide-desc">${overview}</div>` : ''}
+                        <div class="hero-slide-tags"><span class="hero-tag genre-tag">Аніме</span>${year ? `<span class="hero-tag">${year}</span>` : ''}</div>
+                        <div class="hero-slide-btn-row">
+                            <button class="hero-slide-btn" onclick="openAnimeDetail(${item.id})">
+                                <span>Деталі</span><span class="btn-icon"><i class="fas fa-play"></i></span>
+                            </button>
+                            <div class="hero-rating-row">
+                                <div class="hero-rating-badge"><span class="star">★</span> ${rating}</div>
+                                ${year ? `<div class="hero-meta">${year}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+            const dots = document.getElementById('heroDots');
+            if (dots) {
+                dots.innerHTML = heroSlides.map((_, i) => `<div class="hero-dot ${i===0?'active':''}" data-index="${i}"></div>`).join('');
+                dots.querySelectorAll('.hero-dot').forEach(d => d.addEventListener('click', () => { heroIndex = parseInt(d.dataset.index); updateHeroSlide(); startHeroAutoplay(); }));
+            }
+            const hp = document.getElementById('heroPrevBtn');
+            const hn = document.getElementById('heroNextBtn');
+            if (hp) hp.onclick = () => { heroIndex = (heroIndex-1+heroSlides.length)%heroSlides.length; updateHeroSlide(); startHeroAutoplay(); };
+            if (hn) hn.onclick = () => { heroIndex = (heroIndex+1)%heroSlides.length; updateHeroSlide(); startHeroAutoplay(); };
+            startHeroAutoplay();
+        }
+
+        function updateHeroSlide() {
+            document.querySelectorAll('.hero-slide').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.hero-dot').forEach(d => d.classList.remove('active'));
+            const s = document.querySelector('.hero-slide[data-index="' + heroIndex + '"]');
+            const d = document.querySelector('.hero-dot[data-index="' + heroIndex + '"]');
+            if (s) s.classList.add('active');
+            if (d) d.classList.add('active');
+        }
+
+        function startHeroAutoplay() {
+            if (heroTimer) clearInterval(heroTimer);
+            heroTimer = setInterval(() => { heroIndex = (heroIndex+1)%heroSlides.length; updateHeroSlide(); }, 6000);
+        }
+
+        async function loadMainSections() {
+            const container = document.getElementById('genreSectionsContainer');
+            if (!container) return;
+            container.innerHTML = ANIME_SECTIONS.map(s => `
+                <div class="genre-section" id="section-${s.id}">
+                    <h2 class="genre-title"><span class="genre-name">${s.title}</span></h2>
+                    <div class="genre-carousel">${Array(6).fill(createSkeletonCard()).join('')}</div>
+                </div>
+            `).join('');
+            for (const section of ANIME_SECTIONS) {
+                try {
+                    const data = await fetchAnimeSection(section, 1);
+                    const el = document.getElementById('section-' + section.id);
+                    if (el && data.results) {
+                        const car = el.querySelector('.genre-carousel');
+                        if (car) car.innerHTML = data.results.slice(0, 18).map(item => createAnimeCard(item)).join('');
+                    }
+                } catch(e) { console.error('Section error:', section.id, e); }
+            }
+        }
+
+function init() {
             applyTheme(Storage.getTheme());
             startClock();
             updateBackToTop();
 
-            setTimeout(() => {
-                // Жанри вже містять заглушку
-                if (Router.currentRoute === 'main') {
-                    document.getElementById('genreSectionsContainer').innerHTML = `
-                        <div class="loader" style="grid-column:1/-1; padding: 3rem 1rem;">
-                            <i class="fas fa-info-circle"></i>
-                            <p>Дані аніме тимчасово не завантажуються.</p>
-                            <p style="font-size:0.8rem; margin-top:0.5rem; color:var(--text-muted);">Скористайтеся пошуком або особистими закладками.</p>
-                        </div>
-                    `;
-                }
-            }, 50);
+            loadHeroSlides();
+            loadMainSections();
 
             Auth.init();
             Router.init();
