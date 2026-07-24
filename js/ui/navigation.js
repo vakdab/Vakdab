@@ -9,7 +9,7 @@
             if (!nav) return;
 
             // Кнопка назад
-            document.getElementById('bnBack').addEventListener('click', () => {
+            document.getElementById('navBack').addEventListener('click', () => {
                 if (history.length > 1) {
                     history.back();
                 } else {
@@ -18,13 +18,13 @@
             });
 
             // Навігаційні кнопки
-            document.getElementById('bnHome').addEventListener('click', () => {
+            document.getElementById('navHome').addEventListener('click', () => {
                 window.Router?.goTo('main');
             });
-            document.getElementById('bnTop').addEventListener('click', () => {
+            document.getElementById('navRating').addEventListener('click', () => {
                 window.Router?.goTo('rating');
             });
-            document.getElementById('bnProfile').addEventListener('click', () => {
+            document.getElementById('navProfile').addEventListener('click', () => {
                 window.Router?.goTo('profile');
             });
 

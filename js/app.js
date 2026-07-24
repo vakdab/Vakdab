@@ -68,7 +68,7 @@ import { Router, showViewMode } from './router/router.js';
         // ====================================================================
         //  ОБРОБНИКИ ПОДІЙ
         // ====================================================================
-        document.getElementById('bnMenu')?.addEventListener('click', (e) => { e.stopPropagation();
+        document.getElementById('navMenu')?.addEventListener('click', (e) => { e.stopPropagation();
             Router.goTo('genres'); });
 
         document.getElementById('searchCircleBtn').addEventListener('click', () => {
@@ -285,7 +285,7 @@ export async function init() {
             if (!nav) return;
 
             // Кнопка назад
-            document.getElementById('bnBack').addEventListener('click', () => {
+            document.getElementById('navBack').addEventListener('click', () => {
                 if (history.length > 1) {
                     history.back();
                 } else {
@@ -294,13 +294,13 @@ export async function init() {
             });
 
             // Навігаційні кнопки
-            document.getElementById('bnHome').addEventListener('click', () => {
+            document.getElementById('navHome').addEventListener('click', () => {
                 Router.goTo('main');
             });
-            document.getElementById('bnTop').addEventListener('click', () => {
+            document.getElementById('navRating').addEventListener('click', () => {
                 Router.goTo('rating');
             });
-            document.getElementById('bnProfile').addEventListener('click', () => {
+            document.getElementById('navProfile').addEventListener('click', () => {
                 Router.goTo('profile');
             });
 

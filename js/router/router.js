@@ -4,11 +4,12 @@
 import { renderSearchPage } from '../pages/search.js';
 import { renderSettingsPage } from '../pages/settings.js';
 import { renderProfilePage } from '../pages/profile.js';
-import { renderGenresPage } from '../pages/genres.js';
+import { renderGenresPage, loadAndDisplayGenreSections, renderGenrePage } from '../pages/genres.js';
 import { initRatingPage } from '../features/rating.js';
 import { initCommunity } from '../features/community.js';
 // closePlayerPage accessed via window (avoids circular import)
 import { showToast } from '../ui/toast.js';
+import { syncLeftdockActive } from '../ui/leftdock.js';
 
         // ====================================================================
         //  РОУТЕР
@@ -17,7 +18,7 @@ export const Router = {
             currentRoute: 'main',
             params: {},
 
-            window.init() {
+            init() {
                 window.addEventListener('hashchange', () => this.handleRoute());
                 this.handleRoute();
             },
@@ -91,8 +92,7 @@ export const Router = {
                 } else if (route === 'settings') {
                     document.querySelector('.agnative-leftdock__item.selector[data-action="settings"]')?.classList.add(
                         'is-active');
-import { loadAndDisplayGenreSections, renderGenrePage } from '../pages/genres.js';
-import { syncLeftdockActive } from '../ui/leftdock.js';
+
                     this.showSettings();
                 } else if (route === 'genres') {
                     this.showGenres();
@@ -111,10 +111,10 @@ import { syncLeftdockActive } from '../ui/leftdock.js';
                     document.getElementById('genreSectionsContainer').querySelector('.loader')) {
                     loadAndDisplayGenreSections();
                 }
-                currentTab = 'main';
-                currentSearchQuery = '';
-                currentCategory = '';
-                currentPage = 1;
+                window._currentTab = 'main';
+                window._currentSearchQuery = '';
+                window._currentCategory = '';
+                window._currentPage = 1;
                 document.querySelectorAll('.action-pill').forEach(p => p.classList.remove('active-pill'));
                 const si = document.getElementById('searchInput');
                 if (si) si.value = '';
@@ -205,13 +205,13 @@ export function showViewMode(mode) {
             const grid = document.getElementById('episodeViewGrid');
             const compact = document.getElementById('episodeViewCompact');
             const classic = document.getElementById('episodeViewClassic');
-            grid.classList.toggle('hidden', mode !== 'grid');
-            compact.classList.toggle('hidden', mode !== 'compact');
-            classic.classList.toggle('hidden', mode !== 'classic');
+            if (grid) grid.classList.toggle('hidden', mode !== 'grid');
+            if (compact) compact.classList.toggle('hidden', mode !== 'compact');
+            if (classic) classic.classList.toggle('hidden', mode !== 'classic');
             document.querySelectorAll('.episode-view-tab').forEach(tab => {
                 tab.classList.toggle('active', tab.dataset.view === mode);
             });
-            playerPageCurrentView = mode;
+            window._playerPageCurrentView = mode;
         }
         window.showViewMode = showViewMode;
 
