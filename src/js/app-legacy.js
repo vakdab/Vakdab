@@ -1,35 +1,11 @@
-import { FIREBASE_CONFIG, initializeApp, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, setPersistence, browserLocalPersistence, signInAnonymously, sendPasswordResetEmail, deleteUser, getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, orderBy, limit, onSnapshot } from './firebase.js';
-import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, ANIMEUA_BASE, GENRE_MAP } from './config.js';
+import { FIREBASE_CONFIG, initializeApp, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, setPersistence, browserLocalPersistence, signInAnonymously, sendPasswordResetEmail, deleteUser, getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, orderBy, limit, onSnapshot } from './config/firebase.js';
+import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, ANIMEUA_BASE, GENRE_MAP } from './config/constants.js';
+import { safeQuery, safeQueryAll } from './utils/dom.js';
+import { getProxyUrl, isEmbedUrl } from './utils/image.js';
+import './utils/string.js';
 
 let playerPageAnimeuaSeasons = null;
 let externalSourceCache = {};
-
-        String.prototype.hashCode = function() {
-            let h = 0;
-            for (let i = 0; i < this.length; i++) { h = ((h << 5) - h) + this.charCodeAt(i);
-                h |= 0; }
-            return Math.abs(h);
-        };
-
-        function safeQuery(sel, parent) { try { return (parent || document).querySelector(sel); } catch { return null; } }
-
-        function safeQueryAll(sel, parent) { try { return Array.from((parent || document).querySelectorAll(sel)); } catch {
-                return []; } }
-
-        function getProxyUrl(url, forceUA = 'desktop') {
-            if (!url) return null;
-            // force_ua=desktop (за замовчуванням) — проксі підміняє UA на десктопний, бо Android
-            // Chrome/WebView віддає спрощену мобільну версію сторінки без плеєра.
-            // force_ua=mobile використовується як запасний варіант, коли десктопний UA
-            // повертає порожній результат (антибот ashdi.vip інколи блокує саме десктопний UA).
-            return PROXY_URL + '?url=' + encodeURIComponent(url) + '&force_ua=' + forceUA;
-        }
-
-        function isEmbedUrl(url) {
-            if (!url) return false;
-            return url.includes('tortuga.tw/embed') || url.includes('/embed/') ||
-                url.includes('aniboom') || url.includes('cdn-iframe') || url.includes('cdnvideohub');
-        }
 
         // ====================================================================
         //  ІНІЦІАЛІЗАЦІЯ FIREBASE

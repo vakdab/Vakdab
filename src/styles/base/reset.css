@@ -1,0 +1,5 @@
+/* Consistent browser baseline. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+button, input, textarea, select { font: inherit; }
+img, video { max-width: 100%; }

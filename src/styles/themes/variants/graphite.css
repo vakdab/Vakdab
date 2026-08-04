@@ -1,0 +1,2 @@
+/* Graphite accent variant. */
+:root[data-accent="graphite"] { --accent: #0b0b0b; --accent-rgb: 11, 11, 11; }

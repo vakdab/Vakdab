@@ -1,0 +1,2 @@
+/* White accent variant. */
+:root[data-accent="white"] { --accent: #f7f7f7; --accent-rgb: 247, 247, 247; --accent-text: #0a0a0a; }

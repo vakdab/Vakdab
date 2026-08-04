@@ -1,0 +1,25 @@
+/* Dark theme token overrides. */
+.dark-mode {
+            --accent: #f7f7f7;
+            --accent-rgb: 247, 247, 247;
+            --accent-hover: #cfcfcf;
+            --accent-text: #0a0a0a;
+            --accent-gradient: linear-gradient(135deg, #f7f7f7, #cfcfcf);
+            --accent-light: rgba(247, 247, 247, 0.15);
+            --accent-glow: rgba(247, 247, 247, 0.35);
+            --bg: #0b0c10;
+            --surface: rgba(17, 18, 24, 0.95);
+            --text: #f7f7f7;
+            --text-secondary: #cfcfcf;
+            --text-muted: #a8a8a8;
+            --border: #1e1f26;
+            --border-light: #14151a;
+            --border-hover: #2e2f38;
+            --hover: rgba(255, 255, 255, 0.02);
+            --tag-bg: #161719;
+            --glass: rgba(255, 255, 255, 0.04);
+            --glass-dark: rgba(0, 0, 0, 0.45);
+            --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.5);
+        }

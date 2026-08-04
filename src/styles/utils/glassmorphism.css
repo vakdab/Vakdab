@@ -1,0 +1,2 @@
+/* Shared glass surface utility. */
+.glass { background: var(--glass); backdrop-filter: blur(var(--blur-amount)); -webkit-backdrop-filter: blur(var(--blur-amount)); }

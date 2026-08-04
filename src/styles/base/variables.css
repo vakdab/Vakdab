@@ -1,0 +1,35 @@
+/* Design tokens shared by all components. */
+:root {
+            --accent: #0b0b0b;
+            --accent-rgb: 11, 11, 11;
+            --accent-hover: #1a1a1a;
+            --accent-text: #ffffff;
+            --accent-gradient: linear-gradient(135deg, #0b0b0b, #1a1a1a);
+            --accent-light: rgba(11, 11, 11, 0.15);
+            --accent-glow: rgba(11, 11, 11, 0.35);
+            --bg: #fafafa;
+            --surface: rgba(255, 255, 255, 0.96);
+            --text: #0b0b0b;
+            --text-secondary: #4a4a4a;
+            --text-muted: #6b6b6b;
+            --border: #e9e9e9;
+            --border-light: #f3f3f3;
+            --border-hover: #d0d0d0;
+            --hover: rgba(0, 0, 0, 0.03);
+            --tag-bg: #f6f6f6;
+            --glass: rgba(255, 255, 255, 0.6);
+            --glass-dark: rgba(20, 20, 20, 0.35);
+            --blur-amount: 8px;
+            --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.10);
+            --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.14);
+            --radius-sm: 10px;
+            --radius: 14px;
+            --radius-md: 12px;
+            --radius-lg: 18px;
+            --radius-xl: 24px;
+            --transition: 280ms cubic-bezier(.2, .9, .2, 1);
+            --transition-smooth: 360ms cubic-bezier(.2, .9, .2, 1);
+            --agnative-scale: 1;
+            --hero-extra-width: 1.3cm;
+        }
