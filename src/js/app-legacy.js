@@ -851,6 +851,10 @@ let externalSourceCache = {};
                 const synopsis = (synopsisEl?.textContent || '').trim();
                 const statusEl = safeQuery('.poster__label', card);
                 const status = (statusEl?.textContent || '').trim().toLowerCase();
+                const subtitleEl = safeQuery('.poster__subtitle', card);
+                const subtitle = (subtitleEl?.textContent || '').trim();
+                const genres = subtitle.split(/[\/|,]/).map(v => v.trim()).filter(Boolean);
+                const type = genres.some(v => /повнометраж|фільм/i.test(v)) ? 'movie' : (genres.some(v => /ova/i.test(v)) ? 'ova' : 'tv');
                 return {
                     mal_id: href.hashCode(),
                     title,
@@ -861,6 +865,8 @@ let externalSourceCache = {};
                     year: null,
                     synopsis,
                     status,
+                    genres,
+                    type,
                     from: 'animeua'
                 };
             });
@@ -4726,7 +4732,7 @@ let externalSourceCache = {};
                 const poster = a.image?.preview ? `https://animeon.club/api/uploads/images/${a.image.preview}` : '';
                 const title = a.titleUa || a.titleEn || 'Без назви';
                 return `
-                <div class="schedule-item" data-title="${title.replace(/"/g, '&quot;')}">
+                <div class="schedule-item" data-title="${title.replace(/"/g, '&quot;')}" data-title-en="${(a.titleEn || '').replace(/"/g, '&quot;')}" data-slug="${(a.slug || '').replace(/"/g, '&quot;')}">
                     <div class="schedule-item__poster">
                         ${poster ? `<img src="${poster}" alt="${title}" loading="lazy" onerror="this.style.opacity=0">` : ''}
                     </div>
@@ -4741,12 +4747,18 @@ let externalSourceCache = {};
 
         async function openScheduleItemInPlayer(title, el) {
             if (!title) return;
+            const englishTitle = el?.dataset?.titleEn || '';
+            const scheduleSlug = el?.dataset?.slug || '';
             if (el && el.classList.contains('schedule-item--loading')) return; // вже вантажиться
             if (el) el.classList.add('schedule-item--loading');
             try {
-                const results = await searchAnimeua(title, 1);
+                let results = await searchAnimeua(title, 1);
+                if ((!results || !results.length) && englishTitle && englishTitle !== title) results = await searchAnimeua(englishTitle, 1);
                 if (results && results.length) {
                     openPlayerPage(results[0].url);
+                } else if (scheduleSlug) {
+                    // AnimeOn і AnimeUA часто використовують той самий ID/slug — не втрачаємо тайтл через різницю назв.
+                    openPlayerPage(`${ANIMEUA_BASE}/${scheduleSlug}.html`);
                 } else {
                     showToast(`Не знайшли «${title}» — спробуйте пошук вручну`);
                     searchPageState.query = title;
@@ -6755,11 +6767,11 @@ function renderProfilePage() {
             { key: 'ongoing', label: 'Онгоінг' }
         ];
         const FILTER_TYPE_OPTIONS = [
-            { key: 'tv', label: 'ТБ-серіал', functional: false },
+            { key: 'tv', label: 'ТБ-серіал', functional: true },
             { key: 'movie', label: 'Фільм', functional: true },
-            { key: 'ova', label: 'OVA', functional: false },
-            { key: 'ona', label: 'ONA', functional: false },
-            { key: 'special', label: 'Спешл', functional: false }
+            { key: 'ova', label: 'OVA', functional: true },
+            { key: 'ona', label: 'ONA', functional: true },
+            { key: 'special', label: 'Спешл', functional: true }
         ];
         const FILTER_SEASON_OPTIONS = [
             { key: 'winter', label: 'Зима' },
@@ -6782,22 +6794,22 @@ function renderProfilePage() {
 
         function resetFilterState() {
             filterState = {
-                genres: new Set(), status: 'all', types: new Set(), genrePanelOpen: false
+                genres: new Set(), status: 'all', types: new Set(), season: 'all', yearMin: 1970, yearMax: 2026, ratingMin: 0, ratingMax: 10, translation: '', age: new Set(), genrePanelOpen: false
             };
         }
 
         function buildDualRangeHtml(id, min, max, valMin, valMax, step) {
             return `
               <div class="filter-page__number-row">
-                <input type="number" class="filter-page__number-box" id="${id}MinBox" value="${valMin}" disabled>
+                <input type="number" class="filter-page__number-box" id="${id}MinBox" value="${valMin}">
                 <span class="filter-page__number-sep">—</span>
-                <input type="number" class="filter-page__number-box" id="${id}MaxBox" value="${valMax}" disabled>
+                <input type="number" class="filter-page__number-box" id="${id}MaxBox" value="${valMax}">
               </div>
-              <div class="filter-page__dual-range filter-page__dual-range--disabled">
+              <div class="filter-page__dual-range">
                 <div class="filter-page__dual-range-track"></div>
                 <div class="filter-page__dual-range-fill" id="${id}Fill"></div>
-                <input type="range" class="filter-page__dual-range-input" id="${id}MinSlider" min="${min}" max="${max}" step="${step}" value="${valMin}" disabled>
-                <input type="range" class="filter-page__dual-range-input" id="${id}MaxSlider" min="${min}" max="${max}" step="${step}" value="${valMax}" disabled>
+                <input type="range" class="filter-page__dual-range-input" id="${id}MinSlider" min="${min}" max="${max}" step="${step}" value="${valMin}">
+                <input type="range" class="filter-page__dual-range-input" id="${id}MaxSlider" min="${min}" max="${max}" step="${step}" value="${valMax}">
               </div>
             `;
         }
@@ -6859,15 +6871,15 @@ function renderProfilePage() {
               </div>
 
               <div class="filter-page__section">
-                <div class="filter-page__section-title">Сезон <span class="filter-page__soon-badge">Скоро</span></div>
+                <div class="filter-page__section-title">Сезон</div>
                 <div class="filter-page__section-sub">Пошук за сезоном виходу</div>
                 <div class="filter-chip-row" style="margin-top:0.8rem;">
-                  ${FILTER_SEASON_OPTIONS.map(s => `<button class="filter-chip" disabled>${s.label}</button>`).join('')}
+                  ${FILTER_SEASON_OPTIONS.map(s => `<button class="filter-chip" data-season="${s.key}">${s.label}</button>`).join('')}
                 </div>
               </div>
 
               <div class="filter-page__section">
-                <div class="filter-page__section-title">Рік виходу <span class="filter-page__soon-badge">Скоро</span></div>
+                <div class="filter-page__section-title">Рік виходу</div>
                 <div class="filter-page__section-sub">1970-2026</div>
                 ${buildDualRangeHtml('filterYear', 1970, 2026, 1970, 2026, 1)}
               </div>
@@ -6885,44 +6897,44 @@ function renderProfilePage() {
               </div>
 
               <div class="filter-page__section">
-                <div class="filter-page__section-title">Вікове обмеження <span class="filter-page__soon-badge">Скоро</span></div>
+                <div class="filter-page__section-title">Вікове обмеження</div>
                 <div class="filter-page__section-sub">Рейтинг контенту</div>
                 <div class="filter-page__checkbox-grid" style="margin-top:0.8rem;">
                   ${FILTER_AGE_OPTIONS.map(a => `
                     <label class="filter-page__checkbox filter-page__checkbox--soon">
-                      <input type="checkbox" disabled>
+                      <input type="checkbox" data-age="${a}">
                       <span>${a}</span>
                     </label>`).join('')}
                 </div>
               </div>
 
               <div class="filter-page__section">
-                <div class="filter-page__section-title">Оцінка <span class="filter-page__soon-badge">Скоро</span></div>
+                <div class="filter-page__section-title">Оцінка</div>
                 <div class="filter-page__section-sub">Рейтинг MonoAnime</div>
-                <label class="filter-page__checkbox filter-page__checkbox--soon" style="margin-top:0.6rem;">
-                  <input type="checkbox" disabled>
+                <label class="filter-page__checkbox" style="margin-top:0.6rem;">
+                  <input type="checkbox" id="filterUseMal">
                   <span>Брати оцінку з MyAnimeList</span>
                 </label>
                 ${buildDualRangeHtml('filterRating', 0, 10, 0, 10, 0.1)}
               </div>
 
               <div class="filter-page__section">
-                <div class="filter-page__section-title">Переклад <span class="filter-page__soon-badge">Скоро</span></div>
+                <div class="filter-page__section-title">Переклад</div>
                 <div class="filter-page__section-sub">Команда озвучення або субтитрів</div>
-                <select class="filter-page__select" disabled style="margin-top:0.8rem;">
+                <select class="filter-page__select" id="filterTranslation" style="margin-top:0.8rem;">
                   <option>Виберіть переклад</option>
                   ${FILTER_TRANSLATION_OPTIONS.map(t => `<option>${t}</option>`).join('')}
                 </select>
                 <label class="filter-page__checkbox filter-page__checkbox--soon" style="margin-top:0.8rem;">
-                  <input type="checkbox" disabled>
+                  <input type="checkbox" id="filterAllDubbed">
                   <span>Усі епізоди озвучені</span>
                 </label>
               </div>
 
               <div class="filter-page__section">
-                <div class="filter-page__section-title">Студія <span class="filter-page__soon-badge">Скоро</span></div>
+                <div class="filter-page__section-title">Студія</div>
                 <div class="filter-page__section-sub">Виробник тайтлу</div>
-                <select class="filter-page__select" disabled style="margin-top:0.8rem;">
+                <select class="filter-page__select" id="filterTranslation" style="margin-top:0.8rem;">
                   <option>Виберіть студію</option>
                 </select>
               </div>
@@ -6976,6 +6988,18 @@ function renderProfilePage() {
                 });
             });
 
+            container.querySelectorAll('[data-season]').forEach(chip => chip.addEventListener('click', () => {
+                container.querySelectorAll('[data-season]').forEach(c => c.classList.remove('active'));
+                chip.classList.toggle('active'); filterState.season = chip.classList.contains('active') ? chip.dataset.season : 'all'; applyFilters(true);
+            }));
+            container.querySelectorAll('[data-age]').forEach(cb => cb.addEventListener('change', () => { if (cb.checked) filterState.age.add(cb.dataset.age); else filterState.age.delete(cb.dataset.age); applyFilters(true); }));
+            const translation = document.getElementById('filterTranslation');
+            translation?.addEventListener('change', () => { filterState.translation = translation.value; applyFilters(true); });
+            ['filterYear','filterRating'].forEach(id => ['Min','Max'].forEach(side => document.getElementById(id + side + 'Slider')?.addEventListener('input', e => {
+                const box = document.getElementById(id + side + 'Box'); if (box) box.value = e.target.value;
+                filterState[id === 'filterYear' ? (side === 'Min' ? 'yearMin' : 'yearMax') : (side === 'Min' ? 'ratingMin' : 'ratingMax')] = Number(e.target.value);
+                initDualRangeVisual(id, id === 'filterYear' ? 1970 : 0, id === 'filterYear' ? 2026 : 10); applyFilters(true);
+            })));
             initDualRangeVisual('filterYear', 1970, 2026);
             initDualRangeVisual('filterRating', 0, 10);
 
@@ -7011,6 +7035,12 @@ function renderProfilePage() {
                 const maxTotal = 30;
                 const seen = new Set(filterResultsState.items.map(i => i.url));
                 let found = 0;
+                const matches = (a) => {
+                    if (filterState.status !== 'all' && a.status !== filterState.status) return false;
+                    if (filterState.types.size && !filterState.types.has(a.type || 'tv')) return false;
+                    if (filterState.genres.size && ![...(a.genres || [])].some(g => filterState.genres.has(GENRE_MAP[g] || g))) return false;
+                    return true;
+                };
 
                 if (effectiveGenres.size === 0) {
                     const maxPages = 6;
@@ -7018,7 +7048,7 @@ function renderProfilePage() {
                         filterResultsState.page++;
                         const pageItems = await fetchAnimeuaMain(filterResultsState.page);
                         if (!pageItems.length) break;
-                        const matched = filterState.status === 'all' ? pageItems : pageItems.filter(a => a.status === filterState.status);
+                        const matched = pageItems.filter(matches);
                         for (const m of matched) {
                             if (!seen.has(m.url)) { filterResultsState.items.push(m); seen.add(m.url); found++; }
                         }
@@ -7032,7 +7062,7 @@ function renderProfilePage() {
                             const pageItems = await fetchAnimeuaByGenre(slug, filterResultsState.genrePages[slug]);
                             fetchedThisRound++;
                             if (!pageItems.length) break;
-                            const matched = filterState.status === 'all' ? pageItems : pageItems.filter(a => a.status === filterState.status);
+                            const matched = pageItems.filter(matches);
                             for (const m of matched) {
                                 if (!seen.has(m.url)) { filterResultsState.items.push(m); seen.add(m.url); found++; }
                             }
@@ -7169,7 +7199,7 @@ function renderProfilePage() {
                     const poster = a.image?.preview ? `https://animeon.club/api/uploads/images/${a.image.preview}` : '';
                     const title = a.titleUa || a.titleEn || 'Без назви';
                     return `
-                    <div class="schedule-item" data-title="${title.replace(/"/g, '&quot;')}">
+                    <div class="schedule-item" data-title="${title.replace(/"/g, '&quot;')}" data-title-en="${(a.titleEn || '').replace(/"/g, '&quot;')}" data-slug="${(a.slug || '').replace(/"/g, '&quot;')}">
                         <div class="schedule-item__poster">
                             <img src="${poster}" alt="${title}" loading="lazy" onerror="this.style.opacity=0">
                         </div>
@@ -8343,11 +8373,8 @@ function renderProfilePage() {
 
         async function renderRecommendationsAndSimilar(anime) {
             const recSection = document.getElementById('recommendationsSection');
-            const simSection = document.getElementById('similarSection');
             const recEl = document.getElementById('recommendationsHscroll');
-            const simEl = document.getElementById('similarHscroll');
             if (recSection) recSection.style.display = 'none';
-            if (simSection) simSection.style.display = 'none';
             const genres = anime.genres || [];
             if (!genres.length) return;
             try {
@@ -8355,11 +8382,6 @@ function renderProfilePage() {
                 if (slug1 && recEl) {
                     const list1 = await fetchAnimeuaByGenre(slug1, 1);
                     renderPosterCards(recEl, list1, anime.url);
-                }
-                const slug2 = GENRE_MAP[genres[1]] || slug1;
-                if (slug2 && simEl) {
-                    const list2 = await fetchAnimeuaByGenre(slug2, genres[1] ? 1 : 2);
-                    renderPosterCards(simEl, list2, anime.url);
                 }
             } catch (e) {
                 console.warn('Recommendations/similar fetch error:', e);
