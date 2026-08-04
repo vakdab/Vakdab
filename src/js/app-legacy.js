@@ -4465,7 +4465,88 @@ let externalSourceCache = {};
             `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" fill="#2a2a2a"/><text x="150" y="215" font-family="sans-serif" font-size="42" fill="#666" text-anchor="middle">?</text></svg>`
         );
 
-        let mainCardsRenderGen = 0;
+        // ====================================================================
+        //  Лінива TMDB-енріхментація карток (постер + рейтинг) — універсальна
+        //  для всіх .anime-card на сайті (каталог, жанрові каруселі на головній).
+        //  Вантажимо TMDB лише коли картка реально потрапляє у видиму область,
+        //  щоб не робити тисячі зайвих запитів і не підвішувати сторінку.
+        // ====================================================================
+        const animeCardDataMap = new Map();
+        function registerAnimeCardData(list) {
+            (list || []).forEach(a => { if (a && a.url) animeCardDataMap.set(a.url, a); });
+        }
+
+        const TMDB_ENRICH_CONCURRENCY = 3;
+        let tmdbEnrichActive = 0;
+        const tmdbEnrichQueue = [];
+
+        function queueTmdbEnrich(card) {
+            if (!card || card.dataset.tmdbEnriched) return;
+            card.dataset.tmdbEnriched = 'pending';
+            tmdbEnrichQueue.push(card);
+            pumpTmdbEnrichQueue();
+        }
+
+        function pumpTmdbEnrichQueue() {
+            while (tmdbEnrichActive < TMDB_ENRICH_CONCURRENCY && tmdbEnrichQueue.length) {
+                const card = tmdbEnrichQueue.shift();
+                tmdbEnrichActive++;
+                runTmdbEnrichJob(card).finally(() => {
+                    tmdbEnrichActive--;
+                    pumpTmdbEnrichQueue();
+                });
+            }
+        }
+
+        async function runTmdbEnrichJob(card) {
+            const item = animeCardDataMap.get(card.dataset.url);
+            if (!item) { card.dataset.tmdbEnriched = 'failed'; return; }
+            try {
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
+                const info = await Promise.race([fetchTmdbCardInfo(item), timeoutPromise]);
+                if (!document.body.contains(card)) return;
+                if (info?.poster) {
+                    const img = card.querySelector('.anime-poster img');
+                    if (img) {
+                        const swap = new Image();
+                        swap.onload = () => { if (document.body.contains(card)) img.src = info.poster; };
+                        swap.src = info.poster;
+                    }
+                }
+                if (info?.rating) {
+                    const badge = card.querySelector('[data-role="rating"]');
+                    const val = card.querySelector('[data-role="rating-value"]');
+                    if (badge && val) {
+                        val.textContent = info.rating;
+                        badge.classList.remove('anime-card-rating--hidden');
+                    }
+                }
+                card.dataset.tmdbEnriched = 'done';
+            } catch (e) {
+                card.dataset.tmdbEnriched = 'failed';
+            }
+        }
+
+        let animeCardObserver = null;
+        function getAnimeCardObserver() {
+            if (animeCardObserver) return animeCardObserver;
+            animeCardObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (!entry.isIntersecting) return;
+                    animeCardObserver.unobserve(entry.target);
+                    queueTmdbEnrich(entry.target);
+                });
+            }, { root: null, rootMargin: '250px', threshold: 0.01 });
+            return animeCardObserver;
+        }
+
+        function observeAnimeCardsForTmdb(container) {
+            if (!container) return;
+            const observer = getAnimeCardObserver();
+            container.querySelectorAll('.anime-card[data-url]').forEach(card => {
+                if (!card.dataset.tmdbEnriched) observer.observe(card);
+            });
+        }
 
         function renderCards(list) {
             const container = document.getElementById('animeContainer');
@@ -4490,12 +4571,12 @@ let externalSourceCache = {};
             container.classList.remove('popular-list');
             container.classList.add('anime-grid');
             container.style.display = 'grid';
-            const gen = ++mainCardsRenderGen;
+            registerAnimeCardData(list);
             container.innerHTML = list.map((a, idx) => {
                 const poster = a.images?.jpg?.large_image_url || '';
                 const title = a.title || 'Без назви';
                 return `
-            <div class="anime-card" data-url="${a.url}" data-idx="${idx}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
+            <div class="anime-card" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
               <div class="anime-poster">
                 <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='${ANIME_CARD_PLACEHOLDER}'">
                 <span class="anime-card-rating anime-card-rating--hidden" data-role="rating"><i class="fas fa-star"></i><span data-role="rating-value"></span></span>
@@ -4508,48 +4589,7 @@ let externalSourceCache = {};
                 card.addEventListener('keydown', e => { if (e.key === 'Enter') openPlayerPage(card.dataset.url); });
             });
             renderPagination();
-            enrichMainCardsWithTmdb(list, gen);
-        }
-
-        // Фонове підвантаження TMDB-постерів і рейтингів для карток головної сторінки.
-        // Не блокує рендер: картки одразу показуються з постером anime.ua, а тут
-        // лише замінюємо зображення на офіційний TMDB-постер, коли він знайдений.
-        async function enrichMainCardsWithTmdb(list, gen) {
-            const container = document.getElementById('animeContainer');
-            if (!container) return;
-            const CONCURRENCY = 4;
-            let cursor = 0;
-            async function worker() {
-                while (cursor < list.length) {
-                    const i = cursor++;
-                    const item = list[i];
-                    if (gen !== mainCardsRenderGen) return;
-                    const card = container.querySelector(`.anime-card[data-idx="${i}"]`);
-                    if (!card) continue;
-                    try {
-                        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
-                        const tmdbCard = await Promise.race([fetchTmdbCardInfo(item), timeoutPromise]);
-                        if (gen !== mainCardsRenderGen || !tmdbCard) continue;
-                        if (tmdbCard.poster) {
-                            const img = card.querySelector('.anime-poster img');
-                            if (img) {
-                                const swap = new Image();
-                                swap.onload = () => { if (gen === mainCardsRenderGen) img.src = tmdbCard.poster; };
-                                swap.src = tmdbCard.poster;
-                            }
-                        }
-                        if (tmdbCard.rating) {
-                            const badge = card.querySelector('[data-role="rating"]');
-                            const val = card.querySelector('[data-role="rating-value"]');
-                            if (badge && val) {
-                                val.textContent = tmdbCard.rating;
-                                badge.classList.remove('anime-card-rating--hidden');
-                            }
-                        }
-                    } catch (e) { /* залишаємо постер anime.ua, це не критична помилка */ }
-                }
-            }
-            await Promise.all(Array.from({ length: Math.min(CONCURRENCY, list.length) }, worker));
+            observeAnimeCardsForTmdb(container);
         }
 
         function renderPagination() {
@@ -4650,6 +4690,10 @@ let externalSourceCache = {};
 
                 container.innerHTML = html;
 
+                registerAnimeCardData(newestWide);
+                for (const { items } of results) registerAnimeCardData(items);
+                observeAnimeCardsForTmdb(container);
+
                 container.querySelectorAll('.anime-card, .wide-card').forEach(card => {
                     card.addEventListener('click', () => openPlayerPage(card.dataset.url));
                     card.addEventListener('keydown', e => { if (e.key === 'Enter') openPlayerPage(card.dataset
@@ -4707,7 +4751,8 @@ let externalSourceCache = {};
                     return `
                             <div class="anime-card" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}">
                               <div class="anime-poster">
-                                <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='data:image/svg+xml,...'">
+                                <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='${ANIME_CARD_PLACEHOLDER}'">
+                                <span class="anime-card-rating anime-card-rating--hidden" data-role="rating"><i class="fas fa-star"></i><span data-role="rating-value"></span></span>
                               </div>
                               <div class="anime-title-under">${title}</div>
                             </div>
