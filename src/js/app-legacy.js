@@ -4461,6 +4461,12 @@ let externalSourceCache = {};
             await Promise.all(Array.from({ length: Math.min(CONCURRENCY, list.length) }, worker));
         }
 
+        const ANIME_CARD_PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+            `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" fill="#2a2a2a"/><text x="150" y="215" font-family="sans-serif" font-size="42" fill="#666" text-anchor="middle">?</text></svg>`
+        );
+
+        let mainCardsRenderGen = 0;
+
         function renderCards(list) {
             const container = document.getElementById('animeContainer');
             if (!container) return;
@@ -4484,13 +4490,15 @@ let externalSourceCache = {};
             container.classList.remove('popular-list');
             container.classList.add('anime-grid');
             container.style.display = 'grid';
+            const gen = ++mainCardsRenderGen;
             container.innerHTML = list.map((a, idx) => {
                 const poster = a.images?.jpg?.large_image_url || '';
                 const title = a.title || 'Без назви';
                 return `
-            <div class="anime-card" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
+            <div class="anime-card" data-url="${a.url}" data-idx="${idx}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
               <div class="anime-poster">
-                <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='data:image/svg+xml,...'">
+                <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='${ANIME_CARD_PLACEHOLDER}'">
+                <span class="anime-card-rating anime-card-rating--hidden" data-role="rating"><i class="fas fa-star"></i><span data-role="rating-value"></span></span>
               </div>
               <div class="anime-title-under">${title}</div>
             </div>`;
@@ -4500,6 +4508,48 @@ let externalSourceCache = {};
                 card.addEventListener('keydown', e => { if (e.key === 'Enter') openPlayerPage(card.dataset.url); });
             });
             renderPagination();
+            enrichMainCardsWithTmdb(list, gen);
+        }
+
+        // Фонове підвантаження TMDB-постерів і рейтингів для карток головної сторінки.
+        // Не блокує рендер: картки одразу показуються з постером anime.ua, а тут
+        // лише замінюємо зображення на офіційний TMDB-постер, коли він знайдений.
+        async function enrichMainCardsWithTmdb(list, gen) {
+            const container = document.getElementById('animeContainer');
+            if (!container) return;
+            const CONCURRENCY = 4;
+            let cursor = 0;
+            async function worker() {
+                while (cursor < list.length) {
+                    const i = cursor++;
+                    const item = list[i];
+                    if (gen !== mainCardsRenderGen) return;
+                    const card = container.querySelector(`.anime-card[data-idx="${i}"]`);
+                    if (!card) continue;
+                    try {
+                        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
+                        const tmdbCard = await Promise.race([fetchTmdbCardInfo(item), timeoutPromise]);
+                        if (gen !== mainCardsRenderGen || !tmdbCard) continue;
+                        if (tmdbCard.poster) {
+                            const img = card.querySelector('.anime-poster img');
+                            if (img) {
+                                const swap = new Image();
+                                swap.onload = () => { if (gen === mainCardsRenderGen) img.src = tmdbCard.poster; };
+                                swap.src = tmdbCard.poster;
+                            }
+                        }
+                        if (tmdbCard.rating) {
+                            const badge = card.querySelector('[data-role="rating"]');
+                            const val = card.querySelector('[data-role="rating-value"]');
+                            if (badge && val) {
+                                val.textContent = tmdbCard.rating;
+                                badge.classList.remove('anime-card-rating--hidden');
+                            }
+                        }
+                    } catch (e) { /* залишаємо постер anime.ua, це не критична помилка */ }
+                }
+            }
+            await Promise.all(Array.from({ length: Math.min(CONCURRENCY, list.length) }, worker));
         }
 
         function renderPagination() {
@@ -7655,6 +7705,31 @@ function renderProfilePage() {
 
         function tmdbImgUrl(path, size) {
             return path ? `${TMDB_IMG}/${size || 'w342'}${path}` : null;
+        }
+
+        async function fetchTmdbCardInfo(anime) {
+            if (!anime || !TMDB_API_KEY) return null;
+            const cacheKey = 'card:' + (anime.url || anime.title);
+            if (tmdbAnimeCache[cacheKey] !== undefined) return tmdbAnimeCache[cacheKey];
+            const queries = [cleanTitleForTmdb(anime.originalTitle), cleanTitleForTmdb(anime.title)].filter(Boolean);
+            for (const q of queries) {
+                try {
+                    const res = await fetch(`${TMDB_BASE}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(q)}&include_adult=false`);
+                    if (!res.ok) continue;
+                    const data = await res.json();
+                    const hit = (data.results || []).find(r => (r.media_type === 'tv' || r.media_type === 'movie') && r.poster_path);
+                    if (hit) {
+                        const info = {
+                            poster: tmdbImgUrl(hit.poster_path, 'w500'),
+                            rating: hit.vote_average ? Number(hit.vote_average).toFixed(1) : null
+                        };
+                        tmdbAnimeCache[cacheKey] = info;
+                        return info;
+                    }
+                } catch (e) { console.warn('TMDB card info failed', e); }
+            }
+            tmdbAnimeCache[cacheKey] = null;
+            return null;
         }
 
         async function fetchTmdbForAnime(anime) {
