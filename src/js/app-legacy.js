@@ -4404,6 +4404,7 @@ let externalSourceCache = {};
               <div class="popular-card__poster-wrap">
                 <div class="popular-card__poster">
                   <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='data:image/svg+xml,...'">
+                  <span class="popular-card__type" data-role="type" hidden></span>
                 </div>
                 <div class="popular-card__rank popular-card__rank--loading"><i class="fas fa-spinner fa-pulse"></i></div>
               </div>
@@ -4436,6 +4437,20 @@ let externalSourceCache = {};
                         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 9000));
                         const detail = await Promise.race([fetchAnimeLite(item.url), timeoutPromise]);
                         if (gen !== popularRenderGen) return;
+                        const tmdbInfo = await fetchTmdbCardInfo(item).catch(e => {
+                            console.error('TMDB popular card enrichment failed', { url: item.url, error: e });
+                            return null;
+                        });
+                        if (gen !== popularRenderGen) return;
+                        const typeBadge = card.querySelector('[data-role="type"]');
+                        if (tmdbInfo?.poster) {
+                            const img = card.querySelector('.popular-card__poster img');
+                            if (img) img.src = tmdbInfo.poster;
+                        }
+                        if (typeBadge && tmdbInfo?.type) {
+                            typeBadge.textContent = tmdbInfo.type;
+                            typeBadge.hidden = false;
+                        }
                         if (badge) {
                             badge.classList.remove('popular-card__rank--loading');
                             badge.textContent = detail.episodes != null ? detail.episodes : '–';
@@ -4630,8 +4645,10 @@ let externalSourceCache = {};
         //  ЖАНРОВІ СЕКЦІЇ (ПАРАЛЕЛЬНЕ ЗАВАНТАЖЕННЯ)
         // ====================================================================
         const genreList = Object.entries(GENRE_MAP).map(([name, slug]) => ({ name, slug }));
+        let homeSectionsRequestId = 0;
 
         async function loadAndDisplayGenreSections() {
+            const requestId = ++homeSectionsRequestId;
             const container = document.getElementById('genreSectionsContainer');
             if (!container) return;
             container.innerHTML = '<div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження секцій...</div>';
@@ -4644,24 +4661,25 @@ let externalSourceCache = {};
                         const slice = items.slice(0, 80);
                         return { genre, items: slice };
                     } catch (e) {
-                        console.warn(`Помилка завантаження жанру ${genre.name}:`, e);
+                        console.error(`Помилка завантаження жанру ${genre.name}:`, e);
                         return { genre, items: [] };
                     }
                 });
 
                 const newestPromise = fetchAnimeuaMain(1).catch(e => {
-                    console.warn('Помилка завантаження нових аніме:', e);
+                    console.error('Помилка завантаження нових аніме:', e);
                     return [];
                 });
 
                 const schedulePromise = fetchScheduleByOffset(0).catch(e => {
-                    console.warn('Помилка завантаження розкладу:', e);
+                    console.error('Помилка завантаження розкладу:', e);
                     return [];
                 });
 
                 const [results, newestItems, scheduleItems] = await Promise.all([
                     Promise.all(genrePromises), newestPromise, schedulePromise
                 ]);
+                if (requestId !== homeSectionsRequestId) return;
 
                 let html = '';
 
