@@ -4647,6 +4647,26 @@ let externalSourceCache = {};
         const genreList = Object.entries(GENRE_MAP).map(([name, slug]) => ({ name, slug }));
         let homeSectionsRequestId = 0;
 
+        // TMDB is the source of truth for homepage artwork. Preload only the
+        // first visible cards before painting the sections; the rest stay lazy.
+        async function preloadHomepageTmdbGroups(groups, limit = 6) {
+            const visible = groups.flatMap(group => (group || []).slice(0, limit));
+            let cursor = 0;
+            const worker = async () => {
+                while (cursor < visible.length) {
+                    const item = visible[cursor++];
+                    try {
+                        const info = await fetchTmdbCardInfo(item);
+                        if (info?.poster) item.tmdbPoster = info.poster;
+                        if (info?.type) item.tmdbType = info.type;
+                    } catch (e) {
+                        console.error('Homepage TMDB preload failed', { title: item?.title, error: e });
+                    }
+                }
+            };
+            await Promise.all(Array.from({ length: Math.min(4, visible.length) }, worker));
+        }
+
         async function loadAndDisplayGenreSections() {
             const requestId = ++homeSectionsRequestId;
             const container = document.getElementById('genreSectionsContainer');
@@ -4681,20 +4701,24 @@ let externalSourceCache = {};
                 ]);
                 if (requestId !== homeSectionsRequestId) return;
 
+                const preloadGroups = [newestItems, ...results.map(result => result.items)];
+                await preloadHomepageTmdbGroups(preloadGroups, 6);
+                if (requestId !== homeSectionsRequestId) return;
+
                 let html = '';
 
                 const newestWide = newestItems.slice(0, 80).map(a => ({ ...a, typeLabel: 'Серіал' }));
 
                 html += buildHistoryCarouselSectionHtml();
                 html += buildScheduleWidgetHtml(scheduleItems);
-                html += buildAnimeCarouselSectionHtml('genre-newest', 'Нові аніме', newestWide, 'wide');
+                html += buildAnimeCarouselSectionHtml('genre-newest', 'Нові аніме', newestWide);
 
                 for (const { genre, items } of results) {
                     if (items.length === 0) continue;
                     const sectionId = 'genre-' + genre.slug;
                     if (genre.slug === 'film') {
                         const filmWide = items.map(a => ({ ...a, typeLabel: 'Фільм' }));
-                        html += buildAnimeCarouselSectionHtml(sectionId, genre.name, filmWide, 'wide');
+                        html += buildAnimeCarouselSectionHtml(sectionId, genre.name, filmWide);
                     } else {
                         html += buildAnimeCarouselSectionHtml(sectionId, genre.name, items);
                     }
@@ -4762,14 +4786,15 @@ let externalSourceCache = {};
             if (!items || items.length === 0) return '';
             const isWide = variant === 'wide';
             const cardsHtml = items.map(a => {
-                const poster = a.images?.jpg?.large_image_url || '';
+                const poster = a.tmdbPoster || ANIME_CARD_PLACEHOLDER;
                 const title = a.title || 'Без назви';
                 if (!isWide) {
+                    const type = a.tmdbType || '';
                     return `
                             <div class="anime-card" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}">
                               <div class="anime-poster">
                                 <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='${ANIME_CARD_PLACEHOLDER}'">
-                                <span class="anime-card-type" data-role="type" hidden></span>
+                                <span class="anime-card-type" data-role="type" ${type ? '' : 'hidden'}>${type}</span>
                               </div>
                               <div class="anime-title-under">${title}</div>
                             </div>
@@ -4786,7 +4811,7 @@ let externalSourceCache = {};
                 return `
                             <div class="wide-card" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}">
                               <div class="wide-card__frame">
-                                <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='data:image/svg+xml,...'">
+                                <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='${ANIME_CARD_PLACEHOLDER}'">
                                 ${badges.length ? `<div class="wide-card__badges">${badges.join('')}</div>` : ''}
                                 <div class="wide-card__play"><i class="fas fa-play"></i></div>
                                 ${progressHtml}
