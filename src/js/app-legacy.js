@@ -4513,16 +4513,15 @@ let externalSourceCache = {};
                         swap.src = info.poster;
                     }
                 }
-                if (info?.rating) {
-                    const badge = card.querySelector('[data-role="rating"]');
-                    const val = card.querySelector('[data-role="rating-value"]');
-                    if (badge && val) {
-                        val.textContent = info.rating;
-                        badge.classList.remove('anime-card-rating--hidden');
-                    }
+                const typeBadge = card.querySelector('[data-role="type"]');
+                if (typeBadge && info?.type) {
+                    typeBadge.textContent = info.type;
+                    typeBadge.hidden = false;
                 }
+                card.dataset.tmdbType = info?.type || '';
                 card.dataset.tmdbEnriched = 'done';
             } catch (e) {
+                console.error('TMDB card enrichment failed', { url: card?.dataset?.url, error: e });
                 card.dataset.tmdbEnriched = 'failed';
             }
         }
@@ -4579,7 +4578,7 @@ let externalSourceCache = {};
             <div class="anime-card" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
               <div class="anime-poster">
                 <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='${ANIME_CARD_PLACEHOLDER}'">
-                <span class="anime-card-rating anime-card-rating--hidden" data-role="rating"><i class="fas fa-star"></i><span data-role="rating-value"></span></span>
+                <span class="anime-card-type" data-role="type" hidden></span>
               </div>
               <div class="anime-title-under">${title}</div>
             </div>`;
@@ -4752,7 +4751,7 @@ let externalSourceCache = {};
                             <div class="anime-card" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}">
                               <div class="anime-poster">
                                 <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='${ANIME_CARD_PLACEHOLDER}'">
-                                <span class="anime-card-rating anime-card-rating--hidden" data-role="rating"><i class="fas fa-star"></i><span data-role="rating-value"></span></span>
+                                <span class="anime-card-type" data-role="type" hidden></span>
                               </div>
                               <div class="anime-title-under">${title}</div>
                             </div>
@@ -7752,26 +7751,70 @@ function renderProfilePage() {
             return path ? `${TMDB_IMG}/${size || 'w342'}${path}` : null;
         }
 
+        function tmdbNormalizeTitle(value) {
+            return cleanTitleForTmdb(value).toLowerCase()
+                .replace(/[^a-zа-яіїєґ0-9\s]/gi, ' ')
+                .replace(/\b(season|сезон|part|частина|tv|серіал|anime)\b/gi, ' ')
+                .replace(/\s+/g, ' ').trim();
+        }
+
+        function tmdbCardType(hit) {
+            if (!hit) return null;
+            if (hit.media_type === 'movie') return 'Фільм';
+            const isAnimation = (hit.genre_ids || []).includes(16);
+            const isJapanese = ['ja', 'ko'].includes((hit.original_language || '').toLowerCase()) ||
+                (hit.origin_country || []).some(c => ['JP', 'KR'].includes(c));
+            return isAnimation && isJapanese ? 'Аніме' : 'Серіал';
+        }
+
+        function tmdbCandidateScore(hit, query) {
+            const q = tmdbNormalizeTitle(query);
+            const title = tmdbNormalizeTitle(hit.title || hit.name || hit.original_name || '');
+            let score = 0;
+            if (title === q) score += 100;
+            if (title.includes(q) || q.includes(title)) score += 35;
+            const qTokens = new Set(q.split(' ').filter(Boolean));
+            const overlap = title.split(' ').filter(t => qTokens.has(t)).length;
+            score += overlap * 8;
+            if (hit.media_type === 'tv') score += 10;
+            if ((hit.genre_ids || []).includes(16)) score += 18;
+            if (['ja', 'ko'].includes((hit.original_language || '').toLowerCase())) score += 16;
+            if ((hit.origin_country || []).includes('JP')) score += 12;
+            if (hit.poster_path) score += 5;
+            return score + Math.min(Number(hit.popularity) || 0, 20) * 0.15;
+        }
+
         async function fetchTmdbCardInfo(anime) {
             if (!anime || !TMDB_API_KEY) return null;
             const cacheKey = 'card:' + (anime.url || anime.title);
             if (tmdbAnimeCache[cacheKey] !== undefined) return tmdbAnimeCache[cacheKey];
-            const queries = [cleanTitleForTmdb(anime.originalTitle), cleanTitleForTmdb(anime.title)].filter(Boolean);
+            const queries = [...new Set([cleanTitleForTmdb(anime.originalTitle), cleanTitleForTmdb(anime.title)].filter(Boolean))];
+            let candidates = [];
             for (const q of queries) {
                 try {
-                    const res = await fetch(`${TMDB_BASE}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(q)}&include_adult=false`);
+                    const res = await fetch(`${TMDB_BASE}/search/multi?api_key=${TMDB_API_KEY}&language=en-US&query=${encodeURIComponent(q)}&include_adult=false`);
                     if (!res.ok) continue;
                     const data = await res.json();
-                    const hit = (data.results || []).find(r => (r.media_type === 'tv' || r.media_type === 'movie') && r.poster_path);
-                    if (hit) {
-                        const info = {
-                            poster: tmdbImgUrl(hit.poster_path, 'w500'),
-                            rating: hit.vote_average ? Number(hit.vote_average).toFixed(1) : null
-                        };
-                        tmdbAnimeCache[cacheKey] = info;
-                        return info;
-                    }
-                } catch (e) { console.warn('TMDB card info failed', e); }
+                    candidates.push(...(data.results || []).filter(r =>
+                        (r.media_type === 'tv' || r.media_type === 'movie') && r.poster_path
+                    ).map(r => ({ ...r, _query: q })));
+                } catch (e) {
+                    console.error('TMDB card search failed', { query: q, error: e });
+                }
+            }
+            if (candidates.length) {
+                const unique = [...new Map(candidates.map(r => [`${r.media_type}:${r.id}`, r])).values()];
+                unique.sort((a, b) => tmdbCandidateScore(b, b._query) - tmdbCandidateScore(a, a._query));
+                const hit = unique[0];
+                const info = {
+                    poster: tmdbImgUrl(hit.poster_path, 'w500'),
+                    rating: hit.vote_average ? Number(hit.vote_average).toFixed(1) : null,
+                    type: tmdbCardType(hit),
+                    mediaType: hit.media_type,
+                    tmdbId: hit.id
+                };
+                tmdbAnimeCache[cacheKey] = info;
+                return info;
             }
             tmdbAnimeCache[cacheKey] = null;
             return null;
