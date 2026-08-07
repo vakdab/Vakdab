@@ -8362,3 +8362,15 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list,
 body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-card {
     overflow: visible !important;
 }
+
+/* iOS Safari clips the negative top overflow of the floating Popular poster.
+   Keep the same circular design, but place it fully inside the card on phones. */
+@media (max-width: 599px) {
+    #animeContainer.popular-list .popular-card {
+        overflow: visible !important;
+        padding-top: 8.8rem !important;
+    }
+    #animeContainer.popular-list .popular-card__poster-wrap {
+        top: .75rem !important;
+    }
+}
