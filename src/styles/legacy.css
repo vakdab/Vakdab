@@ -8374,3 +8374,32 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
         top: .75rem !important;
     }
 }
+
+/* Final mobile fix for Popular: keep the circular poster in normal flow.
+   This avoids Safari clipping any negative/absolute overflow at all. */
+@media (max-width: 599px) {
+    #animeContainer.popular-list .popular-card {
+        display: block !important;
+        overflow: visible !important;
+        padding: 1rem 1rem 1.1rem !important;
+    }
+    #animeContainer.popular-list .popular-card__poster-wrap {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        inset: auto !important;
+        transform: none !important;
+        width: 7.5rem !important;
+        height: 7.5rem !important;
+        margin: 0 auto .75rem !important;
+    }
+    #animeContainer.popular-list .popular-card__poster {
+        width: 100% !important;
+        height: 100% !important;
+        border-radius: 50% !important;
+        overflow: hidden !important;
+    }
+    #animeContainer.popular-list .popular-card__title {
+        margin-top: 0 !important;
+    }
+}
