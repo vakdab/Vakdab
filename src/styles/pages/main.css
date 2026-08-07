@@ -1,1 +1,83 @@
-/* main page styles are currently preserved in ../../legacy.css during the safe migration. */
+/* Popular styles copied from commit cbaa50fe29a8aea6ed89d734d4215a6c75ee2bdc. */
+/* Popular view no longer creates huge empty gaps around circular posters. */
+.popular-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+    padding: 0;
+}
+@media (min-width: 680px) {
+    .popular-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
+}
+@media (min-width: 1024px) {
+    .popular-list { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.5rem; }
+}
+.popular-card {
+    min-width: 0;
+    padding: 0 0 .75rem;
+    border-radius: 14px;
+    overflow: hidden;
+    text-align: left;
+}
+.popular-card__poster-wrap {
+    position: relative;
+    inset: auto;
+    transform: none;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 3;
+}
+.popular-card__poster {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+}
+.popular-card__rank {
+    top: .55rem;
+    right: .55rem;
+    width: 1.9rem;
+    height: 1.9rem;
+}
+.popular-card__type {
+    position: absolute;
+    left: .55rem;
+    bottom: .55rem;
+    z-index: 3;
+    padding: .28rem .5rem;
+    border-radius: 6px;
+    background: rgba(8, 8, 10, .74);
+    color: #fff;
+    font-size: .62rem;
+    font-weight: 700;
+    line-height: 1;
+    backdrop-filter: blur(8px);
+}
+.popular-card__title {
+    padding: .65rem .7rem 0;
+    margin: 0;
+    font-size: .82rem;
+    line-height: 1.25;
+}
+.popular-card__desc { display: none; }
+
+@media (max-width: 479px) {
+    .app-container { padding-left: .65rem; padding-right: .65rem; }
+    .actions-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .55rem;
+        margin-top: .85rem;
+        margin-bottom: 1.15rem;
+    }
+    .action-pill {
+        width: 100%;
+        justify-content: center;
+        padding-inline: .45rem;
+        font-size: .72rem;
+    }
+    .hero-wrapper {
+        min-height: 310px;
+        max-height: 430px;
+    }
+}

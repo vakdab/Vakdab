@@ -20,7 +20,6 @@
 @import url('./components/genre-section.css');
 @import url('./components/pagination.css');
 @import url('./components/loader.css');
-@import url('./pages/main.css');
 @import url('./pages/search.css');
 @import url('./pages/profile.css');
 @import url('./pages/settings.css');
@@ -36,3 +35,4 @@
 @import url('./community/chat.css');
 @import url('./community/group.css');
 @import url('./legacy.css');
+@import url('./pages/main.css');
