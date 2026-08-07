@@ -1,85 +1,146 @@
-/* Popular styles copied from commit cbaa50fe29a8aea6ed89d734d4215a6c75ee2bdc. */
-/* Popular view no longer creates huge empty gaps around circular posters. */
-.popular-list {
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 1rem;
-    margin-top: 1rem;
-    padding: 0;
-}
-@media (min-width: 680px) {
-    .popular-list { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 1.25rem; }
-}
-@media (min-width: 1024px) {
-    .popular-list { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 1.5rem; }
-}
-.popular-card {
-    display: block;
-    min-width: 0;
-    padding: 0 0 .75rem;
-    border-radius: 14px;
-    overflow: hidden;
-    text-align: left;
-}
-.popular-card__poster-wrap {
-    position: relative;
-    inset: auto;
-    transform: none;
-    width: 100%;
-    height: auto;
-    aspect-ratio: 2 / 3;
-}
-.popular-card__poster {
-    width: 100%;
-    height: 100%;
-    border: 0;
-    border-radius: 0;
-}
-.popular-card__rank {
-    top: .55rem;
-    right: .55rem;
-    width: 1.9rem;
-    height: 1.9rem;
-}
+        /* ===== Популярні — круглий постер + картка (в стилі сайту) ===== */
+        .popular-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4rem;
+            margin-top: 3.5rem;
+            padding: 0 0.2rem;
+        }
+        @media (min-width:600px) {
+            .popular-list {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 4rem 1.4rem;
+            }
+        }
+        @media (min-width:1024px) {
+            .popular-list { grid-template-columns: repeat(3, 1fr); gap: 4rem 1.8rem; }
+        }
+        .popular-card {
+            position: relative;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            padding: 4.6rem 1rem 1.1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+            animation: fadeInUp 0.5s ease both;
+        }
+        .popular-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md), 0 0 0 1px var(--accent-light);
+            border-color: rgba(var(--accent-rgb), 0.4);
+        }
+        .popular-card:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+        .popular-card__poster-wrap {
+            position: absolute;
+            top: -3.75rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 7.5rem;
+            height: 7.5rem;
+        }
+        @media (min-width:480px) {
+            .popular-card__poster-wrap { width: 8.4rem; height: 8.4rem; top: -4.2rem; }
+        }
+        .popular-card__poster {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            background: #e0e0e0;
+            border: 4px solid var(--surface);
+            box-shadow: var(--shadow-md);
+        }
+        .dark-mode .popular-card__poster { background: #2a2a2a; }
+        .popular-card__poster img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+        .popular-card:hover .popular-card__poster img { transform: scale(1.06); }
+        .popular-card__rank {
+            position: absolute;
+            top: -0.3rem;
+            right: -0.3rem;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            color: var(--accent-text);
+            font-weight: 800;
+            font-size: 0.78rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px var(--accent-glow);
+            border: 2px solid var(--surface);
+        }
+        .popular-card__title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text);
+            line-height: 1.3;
+            margin-top: 0.3rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        @media (min-width:480px) {
+            .popular-card__title { font-size: 1.02rem; }
+        }
+        .popular-card__rank--loading { font-size: 0.7rem; }
+        .popular-card__desc {
+            margin-top: 0.5rem;
+            font-size: 0.78rem;
+            line-height: 1.4;
+            color: var(--text-secondary);
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        @media (min-width:480px) {
+            .popular-card__desc { font-size: 0.82rem; }
+        }
+        .popular-card__desc--empty { min-height: 1.1em; }
+        .popular-card__desc-skel {
+            height: 0.7rem;
+            width: 100%;
+            border-radius: 6px;
+            margin: 0.5rem auto 0;
+        }
+        .popular-card__poster.skeleton { border-radius: 50%; }
+
+/* Legacy media type badge. */
 .popular-card__type {
     position: absolute;
     left: .55rem;
     bottom: .55rem;
-    z-index: 3;
+    z-index: 2;
     padding: .28rem .5rem;
     border-radius: 6px;
-    background: rgba(8, 8, 10, .74);
+    background: rgba(8, 8, 10, .78);
     color: #fff;
     font-size: .62rem;
     font-weight: 700;
     line-height: 1;
     backdrop-filter: blur(8px);
 }
-.popular-card__title {
-    padding: .65rem .7rem 0;
-    margin: 0;
-    font-size: .82rem;
-    line-height: 1.25;
-}
-.popular-card__desc { display: none; }
 
-@media (max-width: 479px) {
-    .app-container { padding-left: .65rem; padding-right: .65rem; }
-    .actions-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: .55rem;
-        margin-top: .85rem;
-        margin-bottom: 1.15rem;
-    }
-    .action-pill {
-        width: 100%;
-        justify-content: center;
-        padding-inline: .45rem;
-        font-size: .72rem;
-    }
-    .hero-wrapper {
-        min-height: 310px;
-        max-height: 430px;
+/* The old layout is a vertical list on phones. */
+@media (max-width: 599px) {
+    .popular-list {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 4rem !important;
+        margin-top: 3.5rem;
     }
 }
