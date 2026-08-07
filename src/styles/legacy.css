@@ -8355,3 +8355,10 @@
 
 /* The original Popular layout uses a floating circular poster. Keep the circle visible. */
 #animeContainer.popular-list .popular-card { overflow: visible !important; }
+
+/* Popular only: the circular poster intentionally floats above its card. */
+body:has(#animeContainer.popular-list) .app-container,
+body:has(#animeContainer.popular-list) #animeContainer.popular-list,
+body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-card {
+    overflow: visible !important;
+}
