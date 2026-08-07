@@ -4386,30 +4386,32 @@ let externalSourceCache = {};
 
         let popularRenderGen = 0;
 
-        function renderPopularCards(list) {
+        async function renderPopularCards(list) {
             const container = document.getElementById('animeContainer');
+            if (!container) return;
             container.classList.add('popular-list');
             container.classList.remove('anime-grid');
             container.style.display = '';
             const gen = ++popularRenderGen;
+
+            // Paint the first visible popular posters from TMDB before the cards appear.
+            await preloadHomepageTmdbGroups([list], 12);
+            if (gen !== popularRenderGen) return;
+
             container.innerHTML = list.map((a, idx) => {
-                const poster = a.images?.jpg?.large_image_url || '';
+                const poster = a.tmdbPoster || ANIME_CARD_PLACEHOLDER;
                 const title = a.title || 'Без назви';
-                const shortSynopsis = (a.synopsis || '').trim();
-                const descHtml = shortSynopsis
-                    ? `<div class="popular-card__desc">${escapeHtml(shortSynopsis.length > 130 ? shortSynopsis.slice(0,130)+'…' : shortSynopsis)}</div>`
-                    : `<div class="popular-card__desc popular-card__desc--empty"></div>`;
+                const type = a.tmdbType || '';
                 return `
-            <div class="popular-card" data-url="${a.url}" data-idx="${idx}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
+            <div class="popular-card" data-url="${escapeHtml(a.url)}" data-idx="${idx}" tabindex="0" role="button" aria-label="${escapeHtml(title)}" style="animation-delay:${idx*0.03}s">
               <div class="popular-card__poster-wrap">
                 <div class="popular-card__poster">
-                  <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='data:image/svg+xml,...'">
-                  <span class="popular-card__type" data-role="type" hidden></span>
+                  <img src="${poster}" alt="${escapeHtml(title)}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='${ANIME_CARD_PLACEHOLDER}'">
+                  <span class="popular-card__type" data-role="type" ${type ? '' : 'hidden'}>${type}</span>
                 </div>
                 <div class="popular-card__rank popular-card__rank--loading"><i class="fas fa-spinner fa-pulse"></i></div>
               </div>
-              <div class="popular-card__title">${title}</div>
-              ${descHtml}
+              <div class="popular-card__title">${escapeHtml(title)}</div>
             </div>`;
             }).join('');
             container.querySelectorAll('.popular-card').forEach(card => {
