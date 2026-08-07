@@ -1,18 +1,20 @@
 /* Popular styles copied from commit cbaa50fe29a8aea6ed89d734d4215a6c75ee2bdc. */
 /* Popular view no longer creates huge empty gaps around circular posters. */
 .popular-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 1rem;
     margin-top: 1rem;
     padding: 0;
 }
 @media (min-width: 680px) {
-    .popular-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
+    .popular-list { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 1.25rem; }
 }
 @media (min-width: 1024px) {
-    .popular-list { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.5rem; }
+    .popular-list { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 1.5rem; }
 }
 .popular-card {
+    display: block;
     min-width: 0;
     padding: 0 0 .75rem;
     border-radius: 14px;
