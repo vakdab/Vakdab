@@ -7371,6 +7371,7 @@ function renderProfilePage() {
         let playerPageCurrentEpisodeNum = '1';
         let playerPageHistoryUpdated = false;
         let playerPageWatchStartTime = 0;
+        let playerRatingSourceIsTmdb = false; // TMDB рейтинг має пріоритет над локальним рейтингом глядачів
 
         const QUALITY_OPTIONS = ['Максимальна', '2160p (4K)', '1440p', '1080p', '720p', '480p', '360p'];
 
@@ -7406,8 +7407,9 @@ function renderProfilePage() {
             const _resetLogoImg = document.getElementById('playerTitleLogo');
             if (_resetLogoImg) { _resetLogoImg.style.display = 'none'; _resetLogoImg.src = ''; }
             document.getElementById('castSection').style.display = 'none';
-            const _resetTmdbTile = document.getElementById('playerTmdbRating');
-            if (_resetTmdbTile) _resetTmdbTile.style.display = 'none';
+            const _resetRelatedSection = document.getElementById('relatedSeasonsSection');
+            if (_resetRelatedSection) _resetRelatedSection.style.display = 'none';
+            playerRatingSourceIsTmdb = false;
             updateLikeButton();
             updateDislikeButton();
             updateBookmarkButton(url);
@@ -7456,6 +7458,7 @@ function renderProfilePage() {
                 };
                 updateSourceChip();
                 loadAnimeRatingAggregate(url);
+                renderRelatedSeasons(anime);
                 renderRecommendationsAndSimilar(anime);
                 const seasons = Object.keys(anime.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
                 playerPageCurrentSeason = seasons[0] || '1';
@@ -7510,7 +7513,8 @@ function renderProfilePage() {
                         const logoUrl = tmdbBestLogo(details);
 
                         document.getElementById('playerPosterImg').src = animeUaPoster;
-                        document.getElementById('playerBlurBg').style.backgroundImage = `url(${animeUaPoster})`;
+                        const tmdbBackdrop = tmdbBestBackdrop(details);
+                        document.getElementById('playerBlurBg').style.backgroundImage = `url(${tmdbBackdrop || animeUaPoster})`;
                         document.getElementById('playerPosterTitle').textContent = title;
                         document.getElementById('playerKicker').textContent = originalTitle;
                         document.getElementById('playerTopbarTitle').textContent = title;
@@ -7529,10 +7533,10 @@ function renderProfilePage() {
                                 if (synopsisEl.scrollHeight > synopsisEl.clientHeight + 2) moreBtn.style.display = 'block';
                             }, 100);
                         }
-                        const tmdbTile = document.getElementById('playerTmdbRating');
-                        if (tmdbTile && details.vote_average) {
-                            tmdbTile.style.display = '';
-                            document.getElementById('playerTmdbRatingNum').textContent = details.vote_average.toFixed(1);
+                        if (details.vote_average) {
+                            playerRatingSourceIsTmdb = true;
+                            document.getElementById('playerRatingNum').textContent = details.vote_average.toFixed(1);
+                            document.getElementById('playerRatingLabel').textContent = 'TMDB';
                         }
                         const logoImg = document.getElementById('playerTitleLogo');
                         const kickerEl = document.getElementById('playerKicker');
@@ -7598,9 +7602,16 @@ function renderProfilePage() {
             }
         }
 
+        // Будуємо силку на НАШ сайт (не на джерело animeua.club) — при відкритті вона
+        // сама відкриє потрібне аніме в плеєрі, див. обробку #anime? при завантаженні сторінки.
+        function buildShareUrl(animeUrl) {
+            const base = window.location.origin + window.location.pathname;
+            return `${base}#anime?url=${encodeURIComponent(animeUrl || '')}`;
+        }
+
         function shareAnime() {
             const anime = playerPageAnime;
-            const url = playerPageCurrentAnimeUrl || window.location.href;
+            const url = buildShareUrl(playerPageCurrentAnimeUrl) || window.location.href;
             const title = anime?.title || 'VAKDAB';
             if (navigator.share) {
                 navigator.share({ title, text: `Дивись "${title}" на VAKDAB`, url }).catch(() => {});
@@ -7943,6 +7954,19 @@ function renderProfilePage() {
             const pick = results.find(r => r.iso_3166_1 === 'UA') || results.find(r => r.iso_3166_1 === 'US') ||
                 results.find(r => r.iso_3166_1 === 'JP') || results[0];
             return (pick && pick.rating) ? pick.rating : null;
+        }
+
+        // Кадр (backdrop) з TMDB для фону сторінки аніме — беремо найкращий за мовою/якістю,
+        // фолбек на основний backdrop_path, якщо масив images.backdrops порожній.
+        function tmdbBestBackdrop(details) {
+            const backdrops = (details && details.images && details.images.backdrops) || [];
+            if (backdrops.length) {
+                const sorted = [...backdrops].sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0) || (b.width || 0) - (a.width || 0));
+                const pick = sorted.find(b => !b.iso_639_1) || sorted[0];
+                if (pick) return tmdbImgUrl(pick.file_path, 'w1280');
+            }
+            if (details && details.backdrop_path) return tmdbImgUrl(details.backdrop_path, 'w1280');
+            return null;
         }
 
         const TMDB_STATUS_LABELS = {
@@ -8536,14 +8560,18 @@ function renderProfilePage() {
             const numEl = document.getElementById('playerRatingNum');
             const labelEl = document.getElementById('playerRatingLabel');
             if (!numEl) return;
-            numEl.textContent = '—';
-            if (labelEl) labelEl.textContent = 'ОЦІНКА ГЛЯДАЧІВ';
+            if (!playerRatingSourceIsTmdb) {
+                numEl.textContent = '—';
+                if (labelEl) labelEl.textContent = 'ОЦІНКА ГЛЯДАЧІВ';
+            }
             try {
                 if (!db) return;
                 await ensureFirebaseGuestAuth();
                 const animeId = String(animeUrl.hashCode ? animeUrl.hashCode() : animeUrl);
                 const q = query(collection(db, 'anime_ratings'), where('animeId', '==', animeId));
                 const snap = await getDocs(q);
+                // TMDB-рейтинг має пріоритет — якщо він уже застосований, локальну оцінку глядачів не показуємо в тому ж тайлі
+                if (playerRatingSourceIsTmdb) return;
                 if (snap.empty) { numEl.textContent = '—'; if (labelEl) labelEl.textContent = 'НЕМАЄ ОЦІНОК'; return; }
                 let sum = 0, count = 0;
                 snap.forEach(d => { const v = d.data().value; if (v === 1 || v === -1) { sum += v; count++; } });
@@ -8604,20 +8632,101 @@ function renderProfilePage() {
             });
         }
 
+        // Прибираємо суфікси сезону/частини/типу з назви, щоб знайти інші сезони/фільми того ж аніме
+        function baseTitleForRelated(title) {
+            return (title || '')
+                .replace(/\[[^\]]*\]/g, '')
+                .replace(/[«»"'`]/g, '')
+                .replace(/\b\d+(?:-й|-я|-е)?\s*сезон\b/gi, '')
+                .replace(/\bсезон\s*\d+\b/gi, '')
+                .replace(/\bseason\s*\d+\b/gi, '')
+                .replace(/\bs\d+\b/gi, '')
+                .replace(/\b\d+\s*частина\b/gi, '')
+                .replace(/\bчастина\s*\d+\b/gi, '')
+                .replace(/\b(фільм|movie|film|ova|ona|спешл|special)\b/gi, '')
+                .replace(/[:\-–—]\s*$/, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function extractRelatedOrderNum(title) {
+            const t = String(title || '');
+            const m = t.match(/(\d+)(?:-й|-я|-е)?\s*сезон/i) || t.match(/сезон\s*(\d+)/i) ||
+                t.match(/season\s*(\d+)/i) || t.match(/\bs(\d+)\b/i) ||
+                t.match(/(\d+)\s*частина/i) || t.match(/частина\s*(\d+)/i);
+            if (m) return parseInt(m[1], 10);
+            if (/фільм|movie|film/i.test(t)) return 900;
+            if (/ova|ona|спешл|special/i.test(t)) return 950;
+            return 1;
+        }
+
+        let relatedSeasonsCache = {};
+        async function fetchRelatedSeasons(anime) {
+            const base = baseTitleForRelated(anime.title || anime.originalTitle);
+            if (!base || base.length < 3) return [];
+            const cacheKey = base.toLowerCase();
+            if (relatedSeasonsCache[cacheKey] !== undefined) return relatedSeasonsCache[cacheKey];
+            try {
+                const results = await searchAnimeua(base, 1);
+                const baseNorm = base.toLowerCase();
+                const filtered = (results || []).filter(a => {
+                    const otherBase = baseTitleForRelated(a.title).toLowerCase();
+                    if (!otherBase) return false;
+                    return otherBase === baseNorm || otherBase.includes(baseNorm) || baseNorm.includes(otherBase);
+                });
+                filtered.sort((a, b) => extractRelatedOrderNum(a.title) - extractRelatedOrderNum(b.title));
+                relatedSeasonsCache[cacheKey] = filtered;
+                return filtered;
+            } catch (e) {
+                console.warn('Related seasons fetch error:', e);
+                relatedSeasonsCache[cacheKey] = [];
+                return [];
+            }
+        }
+
+        async function renderRelatedSeasons(anime) {
+            const section = document.getElementById('relatedSeasonsSection');
+            const el = document.getElementById('relatedSeasonsHscroll');
+            if (section) section.style.display = 'none';
+            if (!el) return;
+            try {
+                const list = await fetchRelatedSeasons(anime);
+                renderPosterCards(el, list, anime.url);
+            } catch (e) {
+                console.warn('Related seasons render error:', e);
+            }
+        }
+
         async function renderRecommendationsAndSimilar(anime) {
             const recSection = document.getElementById('recommendationsSection');
             const recEl = document.getElementById('recommendationsHscroll');
             if (recSection) recSection.style.display = 'none';
+            if (!recEl) return;
             const genres = anime.genres || [];
-            if (!genres.length) return;
-            try {
-                const slug1 = GENRE_MAP[genres[0]];
-                if (slug1 && recEl) {
-                    const list1 = await fetchAnimeuaByGenre(slug1, 1);
-                    renderPosterCards(recEl, list1, anime.url);
+            // Пробуємо усі жанри по черзі, поки не знайдемо результат — раніше бралась
+            // лише перша генра і секція просто лишалась порожньою/схованою, якщо жанр
+            // не мапився або на сторінці жанру нічого не було.
+            for (const g of genres) {
+                const slug = GENRE_MAP[g];
+                if (!slug) continue;
+                try {
+                    const list = await fetchAnimeuaByGenre(slug, 1);
+                    const filtered = (list || []).filter(a => a.url !== anime.url);
+                    if (filtered.length) {
+                        renderPosterCards(recEl, filtered, anime.url);
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('Recommendations/similar fetch error:', e);
                 }
+            }
+            // Фолбек — якщо жоден жанр не дав результату, показуємо топ-100, щоб секція
+            // не зникала непередбачувано в одних плеєрах і не з'являлась в інших.
+            try {
+                const top = await fetchAnimeuaTop100();
+                renderPosterCards(recEl, top || [], anime.url);
             } catch (e) {
-                console.warn('Recommendations/similar fetch error:', e);
+                console.warn('Recommendations fallback (top100) error:', e);
             }
         }
 
@@ -8727,7 +8836,12 @@ function renderProfilePage() {
             Router.init();
 
             const hash = window.location.hash.slice(1);
-            if (hash === 'profile') {
+            if (hash.startsWith('anime?')) {
+                const params = Object.fromEntries(new URLSearchParams(hash.split('?')[1]));
+                if (params.url) {
+                    setTimeout(() => openPlayerPage(decodeURIComponent(params.url)), 150);
+                }
+            } else if (hash === 'profile') {
                 Router.goTo('profile');
             } else if (hash.startsWith('genre')) {
                 const parts = hash.split('?');
