@@ -1093,6 +1093,23 @@ let externalSourceCache = {};
                         }
                         attemptsLeft--;
                     }
+                    // Не чекаємо, поки зламаються всі джерела: один ashdi/vidmoly
+                    // може віддати desktop HTML, а інший — тільки mobile HTML.
+                    if (sources.length === 0) {
+                        try {
+                            const mobileHtml = await fetchUA(playerUrl, 1, diag, 'mobile');
+                            const mobileText = mobileHtml._rawHtml || mobileHtml.body?.innerHTML || '';
+                            const mobileSources = extractSourcesFromText(mobileText, provider + ' (Mobile)');
+                            if (mobileSources.length) {
+                                sources = mobileSources;
+                                text = mobileText;
+                                diag.mobileUAFallbackUsed = true;
+                                diag.mobileUAFallbackFound = true;
+                            }
+                        } catch (e) {
+                            diag.jsErrors.push('per-player mobile fallback ' + playerUrl + ': ' + ((e && e.message) || String(e)));
+                        }
+                    }
                     if (/https?:\/\/[^\s'"<>]+\.m3u8/i.test(text)) diag.foundM3u8 = true;
                     if (/https?:\/\/[^\s'"<>]+\.mp4/i.test(text)) diag.foundMp4 = true;
                     if (/Playerjs\s*\(/i.test(text)) diag.foundPlayerjsJson = true;
@@ -1406,13 +1423,20 @@ let externalSourceCache = {};
                 } catch (e) { console.warn('JSON parse error', e); }
             }
             if (sources.length === 0) {
-                const urlMatches = [...text.matchAll(/https?:\/\/[^\s\'"<>]+\.m3u8[^\s\'"<>]*/g)];
+                // Деякі версії плеєра віддають прямий mp4, а не m3u8. Раніше такі
+                // джерела губились і на Android виходило «серій немає».
+                const urlMatches = [...text.matchAll(/https?:\/\/[^\s\'"<>]+\.(?:m3u8|mp4)(?:\?[^\s\'"<>]*)?/gi)];
                 urlMatches.forEach((m, idx) => {
-                    if (!sources.some(s => s.file === m[0])) sources.push({ label: `Потік ${idx+1}`, file: m[0],
-                        provider: providerName, dub: providerName || 'UA', season: '1', episode: String(idx +
-                            1) });
+                    const file = m[0].replace(/\\\//g, '/');
+                    if (!sources.some(s => s.file === file)) sources.push({ label: `Потік ${idx + 1}`, file,
+                        provider: providerName, dub: providerName || 'UA', season: '1', episode: String(idx + 1) });
                 });
             }
+            // Нормалізуємо дублікати та биті пробіли в URL, які часто приходять
+            // з HTML-атрибутів на мобільній версії джерела.
+            sources = sources.filter(s => s && typeof s.file === 'string' && /^https?:\/\//i.test(s.file))
+                .map(s => ({ ...s, file: s.file.trim().replace(/\\\//g, '/') }))
+                .filter((s, i, arr) => arr.findIndex(x => x.file === s.file && x.episode === s.episode && x.dub === s.dub) === i);
             return sources;
         }
 
@@ -1591,6 +1615,9 @@ let externalSourceCache = {};
                     transform: scale(1);
                 }
                 .lp-center-play-btn svg { width: 28px; height: 28px; fill: #fff; }
+                .lp-error { position:absolute; inset:0; z-index:20; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:24px; text-align:center; color:#fff; background:rgba(10,10,14,.88); font-size:13px; }
+                .lp-error strong { font-size:16px; }
+                .lp-error span { max-width:420px; opacity:.78; line-height:1.45; }
             `;
             document.head.appendChild(s);
         })();
@@ -1788,7 +1815,7 @@ let externalSourceCache = {};
                 });
 
                 // Keyboard
-                document.addEventListener('keydown', e => {
+                this._onKeyDown = e => {
                     const modal = document.getElementById('playerPageModal');
                     if (!modal || modal.style.display === 'none' || modal.style.display === '') return;
                     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -1797,7 +1824,8 @@ let externalSourceCache = {};
                     else if (e.code === 'ArrowLeft') { e.preventDefault(); v.currentTime = Math.max(0, v.currentTime - 10); this._showControls(); }
                     else if (e.code === 'KeyF') { e.preventDefault(); this.toggleFullscreen(); }
                     else if (e.code === 'KeyM') { e.preventDefault(); v.muted = !v.muted; this.state.muted = v.muted; this._updateVolBtn(); }
-                });
+                };
+                document.addEventListener('keydown', this._onKeyDown);
             }
 
             _updatePlayBtn() {
@@ -1877,6 +1905,7 @@ let externalSourceCache = {};
                 if (!src) { this.state.loading = false; return; }
 
                 const proxyUrl = (typeof getProxyUrl === 'function' && !src.startsWith(PROXY_URL)) ? getProxyUrl(src) : src;
+                const isHlsSource = /\.m3u8(?:[?#]|$)/i.test(src);
 
                 const _startHls = () => {
                     const hls = new Hls({
@@ -1900,12 +1929,21 @@ let externalSourceCache = {};
                             hls.destroy(); this.hls = null;
                             this.state.loading = false;
                             this._spinner.classList.add('hidden');
-                            v.src = proxyUrl; v.load(); v.play().catch(() => {});
+                            v.src = proxyUrl; v.load();
+                            v.play().catch(() => {});
                         }
                     });
+                    v.addEventListener('error', () => this._showPlaybackError('Потік пошкоджений, заблокований або несумісний із цим пристроєм.'), { once: true });
                 };
 
-                if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                if (!isHlsSource) {
+                    // MP4 та інші browser-native формати не треба проганяти через HLS.js.
+                    v.src = proxyUrl;
+                    v.load();
+                    v.addEventListener('canplay', () => { this.state.loading = false; this._spinner.classList.add('hidden'); }, { once: true });
+                    v.addEventListener('error', () => this._showPlaybackError('Відеофайл не вдалося відкрити на цьому пристрої.'), { once: true });
+                    v.play().catch(() => {});
+                } else if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                     _startHls();
                 } else if (v.canPlayType('application/vnd.apple.mpegurl') !== '' || v.canPlayType('audio/mpegurl') !== '') {
                     v.src = proxyUrl; v.load();
@@ -1921,6 +1959,16 @@ let externalSourceCache = {};
                     sc.onerror = () => { v.src = proxyUrl; v.load(); this.state.loading = false; this._spinner.classList.add('hidden'); };
                     document.head.appendChild(sc);
                 }
+            }
+
+            _showPlaybackError(message) {
+                this.state.loading = false;
+                this._spinner?.classList.add('hidden');
+                if (!this.containerRef || this.containerRef.querySelector('.lp-error')) return;
+                const error = document.createElement('div');
+                error.className = 'lp-error';
+                error.innerHTML = `<strong>Не вдалося запустити відео</strong><span>${message}</span>`;
+                this.containerRef.appendChild(error);
             }
 
             togglePlay() {
@@ -1944,6 +1992,7 @@ let externalSourceCache = {};
 
             destroy() {
                 clearTimeout(this._controlsTimer);
+                if (this._onKeyDown) document.removeEventListener('keydown', this._onKeyDown);
                 clearTimeout(this._centerTimer);
                 if (this.hls) { this.hls.destroy(); this.hls = null; }
                 if (this.videoRef) { this.videoRef.pause(); this.videoRef.removeAttribute('src'); this.videoRef.load(); }
@@ -7375,6 +7424,26 @@ function renderProfilePage() {
 
         const QUALITY_OPTIONS = ['Максимальна', '2160p (4K)', '1440p', '1080p', '720p', '480p', '360p'];
 
+        function renderPlayerEpisodeError(message, diagnostics, retryUrl) {
+            const grid = document.getElementById('episodeViewGrid');
+            if (!grid) return;
+            const device = diagnostics?.device?.type || detectDeviceInfo(navigator.userAgent).type;
+            const stage = diagnostics?.failedStage || 'завантаження даних плеєра';
+            const detail = diagnostics?.emptyObject ? `Не знайдено: ${diagnostics.emptyObject}.` : `Етап: ${stage}.`;
+            grid.innerHTML = `<div class="episode-empty player-error-state">
+                <i class="fas fa-triangle-exclamation"></i>
+                <strong>${escapeHtml(message)}</strong>
+                <span>${escapeHtml(detail)} Пристрій: ${escapeHtml(device)}.</span>
+                <button class="btn-outline player-retry-btn" type="button"><i class="fas fa-redo"></i> Спробувати ще раз</button>
+            </div>`;
+            const retry = grid.querySelector('.player-retry-btn');
+            retry?.addEventListener('click', () => {
+                retry.disabled = true;
+                retry.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Повторюємо...';
+                openPlayerPage(retryUrl || playerPageCurrentAnimeUrl);
+            });
+        }
+
         async function openPlayerPage(url) {
             const modal = document.getElementById('playerPageModal');
             if (!modal) return;
@@ -7471,15 +7540,7 @@ function renderProfilePage() {
                 updatePlayFabLabel();
                 document.getElementById('episodePanel').classList.add('visible');
                 if (seasons.length === 0 || Object.keys(anime.seasons || {}).length === 0) {
-                    document.getElementById('episodeViewGrid').innerHTML =
-                        `<div class="episode-empty">
-                            <i class="fas fa-search" style="font-size:2rem;margin-bottom:12px;opacity:0.5;"></i>
-                            <div>Серії не знайдені на цьому джерелі.</div>
-                            <button class="btn-outline" style="margin-top:16px;padding:8px 20px;border-radius:20px;cursor:pointer;"
-                                onclick="openPlayerPage('${(anime.url||'').replace(/'/g, "\'")}')">
-                                <i class="fas fa-redo"></i> Спробувати знову
-                            </button>
-                        </div>`;
+                    renderPlayerEpisodeError('Серії, сезони або озвучки не завантажилися.', anime._diagnostics, anime.url);
                     console.warn('No episodes found for anime:', anime.url, anime._diagnostics);
                 }
                 buildBottomSheetData();
@@ -7588,15 +7649,7 @@ function renderProfilePage() {
                     failedStage: 'openPlayerPage() — необроблена помилка завантаження', emptyObject: null
                 };
 
-                document.getElementById('episodeViewGrid').innerHTML =
-                    `<div class="episode-empty">
-                        <i class="fas ${icon}" style="font-size:2rem;margin-bottom:12px;opacity:0.5;"></i>
-                        <div>${userMsg}</div>
-                        <button class="btn-outline" style="margin-top:16px;padding:8px 20px;border-radius:20px;cursor:pointer;"
-                            onclick="openPlayerPage('${url.replace(/'/g, "\'")}')">
-                            <i class="fas fa-redo"></i> Спробувати знову
-                        </button>
-                    </div>`;
+                renderPlayerEpisodeError(userMsg, diagForErr, url);
                 document.getElementById('episodePanel').classList.add('visible');
                 console.error('Player load error:', err.message || err, diagForErr);
             }

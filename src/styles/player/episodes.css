@@ -81,3 +81,30 @@
 #playerPageModal #playerFilterBtn {
     display: none !important;
 }
+
+#playerPageModal .player-error-state {
+    min-width: 100%;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 28px 18px;
+    text-align: center;
+    color: var(--text-main);
+}
+#playerPageModal .player-error-state > i {
+    color: var(--accent, #d7b56d);
+    font-size: 28px;
+    margin-bottom: 3px;
+}
+#playerPageModal .player-error-state strong { font-size: 15px; }
+#playerPageModal .player-error-state span {
+    max-width: 520px;
+    color: var(--text-dimmer);
+    font-size: 12px;
+    line-height: 1.5;
+}
+#playerPageModal .player-retry-btn { margin-top: 8px; }
+#playerPageModal .player-retry-btn:disabled { opacity: .65; cursor: wait; }
