@@ -1035,7 +1035,7 @@ let externalSourceCache = {};
             const yearEl = safeQuery('.pmovie__year, .release-year', doc);
             const yearMatch = (yearEl?.textContent || '').match(/\d{4}/);
             let year = yearMatch ? parseInt(yearMatch[0]) : null;
-            if (year !== null) year = year - 1;
+            // AnimeUA already returns the correct release year; never shift it.
             let synopsis = '';
             for (const sel of ['.full-text', '.pmovie__description', '.anime__description']) {
                 const el = safeQuery(sel, doc);
@@ -1044,6 +1044,16 @@ let externalSourceCache = {};
             let rating = '';
             const ratingEl = doc.querySelector('.pmovie__age p, .pmovie__age');
             if (ratingEl) rating = ratingEl.textContent.replace('Рейтинг:', '').trim();
+
+            // Movie runtime from AnimeUA, used immediately while TMDB metadata is loading.
+            let runtimeMinutes = null;
+            const runtimeText = safeQuery('.pmovie__duration, .movie-duration, .duration, [class*="duration"]', doc)?.textContent || '';
+            const runtimeMatch = runtimeText.match(/(?:(\d+)\s*год(?:ин|ини|.)?\s*)?(\d+)\s*хв/i) || runtimeText.match(/(\d{2,3})\s*хв/i);
+            if (runtimeMatch) {
+                const hours = Number(runtimeMatch[1] || 0);
+                const minutes = Number(runtimeMatch[2] || runtimeMatch[1] || 0);
+                runtimeMinutes = runtimeMatch[2] ? hours * 60 + minutes : minutes;
+            }
 
             diag.failedStage = 'extractPlayerIframeUrls() — пошук iframe плеєрів на сторінці';
             let playerUrls = [];
@@ -1203,7 +1213,8 @@ let externalSourceCache = {};
                 score: rating,
                 sources: sources,
                 totalEpisodes,
-                type: genres.some(v => /повнометраж|фільм|movie/i.test(v)) ? 'movie' : 'tv',
+                runtimeMinutes,
+                type: genres.some(v => /повнометраж|фільм|movie/i.test(v)) || /\b(фільм|movie|film)\b/i.test(title) ? 'movie' : 'tv',
                 _diagnostics: diag
             };
         }
@@ -7424,7 +7435,10 @@ function renderProfilePage() {
                 document.getElementById('playerAgeBadge').textContent = anime.score || '—';
                 const isMovie = playerAnimeIsMovie(anime);
                 document.getElementById('playerStatusTag').textContent = isMovie ? 'Фільм' : (totalEpisodes > 0 ? 'Онгоїнг' : 'Завершено');
-                document.getElementById('playerMetaLine').textContent = isMovie ? `${anime.year || '—'}, Фільм` : `${anime.year || '—'}, ${totalEpisodes} еп.`;
+                const animeRuntime = formatMovieRuntime(anime.runtimeMinutes);
+                document.getElementById('playerMetaLine').textContent = isMovie
+                    ? `${anime.year || '—'}, Фільм${animeRuntime ? ` · ${animeRuntime}` : ''}`
+                    : `${anime.year || '—'}, ${totalEpisodes} еп.`;
                 document.getElementById('playerTagRow').innerHTML =
                     (anime.genres || []).slice(0, 4).map(g => `<span class="tag">${g}</span>`).join('');
                 document.getElementById('playerEpisodeCountNum').textContent = totalEpisodes;
@@ -7481,22 +7495,22 @@ function renderProfilePage() {
                         if (_thisSignal.aborted || playerPageCurrentAnimeUrl !== url) return;
                         if (!details) return;
 
-                        const tmdbPoster = tmdbImgUrl(details.poster_path, 'w500') || posterUrl;
+                        // Artwork always remains from AnimeUA. TMDB is metadata-only.
                         const isMovie = tmdbInfo.mediaType === 'movie' || playerAnimeIsMovie(anime);
-                        const tmdbBackdrop = tmdbImgUrl(details.backdrop_path, 'original') || tmdbPoster;
+                        const animeUaPoster = posterUrl || ANIME_CARD_PLACEHOLDER;
                         const title = details.name || anime.title;
                         const originalTitle = details.original_name || anime.originalTitle || anime.title;
                         const year = (details.release_date || details.first_air_date || '').slice(0, 4) || anime.year || '—';
                         const numEpisodes = details.number_of_episodes || totalEpisodes;
-                        const runtime = formatMovieRuntime(details.runtime);
+                        const runtime = formatMovieRuntime(details.runtime) || formatMovieRuntime(anime.runtimeMinutes);
                         const statusLabel = isMovie ? 'Фільм' : (TMDB_STATUS_LABELS[details.status] || (totalEpisodes > 0 ? 'Онгоїнг' : 'Завершено'));
                         const genres = (details.genres || []).map(g => g.name).filter(Boolean);
                         const overview = details.overview || anime.synopsis || '';
                         const ageRating = tmdbAgeRating(details);
                         const logoUrl = tmdbBestLogo(details);
 
-                        document.getElementById('playerPosterImg').src = tmdbPoster;
-                        document.getElementById('playerBlurBg').style.backgroundImage = `url(${tmdbBackdrop})`;
+                        document.getElementById('playerPosterImg').src = animeUaPoster;
+                        document.getElementById('playerBlurBg').style.backgroundImage = `url(${animeUaPoster})`;
                         document.getElementById('playerPosterTitle').textContent = title;
                         document.getElementById('playerKicker').textContent = originalTitle;
                         document.getElementById('playerTopbarTitle').textContent = title;
@@ -7960,9 +7974,7 @@ function renderProfilePage() {
         }
 
         function tmdbStillFor(ep, epMap, tmdbInfo, fallback) {
-            const t = epMap && epMap[parseInt(ep.episode)];
-            if (t && t.still_path) return tmdbImgUrl(t.still_path, 'w300');
-            if (tmdbInfo && tmdbInfo.poster) return tmdbImgUrl(tmdbInfo.poster, 'w342');
+            // Episode artwork also stays on AnimeUA to keep one consistent source.
             return fallback;
         }
 
@@ -8563,16 +8575,26 @@ function renderProfilePage() {
         // ====================================================================
         //  РЕКОМЕНДАЦІЇ / ПОДІБНІ (реальні дані з каталогу за жанром)
         // ====================================================================
+        function relatedAnimeLabel(anime) {
+            const title = String(anime?.title || '');
+            if (/\b(?:сезон|season)\s*\d+/i.test(title)) return (title.match(/(?:сезон|season)\s*\d+/i) || [''])[0];
+            if (/\b\d+(?:-й|-я|-е)?\s*сезон/i.test(title)) return (title.match(/\b\d+(?:-й|-я|-е)?\s*сезон/i) || [''])[0];
+            if (/фільм|movie|film/i.test(title)) return 'Фільм';
+            if (/OVA|ONA|спешл|special/i.test(title)) return 'OVA / Special';
+            return anime?.type === 'movie' ? 'Фільм' : '';
+        }
+
         function renderPosterCards(container, list, excludeUrl) {
             const items = (list || []).filter(a => a.url !== excludeUrl).slice(0, 8);
             if (!items.length) { container.closest('section').style.display = 'none'; return; }
             container.closest('section').style.display = '';
             container.innerHTML = items.map(a => {
                 const poster = a.images?.jpg?.large_image_url || '';
+                const relationLabel = relatedAnimeLabel(a);
                 return `
               <div class="poster-card" data-url="${escapeHtml(a.url)}">
                 <div class="poster-thumb" style="background-image:url(${poster})">
-                  ${a.status ? `<div class="poster-badges"><span class="pb-format">${escapeHtml(a.status)}</span></div>` : ''}
+                  ${(a.status || relationLabel) ? `<div class="poster-badges">${a.status ? `<span class="pb-format">${escapeHtml(a.status)}</span>` : ''}${relationLabel ? `<span class="pb-format">${escapeHtml(relationLabel)}</span>` : ''}</div>` : ''}
                 </div>
                 <div class="poster-title">${escapeHtml(a.title)}</div>
               </div>`;
