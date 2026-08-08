@@ -7673,7 +7673,7 @@ function renderProfilePage() {
                 return `<span class="format-pill${active}" data-dub="${d}" style="cursor:pointer;">${String(d).toUpperCase()}</span>`;
             }).join('');
             if (playerPageCurrentQuality) formatHtml += `<span class="format-pill">${String(playerPageCurrentQuality).toUpperCase()}</span>`;
-            [document.getElementById('playerFormatRow'), document.getElementById('watchFormatRow')].forEach(formatRow => {
+            [document.getElementById('playerFormatRow'), document.getElementById('watchFormatRow'), document.getElementById('playerVideoDubRow')].forEach(formatRow => {
                 if (!formatRow) return;
                 formatRow.innerHTML = formatHtml;
                 formatRow.querySelectorAll('.format-pill[data-dub]').forEach(pill => {
@@ -8673,7 +8673,16 @@ function renderProfilePage() {
         // ====================================================================
         //  ІНІЦІАЛІЗАЦІЯ
         // ====================================================================
+        function moveEpisodesBeforeReviews() {
+            const info = document.getElementById('page-info');
+            const episodes = document.getElementById('page-episodes');
+            if (!info || !episodes || episodes.parentElement === info) return;
+            const firstInfoSection = info.querySelector('section');
+            info.insertBefore(episodes, firstInfoSection || null);
+        }
+
         async function init() {
+            moveEpisodesBeforeReviews();
             applyTheme(Storage.getTheme());
             applyThemeVariant(getProfile());
             /* leftdock removed */

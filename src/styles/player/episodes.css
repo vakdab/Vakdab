@@ -1,11 +1,11 @@
 /* Episodes are part of the anime information page, not a separate screen. */
-#playerPageModal .modal-content > #page-episodes {
+#playerPageModal #page-episodes {
     display: block !important;
     min-height: 0;
     animation: none;
 }
 
-#playerPageModal .modal-content > #page-episodes .episodes-page {
+#playerPageModal #page-episodes .episodes-page {
     min-height: 0;
     margin-top: 1.25rem;
     padding-top: .5rem;
@@ -13,16 +13,48 @@
 }
 
 /* Keep the controls, but make the old back affordance return to the details. */
-#playerPageModal .modal-content > #page-episodes .episodes-topbar {
+#playerPageModal #page-episodes .episodes-topbar {
     position: relative;
     top: auto;
     padding: 12px 16px 10px;
 }
 
-#playerPageModal .modal-content > #page-episodes .episodes-topbar::before {
+#playerPageModal #page-episodes .episodes-topbar::before {
     content: 'Серії';
     margin-right: auto;
     color: var(--text);
     font-size: 18px;
     font-weight: 700;
 }
+
+
+/* Only view mode, episode numbers and seasons remain visible in the episode section. */
+#playerPageModal #watchSourcePill,
+#playerPageModal #watchFilterPill,
+#playerPageModal #bsSourceSection,
+#playerPageModal #bsQualitySection {
+    display: none !important;
+}
+
+/* Dubbing is selected directly over the active video. */
+#playerPageModal .video-dub-row {
+    display: flex !important;
+    position: absolute;
+    top: 58px;
+    left: 58px;
+    right: 14px;
+    z-index: 6;
+    justify-content: flex-start !important;
+    margin: 0 !important;
+    pointer-events: auto;
+}
+#playerPageModal .video-dub-row:empty { display: none !important; }
+#playerPageModal .video-dub-row .format-pill {
+    padding: 6px 11px;
+    border-radius: 8px;
+    background: rgba(0,0,0,.62);
+    color: #fff;
+    border-color: rgba(255,255,255,.28);
+    backdrop-filter: blur(10px);
+}
+#playerPageModal #playerFormatRow { display: none !important; }
