@@ -30,9 +30,9 @@
 @import url('./pages/stickers.css');
 @import url('./player/player-modal.css');
 @import url('./player/anime-info.css');
-@import url('./player/episodes.css');
 @import url('./player/video-player.css');
 @import url('./community/chat.css');
 @import url('./community/group.css');
 @import url('./legacy.css');
 @import url('./pages/main.css');
+@import url('./player/episodes.css');

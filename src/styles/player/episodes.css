@@ -1,1 +1,28 @@
-/* episodes styles are currently preserved in ../../legacy.css during the safe migration. */
+/* Episodes are part of the anime information page, not a separate screen. */
+#playerPageModal .modal-content > #page-episodes {
+    display: block !important;
+    min-height: 0;
+    animation: none;
+}
+
+#playerPageModal .modal-content > #page-episodes .episodes-page {
+    min-height: 0;
+    margin-top: 1.25rem;
+    padding-top: .5rem;
+    border-top: 1px solid var(--line);
+}
+
+/* Keep the controls, but make the old back affordance return to the details. */
+#playerPageModal .modal-content > #page-episodes .episodes-topbar {
+    position: relative;
+    top: auto;
+    padding: 12px 16px 10px;
+}
+
+#playerPageModal .modal-content > #page-episodes .episodes-topbar::before {
+    content: 'Серії';
+    margin-right: auto;
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 700;
+}

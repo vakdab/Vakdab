@@ -7707,10 +7707,11 @@ function renderProfilePage() {
         // ====================================================================
         function openWatchPage() {
             if (!playerPageAnime) { showToast('Аніме ще завантажується'); return; }
-            document.getElementById('page-info').classList.remove('active');
-            document.getElementById('page-episodes').classList.add('active');
-            const mc = document.querySelector('#playerPageModal .modal-content');
-            if (mc) mc.scrollTop = 0;
+            // Episodes now live below the anime information on the same page.
+            document.getElementById('page-info')?.classList.add('active');
+            document.getElementById('page-episodes')?.classList.add('active');
+            const episodesSection = document.querySelector('#playerPageModal #page-episodes');
+            if (episodesSection) episodesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
             const cw = findContinueWatching(playerPageAnime);
             if (cw && cw.progress < 95 && (cw.season !== playerPageCurrentSeason || cw.dub !== playerPageCurrentDub)) {
                 playerPageCurrentSeason = cw.season;
@@ -7721,8 +7722,11 @@ function renderProfilePage() {
         }
 
         function closeWatchPage() {
-            document.getElementById('page-episodes').classList.remove('active');
-            document.getElementById('page-info').classList.add('active');
+            // Return to the details section without changing the page.
+            document.getElementById('page-info')?.classList.add('active');
+            document.getElementById('page-episodes')?.classList.add('active');
+            const infoSection = document.querySelector('#playerPageModal #page-info');
+            if (infoSection) infoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
             if (playerPagePlayer) {
                 if (playerPagePlayer._timeUpdateListener && playerPagePlayer.videoRef) {
                     playerPagePlayer.videoRef.removeEventListener('timeupdate', playerPagePlayer._timeUpdateListener);
