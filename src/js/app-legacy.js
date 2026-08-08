@@ -1203,6 +1203,7 @@ let externalSourceCache = {};
                 score: rating,
                 sources: sources,
                 totalEpisodes,
+                type: genres.some(v => /повнометраж|фільм|movie/i.test(v)) ? 'movie' : 'tv',
                 _diagnostics: diag
             };
         }
@@ -1595,9 +1596,11 @@ let externalSourceCache = {};
 
         function lpFmtTime(sec) {
             if (!isFinite(sec) || sec < 0) return '0:00';
-            const m = Math.floor(sec / 60);
-            const s = Math.floor(sec % 60);
-            return m + ':' + String(s).padStart(2, '0');
+            const total = Math.floor(sec);
+            const h = Math.floor(total / 3600);
+            const m = Math.floor((total % 3600) / 60);
+            const s = total % 60;
+            return h > 0 ? h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') : m + ':' + String(s).padStart(2, '0');
         }
 
         class LampaPlayer {
@@ -1679,11 +1682,14 @@ let externalSourceCache = {};
                     this.state.playing = false;
                     this._updatePlayBtn();
                 });
-                v.addEventListener('timeupdate', () => {
-                    this.state.currentTime = v.currentTime;
-                    this.state.duration = v.duration || 0;
+                const syncTimeState = () => {
+                    this.state.currentTime = Number.isFinite(v.currentTime) ? v.currentTime : 0;
+                    this.state.duration = Number.isFinite(v.duration) ? v.duration : 0;
                     this._updateProgress();
-                });
+                };
+                v.addEventListener('loadedmetadata', syncTimeState);
+                v.addEventListener('durationchange', syncTimeState);
+                v.addEventListener('timeupdate', syncTimeState);
                 v.addEventListener('waiting', () => {
                     this.state.loading = true;
                     this._spinner.classList.remove('hidden');
@@ -4437,20 +4443,6 @@ let externalSourceCache = {};
                         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 9000));
                         const detail = await Promise.race([fetchAnimeLite(item.url), timeoutPromise]);
                         if (gen !== popularRenderGen) return;
-                        const tmdbInfo = await fetchTmdbCardInfo(item).catch(e => {
-                            console.error('TMDB popular card enrichment failed', { url: item.url, error: e });
-                            return null;
-                        });
-                        if (gen !== popularRenderGen) return;
-                        const typeBadge = card.querySelector('[data-role="type"]');
-                        if (tmdbInfo?.poster) {
-                            const img = card.querySelector('.popular-card__poster img');
-                            if (img) img.src = tmdbInfo.poster;
-                        }
-                        if (typeBadge && tmdbInfo?.type) {
-                            typeBadge.textContent = tmdbInfo.type;
-                            typeBadge.hidden = false;
-                        }
                         if (badge) {
                             badge.classList.remove('popular-card__rank--loading');
                             badge.textContent = detail.episodes != null ? detail.episodes : '–';
@@ -4554,13 +4546,9 @@ let externalSourceCache = {};
             return animeCardObserver;
         }
 
-        function observeAnimeCardsForTmdb(container) {
-            if (!container) return;
-            const observer = getAnimeCardObserver();
-            container.querySelectorAll('.anime-card[data-url]').forEach(card => {
-                if (!card.dataset.tmdbEnriched) observer.observe(card);
-            });
-        }
+        // Постери каталогу й головної завжди беруться з AnimeUA.
+        // TMDB не підміняє artwork карток.
+        function observeAnimeCardsForTmdb(container) { return; }
 
         function renderCards(list) {
             const container = document.getElementById('animeContainer');
@@ -4701,10 +4689,6 @@ let externalSourceCache = {};
                 ]);
                 if (requestId !== homeSectionsRequestId) return;
 
-                const preloadGroups = [newestItems, ...results.map(result => result.items)];
-                await preloadHomepageTmdbGroups(preloadGroups, 6);
-                if (requestId !== homeSectionsRequestId) return;
-
                 let html = '';
 
                 const newestWide = newestItems.slice(0, 80).map(a => ({ ...a, typeLabel: 'Серіал' }));
@@ -4786,10 +4770,10 @@ let externalSourceCache = {};
             if (!items || items.length === 0) return '';
             const isWide = variant === 'wide';
             const cardsHtml = items.map(a => {
-                const poster = a.tmdbPoster || ANIME_CARD_PLACEHOLDER;
+                const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
                 const title = a.title || 'Без назви';
                 if (!isWide) {
-                    const type = a.tmdbType || '';
+                    const type = '';
                     return `
                             <div class="anime-card" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}">
                               <div class="anime-poster">
@@ -7438,8 +7422,9 @@ function renderProfilePage() {
                 const totalEpisodes = Object.values(anime.seasons || {}).reduce((sum, s) => sum + Object.values(s).reduce((s2,
                     e) => Math.max(s2, e.length), 0), 0);
                 document.getElementById('playerAgeBadge').textContent = anime.score || '—';
-                document.getElementById('playerStatusTag').textContent = totalEpisodes > 0 ? 'Онгоїнг' : 'Завершено';
-                document.getElementById('playerMetaLine').textContent = `${anime.year || '—'}, ${totalEpisodes} еп.`;
+                const isMovie = playerAnimeIsMovie(anime);
+                document.getElementById('playerStatusTag').textContent = isMovie ? 'Фільм' : (totalEpisodes > 0 ? 'Онгоїнг' : 'Завершено');
+                document.getElementById('playerMetaLine').textContent = isMovie ? `${anime.year || '—'}, Фільм` : `${anime.year || '—'}, ${totalEpisodes} еп.`;
                 document.getElementById('playerTagRow').innerHTML =
                     (anime.genres || []).slice(0, 4).map(g => `<span class="tag">${g}</span>`).join('');
                 document.getElementById('playerEpisodeCountNum').textContent = totalEpisodes;
@@ -7497,12 +7482,14 @@ function renderProfilePage() {
                         if (!details) return;
 
                         const tmdbPoster = tmdbImgUrl(details.poster_path, 'w500') || posterUrl;
+                        const isMovie = tmdbInfo.mediaType === 'movie' || playerAnimeIsMovie(anime);
                         const tmdbBackdrop = tmdbImgUrl(details.backdrop_path, 'original') || tmdbPoster;
                         const title = details.name || anime.title;
                         const originalTitle = details.original_name || anime.originalTitle || anime.title;
-                        const year = (details.first_air_date || '').slice(0, 4) || anime.year || '—';
+                        const year = (details.release_date || details.first_air_date || '').slice(0, 4) || anime.year || '—';
                         const numEpisodes = details.number_of_episodes || totalEpisodes;
-                        const statusLabel = TMDB_STATUS_LABELS[details.status] || (totalEpisodes > 0 ? 'Онгоїнг' : 'Завершено');
+                        const runtime = formatMovieRuntime(details.runtime);
+                        const statusLabel = isMovie ? 'Фільм' : (TMDB_STATUS_LABELS[details.status] || (totalEpisodes > 0 ? 'Онгоїнг' : 'Завершено'));
                         const genres = (details.genres || []).map(g => g.name).filter(Boolean);
                         const overview = details.overview || anime.synopsis || '';
                         const ageRating = tmdbAgeRating(details);
@@ -7515,7 +7502,7 @@ function renderProfilePage() {
                         document.getElementById('playerTopbarTitle').textContent = title;
                         document.getElementById('playerAgeBadge').textContent = ageRating || anime.score || '—';
                         document.getElementById('playerStatusTag').textContent = statusLabel;
-                        document.getElementById('playerMetaLine').textContent = `${year}, ${numEpisodes} еп.`;
+                        document.getElementById('playerMetaLine').textContent = isMovie ? `${year}, Фільм${runtime ? ` · ${runtime}` : ''}` : `${year}, ${numEpisodes} еп.`;
                         if (genres.length) {
                             document.getElementById('playerTagRow').innerHTML =
                                 genres.slice(0, 4).map(g => `<span class="tag">${escapeHtml(g)}</span>`).join('');
@@ -7873,12 +7860,13 @@ function renderProfilePage() {
             const queries = [cleanTitleForTmdb(anime.originalTitle), cleanTitleForTmdb(anime.title)].filter(Boolean);
             for (const q of queries) {
                 try {
-                    const res = await fetch(`${TMDB_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(q)}&include_adult=false`);
+                    const res = await fetch(`${TMDB_BASE}/search/multi?api_key=${TMDB_API_KEY}&language=uk-UA&query=${encodeURIComponent(q)}&include_adult=false`);
                     if (!res.ok) continue;
                     const data = await res.json();
-                    if (data.results && data.results.length) {
-                        const best = data.results[0];
-                        const info = { id: best.id, poster: best.poster_path, backdrop: best.backdrop_path, seasonsCache: {} };
+                    const candidates = (data.results || []).filter(r => (r.media_type === 'tv' || r.media_type === 'movie'));
+                    if (candidates.length) {
+                        const best = candidates.find(r => r.media_type === 'movie') || candidates[0];
+                        const info = { id: best.id, mediaType: best.media_type, poster: best.poster_path, backdrop: best.backdrop_path, seasonsCache: {} };
                         tmdbAnimeCache[cacheKey] = info;
                         return info;
                     }
@@ -7908,13 +7896,14 @@ function renderProfilePage() {
             if (!tmdbInfo || !tmdbInfo.id) return null;
             if (tmdbInfo.fullDetails !== undefined) return tmdbInfo.fullDetails;
             try {
-                const res = await fetch(`${TMDB_BASE}/tv/${tmdbInfo.id}?api_key=${TMDB_API_KEY}&language=uk-UA&append_to_response=credits,images,content_ratings&include_image_language=uk,en,ja,null`);
+                const mediaPath = tmdbInfo.mediaType === 'movie' ? 'movie' : 'tv';
+                const res = await fetch(`${TMDB_BASE}/${mediaPath}/${tmdbInfo.id}?api_key=${TMDB_API_KEY}&language=uk-UA&append_to_response=credits,images,content_ratings&include_image_language=uk,en,ja,null`);
                 if (!res.ok) { tmdbInfo.fullDetails = null; return null; }
                 const data = await res.json();
                 // Якщо опис або жанри порожні українською — донасичуємо з англійської версії
                 if (!data.overview || !(data.genres || []).length) {
                     try {
-                        const resEn = await fetch(`${TMDB_BASE}/tv/${tmdbInfo.id}?api_key=${TMDB_API_KEY}&language=en-US`);
+                        const resEn = await fetch(`${TMDB_BASE}/${mediaPath}/${tmdbInfo.id}?api_key=${TMDB_API_KEY}&language=en-US`);
                         if (resEn.ok) {
                             const dataEn = await resEn.json();
                             if (!data.overview) data.overview = dataEn.overview || '';
@@ -8089,6 +8078,7 @@ function renderProfilePage() {
             renderAllEpisodeViews(episodes, null, null);
             if (!episodes.length) return;
             try {
+                if (playerAnimeIsMovie()) return;
                 const tmdbInfo = await fetchTmdbForAnime(playerPageAnime);
                 if (!tmdbInfo) return;
                 const seasonNum = parseInt(playerPageCurrentSeason) || 1;
@@ -8102,6 +8092,18 @@ function renderProfilePage() {
             } catch (e) { console.warn('TMDB enrich failed', e); }
         }
 
+        function playerAnimeIsMovie(anime = playerPageAnime) {
+            return anime?.type === 'movie' || (anime?.genres || []).some(g => /повнометраж|фільм|movie/i.test(g));
+        }
+
+        function formatMovieRuntime(minutes) {
+            const n = Number(minutes);
+            if (!Number.isFinite(n) || n <= 0) return '';
+            const h = Math.floor(n / 60);
+            const m = Math.round(n % 60);
+            return h ? `${h} год ${m ? m + ' хв' : ''}`.trim() : `${m} хв`;
+        }
+
         async function playEpisode(file, epNum) {
             if (!file) { showToast('Немає файлу для відтворення'); return; }
             playerPageActiveEpisodeFile = file;
@@ -8110,7 +8112,7 @@ function renderProfilePage() {
             const videoDiv = document.getElementById('playerPageVideo');
             videoContainer.classList.add('active');
             const videoTitleEl = document.getElementById('playerTopbarTitle');
-            if (videoTitleEl) videoTitleEl.textContent = `${playerPageAnime?.title || ''} · Серія ${epNum}`;
+            if (videoTitleEl) videoTitleEl.textContent = playerAnimeIsMovie() ? `${playerPageAnime?.title || ''} · Фільм` : `${playerPageAnime?.title || ''} · Серія ${epNum}`;
             videoDiv.innerHTML = '';
 
             let finalUrl = file;
