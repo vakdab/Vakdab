@@ -19,13 +19,6 @@
     padding: 12px 16px 10px;
 }
 
-#playerPageModal #page-episodes .episodes-topbar::before {
-    content: 'Серії';
-    margin-right: auto;
-    color: var(--text);
-    font-size: 18px;
-    font-weight: 700;
-}
 
 
 /* Only view mode, episode numbers and seasons remain visible in the episode section. */
@@ -58,3 +51,33 @@
     backdrop-filter: blur(10px);
 }
 #playerPageModal #playerFormatRow { display: none !important; }
+
+
+/* Final unified-page layout: video occupies the slot above the episode grid. */
+#playerPageModal #page-episodes .player-video-container {
+    display: none !important;
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: min(62vw, 300px) !important;
+    min-height: 220px !important;
+    margin: 0 0 12px !important;
+    z-index: 1 !important;
+}
+#playerPageModal #page-episodes .player-video-container.active {
+    display: flex !important;
+}
+#playerPageModal #page-episodes .episodes-topbar {
+    display: none !important;
+}
+#playerPageModal #playerPlayFab {
+    display: none !important;
+}
+#playerPageModal #playerFormatRow,
+#playerPageModal #watchSourcePill,
+#playerPageModal #watchFilterPill,
+#playerPageModal #bsSourceSection,
+#playerPageModal #bsQualitySection,
+#playerPageModal #playerFilterBtn {
+    display: none !important;
+}

@@ -7672,7 +7672,6 @@ function renderProfilePage() {
                 const active = d === playerPageCurrentDub ? ' active-format' : '';
                 return `<span class="format-pill${active}" data-dub="${d}" style="cursor:pointer;">${String(d).toUpperCase()}</span>`;
             }).join('');
-            if (playerPageCurrentQuality) formatHtml += `<span class="format-pill">${String(playerPageCurrentQuality).toUpperCase()}</span>`;
             [document.getElementById('playerFormatRow'), document.getElementById('watchFormatRow'), document.getElementById('playerVideoDubRow')].forEach(formatRow => {
                 if (!formatRow) return;
                 formatRow.innerHTML = formatHtml;
@@ -8599,10 +8598,10 @@ function renderProfilePage() {
         }
 
         document.getElementById('playerShareBtn').addEventListener('click', shareAnime);
-        document.getElementById('playerPlayFab').addEventListener('click', openWatchPage);
+        document.getElementById('playerPlayFab')?.addEventListener('click', openWatchPage);
         document.getElementById('watchBackBtn').addEventListener('click', closeWatchPage);
-        document.getElementById('watchSourcePill').addEventListener('click', () => openBottomSheet('source'));
-        document.getElementById('watchFilterPill').addEventListener('click', () => openBottomSheet('full'));
+        document.getElementById('watchSourcePill')?.addEventListener('click', () => openBottomSheet('source'));
+        document.getElementById('watchFilterPill')?.addEventListener('click', () => openBottomSheet('full'));
 
         window.openSearchPage = function() {
             Router.goTo('search');
