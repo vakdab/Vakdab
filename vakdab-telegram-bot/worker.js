@@ -2,6 +2,7 @@ const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const ANIMEUA_BASE = 'https://animeua.club';
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
+const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
 
 const userStates = new Map();
 let popularCache = null;
@@ -18,22 +19,33 @@ export default {
         if (url.pathname === '/set_webhook') {
           return await setWebhook(request, env, url);
         }
-        return textResponse('VakDab Telegram Worker is running.');
+        return serveSite(request, env);
       }
 
-      if (request.method === 'POST') {
+      if (request.method === 'POST' && url.pathname === TELEGRAM_WEBHOOK_PATH) {
         const update = await request.json();
         await processUpdate(update, env);
         return textResponse('OK');
       }
 
-      return textResponse('Method Not Allowed', 405);
+      if (request.method === 'POST') {
+        return serveSite(request, env);
+      }
+
+      return serveSite(request, env);
     } catch (error) {
       console.error('[worker] request failed:', safeError(error));
       return textResponse('Internal Server Error', 500);
     }
   }
 };
+
+async function serveSite(request, env) {
+  if (env.ASSETS && typeof env.ASSETS.fetch === 'function') {
+    return env.ASSETS.fetch(request);
+  }
+  return textResponse('VakDab site assets are not configured.', 503);
+}
 
 function textResponse(body, status = 200) {
   return new Response(body, { status, headers: { 'content-type': 'text/plain; charset=utf-8' } });
