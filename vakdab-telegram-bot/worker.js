@@ -109,48 +109,79 @@ async function handleMessage(message, env) {
   await sendMessage(chatId, 'Скористайтеся кнопками меню.', { reply_markup: mainKeyboard() }, env);
 }
 
-// Функція для спілкування з Макімою
+// Функція для спілкування з Макімою (виправлено)
 async function handleMakimaMessage(chatId, userMessage, env) {
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
     const responseText = await callMakimaAI(userMessage, env);
-    await sendMessage(chatId, responseText, {}, env);
+    // Екрануємо HTML для безпеки
+    const safeText = escapeHtml(responseText);
+    await sendMessage(chatId, safeText, {}, env);
   } catch (error) {
     console.error('[makima] failed:', safeError(error));
-    // Тимчасово показуємо точну помилку – потім можна прибрати
-    await sendMessage(chatId, `Помилка: ${escapeHtml(error.message)}`, {}, env);
+    await sendMessage(chatId, 'Макіма зараз не може відповісти. Спробуйте пізніше.', {}, env);
   }
 }
 
+// Виправлена функція виклику Gemini API
 async function callMakimaAI(prompt, env) {
   const apiKey = env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY не налаштовано. Додайте змінну у Cloudflare Worker.');
-
-  // Стабільна безкоштовна модель
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-  const systemInstruction = {
-    parts: [{ text: 'Ти Макіма, дівчина. Відповідай українською мовою. Будь доброзичливою, цікавою та трохи загадковою.' }]
-  };
-  const body = {
-    system_instruction: systemInstruction,
-    contents: [{ parts: [{ text: prompt }] }]
-  };
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error(`[gemini] HTTP ${res.status}: ${errorText}`);
-    throw new Error(`Gemini API помилка ${res.status}: ${errorText.slice(0, 200)}`);
+  if (!apiKey) {
+    console.error('[gemini] GEMINI_API_KEY is not configured');
+    throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Макіма мовчить...';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
+
+  const systemInstruction = {
+    parts: [
+      {
+        text: 'Ти Макіма з аніме Людина-бензопила. Відповідай українською мовою. Будь спокійною, розумною, загадковою.'
+      }
+    ]
+  };
+
+  const body = {
+    system_instruction: systemInstruction,
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          {
+            text: prompt
+          }
+        ]
+      }
+    ]
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[gemini] HTTP ${response.status}: ${errorText}`);
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const candidate = data?.candidates?.[0];
+    const text = candidate?.content?.parts?.[0]?.text;
+
+    if (!text) {
+      console.error('[gemini] Empty or missing response:', JSON.stringify(data));
+      return 'Макіма мовчить...';
+    }
+
+    return text;
+  } catch (error) {
+    console.error('[gemini] Request failed:', safeError(error));
+    throw error;
+  }
 }
 
 async function handleCallbackQuery(callback, env) {
