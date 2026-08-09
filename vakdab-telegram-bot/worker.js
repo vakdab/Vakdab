@@ -75,6 +75,7 @@ async function handleMessage(message, env) {
   if (!chatId) return;
 
   const text = (message.text || '').trim();
+
   if (text === '/start') {
     const state = getState(chatId);
     state.screen = 'home';
@@ -82,7 +83,7 @@ async function handleMessage(message, env) {
     return;
   }
 
-  // --- AI-агент Макіма ---
+  // --- AI-агент Макіма (завжди пріоритет) ---
   if (text.toLowerCase().includes('макіма')) {
     const state = getState(chatId);
     state.screen = 'makima';
@@ -93,14 +94,22 @@ async function handleMessage(message, env) {
   if (!text) return;
 
   const state = getState(chatId);
-  state.searchQuery = text;
-  state.searchPage = 1;
-  state.screen = 'search';
-  await sendMessage(chatId, `Шукаю: <b>${escapeHtml(text)}</b>...`, {}, env);
-  await renderSearch(chatId, 1, env);
+
+  // Пошук ТІЛЬКИ якщо користувач перед цим натиснув кнопку "Пошук"
+  if (state.screen === 'waiting_for_search') {
+    state.searchQuery = text;
+    state.searchPage = 1;
+    state.screen = 'search';
+    await sendMessage(chatId, `Шукаю: <b>${escapeHtml(text)}</b>...`, {}, env);
+    await renderSearch(chatId, 1, env);
+    return;
+  }
+
+  // У будь-якому іншому стані – нагадуємо використовувати кнопки меню
+  await sendMessage(chatId, 'Скористайтеся кнопками меню.', { reply_markup: mainKeyboard() }, env);
 }
 
-// Нова функція для спілкування з Макімою
+// Функція для спілкування з Макімою
 async function handleMakimaMessage(chatId, userMessage, env) {
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
@@ -174,7 +183,7 @@ async function handleCallbackQuery(callback, env) {
 
     if (data === 'random') {
       state.screen = 'random';
-      state.previous = { kind: 'random' }; // для коректної кнопки "Назад"
+      state.previous = { kind: 'random' };
       await replaceMessage(chatId, messageId, 'Шукаю випадкове аніме...', false, {}, env);
       await renderRandom(chatId, messageId, env);
       return;
@@ -220,7 +229,6 @@ async function handleCallbackQuery(callback, env) {
       } else if (previous?.kind === 'popular') {
         await renderPopular(chatId, previous.page, messageId, env);
       } else {
-        // fallback: головна
         state.screen = 'home';
         await replaceMessage(chatId, messageId, 'Оберіть дію:', false, { reply_markup: mainKeyboard() }, env);
       }
@@ -294,7 +302,6 @@ async function renderRandom(chatId, messageId, env) {
     const randomPage = await fetchSource(`${ANIMEUA_BASE}/index.php?do=rand`);
     const randomUrl = absoluteAnimeUrl(firstMatch(randomPage, /<link[^>]+rel=[\"']canonical[\"'][^>]+href=[\"']([^\"']+)[\"']/i) || firstMatch(randomPage, /property=[\"']og:url[\"'][^>]*content=[\"']([^\"']+)[\"']/i));
     if (!randomUrl) throw new Error('RANDOM_INVALID');
-    // Передаємо, що це з випадкового – вже встановлено state.previous = {kind:'random'}
     await renderDetails(chatId, messageId, randomUrl, env);
   } catch (error) {
     console.error('[random] failed:', safeError(error));
@@ -313,17 +320,15 @@ async function renderDetails(chatId, messageId, url, env) {
     const state = getState(chatId);
 
     let keyboard;
-    // Якщо деталі відкриті через "випадкове" – спеціальна клавіатура
     if (state.previous?.kind === 'random') {
       const row = [];
       if (watchUrl) row.push([{ text: 'Дивитись на VakDab', url: watchUrl }]);
       row.push([
         { text: 'Випадкове', callback_data: 'random' },
-        { text: 'Назад', callback_data: 'home' } // повернення на головну
+        { text: 'Назад', callback_data: 'home' }
       ]);
       keyboard = { inline_keyboard: row };
     } else {
-      // звичайний список
       keyboard = {
         inline_keyboard: [
           ...(watchUrl ? [[{ text: 'Дивитись на VakDab', url: watchUrl }]] : []),
@@ -427,7 +432,6 @@ async function fetchSource(targetUrl) {
 function parseCards(html) {
   const cards = [];
   const seen = new Set();
-  const cardPattern = /<(?:(?:a|article|div)[^>]*class=["'][^"']*poster[^"']*["'][^>]*>[\s\S]*?|a[^>]*href=["']([^"']*\/anime\/[^"']*)["'][^>]*>[\s\S]*?)<\/[^>]+>/gi;
   const posterBlocks = html.match(/<a[^>]*class=["'][^"']*poster[^"']*["'][^>]*>[\s\S]*?<\/a>/gi) || [];
   for (const block of posterBlocks) {
     const url = absoluteAnimeUrl(firstMatch(block, /href=["']([^"']+)["']/i));
