@@ -359,7 +359,7 @@ function parseCards(html) {
   const cards = [];
   const seen = new Set();
   const cardPattern = /<(?:(?:a|article|div)[^>]*class=["'][^"']*poster[^"']*["'][^>]*>[\s\S]*?|a[^>]*href=["']([^"']*\/anime\/[^"']*)["'][^>]*>[\s\S]*?)<\/[^>]+>/gi;
-  const posterBlocks = html.match(/<[^>]*class=["'][^"']*poster[^"']*["'][^>]*>[\s\S]*?<\/[^>]+>/gi) || [];
+  const posterBlocks = html.match(/<a[^>]*class=["'][^"']*poster[^"']*["'][^>]*>[\s\S]*?<\/a>/gi) || [];
   for (const block of posterBlocks) {
     const url = absoluteAnimeUrl(firstMatch(block, /href=["']([^"']+)["']/i));
     const title = cleanText(firstMatch(block, /class=["'][^"']*poster__title[^"']*["'][^>]*>([\s\S]*?)<\//i) || firstMatch(block, /<h[1-6][^>]*>([\s\S]*?)<\//i));
@@ -371,7 +371,7 @@ function parseCards(html) {
   }
 
   if (!cards.length) {
-    const linkPattern = /<a[^>]+href=["']([^"']*\/anime\/[^"']+)["'][^>]*>[\s\S]*?<\/a>/gi;
+    const linkPattern = /<a[^>]+href=["']([^"']+)["'][^>]*>[\s\S]*?<\/a>/gi;
     let match;
     while ((match = linkPattern.exec(html))) {
       const block = match[0];
@@ -391,7 +391,7 @@ function parseCards(html) {
 function parseDetails(html, url) {
   const title = cleanText(firstMatch(html, /<h1[^>]*>([\s\S]*?)<\//i) || firstMatch(html, /property=["']og:title["'][^>]*content=["']([^"']+)["']/i));
   const image = absoluteUrl(firstMatch(html, /class=["'][^"']*(?:pmovie__poster|anime__poster|full-poster)[^"']*["'][\s\S]{0,500}?(?:data-src|src)=["']([^"']+)["']/i) || firstMatch(html, /property=["']og:image["'][^>]*content=["']([^"']+)["']/i));
-  const genreBlock = firstMatch(html, /class=["'][^"']*(?:pmovie__genres|genres)[^"']*["'][\s\S]{0,1200}?<\/[^>]+>/i) || '';
+  const genreBlock = firstMatch(html, /<(?:div|section)[^>]*class=["'][^"']*(?:pmovie__genres|genres)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section)>/i) || '';
   const genres = [...genreBlock.matchAll(/<a[^>]*>([\s\S]*?)<\//gi)].map(m => cleanText(m[1])).filter(Boolean);
   const year = firstMatch(html, /class=["'][^"']*(?:pmovie__year|release-year)[^"']*["'][^>]*>[\s\S]*?(\d{4})/i) || firstMatch(html, /\b(19|20)\d{2}\b/);
   const episodes = firstMatch(html, /(?:Епізод(?:ів|и)?|Серій)[^\d]{0,20}(\d+(?:\s*\/\s*\d+)?)/i) || firstMatch(html, /class=["'][^"']*(?:episodes|series-count)[^"']*["'][^>]*>[\s\S]*?(\d+(?:\s*\/\s*\d+)?)/i);
@@ -446,7 +446,7 @@ function absoluteUrl(value) {
 
 function absoluteAnimeUrl(value) {
   const url = absoluteUrl(value);
-  return /^https:\/\/animeua\.club\/anime\//i.test(url) ? url : '';
+  return /^https:\/\/animeua\.club\//i.test(url) && !/^https:\/\/animeua\.club\/?$/i.test(url) ? url : '';
 }
 
 function validateAnimeUrl(value) {
