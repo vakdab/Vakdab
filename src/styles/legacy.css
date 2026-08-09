@@ -8403,3 +8403,9 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
         margin-top: 0 !important;
     }
 }
+
+/* TMDB кадр із серії для карток головної; обкладинка залишається fallback. */
+#animeContainer .anime-poster img.tmdb-episode-frame {
+    object-fit: cover;
+    object-position: center;
+}

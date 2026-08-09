@@ -4493,12 +4493,18 @@ let externalSourceCache = {};
                 const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
                 const info = await Promise.race([fetchTmdbCardInfo(item), timeoutPromise]);
                 if (!document.body.contains(card)) return;
-                if (info?.poster) {
+                if (info?.frame || info?.poster) {
                     const img = card.querySelector('.anime-poster img');
                     if (img) {
                         const swap = new Image();
-                        swap.onload = () => { if (document.body.contains(card)) img.src = info.poster; };
-                        swap.src = info.poster;
+                        const artwork = info.frame || info.poster;
+                        swap.onload = () => {
+                            if (document.body.contains(card)) {
+                                img.src = artwork;
+                                img.classList.add('tmdb-episode-frame');
+                            }
+                        };
+                        swap.src = artwork;
                     }
                 }
                 const typeBadge = card.querySelector('[data-role="type"]');
@@ -4527,9 +4533,13 @@ let externalSourceCache = {};
             return animeCardObserver;
         }
 
-        // Постери каталогу й головної завжди беруться з AnimeUA.
-        // TMDB не підміняє artwork карток.
-        function observeAnimeCardsForTmdb(container) { return; }
+        // TMDB-кадри працюють тільки на головній. Інші сторінки не витрачають
+        // запити й зберігають оригінальні постери AnimeUA.
+        function observeAnimeCardsForTmdb(container) {
+            if (!container || Router.currentRoute !== 'main' || typeof IntersectionObserver === 'undefined') return;
+            const observer = getAnimeCardObserver();
+            container.querySelectorAll('.anime-card').forEach(card => observer.observe(card));
+        }
 
         function renderCards(list) {
             const container = document.getElementById('animeContainer');
@@ -7817,6 +7827,28 @@ function renderProfilePage() {
             return score + Math.min(Number(hit.popularity) || 0, 20) * 0.15;
         }
 
+        const tmdbCardFrameCache = new Map();
+
+        async function fetchTmdbCardFrame(tmdbId, mediaType, fallbackPath) {
+            const key = `${mediaType}:${tmdbId}`;
+            if (tmdbCardFrameCache.has(key)) return tmdbCardFrameCache.get(key);
+            let frame = fallbackPath ? tmdbImgUrl(fallbackPath, 'w780') : null;
+            if (mediaType === 'tv') {
+                try {
+                    const res = await fetch(`${TMDB_BASE}/tv/${tmdbId}/season/1?api_key=${TMDB_API_KEY}&language=en-US`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        const still = (data.episodes || []).find(ep => ep.still_path)?.still_path;
+                        if (still) frame = tmdbImgUrl(still, 'w780');
+                    }
+                } catch (e) {
+                    console.warn('TMDB episode frame failed', { tmdbId, error: e });
+                }
+            }
+            tmdbCardFrameCache.set(key, frame);
+            return frame;
+        }
+
         async function fetchTmdbCardInfo(anime) {
             if (!anime || !TMDB_API_KEY) return null;
             const cacheKey = 'card:' + (anime.url || anime.title);
@@ -7838,9 +7870,12 @@ function renderProfilePage() {
             if (candidates.length) {
                 const unique = [...new Map(candidates.map(r => [`${r.media_type}:${r.id}`, r])).values()];
                 unique.sort((a, b) => tmdbCandidateScore(b, b._query) - tmdbCandidateScore(a, a._query));
-                const hit = unique[0];
+                const preferredType = anime.type === 'movie' ? 'movie' : 'tv';
+                const hit = unique.find(item => item.media_type === preferredType) || unique[0];
+                const frame = await fetchTmdbCardFrame(hit.id, hit.media_type, hit.backdrop_path);
                 const info = {
                     poster: tmdbImgUrl(hit.poster_path, 'w500'),
+                    frame,
                     rating: hit.vote_average ? Number(hit.vote_average).toFixed(1) : null,
                     type: tmdbCardType(hit),
                     mediaType: hit.media_type,
