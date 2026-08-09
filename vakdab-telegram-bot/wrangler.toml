@@ -1,7 +1,9 @@
-name = "vakdab-telegram-bot"
+# This name must match the existing Worker URL:
+# https://vakdab.vakdabpro.workers.dev/
+name = "vakdab"
 main = "worker.js"
 compatibility_date = "2026-08-09"
 
-# Add secrets with Wrangler; do not put values in this file.
-# wrangler secret put TELEGRAM_BOT_TOKEN
-# wrangler secret put WEBHOOK_SETUP_SECRET
+# Runtime secrets are configured in Cloudflare, not committed here.
+# TELEGRAM_BOT_TOKEN
+# WEBHOOK_SETUP_SECRET
