@@ -1,9 +1,0 @@
-[build]
-  publish = "."
-  functions = "netlify/functions"
-
-[[redirects]]
-  from = "/share"
-  to = "/.netlify/functions/share"
-  status = 200
-  force = true

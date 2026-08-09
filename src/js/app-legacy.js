@@ -7657,15 +7657,11 @@ function renderProfilePage() {
         // Будуємо силку на НАШ сайт (не на джерело animeua.club) — при відкритті вона
         // сама відкриє потрібне аніме в плеєрі, див. обробку #anime? при завантаженні сторінки.
         function buildShareUrl(animeUrl) {
-            const encoded = encodeURIComponent(animeUrl || '');
-            const host = window.location.hostname;
-            // GitHub Pages is static: /share is not a real route there. Use the
-            // hash route, which the app can open without a server function.
-            if (host.endsWith('github.io') || host === 'localhost' || host === '127.0.0.1') {
-                return `${window.location.origin}/#anime?url=${encoded}`;
-            }
-            // Netlify has the crawler-friendly preview endpoint.
-            return `${window.location.origin}/share?url=${encoded}`;
+            // Посилання працює на Firebase Hosting без окремого /share endpoint.
+            // URLSearchParams при відкритті hash уже декодує значення один раз.
+            const base = new URL('./', window.location.href);
+            base.hash = `anime?url=${encodeURIComponent(animeUrl || '')}`;
+            return base.href;
         }
 
         function shareAnime() {
