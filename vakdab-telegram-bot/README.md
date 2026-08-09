@@ -9,7 +9,7 @@
 - Пошук: `https://animeua.club/index.php?do=search&subaction=search&story={query}&page={page}`
 - Популярні: `https://animeua.club/top.html`
 - Основний каталог: `https://animeua.club/page/{page}/`
-- Деталі: URL картки `/anime/...`, отриманий із реальної відповіді сайту
+- Деталі: URL картки на кшталт `/388-boruto-naruto-next-generations.html`, отриманий із реальної відповіді сайту
 - Proxy: `https://monoanime.animegran8.workers.dev?url={encoded_url}&force_ua=desktop`
 
 `worker.js` не парсить GitHub Pages і не містить Telegram token.
