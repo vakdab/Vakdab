@@ -1,0 +1,7 @@
+name = "vakdab-telegram-bot"
+main = "worker.js"
+compatibility_date = "2026-08-09"
+
+# Add secrets with Wrangler; do not put values in this file.
+# wrangler secret put TELEGRAM_BOT_TOKEN
+# wrangler secret put WEBHOOK_SETUP_SECRET
