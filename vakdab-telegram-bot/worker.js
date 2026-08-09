@@ -415,9 +415,10 @@ function extractAnimeId(animeUrl) {
   }
 }
 
+// Оновлена функція – виправлено регістр на Vakdab
 function vakdabWatchUrl(animeId) {
   return /^\d+$/.test(String(animeId || ''))
-    ? `https://vakdab.github.io/VakDab/#anime/${animeId}`
+    ? `https://vakdab.github.io/Vakdab/#anime/${animeId}`
     : '';
 }
 
