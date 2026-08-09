@@ -117,14 +117,18 @@ async function handleMakimaMessage(chatId, userMessage, env) {
     await sendMessage(chatId, responseText, {}, env);
   } catch (error) {
     console.error('[makima] failed:', safeError(error));
-    await sendMessage(chatId, 'Макіма зараз не може відповісти. Спробуйте пізніше.', {}, env);
+    // Тимчасово показуємо точну помилку – потім можна прибрати
+    await sendMessage(chatId, `Помилка: ${escapeHtml(error.message)}`, {}, env);
   }
 }
 
 async function callMakimaAI(prompt, env) {
   const apiKey = env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not configured');
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  if (!apiKey) throw new Error('GEMINI_API_KEY не налаштовано. Додайте змінну у Cloudflare Worker.');
+
+  // Стабільна безкоштовна модель
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
   const systemInstruction = {
     parts: [{ text: 'Ти Макіма, дівчина. Відповідай українською мовою. Будь доброзичливою, цікавою та трохи загадковою.' }]
   };
@@ -132,16 +136,19 @@ async function callMakimaAI(prompt, env) {
     system_instruction: systemInstruction,
     contents: [{ parts: [{ text: prompt }] }]
   };
+
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
+
   if (!res.ok) {
     const errorText = await res.text();
     console.error(`[gemini] HTTP ${res.status}: ${errorText}`);
-    throw new Error(`Gemini API error: ${res.status}`);
+    throw new Error(`Gemini API помилка ${res.status}: ${errorText.slice(0, 200)}`);
   }
+
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Макіма мовчить...';
 }
