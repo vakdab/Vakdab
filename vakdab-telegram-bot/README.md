@@ -1,67 +1,67 @@
-# VakDab Telegram Bot Worker
+# VakDab Telegram Bot + Site Worker
 
-Цей Worker використовує той самий data flow, що й сайт VakDab:
+Один Cloudflare Worker обслуговує і сайт VakDab, і Telegram-бота:
 
-`Telegram → Cloudflare Worker → monoanime.animegran8.workers.dev → animeua.club`
+```text
+/                    → статичний сайт VakDab
+/telegram-webhook    → Telegram webhook бота
+/set_webhook         → захищене встановлення webhook
+```
 
-Worker прив'язаний до існуючої адреси:
+Worker залишається на існуючій адресі:
 
 `https://vakdab.vakdabpro.workers.dev/`
 
-## Фактичні джерела VakDab
+## Важливо для Cloudflare Build
 
-- Пошук: `https://animeua.club/index.php?do=search&subaction=search&story={query}&page={page}`
-- Популярні: `https://animeua.club/top.html`
-- Основний каталог: `https://animeua.club/page/{page}/`
-- Випадкове: `https://animeua.club/index.php?do=rand`
-- Деталі: URL картки на кшталт `/388-boruto-naruto-next-generations.html`, отриманий із реальної відповіді сайту
-- Proxy: `https://monoanime.animegran8.workers.dev?url={encoded_url}&force_ua=desktop`
+GitHub repository: `vakdab/Vakdab`
 
-`worker.js` не парсить GitHub Pages і не містить Telegram token.
+Root directory залишити порожнім — потрібні і сайт у корені репозиторію, і `vakdab-telegram-bot/worker.js`.
 
-## Deploy trigger
+Deploy command:
 
-This commit verifies the Cloudflare Git build connection.
+```bash
+npx wrangler deploy
+```
 
-## Cloudflare Git integration
-
-Щоб не копіювати код вручну в Cloudflare:
-
-1. Відкрий Cloudflare Dashboard → Workers & Pages.
-2. Обери існуючий Worker `vakdab`.
-3. Відкрий Settings або Deployments → Builds / Git integration.
-4. Підключи GitHub-репозиторій `vakdab/Vakdab`.
-5. Для root directory вкажи `vakdab-telegram-bot`.
-6. Build command залиш порожньою або вкажи `node --check worker.js`.
-7. Deploy command: `npx wrangler deploy`.
-8. Production branch: `main`.
-
-Після цього Cloudflare автоматично братиме `worker.js` і `wrangler.toml` з цієї папки після кожного push. Wrangler config уже містить:
+`wrangler.toml` використовує:
 
 ```toml
 name = "vakdab"
 main = "worker.js"
+
+[assets]
+directory = "."
+binding = "ASSETS"
 ```
 
-Це відповідає адресі `https://vakdab.vakdabpro.workers.dev/`.
+Тому Worker не віддає Telegram-код замість сайту: GET-запити передаються у `ASSETS`, а тільки POST на `/telegram-webhook` обробляється ботом.
 
-## Secrets Cloudflare
+## Дані AnimeUA
 
-Секрети Telegram залишаються тільки у Cloudflare Worker:
+- Пошук: `https://animeua.club/index.php?do=search&subaction=search&story={query}&page={page}`
+- Популярні: `https://animeua.club/top.html`
+- Каталог: `https://animeua.club/page/{page}/`
+- Випадкове: `https://animeua.club/index.php?do=rand`
+- Proxy: `https://monoanime.animegran8.workers.dev?url={encoded_url}&force_ua=desktop`
 
-```bash
-wrangler secret put TELEGRAM_BOT_TOKEN
-wrangler secret put WEBHOOK_SETUP_SECRET
-```
+## Cloudflare secrets
 
-Не додавай ці значення у GitHub або в `worker.js`.
-
-## Webhook
-
-Webhook Telegram має бути встановлений на існуючу адресу Worker:
+У Worker `vakdab` додай:
 
 ```text
-https://vakdab.vakdabpro.workers.dev/set_webhook?url=https%3A%2F%2Fvakdab.vakdabpro.workers.dev&secret=<WEBHOOK_SETUP_SECRET>
+TELEGRAM_BOT_TOKEN
+WEBHOOK_SETUP_SECRET
+```
+
+Секрети не зберігаються у GitHub і не записуються в код.
+
+## Встановлення Telegram webhook
+
+Webhook має вести не на корінь сайту, а на Telegram-маршрут:
+
+```text
+https://vakdab.vakdabpro.workers.dev/set_webhook?url=https%3A%2F%2Fvakdab.vakdabpro.workers.dev%2Ftelegram-webhook&secret=<WEBHOOK_SETUP_SECRET>
 ```
 
 Перевірка:
@@ -70,19 +70,4 @@ https://vakdab.vakdabpro.workers.dev/set_webhook?url=https%3A%2F%2Fvakdab.vakdab
 https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo
 ```
 
-## Що підтримує Worker
-
-- `/start`, головне меню, популярні, випадкове, пошук;
-- пошук через реальний endpoint AnimeUA з частковим пошуком на стороні джерела;
-- кирилиця, латиниця, нормалізація пробілів;
-- пагінація;
-- деталі, постер і реальний URL аніме;
-- callback queries, inline keyboards, `sendMessage`, `editMessageText`, `sendPhoto`, `answerCallbackQuery`;
-- HTML escaping для Telegram;
-- розділення помилки API та відсутності результатів;
-- короткі callback data;
-- in-memory cache/state без KV/D1.
-
-## Важливе обмеження Cloudflare Worker
-
-`Map` і кеш живуть у пам'яті конкретного Worker isolate та можуть очищатися після простою або нового деплою. Для базової роботи цього достатньо. KV/D1 потрібні лише якщо треба зберігати стани користувачів і результати між перезапусками.
+Після цього сайт відкривається як раніше, а Telegram надсилає updates на `/telegram-webhook`.
