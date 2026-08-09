@@ -2493,6 +2493,20 @@ let externalSourceCache = {};
                     this.showSchedule();
                 } else if (route === 'stickers') {
                     this.showStickers();
+                } else if (route.startsWith('anime/')) {
+                    // Deep-link для Telegram: #anime/<AnimeUA ID>.
+                    // Використовуємо той самий openPlayerPage(), що й звичайні картки.
+                    this.showMain();
+                    const animeIdMatch = route.match(/^anime\/(\d+)$/);
+                    if (animeIdMatch) {
+                        const animeUrl = `${ANIMEUA_BASE}/index.php?newsid=${animeIdMatch[1]}`;
+                        setTimeout(() => openPlayerPage(animeUrl, { fromDeepLink: true }), 150);
+                    } else {
+                        setTimeout(() => {
+                            this.goTo('main');
+                            showToast('Аніме не знайдено');
+                        }, 0);
+                    }
                 } else if (route === 'filter') {
                     this.showFilter();
                 } else {
@@ -7375,7 +7389,7 @@ function renderProfilePage() {
             });
         }
 
-        async function openPlayerPage(url) {
+        async function openPlayerPage(url, options = {}) {
             const modal = document.getElementById('playerPageModal');
             if (!modal) return;
             // Скасувати попереднє завантаження якщо є
@@ -7578,6 +7592,12 @@ function renderProfilePage() {
                     failedStage: 'openPlayerPage() — необроблена помилка завантаження', emptyObject: null
                 };
 
+                if (options.fromDeepLink) {
+                    closePlayerPage();
+                    Router.goTo('main');
+                    setTimeout(() => showToast('Аніме не знайдено'), 0);
+                    return;
+                }
                 renderPlayerEpisodeError(userMsg, diagForErr, url);
                 document.getElementById('episodePanel').classList.add('visible');
                 console.error('Player load error:', err.message || err, diagForErr);
