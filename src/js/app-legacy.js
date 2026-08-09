@@ -7527,8 +7527,6 @@ function renderProfilePage() {
                 };
                 updateSourceChip();
                 loadAnimeRatingAggregate(url);
-                renderRelatedSeasons(anime);
-                renderRecommendationsAndSimilar(anime);
                 const seasons = Object.keys(anime.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
                 playerPageCurrentSeason = seasons[0] || '1';
                 const dubs = Object.keys((anime.seasons[playerPageCurrentSeason]) || {}).sort();
@@ -7587,7 +7585,8 @@ function renderProfilePage() {
                                 genres.slice(0, 4).map(g => `<span class="tag">${escapeHtml(g)}</span>`).join('');
                         }
                         document.getElementById('playerEpisodeCountNum').textContent = numEpisodes;
-                        if (overview) {
+                        // Description comes from AnimeUA. TMDB is not allowed to replace it.
+                        if (!String(anime.synopsis || '').trim() && overview) {
                             synopsisEl.textContent = overview;
                             moreBtn.style.display = 'none';
                             setTimeout(() => {
@@ -7658,8 +7657,9 @@ function renderProfilePage() {
         // Будуємо силку на НАШ сайт (не на джерело animeua.club) — при відкритті вона
         // сама відкриє потрібне аніме в плеєрі, див. обробку #anime? при завантаженні сторінки.
         function buildShareUrl(animeUrl) {
-            const base = window.location.origin + window.location.pathname;
-            return `${base}#anime?url=${encodeURIComponent(animeUrl || '')}`;
+            const isLocal = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+            const origin = isLocal ? 'https://vakdab.netlify.app' : window.location.origin;
+            return `${origin}/share?url=${encodeURIComponent(animeUrl || '')}`;
         }
 
         function shareAnime() {
@@ -8051,8 +8051,8 @@ function renderProfilePage() {
         }
 
         function tmdbStillFor(ep, epMap, tmdbInfo, fallback) {
-            // Episode artwork also stays on AnimeUA to keep one consistent source.
-            return fallback;
+            const tmdbEpisode = epMap && epMap[parseInt(ep.episode, 10)];
+            return tmdbImgUrl(tmdbEpisode?.still_path, 'w500') || fallback;
         }
 
         function tmdbRatingFor(ep, epMap) {
