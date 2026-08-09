@@ -19,34 +19,42 @@ Worker прив'язаний до існуючої адреси:
 
 `worker.js` не парсить GitHub Pages і не містить Telegram token.
 
-## Автоматичне підключення GitHub → Cloudflare
+## Cloudflare Git integration
 
-У корені репозиторію додано workflow:
+Щоб не копіювати код вручну в Cloudflare:
 
-`.github/workflows/deploy-vakdab-telegram.yml`
+1. Відкрий Cloudflare Dashboard → Workers & Pages.
+2. Обери існуючий Worker `vakdab`.
+3. Відкрий Settings або Deployments → Builds / Git integration.
+4. Підключи GitHub-репозиторій `vakdab/Vakdab`.
+5. Для root directory вкажи `vakdab-telegram-bot`.
+6. Build command залиш порожньою або вкажи `node --check worker.js`.
+7. Deploy command: `npx wrangler deploy`.
+8. Production branch: `main`.
 
-Після кожного push у `vakdab-telegram-bot/` GitHub Actions автоматично:
+Після цього Cloudflare автоматично братиме `worker.js` і `wrangler.toml` з цієї папки після кожного push. Wrangler config уже містить:
 
-1. перевіряє синтаксис Worker;
-2. запускає Wrangler;
-3. деплоїть код у Worker `vakdab`;
-4. оновлює `https://vakdab.vakdabpro.workers.dev/`.
+```toml
+name = "vakdab"
+main = "worker.js"
+```
 
-У GitHub Repository Settings → Secrets and variables → Actions потрібно один раз додати:
+Це відповідає адресі `https://vakdab.vakdabpro.workers.dev/`.
 
-- `CLOUDFLARE_API_TOKEN` — Cloudflare API Token з правом `Account.Workers Scripts:Edit`;
-- `CLOUDFLARE_ACCOUNT_ID` — Account ID Cloudflare.
+## Secrets Cloudflare
 
-Секрети Telegram залишаються у Cloudflare і не зберігаються в GitHub:
+Секрети Telegram залишаються тільки у Cloudflare Worker:
 
 ```bash
 wrangler secret put TELEGRAM_BOT_TOKEN
 wrangler secret put WEBHOOK_SETUP_SECRET
 ```
 
+Не додавай ці значення у GitHub або в `worker.js`.
+
 ## Webhook
 
-Webhook Telegram має бути встановлений на вже існуючу адресу Worker:
+Webhook Telegram має бути встановлений на існуючу адресу Worker:
 
 ```text
 https://vakdab.vakdabpro.workers.dev/set_webhook?url=https%3A%2F%2Fvakdab.vakdabpro.workers.dev&secret=<WEBHOOK_SETUP_SECRET>
