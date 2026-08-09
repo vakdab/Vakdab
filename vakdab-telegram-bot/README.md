@@ -19,6 +19,10 @@ Worker прив'язаний до існуючої адреси:
 
 `worker.js` не парсить GitHub Pages і не містить Telegram token.
 
+## Deploy trigger
+
+This commit verifies the Cloudflare Git build connection.
+
 ## Cloudflare Git integration
 
 Щоб не копіювати код вручну в Cloudflare:
