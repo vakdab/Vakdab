@@ -239,10 +239,10 @@ async function renderSearch(chatId, page, env, messageId = null) {
 
 async function renderRandom(chatId, messageId, env) {
   try {
-    const all = await fetchRandomPool();
-    if (!all.length) throw new Error('RANDOM_EMPTY');
-    const item = all[Math.floor(Math.random() * all.length)];
-    await renderDetails(chatId, messageId, item.url, env);
+    const randomPage = await fetchSource(`${ANIMEUA_BASE}/index.php?do=rand`);
+    const randomUrl = absoluteAnimeUrl(firstMatch(randomPage, /<link[^>]+rel=[\"']canonical[\"'][^>]+href=[\"']([^\"']+)[\"']/i) || firstMatch(randomPage, /property=[\"']og:url[\"'][^>]*content=[\"']([^\"']+)[\"']/i));
+    if (!randomUrl) throw new Error('RANDOM_INVALID');
+    await renderDetails(chatId, messageId, randomUrl, env);
   } catch (error) {
     console.error('[random] failed:', safeError(error));
     await updateOrSend(chatId, messageId, 'Не вдалося отримати випадкове аніме. Спробуйте ще раз.', false, {
