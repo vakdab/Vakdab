@@ -1,9 +1,13 @@
-# This name must match the existing Worker URL:
-# https://vakdab.vakdabpro.workers.dev/
+# One Worker serves both the VakDab static site and Telegram bot.
 name = "vakdab"
 main = "worker.js"
 compatibility_date = "2026-08-09"
 
-# Runtime secrets are configured in Cloudflare, not committed here.
+[assets]
+directory = "."
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+# Runtime secrets are configured in Cloudflare:
 # TELEGRAM_BOT_TOKEN
 # WEBHOOK_SETUP_SECRET
