@@ -1,3 +1,5 @@
+import { GoogleGenAI } from "@google/genai";
+
 const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const ANIMEUA_BASE = 'https://animeua.club';
 const PAGE_SIZE = 10;
@@ -76,9 +78,17 @@ async function handleMessage(message, env) {
   if (!chatId) return;
 
   const text = (message.text || '').trim();
+
+  // IA Agent Makima
+  if (/макіма|макима/i.test(text)) {
+    await handleMakima(chatId, text, env);
+    return;
+  }
+
   if (text === '/start') {
     const state = getState(chatId);
     state.screen = 'home';
+    state.fromRandom = false;
     await sendMessage(chatId, 'Привіт! Оберіть дію:', { reply_markup: mainKeyboard() }, env);
     return;
   }
@@ -89,8 +99,28 @@ async function handleMessage(message, env) {
   state.searchQuery = text;
   state.searchPage = 1;
   state.screen = 'search';
+  state.fromRandom = false;
   await sendMessage(chatId, `Шукаю: <b>${escapeHtml(text)}</b>...`, {}, env);
   await renderSearch(chatId, 1, env);
+}
+
+async function handleMakima(chatId, text, env) {
+  try {
+    if (!env.GEMINI_API_KEY) {
+      await sendMessage(chatId, 'Макіма зараз спить... (API ключ не налаштовано)', {}, env);
+      return;
+    }
+    const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+    const interaction = await ai.interactions.create({
+      model: "gemini-3.6-flash",
+      input: `Ти — Макіма. Ти дівчина. Ти — персонаж, який допомагає користувачам знаходити аніме та відповідає на їхні питання. Відповідай українською мовою, коротко і по суті. Користувач написав: "${text}"`,
+    });
+    const reply = interaction.output_text || 'Макіма задумалась...';
+    await sendMessage(chatId, reply, {}, env);
+  } catch (error) {
+    console.error('[makima] failed:', safeError(error));
+    await sendMessage(chatId, 'Макіма задумалась... Спробуй ще раз пізніше.', {}, env);
+  }
 }
 
 async function handleCallbackQuery(callback, env) {
@@ -110,13 +140,17 @@ async function handleCallbackQuery(callback, env) {
   try {
     if (data === 'home') {
       state.screen = 'home';
-      await replaceMessage(chatId, messageId, 'Оберіть дію:', false, { reply_markup: mainKeyboard() }, env);
+      state.fromRandom = false;
+      // Виправлення багу: видаляємо старе повідомлення (навіть фото) і надсилаємо нове меню
+      try { await deleteMessage(chatId, messageId, env); } catch (e) {}
+      await sendMessage(chatId, 'Оберіть дію:', { reply_markup: mainKeyboard() }, env);
       return;
     }
 
     if (data === 'popular:1') {
       state.screen = 'popular';
-      await replaceMessage(chatId, messageId, 'Завантажую популярні аніме...', false, {}, env);
+      state.fromRandom = false;
+      await updateOrSend(chatId, messageId, 'Завантажую популярні аніме...', false, {}, env);
       await renderPopular(chatId, 1, messageId, env);
       return;
     }
@@ -129,14 +163,16 @@ async function handleCallbackQuery(callback, env) {
 
     if (data === 'random') {
       state.screen = 'random';
-      await replaceMessage(chatId, messageId, 'Шукаю випадкове аніме...', false, {}, env);
+      state.fromRandom = true;
+      await updateOrSend(chatId, messageId, 'Шукаю випадкове аніме...', false, {}, env);
       await renderRandom(chatId, messageId, env);
       return;
     }
 
     if (data === 'search:prompt') {
       state.screen = 'waiting_for_search';
-      await replaceMessage(chatId, messageId, 'Введіть назву аніме.', false, { reply_markup: backHomeKeyboard() }, env);
+      state.fromRandom = false;
+      await updateOrSend(chatId, messageId, 'Введіть назву аніме.', false, { reply_markup: backHomeKeyboard() }, env);
       return;
     }
 
@@ -158,11 +194,12 @@ async function handleCallbackQuery(callback, env) {
       const list = kind === 'popular' ? state.popularResults : state.searchResults;
       const item = Array.isArray(list) ? list[index] : null;
       if (!item?.url) {
-        await replaceMessage(chatId, messageId, 'Це аніме більше недоступне. Спробуйте виконати запит ще раз.', false, { reply_markup: mainKeyboard() }, env);
+        await updateOrSend(chatId, messageId, 'Це аніме більше недоступне. Спробуйте виконати запит ще раз.', false, { reply_markup: mainKeyboard() }, env);
         return;
       }
       state.previous = { kind, page };
-      await replaceMessage(chatId, messageId, 'Завантажую деталі...', false, {}, env);
+      state.fromRandom = false;
+      await updateOrSend(chatId, messageId, 'Завантажую деталі...', false, {}, env);
       await renderDetails(chatId, messageId, item.url, env);
       return;
     }
@@ -178,14 +215,14 @@ async function handleCallbackQuery(callback, env) {
     }
   } catch (error) {
     console.error('[callback] failed:', safeError(error));
-    await replaceMessage(chatId, messageId, 'Не вдалося отримати дані. Спробуйте ще раз.', false, { reply_markup: mainKeyboard() }, env);
+    await updateOrSend(chatId, messageId, 'Не вдалося отримати дані. Спробуйте ще раз.', false, { reply_markup: mainKeyboard() }, env);
   }
 }
 
 function getState(chatId) {
   let state = userStates.get(chatId);
   if (!state) {
-    state = { screen: 'home', searchQuery: '', searchPage: 1, popularResults: [], searchResults: [] };
+    state = { screen: 'home', searchQuery: '', searchPage: 1, popularResults: [], searchResults: [], fromRandom: false };
     userStates.set(chatId, state);
   }
   return state;
@@ -202,6 +239,7 @@ async function renderPopular(chatId, page, messageId, env) {
   state.screen = 'popular';
   state.popularPage = page;
   state.popularResults = pageItems;
+  state.fromRandom = false;
   userStates.set(chatId, state);
   await updateOrSend(chatId, messageId, `Популярні аніме — сторінка ${page}`, false, {
     reply_markup: listKeyboard(pageItems, page, 'popular', all.length)
@@ -227,6 +265,7 @@ async function renderSearch(chatId, page, env, messageId = null) {
     state.screen = 'search';
     state.searchPage = page;
     state.searchResults = result.items;
+    state.fromRandom = false;
     userStates.set(chatId, state);
     await updateOrSend(chatId, messageId, `Результати пошуку: <b>${escapeHtml(query)}</b> — сторінка ${page}`, false, {
       reply_markup: listKeyboard(result.items, page, 'search', result.total)
@@ -242,9 +281,11 @@ async function renderSearch(chatId, page, env, messageId = null) {
 async function renderRandom(chatId, messageId, env) {
   try {
     const randomPage = await fetchSource(`${ANIMEUA_BASE}/index.php?do=rand`);
-    const randomUrl = absoluteAnimeUrl(firstMatch(randomPage, /<link[^>]+rel=[\"']canonical[\"'][^>]+href=[\"']([^\"']+)[\"']/i) || firstMatch(randomPage, /property=[\"']og:url[\"'][^>]*content=[\"']([^\"']+)[\"']/i));
+    const randomUrl = absoluteAnimeUrl(firstMatch(randomPage, /<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i) || firstMatch(randomPage, /property=["']og:url["'][^>]*content=["']([^"']+)["']/i));
     if (!randomUrl) throw new Error('RANDOM_INVALID');
-    await renderDetails(chatId, messageId, randomUrl, env);
+    const state = getState(chatId);
+    state.fromRandom = true;
+    await renderDetails(chatId, messageId, randomUrl, env, true);
   } catch (error) {
     console.error('[random] failed:', safeError(error));
     await updateOrSend(chatId, messageId, 'Не вдалося отримати випадкове аніме. Спробуйте ще раз.', false, {
@@ -253,7 +294,7 @@ async function renderRandom(chatId, messageId, env) {
   }
 }
 
-async function renderDetails(chatId, messageId, url, env) {
+async function renderDetails(chatId, messageId, url, env, fromRandom = false) {
   try {
     const details = await fetchAnimeDetails(url);
     if (!details || !details.title) throw new Error('INVALID_ANIME');
@@ -262,11 +303,18 @@ async function renderDetails(chatId, messageId, url, env) {
     const keyboard = {
       inline_keyboard: [
         ...(watchUrl ? [[{ text: 'Дивитись на VakDab', url: watchUrl }]] : []),
-        [{ text: 'Назад', callback_data: 'back:list' }, { text: 'Головна', callback_data: 'home' }]
+        ...(fromRandom
+          ? [
+              [{ text: '🎲 Випадкове', callback_data: 'random' }, { text: '◀ Назад', callback_data: 'home' }],
+              [{ text: '🏠 Головна', callback_data: 'home' }]
+            ]
+          : [
+              [{ text: '◀ Назад', callback_data: 'back:list' }, { text: '🏠 Головна', callback_data: 'home' }]
+            ])
       ]
     };
 
-    await deleteMessage(chatId, messageId, env);
+    try { await deleteMessage(chatId, messageId, env); } catch (e) {}
     if (details.image && /^https:\/\//i.test(details.image)) {
       const photoResult = await sendPhoto(chatId, details.image, text, { reply_markup: keyboard }, env);
       if (!photoResult?.ok) {
