@@ -258,9 +258,10 @@ async function renderDetails(chatId, messageId, url, env) {
     const details = await fetchAnimeDetails(url);
     if (!details || !details.title) throw new Error('INVALID_ANIME');
     const text = detailsText(details);
+    const watchUrl = vakdabWatchUrl(extractAnimeId(details.url));
     const keyboard = {
       inline_keyboard: [
-        [{ text: 'Дивитись на VakDab', url: details.url }],
+        ...(watchUrl ? [[{ text: 'Дивитись на VakDab', url: watchUrl }]] : []),
         [{ text: 'Назад', callback_data: 'back:list' }, { text: 'Головна', callback_data: 'home' }]
       ]
     };
@@ -400,6 +401,24 @@ function parseDetails(html, url) {
   const descriptionBlock = firstMatch(html, /class=["'][^"']*(?:full-text|pmovie__description|anime__description)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|p)>/i);
   const synopsis = cleanText(descriptionBlock);
   return { title: title || 'Без назви', image, genres: [...new Set(genres)], year: year || '', episodes: episodes || '', synopsis, url };
+}
+
+function extractAnimeId(animeUrl) {
+  try {
+    const parsed = new URL(animeUrl);
+    const newsId = parsed.searchParams.get('newsid');
+    if (/^\d+$/.test(newsId || '')) return newsId;
+    const match = parsed.pathname.match(/\/(\d+)(?:-|\.html(?:$|\/))/i);
+    return match?.[1] || '';
+  } catch {
+    return '';
+  }
+}
+
+function vakdabWatchUrl(animeId) {
+  return /^\d+$/.test(String(animeId || ''))
+    ? `https://vakdab.github.io/VakDab/#anime/${animeId}`
+    : '';
 }
 
 function detailsText(details) {
