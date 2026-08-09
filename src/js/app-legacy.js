@@ -7657,9 +7657,15 @@ function renderProfilePage() {
         // Будуємо силку на НАШ сайт (не на джерело animeua.club) — при відкритті вона
         // сама відкриє потрібне аніме в плеєрі, див. обробку #anime? при завантаженні сторінки.
         function buildShareUrl(animeUrl) {
-            const isLocal = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
-            const origin = isLocal ? 'https://vakdab.netlify.app' : window.location.origin;
-            return `${origin}/share?url=${encodeURIComponent(animeUrl || '')}`;
+            const encoded = encodeURIComponent(animeUrl || '');
+            const host = window.location.hostname;
+            // GitHub Pages is static: /share is not a real route there. Use the
+            // hash route, which the app can open without a server function.
+            if (host.endsWith('github.io') || host === 'localhost' || host === '127.0.0.1') {
+                return `${window.location.origin}/#anime?url=${encoded}`;
+            }
+            // Netlify has the crawler-friendly preview endpoint.
+            return `${window.location.origin}/share?url=${encoded}`;
         }
 
         function shareAnime() {
@@ -7667,7 +7673,7 @@ function renderProfilePage() {
             const url = buildShareUrl(playerPageCurrentAnimeUrl) || window.location.href;
             const title = anime?.title || 'VAKDAB';
             if (navigator.share) {
-                navigator.share({ title, text: `Дивись "${title}" на VAKDAB`, url }).catch(() => {});
+                navigator.share({ title, text: `Дивись «${title}» у VAKDAB ✨`, url }).catch(() => {});
             } else if (navigator.clipboard) {
                 navigator.clipboard.writeText(url).then(() => showToast('Посилання скопійовано'))
                     .catch(() => showToast('Не вдалося скопіювати посилання'));
@@ -8892,7 +8898,7 @@ function renderProfilePage() {
             if (hash.startsWith('anime?')) {
                 const params = Object.fromEntries(new URLSearchParams(hash.split('?')[1]));
                 if (params.url) {
-                    setTimeout(() => openPlayerPage(decodeURIComponent(params.url)), 150);
+                    setTimeout(() => openPlayerPage(params.url), 150);
                 }
             } else if (hash === 'profile') {
                 Router.goTo('profile');
