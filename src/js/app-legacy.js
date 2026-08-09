@@ -2291,85 +2291,6 @@ let externalSourceCache = {};
             }
         }
 
-        async function loadAnimeComments(url) {
-            const list = document.getElementById('animeCommentsList');
-            const count = document.getElementById('animeCommentCount');
-            if (!list) return;
-            list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">Завантаження...</div>';
-            try {
-                if (!firebaseInitialized || !db) throw new Error('Firebase недоступний');
-                await ensureFirebaseGuestAuth();
-                const { collection, query, where, getDocs } =
-                    await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js');
-                const animeId = url.hashCode();
-                const q = query(collection(db, 'anime_comments'), where('animeId', '==', animeId));
-                const snap = await getDocs(q);
-                // Сортуємо на клієнті, щоб уникнути залежності від composite index
-                const comments = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-                    .sort((a, b) => (b.createdAt?.toMillis?.() || b.createdAt || 0) - (a.createdAt?.toMillis?.() || a.createdAt || 0));
-
-                if (count) count.textContent = `${comments.length} коментарів`;
-                if (comments.length === 0) {
-                    list.innerHTML = '<div class="review-empty">Станьте першим, хто поділиться враженнями<br>Розкажіть про свої емоції від перегляду</div>';
-                    return;
-                }
-                list.innerHTML = comments.map(c => `
-                    <div class="review-card">
-                        <div class="review-header">
-                            <div class="review-avatar">${(c.authorName || 'А')[0].toUpperCase()}</div>
-                            <div class="review-name">${c.authorName || 'Анонім'}</div>
-                        </div>
-                        <div class="review-text">${(c.text || '').replace(/</g,'&lt;')}</div>
-                    </div>
-                `).join('');
-            } catch (e) {
-                console.warn('loadAnimeComments failed:', e.message);
-                if (count) count.textContent = '0 коментарів';
-                list.innerHTML = '<div class="review-empty">Не вдалося завантажити відгуки. Спробуйте пізніше.</div>';
-            }
-        }
-
-        async function _sendAnimeComment() {
-            const input = document.getElementById('animeCommentInput');
-            const sendBtn = document.getElementById('sendAnimeComment');
-            const text = input.value.trim();
-            if (!text || !playerPageCurrentAnimeUrl || !playerPageAnime) return;
-            if (sendBtn) sendBtn.disabled = true;
-            try {
-                if (!firebaseInitialized || !db) throw new Error('Firebase недоступний');
-                // Гостям видаємо анонімний Firebase-сеанс, щоб коментар зберігся
-                if (!Auth.isAuthenticated()) {
-                    try { await signInAnonymously(auth); } catch (e) { /* якщо анонімний вхід вимкнено — публікуємо все одно спробою нижче */ }
-                }
-                const { addDoc, collection, serverTimestamp } =
-                    await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js');
-                const p = getProfile();
-                await addDoc(collection(db, 'anime_comments'), {
-                    animeId: playerPageCurrentAnimeUrl.hashCode(),
-                    animeUrl: playerPageCurrentAnimeUrl,
-                    animeTitle: playerPageAnime.title || '',
-                    text,
-                    authorName: p.nickname || auth?.currentUser?.displayName || 'Анонім',
-                    authorUid: auth?.currentUser?.uid || null,
-                    createdAt: serverTimestamp()
-                });
-                input.value = '';
-                loadAnimeComments(playerPageCurrentAnimeUrl);
-            } catch (e) {
-                console.warn('sendAnimeComment failed:', e.message);
-                showToast('Не вдалося надіслати відгук. Спробуйте ще раз.');
-            } finally {
-                if (sendBtn) sendBtn.disabled = false;
-            }
-        }
-
-        document.getElementById('sendAnimeComment')?.addEventListener('click', _sendAnimeComment);
-
-        // Add Enter key support
-        document.getElementById('animeCommentInput')?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') { e.preventDefault(); _sendAnimeComment(); }
-        });
-
         // Initialize Lucide icons if not already done
         if (window.lucide) {
             lucide.createIcons();
@@ -7482,7 +7403,6 @@ function renderProfilePage() {
             updateLikeButton();
             updateDislikeButton();
             updateBookmarkButton(url);
-            loadAnimeComments(url);
             modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
             modal.querySelector('.modal-content').scrollTop = 0;
@@ -7945,7 +7865,9 @@ function renderProfilePage() {
                     const data = await res.json();
                     const candidates = (data.results || []).filter(r => (r.media_type === 'tv' || r.media_type === 'movie'));
                     if (candidates.length) {
-                        const best = candidates.find(r => r.media_type === 'movie') || candidates[0];
+                        const preferredType = playerAnimeIsMovie(anime) ? 'movie' : 'tv';
+                        const ranked = [...candidates].sort((a, b) => tmdbCandidateScore(b, q) - tmdbCandidateScore(a, q));
+                        const best = ranked.find(r => r.media_type === preferredType) || ranked[0];
                         const info = { id: best.id, mediaType: best.media_type, poster: best.poster_path, backdrop: best.backdrop_path, seasonsCache: {} };
                         tmdbAnimeCache[cacheKey] = info;
                         return info;
@@ -8312,7 +8234,6 @@ function renderProfilePage() {
                 Storage.setBookmarks(bookmarks);
                 showToast('Видалено з закладок');
                 updateBookmarkButton(url);
-            loadAnimeComments(url);
                 if (Router.currentRoute === 'profile') renderProfilePage();
                 return;
             }
@@ -8331,7 +8252,6 @@ function renderProfilePage() {
             DailyStats.increment('bookmarksToday', 1);
             showToast('Додано до закладок');
             updateBookmarkButton(url);
-            loadAnimeComments(url);
             if (Router.currentRoute === 'profile') renderProfilePage();
         }
 
