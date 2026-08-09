@@ -19,7 +19,7 @@ export default {
         if (url.pathname === '/set_webhook') {
           return await setWebhook(request, env, url);
         }
-        return serveSite(request, env);
+        return textResponse('VakDab Telegram Worker is running.');
       }
 
       if (request.method === 'POST' && url.pathname === TELEGRAM_WEBHOOK_PATH) {
@@ -28,11 +28,7 @@ export default {
         return textResponse('OK');
       }
 
-      if (request.method === 'POST') {
-        return serveSite(request, env);
-      }
-
-      return serveSite(request, env);
+      return textResponse('Not Found', 404);
     } catch (error) {
       console.error('[worker] request failed:', safeError(error));
       return textResponse('Internal Server Error', 500);
@@ -40,12 +36,6 @@ export default {
   }
 };
 
-async function serveSite(request, env) {
-  if (env.ASSETS && typeof env.ASSETS.fetch === 'function') {
-    return env.ASSETS.fetch(request);
-  }
-  return textResponse('VakDab site assets are not configured.', 503);
-}
 
 function textResponse(body, status = 200) {
   return new Response(body, { status, headers: { 'content-type': 'text/plain; charset=utf-8' } });
