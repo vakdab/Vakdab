@@ -204,8 +204,9 @@ async function callMakimaAI(prompt, env, state) {
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured');
 
   let selectedModel = await selectGeminiModel(env, apiKey, false);
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    console.log('[gemini] selected model:', selectedModel);
+  let useSearchTool = true;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    console.log('[gemini] selected model:', selectedModel, '| search tool:', useSearchTool);
     console.log('[gemini] request started');
     const endpoint = `${GEMINI_API_BASE}/models/${encodeURIComponent(selectedModel)}:generateContent`;
     const body = {
@@ -242,9 +243,9 @@ async function callMakimaAI(prompt, env, state) {
         ...(Array.isArray(state?.aiHistory) ? state.aiHistory.slice(-20) : []),
         { role: 'user', parts: [{ text: String(prompt || '') }] }
       ],
-      tools: [{ google_search: {} }],
       generationConfig: { temperature: 0.45, maxOutputTokens: 3000 }
     };
+    if (useSearchTool) body.tools = [{ google_search: {} }];
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -258,9 +259,14 @@ async function callMakimaAI(prompt, env, state) {
     if (!response.ok) {
       console.error('[gemini] API error status:', response.status);
       console.error('[gemini] API error body:', redactGeminiSecret(responseText, apiKey).slice(0, 3000));
-      if (response.status === 404 && attempt === 0) {
+      if (response.status === 404 && attempt < 2) {
         console.log('[gemini] selected model returned 404; refreshing model list');
         selectedModel = await selectGeminiModel(env, apiKey, true);
+        continue;
+      }
+      if (useSearchTool && attempt < 2) {
+        console.log('[gemini] request failed with google_search tool attached; retrying without it');
+        useSearchTool = false;
         continue;
       }
       throw new Error(`Gemini API error ${response.status}`);
@@ -730,24 +736,28 @@ function parseCards(html) {
 // real poster on animeua.club, so it's tried first; the poster block scrape
 // is kept as a secondary attempt/fallback.
 function extractPosterUrl(html) {
-  const isPlaceholder = (value) => !value || /(placeholder|blank|loading|lazy|spinner|default|no-img|noimg|no-?photo)/i.test(value);
+  const isPlaceholder = (value) => !value || /(placeholder|blank|loading|lazy|spinner|default|no-?img|no-?photo)/i.test(value);
 
-  const ogImage = absoluteUrl(firstMatch(html, /property=["']og:image["'][^>]*content=["']([^"']+)["']/i));
-  if (ogImage && !isPlaceholder(ogImage)) return ogImage;
-
-  const posterBlock = firstMatch(html, /class=["'][^"']*(?:pmovie__poster|anime__poster|full-poster|story-poster|poster)[^"']*["'][^>]*>([\s\S]{0,1500}?)<\/(?:div|a|figure)>/i);
+  // Same order as the original, working extraction: try the specific poster
+  // block's data-src/data-original/src first. og:image and twitter:image are
+  // kept only as fallbacks — making them primary in a previous version was
+  // the regression that made posters stop appearing for everyone, since the
+  // proxy/page doesn't always surface a usable og:image. The only real fix
+  // needed here was widening the placeholder filter to catch "no-img.png".
+  const posterBlock = firstMatch(html, /class=["'][^"']*(?:pmovie__poster|anime__poster|full-poster)[^"']*["'][^>]*>([\s\S]{0,1000}?)<\/(?:div|a)>/i);
   const candidates = [];
   if (posterBlock) {
     candidates.push(firstMatch(posterBlock, /data-src=["']([^"']+)["']/i));
     candidates.push(firstMatch(posterBlock, /data-original=["']([^"']+)["']/i));
     candidates.push(firstMatch(posterBlock, /\bsrc=["']([^"']+)["']/i));
   }
+  candidates.push(firstMatch(html, /property=["']og:image["'][^>]*content=["']([^"']+)["']/i));
   candidates.push(firstMatch(html, /property=["']twitter:image["'][^>]*content=["']([^"']+)["']/i));
   for (const candidate of candidates) {
     const abs = absoluteUrl(candidate);
     if (abs && !isPlaceholder(abs)) return abs;
   }
-  return ogImage || '';
+  return '';
 }
 
 function parseDetails(html, url) {
