@@ -75,11 +75,10 @@ async function handleMessage(message, env) {
   if (!chatId) return;
 
   const text = (message.text || '').trim();
-  const state = getState(chatId);
 
   if (text === '/start') {
+    const state = getState(chatId);
     state.screen = 'home';
-    state.aiHistory = [];
     await sendMessage(chatId, 'Привіт! Оберіть дію:', { reply_markup: mainKeyboard() }, env);
     return;
   }
@@ -87,18 +86,32 @@ async function handleMessage(message, env) {
   if (/^\/(?:makima|ask)(?:@\w+)?(?:\s|$)/i.test(text)) {
     const prompt = text.replace(/^\/(?:makima|ask)(?:@\w+)?\s*/i, '').trim();
     if (!prompt) {
-      state.screen = 'waiting_for_makima';
-      await sendMessage(chatId, 'Напишіть запит про аніме.', { reply_markup: backHomeKeyboard() }, env);
+      await sendMessage(chatId, 'Напиши запит після команди, наприклад: <code>/makima розкажи про Макіму</code>.', {}, env);
       return;
     }
-    state.screen = 'makima';
     await handleMakimaMessage(chatId, prompt, env);
+    return;
+  }
+
+  // --- AI-агент Макіма (завжди пріоритет, якщо згадано ім'я) ---
+  if (text.toLowerCase().includes('макіма')) {
+    const state = getState(chatId);
+    state.screen = 'makima'; // не блокуємо інші функції, просто відповідаємо
+    await handleMakimaMessage(chatId, text, env);
     return;
   }
 
   if (!text) return;
 
-  // Пошук через кнопку має пріоритет над AI, щоб не ламати каталог VakDab.
+  const state = getState(chatId);
+
+  // --- Якщо ми в режимі діалогу з Макімою (через кнопку) ---
+  if (state.screen === 'waiting_for_makima') {
+    await handleMakimaMessage(chatId, text, env);
+    return;
+  }
+
+  // --- Пошук (якщо користувач натиснув кнопку "Пошук") ---
   if (state.screen === 'waiting_for_search') {
     state.searchQuery = text;
     state.searchPage = 1;
@@ -108,10 +121,8 @@ async function handleMessage(message, env) {
     return;
   }
 
-  // Після кнопки «Запитати Макіму» та для будь-якого звичайного тексту
-  // запит одразу передається в Gemini.
-  state.screen = 'makima';
-  await handleMakimaMessage(chatId, text, env);
+  // У будь-якому іншому стані – нагадуємо використовувати кнопки меню
+  await sendMessage(chatId, 'Скористайтеся кнопками меню.', { reply_markup: mainKeyboard() }, env);
 }
 
 // Gemini / Makima integration. Model availability is discovered per API key.
@@ -122,9 +133,7 @@ let geminiModelCache = { expiresAt: 0, models: [], selected: '' };
 async function handleMakimaMessage(chatId, userMessage, env) {
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
-    const state = getState(chatId);
-    await enrichMakimaStateFromCatalog(userMessage, state, env);
-    const responseText = await callMakimaAI(userMessage, env, state);
+    const responseText = await callMakimaAI(userMessage, env);
     await sendMessage(chatId, escapeHtml(responseText), { reply_markup: backHomeKeyboard() }, env);
   } catch (error) {
     console.error('[makima] failed:', safeError(error));
@@ -132,45 +141,7 @@ async function handleMakimaMessage(chatId, userMessage, env) {
   }
 }
 
-async function enrichMakimaStateFromCatalog(prompt, state, env) {
-  if (!looksLikeAnimeRequest(prompt)) return;
-  try {
-    const query = extractAnimeQuery(prompt);
-    if (!query || query.length < 2) return;
-    const result = await searchAnime(query, 1);
-    const candidate = result.items?.[0];
-    if (!candidate?.url) return;
-    const details = await fetchAnimeDetails(candidate.url);
-    if (details?.title) {
-      state.lastAnimeDetails = details;
-      state.lastAnimeQuery = query;
-    }
-  } catch (error) {
-    console.warn('[makima] catalog context unavailable:', safeError(error));
-  }
-}
-
-const NON_ANIME_CHATTER = /^(привіт|вітаю|доброго|добрий день|добрий вечір|дякую|дяка|спасибі|дякс|пока|бувай|окей|ок\b|так\b|ні\b|хто ти|що ти вмієш|допоможи|тест|як справи|доброго дня|доброго ранку)/i;
-
-function looksLikeAnimeRequest(prompt) {
-  const value = String(prompt || '').trim();
-  if (value.length < 2) return false;
-  if (NON_ANIME_CHATTER.test(value)) return false;
-  // Явні аніме-ключові слова — точно варто підтягнути дані з AnimeUA.
-  if (/аніме|аниме|манґа|манга|ранобе|сезон|епізод|серіал|фільм|персонаж|студі|озвуч|повна інформація|розкажи про|що це за|дивитись|подивитись|озвучк/i.test(value)) return true;
-  // Інакше все одно пробуємо: користувач міг просто написати назву тайтла
-  // без жодних ключових слів («Наруто», «Атака титанів» тощо).
-  return value.length <= 80;
-}
-
-function extractAnimeQuery(prompt) {
-  const value = String(prompt || '').trim();
-  const match = value.match(/(?:про|щодо|стосовно|розкажи про|інформація про|все про|що це за)\s+(.+?)(?:\?|$)/i);
-  if (match?.[1]) return match[1].replace(/^(аніме|аниме)\s+/i, '').trim();
-  return value.replace(/^(повна інформація|розкажи детально|розкажи все)\s*/i, '').trim();
-}
-
-async function callMakimaAI(prompt, env, state) {
+async function callMakimaAI(prompt, env) {
   const apiKey = String(env.GEMINI_API_KEY || '').trim();
   console.log('[gemini] API key configured:', Boolean(apiKey));
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured');
@@ -182,38 +153,9 @@ async function callMakimaAI(prompt, env, state) {
     const endpoint = `${GEMINI_API_BASE}/models/${encodeURIComponent(selectedModel)}:generateContent`;
     const body = {
       systemInstruction: {
-        parts: [{ text: [
-          'Ти — Макіма, інтелектуальна AI-помічниця Telegram-бота VakDab.',
-          'Головна спеціалізація: аніме, манґа, ранобе, японська анімація, персонажі, студії, жанри, сезони, епізоди, сюжети, адаптації, рейтинги та рекомендації.',
-          'Ти також універсальна помічниця і відповідаєш на питання про програмування, технології, ігри, фільми, музику, навчання, історію, географію та інші теми.',
-          'Якщо питання не про аніме — не переводь розмову на аніме.',
-          'Відповідай українською, якщо користувач не попросив іншу мову. Пиши природно, дружньо і зрозуміло.',
-          'Не починай кожну відповідь зі слів «Звичайно», «Звісно» або «Як помічниця».',
-          '=== ДЖЕРЕЛО ФАКТІВ (ОБОВʼЯЗКОВО) ===',
-          'Єдине джерело конкретних фактичних даних про аніме (назва, альтернативні назви, тип, рік, сезон, жанри, епізоди, тривалість, статус, студія, режисер, автор, джерело, опис) — це блок «ПІДТВЕРДЖЕНИЙ ПРОФІЛЬ VAKDAB» нижче, отриманий напряму з каталогу AnimeUA. Ти НЕ шукаєш і НЕ вигадуєш ці факти сама і не береш їх з інших сайтів чи власної памʼяті.',
-          'Якщо профілю VAKDAB немає або він явно про інше аніме, ніж питає користувач — прямо скажи, що підтверджених даних з каталогу немає, і уточни, чи не мав користувач на увазі саме цю назву. Не видавай здогадки за факти.',
-          'Поле «Опис» з профілю VAKDAB використовуй як основу сюжету. Загальні знання можна додавати лише як контекст (культурний вплив, порівняння, думки фанатів) і завжди чітко позначай це як загальновідому інформацію, а не підтверджений факт каталогу.',
-          '=== ФОРМАТ ВІДПОВІДІ (ОБОВʼЯЗКОВО) ===',
-          'Коли профіль VAKDAB для аніме є і питання стосується саме цього тайтулу — за замовчуванням давай ПОВНУ структуровану відповідь (а не куций опис в 2-3 речення), навіть якщо користувач не написав слово «детально» чи «повна інформація». Коротку відповідь давай тільки якщо користувач явно попросив коротко/стисло.',
-          'Повна відповідь про аніме повинна містити, якщо дані відомі: 1) назва та альтернативні назви; 2) тип, рік, сезон, статус, епізоди, тривалість; 3) жанри й теми; 4) студія, режисер, автор, джерело; 5) сюжет і світ без ключових спойлерів (на основі опису з каталогу); 6) головні персонажі та їхні звʼязки (загальні знання, позначені як такі); 7) звʼязані тайтли — манґа/ранобе, попередні й наступні сезони, фільми, OVA, ONA, спінофи (загальні знання); 8) для кого підійде і чому; 9) коротке підсумкове враження.',
-          'Пропускай розділи, для яких немає надійних даних — не заповнюй їх вигадками чи загальними фразами «інформація невідома» на кожен пункт, просто опусти пункт.',
-          'Якщо питання просте, наприклад «що це за аніме?» без прохання розповісти більше — дай стислий, але змістовний опис (назва, тип, рік, жанри, 2-3 речення сюжету).',
-          'Якщо питання про персонажа — розкажи про роль, характер, здібності, походження, звʼязки та розвиток, якщо відомо, позначаючи це як загальні знання, якщо цього немає в профілі VAKDAB.',
-          'Якщо просять рекомендації — враховуй жанр, сюжет, атмосферу і побажання користувача.',
-          'Перед важливими сюжетними розкриттями напиши «⚠️ СПОЙЛЕРИ».',
-          'Не використовуй Markdown або HTML. Використовуй звичайний текст Telegram, короткі заголовки, нумерацію та символи •.',
-          'Не створюй суцільні величезні абзаци. Не став зайвих питань наприкінці.',
-          'Якщо питають, хто ти, відповідай: «Я Макіма — помічниця VakDab. Моя головна спеціалізація — аніме, але я також можу допомогти з іншими питаннями.»',
-          state?.lastAnimeDetails
-            ? `ПІДТВЕРДЖЕНИЙ ПРОФІЛЬ VAKDAB (єдине джерело фактів для поточного аніме): ${formatAnimeContext(state.lastAnimeDetails)}`
-            : 'ПІДТВЕРДЖЕНИХ ДАНИХ VAKDAB ДЛЯ ПОТОЧНОГО АНІМЕ НЕМАЄ. Не стверджуй, що вони є, і не вигадуй конкретні факти каталогу.'
-        ].join(' ') }]
+        parts: [{ text: 'Ти Макіма з аніме Людина-бензопила. Відповідай українською мовою. Будь спокійною, розумною, загадковою.' }]
       },
-      contents: [
-        ...(Array.isArray(state?.aiHistory) ? state.aiHistory.slice(-20) : []),
-        { role: 'user', parts: [{ text: String(prompt || '') }] }
-      ],
-      generationConfig: { temperature: 0.45, maxOutputTokens: 1200 }
+      contents: [{ role: 'user', parts: [{ text: String(prompt || '') }] }]
     };
 
     const response = await fetch(endpoint, {
@@ -248,14 +190,7 @@ async function callMakimaAI(prompt, env, state) {
       throw new Error('Gemini returned no text');
     }
     console.log('[gemini] generated text received');
-    const cleanText = generatedText.length > 3000 ? `${generatedText.slice(0, 2997)}...` : generatedText;
-    if (state) {
-      if (!Array.isArray(state.aiHistory)) state.aiHistory = [];
-      state.aiHistory.push({ role: 'user', parts: [{ text: String(prompt || '') }] });
-      state.aiHistory.push({ role: 'model', parts: [{ text: cleanText }] });
-      state.aiHistory = state.aiHistory.slice(-20);
-    }
-    return cleanText;
+    return generatedText;
   }
   throw new Error('Gemini model selection failed');
 }
@@ -346,21 +281,21 @@ async function handleCallbackQuery(callback, env) {
     if (data === 'home') {
       state.screen = 'home';
       state.previous = null;
-      await transitionMessage(chatId, messageId, 'Оберіть дію:', env, { reply_markup: mainKeyboard() });
+      await replaceMessage(chatId, messageId, 'Оберіть дію:', false, { reply_markup: mainKeyboard() }, env);
       return;
     }
 
     // --- Нова кнопка "Запитати Макіму" ---
     if (data === 'makima:prompt') {
       state.screen = 'waiting_for_makima';
-      await transitionMessage(chatId, messageId, 'Макіма готова допомогти.\n\nЗапитайте мене про аніме або будь-що інше.', env, { reply_markup: backHomeKeyboard() });
+      await replaceMessage(chatId, messageId, 'Напишіть своє запитання Макімі.', false, { reply_markup: backHomeKeyboard() }, env);
       return;
     }
 
     if (data === 'popular:1') {
       state.screen = 'popular';
-      const newId = await transitionMessage(chatId, messageId, 'Завантажую популярні аніме...', env, {});
-      await renderPopular(chatId, 1, newId, env);
+      await replaceMessage(chatId, messageId, 'Завантажую популярні аніме...', false, {}, env);
+      await renderPopular(chatId, 1, messageId, env);
       return;
     }
 
@@ -373,14 +308,14 @@ async function handleCallbackQuery(callback, env) {
     if (data === 'random') {
       state.screen = 'random';
       state.previous = { kind: 'random' };
-      const newId = await transitionMessage(chatId, messageId, 'Шукаю випадкове аніме...', env, {});
-      await renderRandom(chatId, newId, env);
+      await replaceMessage(chatId, messageId, 'Шукаю випадкове аніме...', false, {}, env);
+      await renderRandom(chatId, messageId, env);
       return;
     }
 
     if (data === 'search:prompt') {
       state.screen = 'waiting_for_search';
-      await transitionMessage(chatId, messageId, 'Введіть назву аніме.', env, { reply_markup: backHomeKeyboard() });
+      await replaceMessage(chatId, messageId, 'Введіть назву аніме.', false, { reply_markup: backHomeKeyboard() }, env);
       return;
     }
 
@@ -402,12 +337,12 @@ async function handleCallbackQuery(callback, env) {
       const list = kind === 'popular' ? state.popularResults : state.searchResults;
       const item = Array.isArray(list) ? list[index] : null;
       if (!item?.url) {
-        await transitionMessage(chatId, messageId, 'Це аніме більше недоступне. Спробуйте виконати запит ще раз.', env, { reply_markup: mainKeyboard() });
+        await replaceMessage(chatId, messageId, 'Це аніме більше недоступне. Спробуйте виконати запит ще раз.', false, { reply_markup: mainKeyboard() }, env);
         return;
       }
       state.previous = { kind, page };
-      const newId = await transitionMessage(chatId, messageId, 'Завантажую деталі...', env, {});
-      await renderDetails(chatId, newId, item.url, env);
+      await replaceMessage(chatId, messageId, 'Завантажую деталі...', false, {}, env);
+      await renderDetails(chatId, messageId, item.url, env);
       return;
     }
 
@@ -419,58 +354,20 @@ async function handleCallbackQuery(callback, env) {
         await renderPopular(chatId, previous.page, messageId, env);
       } else {
         state.screen = 'home';
-        await transitionMessage(chatId, messageId, 'Оберіть дію:', env, { reply_markup: mainKeyboard() });
+        await replaceMessage(chatId, messageId, 'Оберіть дію:', false, { reply_markup: mainKeyboard() }, env);
       }
       return;
     }
   } catch (error) {
     console.error('[callback] failed:', safeError(error));
-    await transitionMessage(chatId, messageId, 'Не вдалося отримати дані. Спробуйте ще раз.', env, { reply_markup: mainKeyboard() });
+    await replaceMessage(chatId, messageId, 'Не вдалося отримати дані. Спробуйте ще раз.', false, { reply_markup: mainKeyboard() }, env);
   }
-}
-
-// Editing a text message in place only works if the message currently holds
-// text; if it currently holds a photo (e.g. after "Випадкове"/"Деталі"),
-// editMessageText fails silently and buttons like "Головна" stop working.
-// This helper tries an in-place edit first and, if that fails, deletes the
-// old message and sends a fresh one — so navigation always works regardless
-// of whether the previous screen was a photo or plain text.
-async function transitionMessage(chatId, messageId, text, env, extra = {}) {
-  if (messageId) {
-    const result = await replaceMessage(chatId, messageId, text, false, extra, env);
-    if (result?.ok) return messageId;
-    await deleteMessage(chatId, messageId, env);
-  }
-  const sent = await sendMessage(chatId, text, extra, env);
-  return sent?.result?.message_id || messageId || null;
-}
-
-function formatAnimeContext(details) {
-  if (!details) return '';
-  const fields = [
-    ['Назва', details.title],
-    ['Оригінальна назва', details.originalTitle],
-    ['Альтернативні назви', details.altTitle],
-    ['Тип', details.type],
-    ['Рік', details.year],
-    ['Сезон виходу', details.releaseSeason],
-    ['Жанри', Array.isArray(details.genres) ? details.genres.join(', ') : details.genres],
-    ['Епізоди', details.episodes],
-    ['Тривалість', details.duration],
-    ['Статус', details.status],
-    ['Студія', details.studio],
-    ['Режисер', details.director],
-    ['Автор', details.author],
-    ['Оригінальне джерело', details.source],
-    ['Опис', details.synopsis]
-  ].filter(([, value]) => value !== undefined && value !== null && String(value).trim());
-  return fields.map(([label, value]) => `${label}: ${String(value).slice(0, 1200)}`).join('; ').slice(0, 7000);
 }
 
 function getState(chatId) {
   let state = userStates.get(chatId);
   if (!state) {
-    state = { screen: 'home', searchQuery: '', searchPage: 1, popularResults: [], searchResults: [], previous: null, aiHistory: [] };
+    state = { screen: 'home', searchQuery: '', searchPage: 1, popularResults: [], searchResults: [], previous: null };
     userStates.set(chatId, state);
   }
   return state;
@@ -545,7 +442,6 @@ async function renderDetails(chatId, messageId, url, env) {
     const text = detailsText(details);
     const watchUrl = vakdabWatchUrl(extractAnimeId(details.url));
     const state = getState(chatId);
-    state.lastAnimeDetails = details;
 
     let keyboard;
     if (state.previous?.kind === 'random') {
@@ -665,7 +561,7 @@ function parseCards(html) {
   for (const block of posterBlocks) {
     const url = absoluteAnimeUrl(firstMatch(block, /href=["']([^"']+)["']/i));
     const title = cleanText(firstMatch(block, /class=["'][^"']*poster__title[^"']*["'][^>]*>([\s\S]*?)<\//i) || firstMatch(block, /<h[1-6][^>]*>([\s\S]*?)<\//i));
-    const image = absoluteUrl(firstMatch(block, /data-src=["']([^"']+)["']/i) || firstMatch(block, /data-original=["']([^"']+)["']/i) || firstMatch(block, /\bsrc=["']([^"']+)["']/i));
+    const image = absoluteUrl(firstMatch(block, /(?:data-src|src)=["']([^"']+)["']/i));
     if (url && title && !seen.has(url)) {
       seen.add(url);
       cards.push({ title, url, image });
@@ -679,7 +575,7 @@ function parseCards(html) {
       const block = match[0];
       const url = absoluteAnimeUrl(match[1]);
       const title = cleanText(firstMatch(block, /class=["'][^"']*poster__title[^"']*["'][^>]*>([\s\S]*?)<\//i) || block.replace(/<[^>]+>/g, ' '));
-      const image = absoluteUrl(firstMatch(block, /data-src=["']([^"']+)["']/i) || firstMatch(block, /data-original=["']([^"']+)["']/i) || firstMatch(block, /\bsrc=["']([^"']+)["']/i));
+      const image = absoluteUrl(firstMatch(block, /(?:data-src|src)=["']([^"']+)["']/i));
       if (url && title && !seen.has(url)) {
         seen.add(url);
         cards.push({ title, url, image });
@@ -690,69 +586,16 @@ function parseCards(html) {
   return cards;
 }
 
-// Poster images on the source site are usually lazy-loaded: the real photo
-// lives in a `data-src` (or `data-original`) attribute, while `src` holds a
-// tiny placeholder/spinner gif until JS swaps it in. Since our scraper never
-// runs that JS, grabbing whichever attribute appears first in the markup
-// sometimes returns the placeholder instead of the real poster, which is why
-// a photo occasionally fails to show. Look for the real source explicitly
-// and fall back to the page's og:image (which is not lazy-loaded) if the
-// poster block itself doesn't have a usable image.
-function extractPosterUrl(html) {
-  const posterBlock = firstMatch(html, /class=["'][^"']*(?:pmovie__poster|anime__poster|full-poster)[^"']*["'][^>]*>([\s\S]{0,1000}?)<\/(?:div|a)>/i);
-  const candidates = [];
-  if (posterBlock) {
-    candidates.push(firstMatch(posterBlock, /data-src=["']([^"']+)["']/i));
-    candidates.push(firstMatch(posterBlock, /data-original=["']([^"']+)["']/i));
-    candidates.push(firstMatch(posterBlock, /\bsrc=["']([^"']+)["']/i));
-  }
-  candidates.push(firstMatch(html, /property=["']og:image["'][^>]*content=["']([^"']+)["']/i));
-  for (const candidate of candidates) {
-    const abs = absoluteUrl(candidate);
-    if (abs && !/(placeholder|blank|loading|lazy|spinner|default)/i.test(abs)) return abs;
-  }
-  return '';
-}
-
 function parseDetails(html, url) {
-  const textField = (patterns) => {
-    for (const pattern of patterns) {
-      const value = firstMatch(html, pattern);
-      if (value) return cleanText(value);
-    }
-    return '';
-  };
-  const labeledField = (labels) => {
-    const label = labels.join('|');
-    return textField([
-      new RegExp(`(?:${label})\\s*[:\\-]?\\s*(?:<[^>]+>\\s*){0,3}([^<]{1,160})`, 'i'),
-      new RegExp(`(?:${label})[\\s\\S]{0,180}?<[^>]*>([^<]{1,160})<`, 'i')
-    ]);
-  };
-
   const title = cleanText(firstMatch(html, /<h1[^>]*>([\s\S]*?)<\//i) || firstMatch(html, /property=["']og:title["'][^>]*content=["']([^"']+)["']/i));
-  const originalTitle = textField([/class=["'][^"']*(?:original-title|original_name|original-title)[^"']*["'][^>]*>([\s\S]*?)<\//i]);
-  const altTitle = textField([/class=["'][^"']*(?:alternative-title|alt-title|other-title)[^"']*["'][^>]*>([\s\S]*?)<\//i]);
-  const image = extractPosterUrl(html);
-  const genreBlock = firstMatch(html, /<(?:div|section)[^>]*class=["'][^"']*(?:pmovie__genres|genres)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section)>/i) || firstMatch(html, /class=["'][^"']*pmovie__genres[^"']*["'][^>]*>([\s\S]*?)<\/div>/i) || '';
+  const image = absoluteUrl(firstMatch(html, /class=["'][^"']*(?:pmovie__poster|anime__poster|full-poster)[^"']*["'][\s\S]{0,500}?(?:data-src|src)=["']([^"']+)["']/i) || firstMatch(html, /property=["']og:image["'][^>]*content=["']([^"']+)["']/i));
+  const genreBlock = firstMatch(html, /<(?:div|section)[^>]*class=["'][^"']*(?:pmovie__genres|genres)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section)>/i) || '';
   const genres = [...genreBlock.matchAll(/<a[^>]*>([\s\S]*?)<\//gi)].map(m => cleanText(m[1])).filter(Boolean);
-  const year = firstMatch(html, /class=["'][^"']*(?:pmovie__year|release-year)[^"']*["]?[^>]*>[\s\S]*?(\d{4})/i) || firstMatch(html, /\b((?:19|20)\d{2})\b/);
+  const year = firstMatch(html, /class=["'][^"']*(?:pmovie__year|release-year)[^"']*["'][^>]*>[\s\S]*?(\d{4})/i) || firstMatch(html, /\b(19|20)\d{2}\b/);
   const episodes = firstMatch(html, /(?:Епізод(?:ів|и)?|Серій)[^\d]{0,20}(\d+(?:\s*\/\s*\d+)?)/i) || firstMatch(html, /class=["'][^"']*(?:episodes|series-count)[^"']*["'][^>]*>[\s\S]*?(\d+(?:\s*\/\s*\d+)?)/i);
-  const duration = labeledField(['Тривалість', 'Продолжительность', 'Duration']) || textField([/class=["'][^"']*(?:duration|runtime|movie-time)[^"']*["'][^>]*>([\s\S]*?)<\//i]);
-  const status = labeledField(['Статус', 'Status']) || textField([/class=["'][^"']*(?:status|state)[^"']*["'][^>]*>([\s\S]*?)<\//i]);
-  const studio = labeledField(['Студія', 'Студия', 'Studio']) || textField([/class=["'][^"']*(?:studio|studios|producer)[^"']*["'][^>]*>([\s\S]*?)<\//i]);
-  const director = labeledField(['Режисер', 'Режиссёр', 'Director']);
-  const author = labeledField(['Автор', 'Author', 'Manga']);
-  const source = labeledField(['Джерело', 'Источник', 'Source']);
-  const releaseSeason = labeledField(['Сезон', 'Season']);
-  const type = /фільм|movie|film/i.test(`${title} ${genres.join(' ')}`) ? 'Movie' : (/OVA|ONA|special/i.test(`${title} ${genres.join(' ')}`) ? 'OVA / Special' : 'TV');
   const descriptionBlock = firstMatch(html, /class=["'][^"']*(?:full-text|pmovie__description|anime__description)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|p)>/i);
   const synopsis = cleanText(descriptionBlock);
-  return {
-    title: title || 'Без назви', image, originalTitle, altTitle,
-    genres: [...new Set(genres)], year, type, releaseSeason, episodes, duration,
-    status, studio, director, author, source, synopsis, url
-  };
+  return { title: title || 'Без назви', image, genres: [...new Set(genres)], year: year || '', episodes: episodes || '', synopsis, url };
 }
 
 function extractAnimeId(animeUrl) {
@@ -775,17 +618,12 @@ function vakdabWatchUrl(animeId) {
 
 function detailsText(details) {
   let text = `<b>${escapeHtml(details.title)}</b>`;
-  const rows = [
-    ['Оригінальна назва', details.originalTitle], ['Альтернативні назви', details.altTitle],
-    ['Тип', details.type], ['Рік', details.year], ['Сезон', details.releaseSeason],
-    ['Статус', details.status], ['Епізоди', details.episodes], ['Тривалість', details.duration],
-    ['Студія', details.studio], ['Режисер', details.director], ['Автор', details.author],
-    ['Жанри', details.genres?.length ? details.genres.join(', ') : 'Не знайдено в каталозі']
-  ];
-  for (const [label, value] of rows) if (value) text += `\n${label}: ${escapeHtml(value)}`;
+  if (details.year) text += `\nРік: ${escapeHtml(details.year)}`;
+  if (details.episodes) text += `\nЕпізоди: ${escapeHtml(details.episodes)}`;
+  if (details.genres.length) text += `\nЖанри: ${escapeHtml(details.genres.join(', '))}`;
   if (details.synopsis) {
-    const synopsis = details.synopsis.slice(0, 1200);
-    text += `\n\nОпис:\n${escapeHtml(synopsis)}${details.synopsis.length > 1200 ? '…' : ''}`;
+    const synopsis = details.synopsis.slice(0, 900);
+    text += `\n\nОпис:\n${escapeHtml(synopsis)}${details.synopsis.length > 900 ? '…' : ''}`;
   }
   return text;
 }
