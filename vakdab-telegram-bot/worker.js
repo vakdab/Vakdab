@@ -93,7 +93,7 @@ async function handleMessage(message, env) {
     return;
   }
 
-  // --- AI-агент Макіма (завжди пріоритет, якщо згадано ім'я) ---
+  // AI-агент Макіма (завжди пріоритет, якщо згадано ім'я)
   if (text.toLowerCase().includes('макіма')) {
     const state = getState(chatId);
     state.screen = 'makima'; // не блокуємо інші функції, просто відповідаємо
@@ -105,13 +105,13 @@ async function handleMessage(message, env) {
 
   const state = getState(chatId);
 
-  // --- Якщо ми в режимі діалогу з Макімою (через кнопку) ---
+  // Якщо ми в режимі діалогу з Макімою (через кнопку)
   if (state.screen === 'waiting_for_makima') {
     await handleMakimaMessage(chatId, text, env);
     return;
   }
 
-  // --- Пошук (якщо користувач натиснув кнопку "Пошук") ---
+  // Пошук (якщо користувач натиснув кнопку "Пошук")
   if (state.screen === 'waiting_for_search') {
     state.searchQuery = text;
     state.searchPage = 1;
@@ -134,8 +134,14 @@ async function handleMakimaMessage(chatId, userMessage, env) {
     const responseText = await callMakimaAI(userMessage, env);
     await sendMessage(chatId, escapeHtml(responseText), { reply_markup: backHomeKeyboard() }, env);
   } catch (error) {
-    console.error('[makima] failed:', safeError(error));
-    await sendMessage(chatId, 'Макіма тимчасово не може відповісти. Спробуйте ще раз.', { reply_markup: backHomeKeyboard() }, env);
+    const errorText = safeError(error);
+    console.error('[makima] failed:', errorText);
+    await sendMessage(
+      chatId,
+      `❌ Помилка OpenAI:\n<code>${escapeHtml(errorText)}</code>`,
+      { reply_markup: backHomeKeyboard() },
+      env
+    );
   }
 }
 
@@ -151,7 +157,7 @@ async function callMakimaAI(prompt, env) {
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4.1-mini',          // <-- змінено модель
       messages: [
         {
           role: 'system',
@@ -216,7 +222,7 @@ async function handleCallbackQuery(callback, env) {
       return;
     }
 
-    // --- Нова кнопка "Запитати Макіму" ---
+    // Нова кнопка "Запитати Макіму"
     if (data === 'makima:prompt') {
       state.screen = 'waiting_for_makima';
       await replaceMessage(chatId, messageId, 'Напишіть своє запитання Макімі.', false, { reply_markup: backHomeKeyboard() }, env);
