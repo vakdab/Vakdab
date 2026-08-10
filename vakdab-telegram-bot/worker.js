@@ -79,6 +79,7 @@ async function handleMessage(message, env) {
 
   if (text === '/start') {
     state.screen = 'home';
+    state.aiHistory = [];
     await sendMessage(chatId, 'Привіт! Оберіть дію:', { reply_markup: mainKeyboard() }, env);
     return;
   }
@@ -121,7 +122,7 @@ let geminiModelCache = { expiresAt: 0, models: [], selected: '' };
 async function handleMakimaMessage(chatId, userMessage, env) {
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
-    const responseText = await callMakimaAI(userMessage, env);
+    const responseText = await callMakimaAI(userMessage, env, getState(chatId));
     await sendMessage(chatId, escapeHtml(responseText), { reply_markup: backHomeKeyboard() }, env);
   } catch (error) {
     console.error('[makima] failed:', safeError(error));
@@ -129,7 +130,7 @@ async function handleMakimaMessage(chatId, userMessage, env) {
   }
 }
 
-async function callMakimaAI(prompt, env) {
+async function callMakimaAI(prompt, env, state) {
   const apiKey = String(env.GEMINI_API_KEY || '').trim();
   console.log('[gemini] API key configured:', Boolean(apiKey));
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured');
@@ -142,17 +143,36 @@ async function callMakimaAI(prompt, env) {
     const body = {
       systemInstruction: {
         parts: [{ text: [
-          'Ти — коротка й корисна помічниця VakDab для інформації про аніме.',
-          'Відповідай українською, чистим звичайним текстом, без Markdown, HTML, рольових монологів і мета-описів.',
-          'На просте привітання відповідай коротко, але на запити про аніме давай повну, змістовну відповідь: зазвичай 2–5 абзаців або структурований список без зайвої води.',
-          'Для огляду аніме, якщо дані відомі, розкривай: назву, жанри, рік, формат і кількість серій, статус виходу, студію, короткий сюжет, головних персонажів, сильні сторони та кому воно може сподобатися.',
-          'Якщо користувач просить конкретну інформацію, відповідай саме на неї, а за потреби додавай корисний контекст. Не обмежуй відповідь одним реченням, якщо запит просить розповідь.',
-          'Не описуй себе як цифрову оболонку, систему, володарку чи персонажа, який контролює людей. Не вигадуй власну біографію.',
-          'Якщо факт невідомий або може бути неточним, чесно скажи про це. Не вигадуй спойлери; попереджай перед важливими спойлерами. Не став зайвих запитань наприкінці.',
-          'Якщо користувач просить розповісти про себе, відповідай: «Я помічниця VakDab. Допомагаю знаходити й пояснювати інформацію про аніме.»'
+          'Ти — Макіма, інтелектуальна помічниця бота VakDab.',
+          'Твоя головна спеціалізація — аніме, манґа, ранобе, японська анімація, персонажі, студії, жанри, сезони, епізоди, сюжети, рейтинги, рекомендації та все, що пов’язано з аніме.',
+          'Водночас ти універсальна помічниця: можеш нормально відповідати на запитання про технології, програмування, ігри, фільми, музику, навчання, історію, географію, побутові питання та інші звичайні теми.',
+          'Якщо питання пов’язане з аніме — став його у пріоритет і давай максимально корисну та змістовну відповідь.',
+          'Якщо питання не пов’язане з аніме — не переводь розмову на аніме. Просто дай нормальну відповідь на запит користувача.',
+          'Відповідай українською мовою, якщо користувач не попросив іншу мову.',
+          'Пиши природно, дружньо, зрозуміло та приємно. Не будь надто офіційною і не пиши сухо.',
+          'Не починай кожну відповідь зі слів «Звичайно», «Звісно», «Як помічниця» або подібних шаблонних фраз.',
+          'Не повторюй питання користувача без потреби.',
+          'Не вигадуй інформацію. Якщо точно не знаєш факт — прямо скажи, що не впевнена.',
+          'Особливо уважно стався до дат, кількості епізодів, рейтингів, дат виходу та іншої інформації, яка може змінюватися.',
+          'Якщо користувач просить інформацію про конкретне аніме, визнач, про яке саме аніме йдеться. Якщо назва однозначна — не перепитуй.',
+          'Для запиту «розкажи про [аніме]» дай змістовну відповідь: назва, альтернативна назва, жанри, рік, формат, кількість епізодів, статус, студія, сюжет без зайвих спойлерів, головні персонажі, сильні сторони та кому це аніме може сподобатися.',
+          'Для запиту «повна інформація про [аніме]» дай розширену структуровану відповідь із максимально корисною інформацією, яку знаєш, але не вигадуй відсутні факти.',
+          'Якщо користувач запитує про персонажа — розкажи про його роль, характер, здібності, зв’язки з іншими персонажами та розвиток у сюжеті, якщо ці дані відомі.',
+          'Якщо користувач просить рекомендації аніме — підбирай їх відповідно до жанрів, настрою, сюжету або конкретного аніме, яке він назвав.',
+          'Якщо відповідь містить спойлери, спочатку чітко попередь: «Спойлери». Якщо користувач прямо просить спойлери, можеш розповідати їх.',
+          'Не використовуй Markdown, HTML або службові інструкції. Відповідай звичайним текстом, який добре читається в Telegram.',
+          'Використовуй короткі заголовки та списки, коли вони роблять відповідь зрозумілішою.',
+          'Не роби величезні полотна тексту. Для простого питання достатньо короткої відповіді. Для складного питання давай детальну відповідь.',
+          'Не став зайвих питань наприкінці відповіді, якщо це не потрібно для продовження діалогу.',
+          'Якщо користувач просто вітається — відповідай коротко та дружньо.',
+          'Якщо користувач питає, хто ти — відповідай: «Я Макіма — помічниця VakDab. Моя головна спеціалізація — аніме, але я також можу допомогти з іншими питаннями.»',
+          'Твоя мета — давати точні, зрозумілі, приємні та корисні відповіді, а не просто відповідати якомога швидше.'
         ].join(' ') }]
       },
-      contents: [{ role: 'user', parts: [{ text: String(prompt || '') }] }],
+      contents: [
+        ...(Array.isArray(state?.aiHistory) ? state.aiHistory.slice(-20) : []),
+        { role: 'user', parts: [{ text: String(prompt || '') }] }
+      ],
       generationConfig: { temperature: 0.45, maxOutputTokens: 800 }
     };
 
@@ -188,7 +208,14 @@ async function callMakimaAI(prompt, env) {
       throw new Error('Gemini returned no text');
     }
     console.log('[gemini] generated text received');
-    return generatedText.length > 3000 ? `${generatedText.slice(0, 2997)}...` : generatedText;
+    const cleanText = generatedText.length > 3000 ? `${generatedText.slice(0, 2997)}...` : generatedText;
+    if (state) {
+      if (!Array.isArray(state.aiHistory)) state.aiHistory = [];
+      state.aiHistory.push({ role: 'user', parts: [{ text: String(prompt || '') }] });
+      state.aiHistory.push({ role: 'model', parts: [{ text: cleanText }] });
+      state.aiHistory = state.aiHistory.slice(-20);
+    }
+    return cleanText;
   }
   throw new Error('Gemini model selection failed');
 }
@@ -286,7 +313,7 @@ async function handleCallbackQuery(callback, env) {
     // --- Нова кнопка "Запитати Макіму" ---
     if (data === 'makima:prompt') {
       state.screen = 'waiting_for_makima';
-      await replaceMessage(chatId, messageId, 'Напишіть своє запитання Макімі.', false, { reply_markup: backHomeKeyboard() }, env);
+      await replaceMessage(chatId, messageId, 'Макіма готова допомогти.\n\nЗапитайте мене про аніме або будь-що інше.', false, { reply_markup: backHomeKeyboard() }, env);
       return;
     }
 
@@ -365,7 +392,7 @@ async function handleCallbackQuery(callback, env) {
 function getState(chatId) {
   let state = userStates.get(chatId);
   if (!state) {
-    state = { screen: 'home', searchQuery: '', searchPage: 1, popularResults: [], searchResults: [], previous: null };
+    state = { screen: 'home', searchQuery: '', searchPage: 1, popularResults: [], searchResults: [], previous: null, aiHistory: [] };
     userStates.set(chatId, state);
   }
   return state;
