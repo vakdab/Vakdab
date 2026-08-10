@@ -135,8 +135,18 @@ async function handleMakimaMessage(chatId, userMessage, env) {
     // Додаємо кнопку "Головна", щоб вийти з діалогу (якщо він був активований через кнопку)
     await sendMessage(chatId, safeText, { reply_markup: backHomeKeyboard() }, env);
   } catch (error) {
-    console.error('[makima] failed:', safeError(error));
-    await sendMessage(chatId, 'Макіма зараз не може відповісти. Спробуйте пізніше.', { reply_markup: backHomeKeyboard() }, env);
+    const message = safeError(error);
+    console.error('[makima] failed:', message);
+    const diagnostic = message.includes('401') || message.includes('400')
+      ? 'Перевірте GEMINI_API_KEY у Cloudflare: ключ недійсний або вставлений неповністю.'
+      : message.includes('403')
+        ? 'У Google AI Studio не увімкнено Gemini API для цього ключа або немає доступу.'
+        : message.includes('404')
+          ? 'Модель Gemini не знайдена. Використовуйте gemini-2.5-flash.'
+          : message.includes('429')
+            ? 'Перевищено ліміт Gemini API. Спробуйте пізніше.'
+            : 'Перевірте Cloudflare Worker Logs для деталей помилки Gemini.';
+    await sendMessage(chatId, `Макіма не може відповісти.\n\n${diagnostic}`, { reply_markup: backHomeKeyboard() }, env);
   }
 }
 
@@ -183,7 +193,9 @@ async function callMakimaAI(prompt, env) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[gemini] HTTP ${response.status}: ${errorText}`);
-      throw new Error(`Gemini API error: ${response.status}`);
+      let detail = '';
+      try { detail = JSON.parse(errorText)?.error?.message || ''; } catch {}
+      throw new Error(`Gemini API error ${response.status}: ${detail.slice(0, 180)}`);
     }
 
     const data = await response.json();
