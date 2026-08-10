@@ -160,7 +160,7 @@ async function callMakimaAI(prompt, env) {
   };
 
   const body = {
-    system_instruction: systemInstruction,
+    systemInstruction,
     contents: [
       {
         role: 'user',
