@@ -3,6 +3,7 @@ const ANIMEUA_BASE = 'https://animeua.club';
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
+const TELEGRAM_MESSAGE_LIMIT = 3800; // headroom under Telegram's 4096-char hard limit
 
 const userStates = new Map();
 let popularCache = null;
@@ -125,11 +126,38 @@ async function handleMakimaMessage(chatId, userMessage, env) {
     const state = getState(chatId);
     await enrichMakimaStateFromCatalog(userMessage, state, env);
     const responseText = await callMakimaAI(userMessage, env, state);
-    await sendMessage(chatId, escapeHtml(responseText), { reply_markup: backHomeKeyboard() }, env);
+    await sendLongMessage(chatId, responseText, env);
   } catch (error) {
     console.error('[makima] failed:', safeError(error));
     await sendMessage(chatId, 'Макіма тимчасово не може відповісти. Спробуйте ще раз.', { reply_markup: backHomeKeyboard() }, env);
   }
+}
+
+// Telegram caps text messages at 4096 characters. Previously long Makima
+// answers were hard-truncated with "...", cutting them off mid-sentence.
+// Instead, split into several sequential messages so nothing gets lost.
+async function sendLongMessage(chatId, text, env) {
+  const chunks = splitIntoChunks(text, TELEGRAM_MESSAGE_LIMIT);
+  for (let i = 0; i < chunks.length; i += 1) {
+    const isLast = i === chunks.length - 1;
+    await sendMessage(chatId, escapeHtml(chunks[i]), isLast ? { reply_markup: backHomeKeyboard() } : {}, env);
+  }
+}
+
+function splitIntoChunks(text, maxLen) {
+  const value = String(text || '');
+  if (value.length <= maxLen) return [value];
+  const chunks = [];
+  let rest = value;
+  while (rest.length > maxLen) {
+    let cut = rest.lastIndexOf('\n', maxLen);
+    if (cut < maxLen * 0.5) cut = rest.lastIndexOf(' ', maxLen);
+    if (cut < maxLen * 0.5) cut = maxLen;
+    chunks.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if (rest) chunks.push(rest);
+  return chunks;
 }
 
 async function enrichMakimaStateFromCatalog(prompt, state, env) {
@@ -189,31 +217,33 @@ async function callMakimaAI(prompt, env, state) {
           'Якщо питання не про аніме — не переводь розмову на аніме.',
           'Відповідай українською, якщо користувач не попросив іншу мову. Пиши природно, дружньо і зрозуміло.',
           'Не починай кожну відповідь зі слів «Звичайно», «Звісно» або «Як помічниця».',
-          '=== ДЖЕРЕЛО ФАКТІВ (ОБОВʼЯЗКОВО) ===',
-          'Єдине джерело конкретних фактичних даних про аніме (назва, альтернативні назви, тип, рік, сезон, жанри, епізоди, тривалість, статус, студія, режисер, автор, джерело, опис) — це блок «ПІДТВЕРДЖЕНИЙ ПРОФІЛЬ VAKDAB» нижче, отриманий напряму з каталогу AnimeUA. Ти НЕ шукаєш і НЕ вигадуєш ці факти сама і не береш їх з інших сайтів чи власної памʼяті.',
-          'Якщо профілю VAKDAB немає або він явно про інше аніме, ніж питає користувач — прямо скажи, що підтверджених даних з каталогу немає, і уточни, чи не мав користувач на увазі саме цю назву. Не видавай здогадки за факти.',
-          'Поле «Опис» з профілю VAKDAB використовуй як основу сюжету. Загальні знання можна додавати лише як контекст (культурний вплив, порівняння, думки фанатів) і завжди чітко позначай це як загальновідому інформацію, а не підтверджений факт каталогу.',
+          '=== ДЖЕРЕЛО ФАКТІВ ===',
+          'Якщо є блок «ПІДТВЕРДЖЕНИЙ ПРОФІЛЬ VAKDAB» — це пріоритетне джерело фактів саме про цей тайтул у каталозі VakDab (переклад, наявність на сайті тощо); спирайся на нього в першу чергу і не суперечь йому.',
+          'Для всього іншого (персонажі, автори, студії, дати, продовження, порівняння, будь-яка інформація, якої немає в профілі VAKDAB) — вільно використовуй свої знання та пошук в інтернеті (інструмент Google Search тобі доступний). Не відмовляйся відповідати лише через те, що чогось немає в профілі VAKDAB.',
+          'Якщо не певна щодо якогось факту навіть після пошуку — чесно скажи про це, а не вигадуй.',
+          'Поле «Опис» з профілю VAKDAB використовуй як основу сюжету, коли він є.',
           '=== ФОРМАТ ВІДПОВІДІ (ОБОВʼЯЗКОВО) ===',
           'Коли профіль VAKDAB для аніме є і питання стосується саме цього тайтулу — за замовчуванням давай ПОВНУ структуровану відповідь (а не куций опис в 2-3 речення), навіть якщо користувач не написав слово «детально» чи «повна інформація». Коротку відповідь давай тільки якщо користувач явно попросив коротко/стисло.',
-          'Повна відповідь про аніме повинна містити, якщо дані відомі: 1) назва та альтернативні назви; 2) тип, рік, сезон, статус, епізоди, тривалість; 3) жанри й теми; 4) студія, режисер, автор, джерело; 5) сюжет і світ без ключових спойлерів (на основі опису з каталогу); 6) головні персонажі та їхні звʼязки (загальні знання, позначені як такі); 7) звʼязані тайтли — манґа/ранобе, попередні й наступні сезони, фільми, OVA, ONA, спінофи (загальні знання); 8) для кого підійде і чому; 9) коротке підсумкове враження.',
+          'Повна відповідь про аніме повинна містити, якщо дані відомі: 1) назва та альтернативні назви; 2) тип, рік, сезон, статус, епізоди, тривалість; 3) жанри й теми; 4) студія, режисер, автор, джерело; 5) сюжет і світ без ключових спойлерів; 6) головні персонажі та їхні звʼязки; 7) звʼязані тайтли — манґа/ранобе, попередні й наступні сезони, фільми, OVA, ONA, спінофи; 8) для кого підійде і чому; 9) коротке підсумкове враження.',
           'Пропускай розділи, для яких немає надійних даних — не заповнюй їх вигадками чи загальними фразами «інформація невідома» на кожен пункт, просто опусти пункт.',
           'Якщо питання просте, наприклад «що це за аніме?» без прохання розповісти більше — дай стислий, але змістовний опис (назва, тип, рік, жанри, 2-3 речення сюжету).',
-          'Якщо питання про персонажа — розкажи про роль, характер, здібності, походження, звʼязки та розвиток, якщо відомо, позначаючи це як загальні знання, якщо цього немає в профілі VAKDAB.',
+          'Якщо питання про персонажа — розкажи про роль, характер, здібності, походження, звʼязки та розвиток.',
           'Якщо просять рекомендації — враховуй жанр, сюжет, атмосферу і побажання користувача.',
           'Перед важливими сюжетними розкриттями напиши «⚠️ СПОЙЛЕРИ».',
           'Не використовуй Markdown або HTML. Використовуй звичайний текст Telegram, короткі заголовки, нумерацію та символи •.',
           'Не створюй суцільні величезні абзаци. Не став зайвих питань наприкінці.',
           'Якщо питають, хто ти, відповідай: «Я Макіма — помічниця VakDab. Моя головна спеціалізація — аніме, але я також можу допомогти з іншими питаннями.»',
           state?.lastAnimeDetails
-            ? `ПІДТВЕРДЖЕНИЙ ПРОФІЛЬ VAKDAB (єдине джерело фактів для поточного аніме): ${formatAnimeContext(state.lastAnimeDetails)}`
-            : 'ПІДТВЕРДЖЕНИХ ДАНИХ VAKDAB ДЛЯ ПОТОЧНОГО АНІМЕ НЕМАЄ. Не стверджуй, що вони є, і не вигадуй конкретні факти каталогу.'
+            ? `ПІДТВЕРДЖЕНИЙ ПРОФІЛЬ VAKDAB (пріоритетне джерело фактів для поточного аніме з каталогу VakDab): ${formatAnimeContext(state.lastAnimeDetails)}`
+            : 'ПІДТВЕРДЖЕНИХ ДАНИХ VAKDAB ДЛЯ ПОТОЧНОГО АНІМЕ НЕМАЄ. Використовуй власні знання та пошук в інтернеті.'
         ].join(' ') }]
       },
       contents: [
         ...(Array.isArray(state?.aiHistory) ? state.aiHistory.slice(-20) : []),
         { role: 'user', parts: [{ text: String(prompt || '') }] }
       ],
-      generationConfig: { temperature: 0.45, maxOutputTokens: 1200 }
+      tools: [{ google_search: {} }],
+      generationConfig: { temperature: 0.45, maxOutputTokens: 3000 }
     };
 
     const response = await fetch(endpoint, {
@@ -248,7 +278,7 @@ async function callMakimaAI(prompt, env, state) {
       throw new Error('Gemini returned no text');
     }
     console.log('[gemini] generated text received');
-    const cleanText = generatedText.length > 3000 ? `${generatedText.slice(0, 2997)}...` : generatedText;
+    const cleanText = generatedText;
     if (state) {
       if (!Array.isArray(state.aiHistory)) state.aiHistory = [];
       state.aiHistory.push({ role: 'user', parts: [{ text: String(prompt || '') }] });
@@ -692,26 +722,32 @@ function parseCards(html) {
 
 // Poster images on the source site are usually lazy-loaded: the real photo
 // lives in a `data-src` (or `data-original`) attribute, while `src` holds a
-// tiny placeholder/spinner gif until JS swaps it in. Since our scraper never
-// runs that JS, grabbing whichever attribute appears first in the markup
-// sometimes returns the placeholder instead of the real poster, which is why
-// a photo occasionally fails to show. Look for the real source explicitly
-// and fall back to the page's og:image (which is not lazy-loaded) if the
-// poster block itself doesn't have a usable image.
+// tiny placeholder ("no-img.png" on this site) until JS swaps it in. Since
+// our scraper never runs that JS, grabbing whichever attribute appears first
+// in the markup sometimes returns the placeholder instead of the real
+// poster — this is the main reason posters occasionally fail to show.
+// `og:image` is set server-side (not lazy-loaded) and reliably points at the
+// real poster on animeua.club, so it's tried first; the poster block scrape
+// is kept as a secondary attempt/fallback.
 function extractPosterUrl(html) {
-  const posterBlock = firstMatch(html, /class=["'][^"']*(?:pmovie__poster|anime__poster|full-poster)[^"']*["'][^>]*>([\s\S]{0,1000}?)<\/(?:div|a)>/i);
+  const isPlaceholder = (value) => !value || /(placeholder|blank|loading|lazy|spinner|default|no-img|noimg|no-?photo)/i.test(value);
+
+  const ogImage = absoluteUrl(firstMatch(html, /property=["']og:image["'][^>]*content=["']([^"']+)["']/i));
+  if (ogImage && !isPlaceholder(ogImage)) return ogImage;
+
+  const posterBlock = firstMatch(html, /class=["'][^"']*(?:pmovie__poster|anime__poster|full-poster|story-poster|poster)[^"']*["'][^>]*>([\s\S]{0,1500}?)<\/(?:div|a|figure)>/i);
   const candidates = [];
   if (posterBlock) {
     candidates.push(firstMatch(posterBlock, /data-src=["']([^"']+)["']/i));
     candidates.push(firstMatch(posterBlock, /data-original=["']([^"']+)["']/i));
     candidates.push(firstMatch(posterBlock, /\bsrc=["']([^"']+)["']/i));
   }
-  candidates.push(firstMatch(html, /property=["']og:image["'][^>]*content=["']([^"']+)["']/i));
+  candidates.push(firstMatch(html, /property=["']twitter:image["'][^>]*content=["']([^"']+)["']/i));
   for (const candidate of candidates) {
     const abs = absoluteUrl(candidate);
-    if (abs && !/(placeholder|blank|loading|lazy|spinner|default)/i.test(abs)) return abs;
+    if (abs && !isPlaceholder(abs)) return abs;
   }
-  return '';
+  return ogImage || '';
 }
 
 function parseDetails(html, url) {
@@ -722,11 +758,16 @@ function parseDetails(html, url) {
     }
     return '';
   };
+  // (?<!["']) / (?!["']) reject matches where the label word sits inside an
+  // HTML attribute value (e.g. title="Автор" on a comment-author avatar
+  // elsewhere on the page) instead of visible text describing the anime.
+  // [^<>"=] in the captured value additionally refuses to swallow stray
+  // class="..." / attribute soup even if a match slips through.
   const labeledField = (labels) => {
     const label = labels.join('|');
     return textField([
-      new RegExp(`(?:${label})\\s*[:\\-]?\\s*(?:<[^>]+>\\s*){0,3}([^<]{1,160})`, 'i'),
-      new RegExp(`(?:${label})[\\s\\S]{0,180}?<[^>]*>([^<]{1,160})<`, 'i')
+      new RegExp(`(?<!["'])\\b(?:${label})\\b(?!["'])\\s*[:\\-]?\\s*(?:<[^>]+>\\s*){0,3}([^<>"=]{1,160})`, 'i'),
+      new RegExp(`(?<!["'])\\b(?:${label})\\b(?!["'])[\\s\\S]{0,180}?<[^>]*>([^<>"=]{1,160})<`, 'i')
     ]);
   };
 
