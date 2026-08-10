@@ -93,10 +93,9 @@ async function handleMessage(message, env) {
     return;
   }
 
-  // --- AI-агент Макіма (завжди пріоритет, якщо згадано ім'я) ---
   if (text.toLowerCase().includes('макіма')) {
     const state = getState(chatId);
-    state.screen = 'makima'; // не блокуємо інші функції, просто відповідаємо
+    state.screen = 'makima';
     await handleMakimaMessage(chatId, text, env);
     return;
   }
@@ -105,13 +104,11 @@ async function handleMessage(message, env) {
 
   const state = getState(chatId);
 
-  // --- Якщо ми в режимі діалогу з Макімою (через кнопку) ---
   if (state.screen === 'waiting_for_makima') {
     await handleMakimaMessage(chatId, text, env);
     return;
   }
 
-  // --- Пошук (якщо користувач натиснув кнопку "Пошук") ---
   if (state.screen === 'waiting_for_search') {
     state.searchQuery = text;
     state.searchPage = 1;
@@ -121,7 +118,6 @@ async function handleMessage(message, env) {
     return;
   }
 
-  // У будь-якому іншому стані – нагадуємо використовувати кнопки меню
   await sendMessage(chatId, 'Скористайтеся кнопками меню.', { reply_markup: mainKeyboard() }, env);
 }
 
@@ -141,69 +137,31 @@ async function handleMakimaMessage(chatId, userMessage, env) {
 
 async function callMakimaAI(prompt, env) {
   const apiKey = String(env.GROQ_API_KEY || '').trim();
-  console.log('[groq] API key configured:', Boolean(apiKey));
   if (!apiKey) throw new Error('GROQ_API_KEY is not configured');
-
   const model = String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
 
-  const endpoint = `${GROQ_API_BASE}/chat/completions`;
-  const body = {
-    model,
-    messages: [
-      {
-        role: 'system',
-        content: 'Ти Макіма з аніме Людина-бензопила. Відповідай українською мовою. Будь спокійною, розумною, загадковою.'
-      },
-      {
-        role: 'user',
-        content: String(prompt || '')
-      }
-    ],
-    temperature: 0.7,
-    max_tokens: 1024
-  };
-
-  console.log('[groq] selected model:', model);
-  console.log('[groq] request started');
-
-  const response = await fetch(endpoint, {
+  const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: 'Ти Макіма з аніме Людина-бензопила. Відповідай українською мовою. Будь спокійною, розумною, загадковою.' },
+        { role: 'user', content: String(prompt || '') }
+      ],
+      temperature: 0.7,
+      max_tokens: 1024
+    })
   });
 
-  console.log('[groq] response status:', response.status);
-  const responseText = await response.text();
-  console.log('[groq] response received');
-
-  if (!response.ok) {
-    console.error('[groq] API error status:', response.status);
-    console.error('[groq] API error body:', redactGroqSecret(responseText, apiKey).slice(0, 3000));
-    throw new Error(`Groq API error ${response.status}`);
-  }
-
-  let data;
-  try {
-    data = JSON.parse(responseText);
-  } catch {
-    throw new Error('Groq returned invalid JSON');
-  }
-
+  if (!response.ok) throw new Error(`Groq API error ${response.status}`);
+  const data = await response.json();
   const generatedText = data?.choices?.[0]?.message?.content?.trim();
-  if (!generatedText) {
-    console.error('[groq] generated text missing:', JSON.stringify(data).slice(0, 500));
-    throw new Error('Groq returned no text');
-  }
-
-  console.log('[groq] generated text received');
+  if (!generatedText) throw new Error('Groq returned no text');
   return generatedText;
-}
-
-function redactGroqSecret(value, secret) {
-  return String(value || '').replaceAll(secret, '[REDACTED_GROQ_API_KEY]');
 }
 
 async function handleCallbackQuery(callback, env) {
@@ -221,10 +179,14 @@ async function handleCallbackQuery(callback, env) {
   const state = getState(chatId);
 
   try {
+    // ========== ВИПРАВЛЕНА ОБРОБКА "ГОЛОВНА" ==========
     if (data === 'home') {
       state.screen = 'home';
       state.previous = null;
-      await replaceMessage(chatId, messageId, 'Оберіть дію:', false, { reply_markup: mainKeyboard() }, env);
+      // Видаляємо поточне повідомлення (незалежно від типу)
+      await deleteMessage(chatId, messageId, env);
+      // Надсилаємо нове повідомлення з головним меню
+      await sendMessage(chatId, 'Оберіть дію:', { reply_markup: mainKeyboard() }, env);
       return;
     }
 
@@ -288,7 +250,7 @@ async function handleCallbackQuery(callback, env) {
       return;
     }
 
-    // Обробка 'back:list' залишена для сумісності, але більше не використовується
+    // Обробка 'back:list' залишена для сумісності
     if (data === 'back:list') {
       const previous = state.previous;
       if (previous?.kind === 'search') {
@@ -367,7 +329,7 @@ async function renderSearch(chatId, page, env, messageId = null) {
 async function renderRandom(chatId, messageId, env) {
   try {
     const randomPage = await fetchSource(`${ANIMEUA_BASE}/index.php?do=rand`);
-    const randomUrl = absoluteAnimeUrl(firstMatch(randomPage, /<link[^>]+rel=[\"']canonical[\"'][^>]+href=[\"']([^\"']+)[\"']/i) || firstMatch(randomPage, /property=[\"']og:url[\"'][^>]*content=[\"']([^\"']+)[\"']/i));
+    const randomUrl = absoluteAnimeUrl(firstMatch(randomPage, /<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i) || firstMatch(randomPage, /property=["']og:url["'][^>]*content=["']([^"']+)["']/i));
     if (!randomUrl) throw new Error('RANDOM_INVALID');
     await renderDetails(chatId, messageId, randomUrl, env);
   } catch (error) {
@@ -378,7 +340,6 @@ async function renderRandom(chatId, messageId, env) {
   }
 }
 
-// ========== ОНОВЛЕНА ФУНКЦІЯ renderDetails ==========
 async function renderDetails(chatId, messageId, url, env) {
   try {
     const details = await fetchAnimeDetails(url);
@@ -387,8 +348,6 @@ async function renderDetails(chatId, messageId, url, env) {
     const watchUrl = vakdabWatchUrl(extractAnimeId(details.url));
     const state = getState(chatId);
 
-    // Будуємо клавіатуру: завжди є кнопка "Головна",
-    // а якщо прийшли з "Випадкове" – додаємо ще кнопку "Випадкове"
     const buttons = [];
     if (state.previous?.kind === 'random') {
       buttons.push({ text: 'Випадкове', callback_data: 'random' });
