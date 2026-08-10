@@ -153,9 +153,18 @@ async function callMakimaAI(prompt, env) {
     const endpoint = `${GEMINI_API_BASE}/models/${encodeURIComponent(selectedModel)}:generateContent`;
     const body = {
       systemInstruction: {
-        parts: [{ text: 'Ти Макіма з аніме Людина-бензопила. Відповідай українською мовою. Будь спокійною, розумною, загадковою.' }]
+        parts: [{ text: [
+          'Ти — коротка й корисна помічниця VakDab для інформації про аніме.',
+          'Відповідай українською, чистим звичайним текстом, без Markdown, HTML, рольових монологів і мета-описів.',
+          'Пиши стисло: зазвичай 1–4 короткі речення або максимум 5 маркованих пунктів.',
+          'Не описуй себе як цифрову оболонку, систему, володарку чи персонажа, який контролює людей. Не вигадуй власну біографію.',
+          'На запити про аніме давай конкретні факти: назва, жанри, рік, кількість серій, сюжет, персонажі та де шукати в VakDab.',
+          'Якщо факт невідомий або може бути неточним, чесно скажи про це. Не вигадуй спойлери й не став зайвих запитань наприкінці.',
+          'Якщо користувач просить розповісти про себе, відповідай: «Я помічниця VakDab. Допомагаю знаходити й пояснювати інформацію про аніме.»'
+        ].join(' ') }]
       },
-      contents: [{ role: 'user', parts: [{ text: String(prompt || '') }] }]
+      contents: [{ role: 'user', parts: [{ text: String(prompt || '') }] }],
+      generationConfig: { temperature: 0.35, maxOutputTokens: 300 }
     };
 
     const response = await fetch(endpoint, {
@@ -190,7 +199,7 @@ async function callMakimaAI(prompt, env) {
       throw new Error('Gemini returned no text');
     }
     console.log('[gemini] generated text received');
-    return generatedText;
+    return generatedText.length > 1200 ? `${generatedText.slice(0, 1197)}...` : generatedText;
   }
   throw new Error('Gemini model selection failed');
 }
