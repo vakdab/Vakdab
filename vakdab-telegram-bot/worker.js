@@ -144,7 +144,6 @@ async function callMakimaAI(prompt, env) {
   console.log('[groq] API key configured:', Boolean(apiKey));
   if (!apiKey) throw new Error('GROQ_API_KEY is not configured');
 
-  // Можна задати через секрет GROQ_MODEL, інакше береться швидка і якісна модель за замовчуванням
   const model = String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
 
   const endpoint = `${GROQ_API_BASE}/chat/completions`;
@@ -229,7 +228,6 @@ async function handleCallbackQuery(callback, env) {
       return;
     }
 
-    // --- Нова кнопка "Запитати Макіму" ---
     if (data === 'makima:prompt') {
       state.screen = 'waiting_for_makima';
       await replaceMessage(chatId, messageId, 'Напишіть своє запитання Макімі.', false, { reply_markup: backHomeKeyboard() }, env);
@@ -290,6 +288,7 @@ async function handleCallbackQuery(callback, env) {
       return;
     }
 
+    // Обробка 'back:list' залишена для сумісності, але більше не використовується
     if (data === 'back:list') {
       const previous = state.previous;
       if (previous?.kind === 'search') {
@@ -379,6 +378,7 @@ async function renderRandom(chatId, messageId, env) {
   }
 }
 
+// ========== ОНОВЛЕНА ФУНКЦІЯ renderDetails ==========
 async function renderDetails(chatId, messageId, url, env) {
   try {
     const details = await fetchAnimeDetails(url);
@@ -387,22 +387,24 @@ async function renderDetails(chatId, messageId, url, env) {
     const watchUrl = vakdabWatchUrl(extractAnimeId(details.url));
     const state = getState(chatId);
 
-    let keyboard;
+    // Будуємо клавіатуру: завжди є кнопка "Головна",
+    // а якщо прийшли з "Випадкове" – додаємо ще кнопку "Випадкове"
+    const buttons = [];
     if (state.previous?.kind === 'random') {
-      const row = [];
-      if (watchUrl) row.push([{ text: 'Дивитись на VakDab', url: watchUrl }]);
-      row.push([
-        { text: 'Випадкове', callback_data: 'random' },
-        { text: 'Назад', callback_data: 'home' }
-      ]);
-      keyboard = { inline_keyboard: row };
-    } else {
+      buttons.push({ text: 'Випадкове', callback_data: 'random' });
+    }
+    buttons.push({ text: 'Головна', callback_data: 'home' });
+
+    let keyboard;
+    if (watchUrl) {
       keyboard = {
         inline_keyboard: [
-          ...(watchUrl ? [[{ text: 'Дивитись на VakDab', url: watchUrl }]] : []),
-          [{ text: 'Назад', callback_data: 'back:list' }, { text: 'Головна', callback_data: 'home' }]
+          [{ text: 'Дивитись на VakDab', url: watchUrl }],
+          buttons
         ]
       };
+    } else {
+      keyboard = { inline_keyboard: [buttons] };
     }
 
     await deleteMessage(chatId, messageId, env);
