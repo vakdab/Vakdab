@@ -149,7 +149,7 @@ async function callMakimaAI(prompt, env) {
   }
 
   const model = env.GEMINI_MODEL || 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
 
   const systemInstruction = {
     parts: [
@@ -176,7 +176,7 @@ async function callMakimaAI(prompt, env) {
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(body)
     });
 
