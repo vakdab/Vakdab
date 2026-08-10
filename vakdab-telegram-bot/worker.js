@@ -202,7 +202,7 @@ async function callMakimaAI(prompt, env, state) {
         ...(Array.isArray(state?.aiHistory) ? state.aiHistory.slice(-20) : []),
         { role: 'user', parts: [{ text: String(prompt || '') }] }
       ],
-      generationConfig: { temperature: 0.45, maxOutputTokens: 800 }
+      generationConfig: { temperature: 0.45, maxOutputTokens: 1200 }
     };
 
     const response = await fetch(endpoint, {
@@ -683,7 +683,7 @@ function parseDetails(html, url) {
   const originalTitle = textField([/class=["'][^"']*(?:original-title|original_name|original-title)[^"']*["'][^>]*>([\s\S]*?)<\//i]);
   const altTitle = textField([/class=["'][^"']*(?:alternative-title|alt-title|other-title)[^"']*["'][^>]*>([\s\S]*?)<\//i]);
   const image = absoluteUrl(firstMatch(html, /class=["'][^"']*(?:pmovie__poster|anime__poster|full-poster)[^"']*[\s\S]{0,500}?(?:data-src|src)=["']([^"']+)["']/i) || firstMatch(html, /property=["']og:image["'][^>]*content=["']([^"']+)["']/i));
-  const genreBlock = firstMatch(html, /<(?:div|section)[^>]*class=["'][^"']*(?:pmovie__genres|genres)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section)>/i) || '';
+  const genreBlock = firstMatch(html, /<(?:div|section)[^>]*class=["'][^"']*(?:pmovie__genres|genres)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section)>/i) || firstMatch(html, /class=["'][^"']*pmovie__genres[^"']*["'][^>]*>([\s\S]*?)<\/div>/i) || '';
   const genres = [...genreBlock.matchAll(/<a[^>]*>([\s\S]*?)<\//gi)].map(m => cleanText(m[1])).filter(Boolean);
   const year = firstMatch(html, /class=["'][^"']*(?:pmovie__year|release-year)[^"']*["]?[^>]*>[\s\S]*?(\d{4})/i) || firstMatch(html, /\b((?:19|20)\d{2})\b/);
   const episodes = firstMatch(html, /(?:Епізод(?:ів|и)?|Серій)[^\d]{0,20}(\d+(?:\s*\/\s*\d+)?)/i) || firstMatch(html, /class=["'][^"']*(?:episodes|series-count)[^"']*["'][^>]*>[\s\S]*?(\d+(?:\s*\/\s*\d+)?)/i);
@@ -729,7 +729,7 @@ function detailsText(details) {
     ['Тип', details.type], ['Рік', details.year], ['Сезон', details.releaseSeason],
     ['Статус', details.status], ['Епізоди', details.episodes], ['Тривалість', details.duration],
     ['Студія', details.studio], ['Режисер', details.director], ['Автор', details.author],
-    ['Жанри', details.genres?.join(', ')]
+    ['Жанри', details.genres?.length ? details.genres.join(', ') : 'Не знайдено в каталозі']
   ];
   for (const [label, value] of rows) if (value) text += `\n${label}: ${escapeHtml(value)}`;
   if (details.synopsis) {
