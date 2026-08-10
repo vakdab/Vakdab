@@ -166,7 +166,8 @@ async function callMakimaAI(prompt, env, state) {
           'Не став зайвих питань наприкінці відповіді, якщо це не потрібно для продовження діалогу.',
           'Якщо користувач просто вітається — відповідай коротко та дружньо.',
           'Якщо користувач питає, хто ти — відповідай: «Я Макіма — помічниця VakDab. Моя головна спеціалізація — аніме, але я також можу допомогти з іншими питаннями.»',
-          'Твоя мета — давати точні, зрозумілі, приємні та корисні відповіді, а не просто відповідати якомога швидше.'
+          'Твоя мета — давати точні, зрозумілі, приємні та корисні відповіді, а не просто відповідати якомога швидше.',
+          state?.lastAnimeDetails ? `Перевірені дані з каталогу VakDab для поточного аніме: ${formatAnimeContext(state.lastAnimeDetails)}` : ''
         ].join(' ') }]
       },
       contents: [
@@ -389,6 +390,17 @@ async function handleCallbackQuery(callback, env) {
   }
 }
 
+function formatAnimeContext(details) {
+  if (!details) return '';
+  const fields = [
+    ['Назва', details.title], ['Альтернативна назва', details.altTitle || details.originalTitle],
+    ['Рік', details.year], ['Жанри', Array.isArray(details.genres) ? details.genres.join(', ') : details.genres],
+    ['Епізоди', details.episodes], ['Статус', details.status], ['Студія', details.studio],
+    ['Опис', details.description]
+  ].filter(([, value]) => value !== undefined && value !== null && String(value).trim());
+  return fields.map(([label, value]) => `${label}: ${String(value).slice(0, 1200)}`).join('; ').slice(0, 5000);
+}
+
 function getState(chatId) {
   let state = userStates.get(chatId);
   if (!state) {
@@ -467,6 +479,7 @@ async function renderDetails(chatId, messageId, url, env) {
     const text = detailsText(details);
     const watchUrl = vakdabWatchUrl(extractAnimeId(details.url));
     const state = getState(chatId);
+    state.lastAnimeDetails = details;
 
     let keyboard;
     if (state.previous?.kind === 'random') {
