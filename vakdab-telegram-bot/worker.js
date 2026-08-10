@@ -141,13 +141,9 @@ async function handleMakimaMessage(chatId, userMessage, env) {
 
 async function callMakimaAI(prompt, env) {
   const apiKey = String(env.OPENAI_API_KEY || '').trim();
-  console.log('[openai] API key configured:', Boolean(apiKey));
-  if (!apiKey) throw new Error('OPENAI_API_KEY is not configured');
-
-  const model = String(env.OPENAI_MODEL || 'gpt-4o-mini').trim();
-  console.log('[openai] using model:', model);
-  console.log('[openai] request started');
-
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY не знайдений у Worker');
+  }
   const response = await fetch(`${OPENAI_API_BASE}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -155,43 +151,47 @@ async function callMakimaAI(prompt, env) {
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model,
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
-          content: 'Ти Макіма з аніме Людина-бензопила. Відповідай українською мовою. Будь спокійною, розумною, загадковою.'
+          content:
+            'Ти Макіма з аніме Людина-бензопила. ' +
+            'Відповідай українською мовою. ' +
+            'Будь спокійною, розумною та загадковою.'
         },
-        { role: 'user', content: String(prompt || '') }
+        {
+          role: 'user',
+          content: String(prompt || '')
+        }
       ]
     })
   });
-
-  console.log('[openai] response status:', response.status);
-  const responseText = await response.text();
-  console.log('[openai] response received');
-
+  const raw = await response.text();
+  console.log('[OPENAI STATUS]', response.status);
+  console.log('[OPENAI RESPONSE]', raw.slice(0, 2000));
   if (!response.ok) {
-    console.error('[openai] API error status:', response.status);
-    console.error('[openai] API error body:', redactOpenAISecret(responseText, apiKey).slice(0, 3000));
-    throw new Error(`OpenAI API error ${response.status}`);
+    let errorMessage = `HTTP ${response.status}`;
+    try {
+      const errorData = JSON.parse(raw);
+      errorMessage =
+        errorData?.error?.message ||
+        errorData?.error?.code ||
+        errorMessage;
+    } catch {}
+    throw new Error(`OpenAI: ${errorMessage}`);
   }
-
   let data;
-  try { data = JSON.parse(responseText); } catch { throw new Error('OpenAI returned invalid JSON'); }
-  const choice = data?.choices?.[0];
-  const finishReason = choice?.finish_reason || 'unknown';
-  const generatedText = String(choice?.message?.content || '').trim();
-  console.log('[openai] finish reason:', finishReason);
-  if (!generatedText) {
-    console.error('[openai] generated text missing:', JSON.stringify({ finishReason, choices: Array.isArray(data?.choices) ? data.choices.length : 0 }));
-    throw new Error('OpenAI returned no text');
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error('OpenAI повернув не JSON');
   }
-  console.log('[openai] generated text received');
-  return generatedText;
-}
-
-function redactOpenAISecret(value, secret) {
-  return String(value || '').replaceAll(secret, '[REDACTED_OPENAI_API_KEY]');
+  const result = data?.choices?.[0]?.message?.content?.trim();
+  if (!result) {
+    throw new Error('OpenAI не повернув текст');
+  }
+  return result;
 }
 
 async function handleCallbackQuery(callback, env) {
