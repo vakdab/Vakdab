@@ -75,9 +75,9 @@ async function handleMessage(message, env) {
   if (!chatId) return;
 
   const text = (message.text || '').trim();
+  const state = getState(chatId);
 
   if (text === '/start') {
-    const state = getState(chatId);
     state.screen = 'home';
     await sendMessage(chatId, 'Привіт! Оберіть дію:', { reply_markup: mainKeyboard() }, env);
     return;
@@ -86,32 +86,18 @@ async function handleMessage(message, env) {
   if (/^\/(?:makima|ask)(?:@\w+)?(?:\s|$)/i.test(text)) {
     const prompt = text.replace(/^\/(?:makima|ask)(?:@\w+)?\s*/i, '').trim();
     if (!prompt) {
-      await sendMessage(chatId, 'Напиши запит після команди, наприклад: <code>/makima розкажи про Макіму</code>.', {}, env);
+      state.screen = 'waiting_for_makima';
+      await sendMessage(chatId, 'Напишіть запит про аніме.', { reply_markup: backHomeKeyboard() }, env);
       return;
     }
+    state.screen = 'makima';
     await handleMakimaMessage(chatId, prompt, env);
-    return;
-  }
-
-  // --- AI-агент Макіма (завжди пріоритет, якщо згадано ім'я) ---
-  if (text.toLowerCase().includes('макіма')) {
-    const state = getState(chatId);
-    state.screen = 'makima'; // не блокуємо інші функції, просто відповідаємо
-    await handleMakimaMessage(chatId, text, env);
     return;
   }
 
   if (!text) return;
 
-  const state = getState(chatId);
-
-  // --- Якщо ми в режимі діалогу з Макімою (через кнопку) ---
-  if (state.screen === 'waiting_for_makima') {
-    await handleMakimaMessage(chatId, text, env);
-    return;
-  }
-
-  // --- Пошук (якщо користувач натиснув кнопку "Пошук") ---
+  // Пошук через кнопку має пріоритет над AI, щоб не ламати каталог VakDab.
   if (state.screen === 'waiting_for_search') {
     state.searchQuery = text;
     state.searchPage = 1;
@@ -121,8 +107,10 @@ async function handleMessage(message, env) {
     return;
   }
 
-  // У будь-якому іншому стані – нагадуємо використовувати кнопки меню
-  await sendMessage(chatId, 'Скористайтеся кнопками меню.', { reply_markup: mainKeyboard() }, env);
+  // Після кнопки «Запитати Макіму» та для будь-якого звичайного тексту
+  // запит одразу передається в Gemini.
+  state.screen = 'makima';
+  await handleMakimaMessage(chatId, text, env);
 }
 
 // Gemini / Makima integration. Model availability is discovered per API key.
