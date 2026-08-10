@@ -93,7 +93,7 @@ async function handleMessage(message, env) {
     return;
   }
 
-  // AI-агент Макіма (завжди пріоритет, якщо згадано ім'я)
+  // --- AI-агент Макіма (завжди пріоритет, якщо згадано ім'я) ---
   if (text.toLowerCase().includes('макіма')) {
     const state = getState(chatId);
     state.screen = 'makima'; // не блокуємо інші функції, просто відповідаємо
@@ -105,13 +105,13 @@ async function handleMessage(message, env) {
 
   const state = getState(chatId);
 
-  // Якщо ми в режимі діалогу з Макімою (через кнопку)
+  // --- Якщо ми в режимі діалогу з Макімою (через кнопку) ---
   if (state.screen === 'waiting_for_makima') {
     await handleMakimaMessage(chatId, text, env);
     return;
   }
 
-  // Пошук (якщо користувач натиснув кнопку "Пошук")
+  // --- Пошук (якщо користувач натиснув кнопку "Пошук") ---
   if (state.screen === 'waiting_for_search') {
     state.searchQuery = text;
     state.searchPage = 1;
@@ -125,8 +125,10 @@ async function handleMessage(message, env) {
   await sendMessage(chatId, 'Скористайтеся кнопками меню.', { reply_markup: mainKeyboard() }, env);
 }
 
-// OpenAI / Makima integration.
-const OPENAI_API_BASE = 'https://api.openai.com/v1';
+// Gemini / Makima integration. Model availability is discovered per API key.
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+const GEMINI_MODEL_CACHE_TTL_MS = 5 * 60 * 1000;
+let geminiModelCache = { expiresAt: 0, models: [], selected: '' };
 
 async function handleMakimaMessage(chatId, userMessage, env) {
   try {
@@ -134,70 +136,131 @@ async function handleMakimaMessage(chatId, userMessage, env) {
     const responseText = await callMakimaAI(userMessage, env);
     await sendMessage(chatId, escapeHtml(responseText), { reply_markup: backHomeKeyboard() }, env);
   } catch (error) {
-    const errorText = safeError(error);
-    console.error('[makima] failed:', errorText);
-    await sendMessage(
-      chatId,
-      `❌ Помилка OpenAI:\n<code>${escapeHtml(errorText)}</code>`,
-      { reply_markup: backHomeKeyboard() },
-      env
-    );
+    console.error('[makima] failed:', safeError(error));
+    await sendMessage(chatId, 'Макіма тимчасово не може відповісти. Спробуйте ще раз.', { reply_markup: backHomeKeyboard() }, env);
   }
 }
 
 async function callMakimaAI(prompt, env) {
-  const apiKey = String(env.OPENAI_API_KEY || '').trim();
-  if (!apiKey) {
-    throw new Error('OPENAI_API_KEY не знайдений у Worker');
+  const apiKey = String(env.GEMINI_API_KEY || '').trim();
+  console.log('[gemini] API key configured:', Boolean(apiKey));
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not configured');
+
+  let selectedModel = await selectGeminiModel(env, apiKey, false);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    console.log('[gemini] selected model:', selectedModel);
+    console.log('[gemini] request started');
+    const endpoint = `${GEMINI_API_BASE}/models/${encodeURIComponent(selectedModel)}:generateContent`;
+    const body = {
+      systemInstruction: {
+        parts: [{ text: 'Ти Макіма з аніме Людина-бензопила. Відповідай українською мовою. Будь спокійною, розумною, загадковою.' }]
+      },
+      contents: [{ role: 'user', parts: [{ text: String(prompt || '') }] }]
+    };
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify(body)
+    });
+    console.log('[gemini] response status:', response.status);
+    const responseText = await response.text();
+    console.log('[gemini] response received');
+
+    if (!response.ok) {
+      console.error('[gemini] API error status:', response.status);
+      console.error('[gemini] API error body:', redactGeminiSecret(responseText, apiKey).slice(0, 3000));
+      if (response.status === 404 && attempt === 0) {
+        console.log('[gemini] selected model returned 404; refreshing model list');
+        selectedModel = await selectGeminiModel(env, apiKey, true);
+        continue;
+      }
+      throw new Error(`Gemini API error ${response.status}`);
+    }
+
+    let data;
+    try { data = JSON.parse(responseText); } catch { throw new Error('Gemini returned invalid JSON'); }
+    const candidate = data?.candidates?.[0];
+    const finishReason = candidate?.finishReason || 'unknown';
+    const parts = Array.isArray(candidate?.content?.parts) ? candidate.content.parts : [];
+    const generatedText = parts.map(part => typeof part?.text === 'string' ? part.text : '').join('').trim();
+    console.log('[gemini] finish reason:', finishReason);
+    if (!generatedText) {
+      console.error('[gemini] generated text missing:', JSON.stringify({ finishReason, candidates: Array.isArray(data?.candidates) ? data.candidates.length : 0 }));
+      throw new Error('Gemini returned no text');
+    }
+    console.log('[gemini] generated text received');
+    return generatedText;
   }
-  const response = await fetch(`${OPENAI_API_BASE}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-4.1-mini',          // <-- змінено модель
-      messages: [
-        {
-          role: 'system',
-          content:
-            'Ти Макіма з аніме Людина-бензопила. ' +
-            'Відповідай українською мовою. ' +
-            'Будь спокійною, розумною та загадковою.'
-        },
-        {
-          role: 'user',
-          content: String(prompt || '')
-        }
-      ]
-    })
+  throw new Error('Gemini model selection failed');
+}
+
+async function selectGeminiModel(env, apiKey, forceRefresh) {
+  const now = Date.now();
+  if (!forceRefresh && geminiModelCache.expiresAt > now && geminiModelCache.selected) {
+    return geminiModelCache.selected;
+  }
+
+  console.log('[gemini] checking available models');
+  const models = await fetchAvailableGeminiModels(apiKey);
+  const stableTextModels = models.filter(model => {
+    const id = geminiModelId(model.name);
+    const methods = Array.isArray(model.supportedGenerationMethods) ? model.supportedGenerationMethods : [];
+    return id && methods.includes('generateContent') && !/(preview|experimental|deprecated|embedding|image|audio|tts|veo|robot)/i.test(id);
   });
-  const raw = await response.text();
-  console.log('[OPENAI STATUS]', response.status);
-  console.log('[OPENAI RESPONSE]', raw.slice(0, 2000));
-  if (!response.ok) {
-    let errorMessage = `HTTP ${response.status}`;
-    try {
-      const errorData = JSON.parse(raw);
-      errorMessage =
-        errorData?.error?.message ||
-        errorData?.error?.code ||
-        errorMessage;
-    } catch {}
-    throw new Error(`OpenAI: ${errorMessage}`);
+  const availableIds = stableTextModels.map(model => geminiModelId(model.name));
+  console.log('[gemini] available models:', availableIds.join(', ') || '(none)');
+
+  const configured = String(env.GEMINI_MODEL || '').trim().replace(/^models\//, '');
+  if (configured && availableIds.includes(configured)) {
+    geminiModelCache = { expiresAt: now + GEMINI_MODEL_CACHE_TTL_MS, models: stableTextModels, selected: configured };
+    return configured;
   }
-  let data;
-  try {
-    data = JSON.parse(raw);
-  } catch {
-    throw new Error('OpenAI повернув не JSON');
+  if (configured) console.log('[gemini] configured model is unavailable:', configured);
+
+  const preferred = [
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-2.5-flash',
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash-lite'
+  ];
+  const selected = preferred.find(id => availableIds.includes(id)) || availableIds[0];
+  if (!selected) throw new Error('No available Gemini model supports generateContent');
+  geminiModelCache = { expiresAt: now + GEMINI_MODEL_CACHE_TTL_MS, models: stableTextModels, selected };
+  console.log('[gemini] selected available fallback:', selected);
+  return selected;
+}
+
+async function fetchAvailableGeminiModels(apiKey) {
+  const models = [];
+  let pageToken = '';
+  for (let page = 0; page < 5; page += 1) {
+    const url = new URL(`${GEMINI_API_BASE}/models`);
+    url.searchParams.set('pageSize', '100');
+    if (pageToken) url.searchParams.set('pageToken', pageToken);
+    const response = await fetch(url, { headers: { 'x-goog-api-key': apiKey } });
+    const body = await response.text();
+    if (!response.ok) {
+      console.error('[gemini] API error status:', response.status);
+      console.error('[gemini] API error body:', redactGeminiSecret(body, apiKey).slice(0, 3000));
+      throw new Error(`Gemini models API error ${response.status}`);
+    }
+    let data;
+    try { data = JSON.parse(body); } catch { throw new Error('Gemini models API returned invalid JSON'); }
+    if (Array.isArray(data.models)) models.push(...data.models);
+    pageToken = data.nextPageToken || '';
+    if (!pageToken) break;
   }
-  const result = data?.choices?.[0]?.message?.content?.trim();
-  if (!result) {
-    throw new Error('OpenAI не повернув текст');
-  }
-  return result;
+  return models;
+}
+
+function geminiModelId(name) {
+  return String(name || '').replace(/^models\//, '').trim();
+}
+
+function redactGeminiSecret(value, secret) {
+  return String(value || '').replaceAll(secret, '[REDACTED_GEMINI_API_KEY]');
 }
 
 async function handleCallbackQuery(callback, env) {
@@ -222,7 +285,7 @@ async function handleCallbackQuery(callback, env) {
       return;
     }
 
-    // Нова кнопка "Запитати Макіму"
+    // --- Нова кнопка "Запитати Макіму" ---
     if (data === 'makima:prompt') {
       state.screen = 'waiting_for_makima';
       await replaceMessage(chatId, messageId, 'Напишіть своє запитання Макімі.', false, { reply_markup: backHomeKeyboard() }, env);
