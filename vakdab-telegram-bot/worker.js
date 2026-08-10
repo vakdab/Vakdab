@@ -83,6 +83,16 @@ async function handleMessage(message, env) {
     return;
   }
 
+  if (/^\/(?:makima|ask)(?:@\w+)?(?:\s|$)/i.test(text)) {
+    const prompt = text.replace(/^\/(?:makima|ask)(?:@\w+)?\s*/i, '').trim();
+    if (!prompt) {
+      await sendMessage(chatId, 'Напиши запит після команди, наприклад: <code>/makima розкажи про Макіму</code>.', {}, env);
+      return;
+    }
+    await handleMakimaMessage(chatId, prompt, env);
+    return;
+  }
+
   // --- AI-агент Макіма (завжди пріоритет, якщо згадано ім'я) ---
   if (text.toLowerCase().includes('макіма')) {
     const state = getState(chatId);
@@ -138,7 +148,8 @@ async function callMakimaAI(prompt, env) {
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
+  const model = env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   const systemInstruction = {
     parts: [

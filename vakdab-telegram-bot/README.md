@@ -71,3 +71,10 @@ https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo
 ```
 
 Після цього сайт відкривається як раніше, а Telegram надсилає updates на `/telegram-webhook`.
+
+## Gemini / Makima
+
+Telegram-команда `/makima <запит>` або `/ask <запит>` передає запит у Gemini.
+У Cloudflare Worker потрібно додати secret `GEMINI_API_KEY`; ключ не зберігається в GitHub. Опційно можна задати змінну `GEMINI_MODEL`, за замовчуванням використовується `gemini-2.5-flash`.
+
+Команду можна додати через Cloudflare Dashboard → Worker `vakdab` → Settings → Variables and Secrets → Add secret.
