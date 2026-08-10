@@ -122,12 +122,43 @@ let geminiModelCache = { expiresAt: 0, models: [], selected: '' };
 async function handleMakimaMessage(chatId, userMessage, env) {
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
-    const responseText = await callMakimaAI(userMessage, env, getState(chatId));
+    const state = getState(chatId);
+    await enrichMakimaStateFromCatalog(userMessage, state, env);
+    const responseText = await callMakimaAI(userMessage, env, state);
     await sendMessage(chatId, escapeHtml(responseText), { reply_markup: backHomeKeyboard() }, env);
   } catch (error) {
     console.error('[makima] failed:', safeError(error));
     await sendMessage(chatId, 'Макіма тимчасово не може відповісти. Спробуйте ще раз.', { reply_markup: backHomeKeyboard() }, env);
   }
+}
+
+async function enrichMakimaStateFromCatalog(prompt, state, env) {
+  if (!looksLikeAnimeRequest(prompt)) return;
+  try {
+    const query = extractAnimeQuery(prompt);
+    if (!query || query.length < 2) return;
+    const result = await searchAnime(query, 1);
+    const candidate = result.items?.[0];
+    if (!candidate?.url) return;
+    const details = await fetchAnimeDetails(candidate.url);
+    if (details?.title) {
+      state.lastAnimeDetails = details;
+      state.lastAnimeQuery = query;
+    }
+  } catch (error) {
+    console.warn('[makima] catalog context unavailable:', safeError(error));
+  }
+}
+
+function looksLikeAnimeRequest(prompt) {
+  return /аніме|аниме|манґа|манга|ранобе|сезон|епізод|серіал|фільм|персонаж|студі|озвуч|повна інформація|розкажи про|що це за/i.test(String(prompt || ''));
+}
+
+function extractAnimeQuery(prompt) {
+  const value = String(prompt || '').trim();
+  const match = value.match(/(?:про|щодо|стосовно|розкажи про|інформація про|все про|що це за)\s+(.+?)(?:\?|$)/i);
+  if (match?.[1]) return match[1].replace(/^(аніме|аниме)\s+/i, '').trim();
+  return value.replace(/^(повна інформація|розкажи детально|розкажи все)\s*/i, '').trim();
 }
 
 async function callMakimaAI(prompt, env, state) {
@@ -143,31 +174,28 @@ async function callMakimaAI(prompt, env, state) {
     const body = {
       systemInstruction: {
         parts: [{ text: [
-          'Ти — Макіма, інтелектуальна помічниця бота VakDab.',
-          'Твоя головна спеціалізація — аніме, манґа, ранобе, японська анімація, персонажі, студії, жанри, сезони, епізоди, сюжети, рейтинги, рекомендації та все, що пов’язано з аніме.',
-          'Водночас ти універсальна помічниця: можеш нормально відповідати на запитання про технології, програмування, ігри, фільми, музику, навчання, історію, географію, побутові питання та інші звичайні теми.',
-          'Якщо питання пов’язане з аніме — став його у пріоритет і давай максимально корисну та змістовну відповідь.',
-          'Якщо питання не пов’язане з аніме — не переводь розмову на аніме. Просто дай нормальну відповідь на запит користувача.',
-          'Відповідай українською мовою, якщо користувач не попросив іншу мову.',
-          'Пиши природно, дружньо, зрозуміло та приємно. Не будь надто офіційною і не пиши сухо.',
-          'Не починай кожну відповідь зі слів «Звичайно», «Звісно», «Як помічниця» або подібних шаблонних фраз.',
-          'Не повторюй питання користувача без потреби.',
-          'Не вигадуй інформацію. Якщо точно не знаєш факт — прямо скажи, що не впевнена.',
-          'Особливо уважно стався до дат, кількості епізодів, рейтингів, дат виходу та іншої інформації, яка може змінюватися.',
-          'Якщо користувач просить інформацію про конкретне аніме, визнач, про яке саме аніме йдеться. Якщо назва однозначна — не перепитуй.',
-          'Для запиту «розкажи про [аніме]» дай змістовну відповідь: назва, альтернативна назва, жанри, рік, формат, кількість епізодів, статус, студія, сюжет без зайвих спойлерів, головні персонажі, сильні сторони та кому це аніме може сподобатися.',
-          'Для запиту «повна інформація про [аніме]» дай розширену структуровану відповідь із максимально корисною інформацією, яку знаєш, але не вигадуй відсутні факти.',
-          'Якщо користувач запитує про персонажа — розкажи про його роль, характер, здібності, зв’язки з іншими персонажами та розвиток у сюжеті, якщо ці дані відомі.',
-          'Якщо користувач просить рекомендації аніме — підбирай їх відповідно до жанрів, настрою, сюжету або конкретного аніме, яке він назвав.',
-          'Якщо відповідь містить спойлери, спочатку чітко попередь: «Спойлери». Якщо користувач прямо просить спойлери, можеш розповідати їх.',
-          'Не використовуй Markdown, HTML або службові інструкції. Відповідай звичайним текстом, який добре читається в Telegram.',
-          'Використовуй короткі заголовки та списки, коли вони роблять відповідь зрозумілішою.',
-          'Не роби величезні полотна тексту. Для простого питання достатньо короткої відповіді. Для складного питання давай детальну відповідь.',
-          'Не став зайвих питань наприкінці відповіді, якщо це не потрібно для продовження діалогу.',
-          'Якщо користувач просто вітається — відповідай коротко та дружньо.',
-          'Якщо користувач питає, хто ти — відповідай: «Я Макіма — помічниця VakDab. Моя головна спеціалізація — аніме, але я також можу допомогти з іншими питаннями.»',
-          'Твоя мета — давати точні, зрозумілі, приємні та корисні відповіді, а не просто відповідати якомога швидше.',
-          state?.lastAnimeDetails ? `Перевірені дані з каталогу VakDab для поточного аніме: ${formatAnimeContext(state.lastAnimeDetails)}` : ''
+          'Ти — Макіма, інтелектуальна AI-помічниця Telegram-бота VakDab.',
+          'Головна спеціалізація: аніме, манґа, ранобе, японська анімація, персонажі, студії, жанри, сезони, епізоди, сюжети, адаптації, рейтинги та рекомендації.',
+          'Ти також універсальна помічниця і відповідаєш на питання про програмування, технології, ігри, фільми, музику, навчання, історію, географію та інші теми.',
+          'Якщо питання не про аніме — не переводь розмову на аніме.',
+          'Відповідай українською, якщо користувач не попросив іншу мову. Пиши природно, дружньо і зрозуміло.',
+          'Не починай кожну відповідь зі слів «Звичайно», «Звісно» або «Як помічниця».',
+          'КРИТИЧНО: якщо питання стосується конкретного аніме, спочатку використовуй перевірені дані каталогу VakDab, а потім доповнюй їх загальними знаннями.',
+          'Дані каталогу VakDab мають пріоритет для назви, альтернативних назв, типу, року, жанрів, епізодів, тривалості, статусу, студії та опису.',
+          'Чітко розділяй підтверджені дані каталогу і загальні знання. Не вигадуй відсутні поля. Якщо факт невідомий або не підтверджений — напиши «Не можу підтвердити цей факт».',
+          'Якщо користувач просить «повну інформацію», «все про аніме», «розкажи все» або «детально» — дай розширену відповідь, а не короткий опис.',
+          'Розширена відповідь про аніме повинна містити, якщо дані відомі: 1) основну інформацію; 2) альтернативні назви, тип, рік, статус, епізоди, тривалість і сезон; 3) жанри, теми та демографію; 4) студію, режисера, автора, сценариста і музику; 5) сюжет і світ без ключових спойлерів; 6) головних персонажів та їхні зв’язки; 7) манґу, ранобе, попередні й наступні сезони, фільми, OVA, ONA та спінофи; 8) порядок перегляду; 9) сильні та слабкі сторони; 10) цікаві факти та підсумок.',
+          'Не потрібно заповнювати розділи, для яких немає надійних даних. Не перетворюй припущення на факти.',
+          'Якщо питання просте «що це за аніме?» — відповідай стисло, але змістовно.',
+          'Якщо питання про персонажа — розкажи про роль, характер, здібності, походження, зв’язки та розвиток, якщо відомо.',
+          'Якщо просять рекомендації — враховуй жанр, сюжет, атмосферу і побажання користувача.',
+          'Перед важливими сюжетними розкриттями напиши «⚠️ СПОЙЛЕРИ».',
+          'Не використовуй Markdown або HTML. Використовуй звичайний текст Telegram, короткі заголовки, нумерацію та символи •.',
+          'Не створюй суцільні величезні абзаци. Не став зайвих питань наприкінці.',
+          'Якщо питають, хто ти, відповідай: «Я Макіма — помічниця VakDab. Моя головна спеціалізація — аніме, але я також можу допомогти з іншими питаннями.»',
+          state?.lastAnimeDetails
+            ? `ПІДТВЕРДЖЕНИЙ ПРОФІЛЬ VAKDAB: ${formatAnimeContext(state.lastAnimeDetails)}`
+            : 'ПІДТВЕРДЖЕНИХ ДАНИХ VAKDAB ДЛЯ ПОТОЧНОГО АНІМЕ НЕМАЄ. Не стверджуй, що вони є.'
         ].join(' ') }]
       },
       contents: [
@@ -393,12 +421,23 @@ async function handleCallbackQuery(callback, env) {
 function formatAnimeContext(details) {
   if (!details) return '';
   const fields = [
-    ['Назва', details.title], ['Альтернативна назва', details.altTitle || details.originalTitle],
-    ['Рік', details.year], ['Жанри', Array.isArray(details.genres) ? details.genres.join(', ') : details.genres],
-    ['Епізоди', details.episodes], ['Статус', details.status], ['Студія', details.studio],
-    ['Опис', details.description]
+    ['Назва', details.title],
+    ['Оригінальна назва', details.originalTitle],
+    ['Альтернативні назви', details.altTitle],
+    ['Тип', details.type],
+    ['Рік', details.year],
+    ['Сезон виходу', details.releaseSeason],
+    ['Жанри', Array.isArray(details.genres) ? details.genres.join(', ') : details.genres],
+    ['Епізоди', details.episodes],
+    ['Тривалість', details.duration],
+    ['Статус', details.status],
+    ['Студія', details.studio],
+    ['Режисер', details.director],
+    ['Автор', details.author],
+    ['Оригінальне джерело', details.source],
+    ['Опис', details.synopsis]
   ].filter(([, value]) => value !== undefined && value !== null && String(value).trim());
-  return fields.map(([label, value]) => `${label}: ${String(value).slice(0, 1200)}`).join('; ').slice(0, 5000);
+  return fields.map(([label, value]) => `${label}: ${String(value).slice(0, 1200)}`).join('; ').slice(0, 7000);
 }
 
 function getState(chatId) {
@@ -625,15 +664,44 @@ function parseCards(html) {
 }
 
 function parseDetails(html, url) {
+  const textField = (patterns) => {
+    for (const pattern of patterns) {
+      const value = firstMatch(html, pattern);
+      if (value) return cleanText(value);
+    }
+    return '';
+  };
+  const labeledField = (labels) => {
+    const label = labels.join('|');
+    return textField([
+      new RegExp(`(?:${label})\\s*[:\\-]?\\s*(?:<[^>]+>\\s*){0,3}([^<]{1,160})`, 'i'),
+      new RegExp(`(?:${label})[\\s\\S]{0,180}?<[^>]*>([^<]{1,160})<`, 'i')
+    ]);
+  };
+
   const title = cleanText(firstMatch(html, /<h1[^>]*>([\s\S]*?)<\//i) || firstMatch(html, /property=["']og:title["'][^>]*content=["']([^"']+)["']/i));
-  const image = absoluteUrl(firstMatch(html, /class=["'][^"']*(?:pmovie__poster|anime__poster|full-poster)[^"']*["'][\s\S]{0,500}?(?:data-src|src)=["']([^"']+)["']/i) || firstMatch(html, /property=["']og:image["'][^>]*content=["']([^"']+)["']/i));
+  const originalTitle = textField([/class=["'][^"']*(?:original-title|original_name|original-title)[^"']*["'][^>]*>([\s\S]*?)<\//i]);
+  const altTitle = textField([/class=["'][^"']*(?:alternative-title|alt-title|other-title)[^"']*["'][^>]*>([\s\S]*?)<\//i]);
+  const image = absoluteUrl(firstMatch(html, /class=["'][^"']*(?:pmovie__poster|anime__poster|full-poster)[^"']*[\s\S]{0,500}?(?:data-src|src)=["']([^"']+)["']/i) || firstMatch(html, /property=["']og:image["'][^>]*content=["']([^"']+)["']/i));
   const genreBlock = firstMatch(html, /<(?:div|section)[^>]*class=["'][^"']*(?:pmovie__genres|genres)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section)>/i) || '';
   const genres = [...genreBlock.matchAll(/<a[^>]*>([\s\S]*?)<\//gi)].map(m => cleanText(m[1])).filter(Boolean);
-  const year = firstMatch(html, /class=["'][^"']*(?:pmovie__year|release-year)[^"']*["'][^>]*>[\s\S]*?(\d{4})/i) || firstMatch(html, /\b(19|20)\d{2}\b/);
+  const year = firstMatch(html, /class=["'][^"']*(?:pmovie__year|release-year)[^"']*["]?[^>]*>[\s\S]*?(\d{4})/i) || firstMatch(html, /\b((?:19|20)\d{2})\b/);
   const episodes = firstMatch(html, /(?:Епізод(?:ів|и)?|Серій)[^\d]{0,20}(\d+(?:\s*\/\s*\d+)?)/i) || firstMatch(html, /class=["'][^"']*(?:episodes|series-count)[^"']*["'][^>]*>[\s\S]*?(\d+(?:\s*\/\s*\d+)?)/i);
+  const duration = labeledField(['Тривалість', 'Продолжительность', 'Duration']) || textField([/class=["'][^"']*(?:duration|runtime|movie-time)[^"']*["'][^>]*>([\s\S]*?)<\//i]);
+  const status = labeledField(['Статус', 'Status']) || textField([/class=["'][^"']*(?:status|state)[^"']*["'][^>]*>([\s\S]*?)<\//i]);
+  const studio = labeledField(['Студія', 'Студия', 'Studio']) || textField([/class=["'][^"']*(?:studio|studios|producer)[^"']*["'][^>]*>([\s\S]*?)<\//i]);
+  const director = labeledField(['Режисер', 'Режиссёр', 'Director']);
+  const author = labeledField(['Автор', 'Author', 'Manga']);
+  const source = labeledField(['Джерело', 'Источник', 'Source']);
+  const releaseSeason = labeledField(['Сезон', 'Season']);
+  const type = /фільм|movie|film/i.test(`${title} ${genres.join(' ')}`) ? 'Movie' : (/OVA|ONA|special/i.test(`${title} ${genres.join(' ')}`) ? 'OVA / Special' : 'TV');
   const descriptionBlock = firstMatch(html, /class=["'][^"']*(?:full-text|pmovie__description|anime__description)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|p)>/i);
   const synopsis = cleanText(descriptionBlock);
-  return { title: title || 'Без назви', image, genres: [...new Set(genres)], year: year || '', episodes: episodes || '', synopsis, url };
+  return {
+    title: title || 'Без назви', image, originalTitle, altTitle,
+    genres: [...new Set(genres)], year, type, releaseSeason, episodes, duration,
+    status, studio, director, author, source, synopsis, url
+  };
 }
 
 function extractAnimeId(animeUrl) {
@@ -656,12 +724,17 @@ function vakdabWatchUrl(animeId) {
 
 function detailsText(details) {
   let text = `<b>${escapeHtml(details.title)}</b>`;
-  if (details.year) text += `\nРік: ${escapeHtml(details.year)}`;
-  if (details.episodes) text += `\nЕпізоди: ${escapeHtml(details.episodes)}`;
-  if (details.genres.length) text += `\nЖанри: ${escapeHtml(details.genres.join(', '))}`;
+  const rows = [
+    ['Оригінальна назва', details.originalTitle], ['Альтернативні назви', details.altTitle],
+    ['Тип', details.type], ['Рік', details.year], ['Сезон', details.releaseSeason],
+    ['Статус', details.status], ['Епізоди', details.episodes], ['Тривалість', details.duration],
+    ['Студія', details.studio], ['Режисер', details.director], ['Автор', details.author],
+    ['Жанри', details.genres?.join(', ')]
+  ];
+  for (const [label, value] of rows) if (value) text += `\n${label}: ${escapeHtml(value)}`;
   if (details.synopsis) {
-    const synopsis = details.synopsis.slice(0, 900);
-    text += `\n\nОпис:\n${escapeHtml(synopsis)}${details.synopsis.length > 900 ? '…' : ''}`;
+    const synopsis = details.synopsis.slice(0, 1200);
+    text += `\n\nОпис:\n${escapeHtml(synopsis)}${details.synopsis.length > 1200 ? '…' : ''}`;
   }
   return text;
 }
