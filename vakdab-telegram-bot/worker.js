@@ -8,6 +8,9 @@ const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
 // але повний архів лишається у пам'яті користувача.
 const MAX_CONTEXT_MESSAGES_FOR_API = 40; // ~20 останніх user/assistant реплік передаються моделі як контекст
 
+// Обмеження на розмір масивів у профілі користувача, щоб він не розростався нескінченно.
+const PROFILE_ARRAY_MAX_ITEMS = 20;
+
 const userStates = new Map();
 let popularCache = null;
 let popularCacheAt = 0;
@@ -93,6 +96,13 @@ async function handleMessage(message, env) {
   if (/^\/forget(?:@\w+)?(?:\s|$)/i.test(text)) {
     await clearUserHistory(memoryKey, env);
     await sendMessage(chatId, 'Гаразд, я забула нашу попередню розмову. Починаємо з чистого аркуша 🙂', { reply_markup: backHomeKeyboard() }, env);
+    return;
+  }
+
+  if (/^\/forgetall(?:@\w+)?(?:\s|$)/i.test(text)) {
+    await clearUserHistory(memoryKey, env);
+    await clearUserProfile(memoryKey, env);
+    await sendMessage(chatId, 'Я повністю забула і нашу розмову, і все, що знала про тебе. Знайомимось заново 🙂', { reply_markup: backHomeKeyboard() }, env);
     return;
   }
 
@@ -209,7 +219,8 @@ async function handleMakimaMessage(chatId, memoryKey, userMessage, env) {
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
     const fullHistory = await getUserHistory(memoryKey, env);
-    const responseText = await callMakimaAI(userMessage, fullHistory, env);
+    const profile = await getUserProfile(memoryKey, env);
+    const responseText = await callMakimaAI(userMessage, fullHistory, profile, env);
 
     fullHistory.push({ role: 'user', content: userMessage });
     fullHistory.push({ role: 'assistant', content: responseText });
@@ -217,13 +228,25 @@ async function handleMakimaMessage(chatId, memoryKey, userMessage, env) {
     await saveUserHistory(memoryKey, fullHistory, env);
 
     await sendMessage(chatId, escapeHtml(responseText), { reply_markup: backHomeKeyboard() }, env);
+
+    // Аналіз і оновлення профілю виконуємо ПІСЛЯ відправки відповіді користувачу і в окремому
+    // try/catch: будь-яка помилка тут не повинна ламати основну розмову.
+    try {
+      const extracted = await extractMemory(userMessage, profile, env);
+      if (extracted && Object.keys(extracted).length > 0) {
+        const mergedProfile = mergeProfile(profile, extracted);
+        await saveUserProfile(memoryKey, mergedProfile, env);
+      }
+    } catch (memError) {
+      console.error('[memory] extract/merge failed:', safeError(memError));
+    }
   } catch (error) {
     console.error('[makima] failed:', safeError(error));
     await sendMessage(chatId, 'Макіма тимчасово не може відповісти. Спробуйте ще раз.', { reply_markup: backHomeKeyboard() }, env);
   }
 }
 
-async function callMakimaAI(prompt, fullHistory, env) {
+async function callMakimaAI(prompt, fullHistory, profile, env) {
   const apiKey = String(env.GROQ_API_KEY || '').trim();
   if (!apiKey) throw new Error('GROQ_API_KEY is not configured');
   const model = String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
@@ -231,9 +254,14 @@ async function callMakimaAI(prompt, fullHistory, env) {
   // Моделі надсилаємо лише останній фрагмент довгої історії (ліміт контексту API),
   // хоча в KV увесь архів розмови зберігається без втрат.
   const recentHistory = fullHistory.slice(-MAX_CONTEXT_MESSAGES_FOR_API);
+  const profileContext = buildProfileContext(profile);
+
+  const systemPrompt = profileContext
+    ? `${MAKIMA_SYSTEM_PROMPT}\n\nІНФОРМАЦІЯ ПРО КОРИСТУВАЧА:\n${profileContext}\n\nПРАВИЛА ВИКОРИСТАННЯ ЦІЄЇ ІНФОРМАЦІЇ:\nВикористовуй її тільки коли вона реально покращує відповідь і доречна за темою розмови.\nНе згадуй випадкові факти, якщо вони не стосуються поточного питання.\nНе кажи "я пам'ятаю" або подібних фраз.\nГовори природно, ніби добре знайома людина, а не бот, що звіряється з базою даних.`
+    : MAKIMA_SYSTEM_PROMPT;
 
   const messages = [
-    { role: 'system', content: MAKIMA_SYSTEM_PROMPT },
+    { role: 'system', content: systemPrompt },
     ...recentHistory,
     { role: 'user', content: String(prompt || '') }
   ];
@@ -296,6 +324,203 @@ async function clearUserHistory(memoryKey, env) {
   } catch (error) {
     console.error('[memory] clear failed:', safeError(error));
   }
+}
+
+// ---- Профіль користувача (стабільні факти, НЕ історія повідомлень) ----
+
+function defaultProfile() {
+  return {
+    name: '',
+    birthday: '',
+    age: '',
+    favoriteAnime: [],
+    favoriteGenres: [],
+    hobbies: [],
+    projects: [],
+    preferences: [],
+    facts: []
+  };
+}
+
+async function getUserProfile(memoryKey, env) {
+  if (!env.MAKIMA_MEMORY) return defaultProfile();
+  try {
+    const raw = await env.MAKIMA_MEMORY.get(`profile:${memoryKey}`);
+    if (!raw) return defaultProfile();
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return defaultProfile();
+    // Захист від пошкодженого/неповного JSON у KV — доповнюємо дефолтами
+    return { ...defaultProfile(), ...parsed };
+  } catch (error) {
+    console.error('[profile] read failed:', safeError(error));
+    return defaultProfile();
+  }
+}
+
+async function saveUserProfile(memoryKey, profile, env) {
+  if (!env.MAKIMA_MEMORY) return;
+  try {
+    const safeProfile = { ...defaultProfile(), ...(profile || {}) };
+    await env.MAKIMA_MEMORY.put(`profile:${memoryKey}`, JSON.stringify(safeProfile));
+  } catch (error) {
+    console.error('[profile] write failed:', safeError(error));
+  }
+}
+
+async function clearUserProfile(memoryKey, env) {
+  if (!env.MAKIMA_MEMORY) return;
+  try {
+    await env.MAKIMA_MEMORY.delete(`profile:${memoryKey}`);
+  } catch (error) {
+    console.error('[profile] clear failed:', safeError(error));
+  }
+}
+
+// Формує короткий текстовий блок з профілю для system prompt.
+// Порожні поля не включаються, щоб не засмічувати контекст.
+function buildProfileContext(profile) {
+  if (!profile) return '';
+  const lines = [];
+  if (profile.name) lines.push(`Ім'я: ${profile.name}`);
+  if (profile.birthday) lines.push(`День народження: ${profile.birthday}`);
+  if (profile.age) lines.push(`Вік: ${profile.age}`);
+  if (Array.isArray(profile.favoriteAnime) && profile.favoriteAnime.length) {
+    lines.push(`Улюблені аніме: ${profile.favoriteAnime.join(', ')}`);
+  }
+  if (Array.isArray(profile.favoriteGenres) && profile.favoriteGenres.length) {
+    lines.push(`Улюблені жанри: ${profile.favoriteGenres.join(', ')}`);
+  }
+  if (Array.isArray(profile.hobbies) && profile.hobbies.length) {
+    lines.push(`Хобі: ${profile.hobbies.join(', ')}`);
+  }
+  if (Array.isArray(profile.projects) && profile.projects.length) {
+    lines.push(`Проєкти: ${profile.projects.join(', ')}`);
+  }
+  if (Array.isArray(profile.preferences) && profile.preferences.length) {
+    lines.push(`Вподобання: ${profile.preferences.join(', ')}`);
+  }
+  if (Array.isArray(profile.facts) && profile.facts.length) {
+    lines.push(`Інші факти: ${profile.facts.join(', ')}`);
+  }
+  return lines.join('\n');
+}
+
+// ---- Автоматичне вилучення довготривалих фактів з повідомлення ----
+
+const MEMORY_EXTRACT_SYSTEM_PROMPT = `Ти — модуль аналізу пам'яті для AI-асистентки Макіми.
+Твоя єдина задача: проаналізувати ОДНЕ повідомлення користувача і поточний профіль, та повернути ТІЛЬКИ JSON
+з новими або оновленими довготривалими фактами про користувача.
+
+Довготривалі факти — це стабільна інформація: ім'я, день народження, вік, улюблені аніме, улюблені жанри,
+хобі, проєкти, над якими працює користувач, стійкі вподобання.
+
+НЕ включай:
+- випадкові одноразові питання;
+- тимчасові емоції чи настрій;
+- технічні питання без особистого контексту (наприклад "як зробити React компонент" — це НЕ факт про користувача);
+- інформацію, якої немає в повідомленні (нічого не вигадуй).
+
+Якщо в повідомленні немає жодного нового довготривалого факту — поверни порожній об'єкт {}.
+
+Формат відповіді — ТІЛЬКИ JSON, без пояснень, без markdown, без \`\`\`.
+Можливі поля: name, birthday, age, favoriteAnime (масив), favoriteGenres (масив), hobbies (масив),
+projects (масив), preferences (масив), facts (масив).
+Включай лише ті поля, для яких дійсно є нова інформація.`;
+
+async function extractMemory(userMessage, profile, env) {
+  const apiKey = String(env.GROQ_API_KEY || '').trim();
+  if (!apiKey) return {};
+  const model = String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
+
+  const profileSnapshot = JSON.stringify({ ...defaultProfile(), ...(profile || {}) });
+
+  try {
+    const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: MEMORY_EXTRACT_SYSTEM_PROMPT },
+          { role: 'user', content: `Поточний профіль:\n${profileSnapshot}\n\nПовідомлення користувача:\n${String(userMessage || '')}` }
+        ],
+        temperature: 0.1,
+        max_tokens: 400
+      })
+    });
+
+    if (!response.ok) {
+      console.error(`[memory] extract API error ${response.status}`);
+      return {};
+    }
+
+    const data = await response.json();
+    const rawText = data?.choices?.[0]?.message?.content?.trim();
+    if (!rawText) return {};
+
+    // Прибираємо можливі markdown-огорожі ```json ... ```
+    const cleaned = rawText.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch (parseError) {
+      console.error('[memory] extract JSON parse failed:', safeError(parseError));
+      return {};
+    }
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return parsed;
+  } catch (error) {
+    console.error('[memory] extract request failed:', safeError(error));
+    return {};
+  }
+}
+
+// ---- Об'єднання нового фрагмента фактів з існуючим профілем ----
+
+const PROFILE_ARRAY_FIELDS = ['favoriteAnime', 'favoriteGenres', 'hobbies', 'projects', 'preferences', 'facts'];
+const PROFILE_STRING_FIELDS = ['name', 'birthday', 'age'];
+
+function mergeProfile(oldProfile, extracted) {
+  const base = { ...defaultProfile(), ...(oldProfile || {}) };
+  if (!extracted || typeof extracted !== 'object') return base;
+
+  const merged = { ...base };
+
+  for (const field of PROFILE_STRING_FIELDS) {
+    const value = extracted[field];
+    if (typeof value === 'string' && value.trim()) {
+      merged[field] = value.trim();
+    }
+  }
+
+  for (const field of PROFILE_ARRAY_FIELDS) {
+    const incoming = extracted[field];
+    if (Array.isArray(incoming) && incoming.length) {
+      const existing = Array.isArray(base[field]) ? base[field] : [];
+      const cleanedIncoming = incoming
+        .filter(item => typeof item === 'string' && item.trim())
+        .map(item => item.trim());
+
+      const combined = [...existing];
+      for (const item of cleanedIncoming) {
+        if (!combined.some(existingItem => existingItem.toLowerCase() === item.toLowerCase())) {
+          combined.push(item);
+        }
+      }
+
+      // Обрізаємо до ліміту, залишаючи НАЙНОВІШІ факти (вони важливіші за старі одноразові згадки)
+      merged[field] = combined.length > PROFILE_ARRAY_MAX_ITEMS
+        ? combined.slice(combined.length - PROFILE_ARRAY_MAX_ITEMS)
+        : combined;
+    }
+  }
+
+  return merged;
 }
 
 async function handleCallbackQuery(callback, env) {
