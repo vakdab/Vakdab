@@ -188,3 +188,10 @@
         height: 8.4rem !important;
     }
 }
+
+
+/* Wide homepage cards: stretch artwork, keep the title on top of it. */
+.genre-carousel--wide .wide-card { position: relative !important; }
+.genre-carousel--wide .wide-card__frame { position: relative !important; overflow: hidden !important; }
+.genre-carousel--wide .wide-card__frame img { width: 100% !important; height: 100% !important; object-fit: fill !important; transform: none !important; }
+.genre-carousel--wide .wide-card__title { position: absolute !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 20 !important; display: block !important; margin: 0 !important; padding: 3rem .75rem .7rem !important; color: #fff !important; background: linear-gradient(to top, rgba(0,0,0,.92), rgba(0,0,0,0)) !important; font-size: .9rem !important; font-weight: 800 !important; line-height: 1.25 !important; text-shadow: 0 1px 3px rgba(0,0,0,.9) !important; }
