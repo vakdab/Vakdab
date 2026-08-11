@@ -36,3 +36,5 @@
 @import url('./legacy.css');
 @import url('./pages/main.css');
 @import url('./player/episodes.css');
+
+@import url('./player/player-polish.css');
