@@ -794,15 +794,15 @@
             gap: 1rem;
         }
         .wide-card {
-            flex: 0 0 220px;
+            flex: 0 0 min(82vw, 420px);
             scroll-snap-align: start;
             cursor: pointer;
         }
         @media (min-width:480px) {
-            .wide-card { flex: 0 0 260px; }
+            .wide-card { flex-basis: min(68vw, 520px); }
         }
         @media (min-width:768px) {
-            .wide-card { flex: 0 0 300px; }
+            .wide-card { flex-basis: min(42vw, 560px); }
         }
         .wide-card__frame {
             position: relative;
