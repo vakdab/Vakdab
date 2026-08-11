@@ -7441,6 +7441,8 @@ function renderProfilePage() {
                 playerPageCurrentSource = 'Основне';
                 const posterUrl = anime.images?.jpg?.large_image_url || '';
                 document.getElementById('playerPosterImg').src = posterUrl;
+                const heroPoster = document.getElementById('playerHeroPoster');
+                if (heroPoster) { heroPoster.src = posterUrl; heroPoster.alt = anime.title || ''; }
                 document.getElementById('playerPosterTitle').textContent = anime.title;
                 document.getElementById('playerKicker').textContent = anime.originalTitle || anime.title;
                 document.getElementById('playerTopbarTitle').textContent = anime.title;
@@ -7516,6 +7518,8 @@ function renderProfilePage() {
                         const logoUrl = tmdbBestLogo(details);
 
                         document.getElementById('playerPosterImg').src = animeUaPoster;
+                        const heroPoster = document.getElementById('playerHeroPoster');
+                        if (heroPoster) { heroPoster.src = animeUaPoster; heroPoster.alt = title || ''; }
                         const tmdbBackdrop = tmdbBestBackdrop(details);
                         document.getElementById('playerBlurBg').style.backgroundImage = `url(${tmdbBackdrop || animeUaPoster})`;
                         document.getElementById('playerPosterTitle').textContent = title;
