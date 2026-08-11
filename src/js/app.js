@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=animeua-posters-1';
+import './app-legacy.js?v=wide-overlay-4';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';
