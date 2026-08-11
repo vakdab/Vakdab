@@ -1,585 +1,136 @@
-/* VakDab player polish — focused visual layer, no behavior changes */
-
+/* VakDab unified player — one source of truth. */
 #playerPageModal {
-  background: rgba(4, 6, 12, .82);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  padding: 20px;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0;
+    background: color-mix(in srgb, var(--bg) 76%, transparent);
+    color: var(--text);
 }
-
 #playerPageModal .modal-content {
-  --player-bg: #0b0e16;
-  --player-panel: rgba(19, 24, 36, .88);
-  --player-panel-soft: rgba(255, 255, 255, .055);
-  --player-line: rgba(255, 255, 255, .11);
-  --player-text: #f5f7fb;
-  --player-muted: #9aa4b5;
-  --player-dim: #697386;
-  --player-accent: #ff8c3b;
-  --player-accent-strong: #ffc98a;
-  background: var(--player-bg);
-  color: var(--player-text);
-  max-width: 1180px;
-  min-height: 0;
-  margin: 0 auto;
-  border: 1px solid rgba(255, 255, 255, .11);
-  border-radius: 24px;
-  box-shadow: 0 30px 100px rgba(0, 0, 0, .55);
-  overflow: hidden;
-}
-
-#playerPageModal .modal-content button,
-#playerPageModal .modal-content [role="button"] {
-  -webkit-tap-highlight-color: transparent;
-}
-
-#playerPageModal .modal-content .hero-img {
-  height: 455px;
-  background-color: #111625;
-  background-position: center 28%;
-}
-
-#playerPageModal .modal-content .hero-img::after {
-  background:
-    linear-gradient(180deg, rgba(7, 10, 18, .18) 0%, rgba(7, 10, 18, .20) 34%, rgba(7, 10, 18, .78) 72%, var(--player-bg) 100%),
-    linear-gradient(90deg, rgba(7, 10, 18, .26), transparent 42%, rgba(7, 10, 18, .22));
-}
-
-#playerPageModal .modal-content .smoke {
-  opacity: .55;
-  filter: blur(28px);
-}
-
-#playerPageModal .modal-content .topbar {
-  top: 18px;
-  left: 22px;
-  right: 22px;
-}
-
-#playerPageModal .modal-content .icon-btn,
-#playerPageModal .modal-content .player-back-btn,
-#playerPageModal .modal-content .player-filter-btn,
-#playerPageModal .modal-content .player-source-chip {
-  background: rgba(9, 13, 23, .58);
-  border-color: rgba(255, 255, 255, .14);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
-  transition: background .2s ease, border-color .2s ease, transform .2s ease;
-}
-
-#playerPageModal .modal-content .icon-btn:hover,
-#playerPageModal .modal-content .player-back-btn:hover,
-#playerPageModal .modal-content .player-filter-btn:hover,
-#playerPageModal .modal-content .player-source-chip:hover {
-  background: rgba(139, 124, 255, .2);
-  border-color: rgba(169, 159, 255, .55);
-  transform: translateY(-1px);
-}
-
-#playerPageModal .modal-content .badge,
-#playerPageModal .modal-content .status-tag,
-#playerPageModal .modal-content .tv-badge {
-  background: rgba(9, 13, 23, .62);
-  border-color: rgba(255, 255, 255, .14);
-  color: var(--player-text);
-}
-
-#playerPageModal .modal-content .tv-badge {
-  top: 72px;
-  left: 22px;
-  color: #fff;
-  background: linear-gradient(135deg, var(--player-accent), #5d73e8);
-  border: 0;
-  box-shadow: 0 8px 24px rgba(109, 94, 238, .32);
-}
-
-#playerPageModal .modal-content .logo-wrap {
-  bottom: 74px;
-  text-align: left;
-  padding: 0 44px;
-}
-
-#playerPageModal .modal-content .kicker {
-  font-size: clamp(24px, 4vw, 42px);
-  line-height: 1.08;
-  letter-spacing: -.035em;
-  max-width: 760px;
-}
-
-#playerPageModal .modal-content .title-logo-img {
-  margin: 0;
-  max-width: min(70%, 560px);
-  max-height: 130px;
-}
-
-#playerPageModal .modal-content .content-top {
-  padding: 30px 44px 8px;
-  text-align: left;
-}
-
-#playerPageModal .modal-content h1.title {
-  color: var(--player-text);
-  font-size: clamp(25px, 3vw, 36px);
-  letter-spacing: -.035em;
-  margin-bottom: 9px;
-}
-
-#playerPageModal .modal-content .meta-line {
-  color: var(--player-muted);
-  font-size: 14px;
-}
-
-#playerPageModal .modal-content .tag-row {
-  justify-content: flex-start;
-  gap: 8px;
-}
-
-#playerPageModal .modal-content .tag,
-#playerPageModal .modal-content .format-pill,
-#playerPageModal .modal-content .season-tab,
-#playerPageModal .modal-content .episode-view-tab,
-#playerPageModal .modal-content .view-tab {
-  background: var(--player-panel-soft);
-  border-color: var(--player-line);
-  color: var(--player-muted);
-  transition: color .2s ease, background .2s ease, border-color .2s ease, transform .2s ease;
-}
-
-#playerPageModal .modal-content .tag:hover,
-#playerPageModal .modal-content .format-pill:hover,
-#playerPageModal .modal-content .season-tab:hover,
-#playerPageModal .modal-content .episode-view-tab:hover,
-#playerPageModal .modal-content .view-tab:hover {
-  color: var(--player-text);
-  background: rgba(139, 124, 255, .13);
-  border-color: rgba(169, 159, 255, .38);
-}
-
-#playerPageModal .modal-content .format-pill.active-format,
-#playerPageModal .modal-content .season-tab.active-season-tab,
-#playerPageModal .modal-content .episode-view-tab.active,
-#playerPageModal .modal-content .view-tab.active,
-#playerPageModal .modal-content .episode-season-btn.active {
-  color: #fff;
-  background: linear-gradient(135deg, var(--player-accent), #2fb6a6);
-  border-color: transparent;
-  box-shadow: 0 8px 20px rgba(112, 98, 230, .25);
-}
-
-#playerPageModal .modal-content .ratings-row {
-  justify-content: flex-start;
-  margin: 18px 44px 12px;
-  gap: 10px;
-}
-
-#playerPageModal .modal-content .rating-card {
-  min-width: 132px;
-  padding: 13px 18px;
-  background: var(--player-panel);
-  border-color: var(--player-line);
-  border-radius: 14px;
-  text-align: left;
-}
-
-#playerPageModal .modal-content .rating-num {
-  color: var(--player-text);
-  font-size: 20px;
-}
-
-#playerPageModal .modal-content .rating-label {
-  color: var(--player-dim);
-}
-
-#playerPageModal .modal-content .actions {
-  justify-content: flex-start;
-  gap: 10px;
-  padding: 4px 44px 18px;
-}
-
-#playerPageModal .modal-content .action-icon {
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--player-line);
-  border-radius: 12px;
-  background: var(--player-panel-soft);
-  color: var(--player-muted);
-  transition: color .2s ease, background .2s ease, border-color .2s ease, transform .2s ease;
-}
-
-#playerPageModal .modal-content .action-icon:hover {
-  color: #fff;
-  background: rgba(139, 124, 255, .16);
-  border-color: rgba(169, 159, 255, .42);
-  transform: translateY(-2px);
-}
-
-#playerPageModal .modal-content .action-icon.liked,
-#playerPageModal .modal-content .action-icon.bookmarked {
-  color: var(--player-accent-strong);
-}
-
-#playerPageModal .modal-content section {
-  padding: 24px 44px 4px;
-  border-top: 1px solid rgba(255, 255, 255, .065);
-}
-
-#playerPageModal .modal-content .section-title {
-  color: var(--player-text);
-  font-size: 17px;
-  letter-spacing: -.02em;
-  margin-bottom: 12px;
-}
-
-#playerPageModal .modal-content .details-text {
-  color: var(--player-muted);
-  line-height: 1.7;
-  font-size: 14px;
-  max-width: 850px;
-}
-
-#playerPageModal .modal-content .synopsis-more-btn {
-  color: var(--player-accent-strong);
-  font-weight: 700;
-}
-
-/* Episodes page */
-#playerPageModal .modal-content .episodes-page {
-  background: var(--player-bg);
-  min-height: 100%;
-  padding: 18px 44px 44px;
-}
-
-#playerPageModal .modal-content .episodes-topbar {
-  min-height: 54px;
-  gap: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, .07);
-}
-
-#playerPageModal .modal-content .back-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: var(--player-panel-soft);
-  border: 1px solid var(--player-line);
-  color: var(--player-text);
-  transition: .2s ease;
-}
-
-#playerPageModal .modal-content .back-btn:hover {
-  background: rgba(139, 124, 255, .16);
-  border-color: rgba(169, 159, 255, .42);
-  transform: translateX(-2px);
-}
-
-#playerPageModal .modal-content .episodes-tabs {
-  gap: 8px;
-}
-
-#playerPageModal .modal-content .ep-tab {
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: var(--player-panel-soft);
-  border: 1px solid var(--player-line);
-  color: var(--player-muted);
-}
-
-#playerPageModal .modal-content .ep-tab:hover {
-  color: var(--player-text);
-  border-color: rgba(169, 159, 255, .42);
-}
-
-#playerPageModal .modal-content .episodes-view-tabs {
-  margin: 20px 0 14px;
-  padding: 4px;
-  width: fit-content;
-  background: rgba(255, 255, 255, .035);
-  border: 1px solid var(--player-line);
-  border-radius: 12px;
-}
-
-#playerPageModal .modal-content .episode-season-row,
-#playerPageModal .modal-content .season-select {
-  padding: 8px 0 18px;
-  gap: 8px;
-}
-
-#playerPageModal .modal-content .episode-season-btn {
-  border-radius: 10px;
-  background: var(--player-panel-soft);
-  border-color: var(--player-line);
-  color: var(--player-muted);
-}
-
-#playerPageModal .modal-content .episodes-grid,
-#playerPageModal .modal-content .ep-grid {
-  gap: 12px;
-}
-
-#playerPageModal .modal-content .episode-grid-card,
-#playerPageModal .modal-content .episode-compact-card,
-#playerPageModal .modal-content .episode-classic-card,
-#playerPageModal .modal-content .ep-card {
-  background: var(--player-panel);
-  border: 1px solid var(--player-line);
-  border-radius: 14px;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, .12);
-  overflow: hidden;
-  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
-}
-
-#playerPageModal .modal-content .episode-grid-card:hover,
-#playerPageModal .modal-content .episode-compact-card:hover,
-#playerPageModal .modal-content .episode-classic-card:hover,
-#playerPageModal .modal-content .ep-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(169, 159, 255, .45);
-  box-shadow: 0 16px 34px rgba(0, 0, 0, .25);
-}
-
-#playerPageModal .modal-content .episode-grid-thumb,
-#playerPageModal .modal-content .ep-thumb {
-  background-color: #161b2a;
-}
-
-#playerPageModal .modal-content .episode-grid-num,
-#playerPageModal .modal-content .ep-num {
-  background: rgba(8, 11, 19, .78);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, .18);
-  border-radius: 9px;
-}
-
-#playerPageModal .modal-content .episode-grid-info,
-#playerPageModal .modal-content .ep-info {
-  background: transparent;
-}
-
-#playerPageModal .modal-content .episode-grid-title,
-#playerPageModal .modal-content .ep-title {
-  color: var(--player-text);
-}
-
-#playerPageModal .modal-content .episode-grid-meta,
-#playerPageModal .modal-content .ep-date {
-  color: var(--player-dim);
-}
-
-/* Video surface and custom controls */
-#playerPageModal .modal-content .player-video-container {
-  background: #05070b;
-  border: 1px solid rgba(255, 255, 255, .1);
-  border-radius: 18px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, .36);
-  overflow: hidden;
-}
-
-#playerPageModal .modal-content .video-overlay-topbar {
-  background: linear-gradient(180deg, rgba(4, 6, 12, .86), transparent);
-  padding: 18px;
-}
-
-#playerPageModal .modal-content .video-overlay-title {
-  color: #fff;
-  font-weight: 700;
-  letter-spacing: -.015em;
-}
-
-#playerPageModal .modal-content .lampa-player-container {
-  border-radius: 16px !important;
-  background: #05070b !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
-}
-
-#playerPageModal .modal-content .lampa-player-container video {
-  background: #05070b;
-}
-
-#playerPageModal .modal-content .lp-controls {
-  padding: 14px 18px 16px !important;
-  background: linear-gradient(to top, rgba(4, 6, 12, .96), rgba(4, 6, 12, .6) 62%, transparent) !important;
-  gap: 10px !important;
-}
-
-#playerPageModal .modal-content .lp-progress-wrap {
-  height: 5px !important;
-  background: rgba(255, 255, 255, .2) !important;
-}
-
-#playerPageModal .modal-content .lp-progress-wrap:hover {
-  height: 7px !important;
-}
-
-#playerPageModal .modal-content .lp-progress-fill {
-  background: linear-gradient(90deg, var(--player-accent), #54c7ff) !important;
-}
-
-#playerPageModal .modal-content .lp-progress-fill::after {
-  background: #fff !important;
-  box-shadow: 0 0 0 4px rgba(139, 124, 255, .22);
-}
-
-#playerPageModal .modal-content .lp-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  color: #fff;
-  opacity: .88;
-  transition: background .18s ease, opacity .18s ease, transform .18s ease;
-}
-
-#playerPageModal .modal-content .lp-btn:hover {
-  background: rgba(139, 124, 255, .2);
-  opacity: 1;
-  transform: none;
-}
-
-#playerPageModal .modal-content .lp-btn svg {
-  fill: currentColor;
-}
-
-#playerPageModal .modal-content .lp-time {
-  color: rgba(255, 255, 255, .78);
-  font-variant-numeric: tabular-nums;
-}
-
-#playerPageModal .modal-content .lp-volume-slider {
-  background: rgba(255, 255, 255, .24);
-}
-
-#playerPageModal .modal-content .lp-volume-slider::-webkit-slider-thumb {
-  background: var(--player-accent-strong);
-  box-shadow: 0 0 0 3px rgba(139, 124, 255, .2);
-}
-
-#playerPageModal .modal-content .lp-center-play-btn {
-  width: 76px;
-  height: 76px;
-  background: linear-gradient(135deg, rgba(139, 124, 255, .94), rgba(85, 112, 232, .94));
-  border: 1px solid rgba(255, 255, 255, .3);
-  box-shadow: 0 18px 50px rgba(68, 57, 170, .42);
-}
-
-#playerPageModal .modal-content .lp-center-play-btn svg {
-  fill: #fff;
-}
-
-#playerPageModal .modal-content .lp-error {
-  background: rgba(8, 11, 19, .94);
-  color: var(--player-text);
-}
-
-#playerPageModal .modal-content .lp-error span {
-  color: var(--player-muted);
-}
-
-@media (max-width: 767px) {
-  #playerPageModal { padding: 0; }
-  #playerPageModal .modal-content {
-    border: 0;
-    border-radius: 0;
-    min-height: 100vh;
-  }
-  #playerPageModal .modal-content .hero-img { height: 350px; }
-  #playerPageModal .modal-content .topbar { left: 16px; right: 16px; top: 14px; }
-  #playerPageModal .modal-content .logo-wrap { bottom: 48px; padding: 0 20px; }
-  #playerPageModal .modal-content .content-top { padding: 24px 20px 6px; }
-  #playerPageModal .modal-content .ratings-row { margin: 16px 20px 10px; }
-  #playerPageModal .modal-content .actions { padding: 4px 20px 18px; }
-  #playerPageModal .modal-content section { padding: 20px 20px 4px; }
-  #playerPageModal .modal-content .episodes-page { padding: 14px 16px 30px; }
-  #playerPageModal .modal-content .episodes-view-tabs { width: 100%; justify-content: space-between; }
-  #playerPageModal .modal-content .episode-view-tab,
-  #playerPageModal .modal-content .view-tab { flex: 1; text-align: center; }
-  #playerPageModal .modal-content .lp-volume-slider { width: 58px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  #playerPageModal .modal-content *,
-  #playerPageModal .modal-content *::before,
-  #playerPageModal .modal-content *::after {
-    transition-duration: .01ms !important;
-    animation-duration: .01ms !important;
-  }
-}
-
-
-/* Reference architecture: poster card + ocean hero */
-#playerPageModal .modal-content .player-hero-poster-wrap {
-  position: absolute;
-  z-index: 4;
-  left: 44px;
-  bottom: 48px;
-  width: 168px;
-  aspect-ratio: 2 / 3;
-  padding: 5px;
-  border: 1px solid rgba(255, 255, 255, .16);
-  border-radius: 18px;
-  background: rgba(10, 27, 38, .72);
-  box-shadow: 0 24px 50px rgba(0, 0, 0, .48);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-#playerPageModal .modal-content .player-hero-poster {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 14px;
-  object-fit: cover;
-  background: #0f2732;
-}
-
-#playerPageModal .modal-content .hero-img {
-  background-color: #0a1b26;
-}
-
-#playerPageModal .modal-content .hero-img::after {
-  background:
-    linear-gradient(180deg, rgba(10, 27, 38, .12) 0%, rgba(10, 27, 38, .25) 35%, rgba(10, 27, 38, .8) 74%, var(--player-bg) 100%),
-    linear-gradient(90deg, rgba(10, 27, 38, .64) 0%, transparent 46%, rgba(10, 27, 38, .22) 100%);
-}
-
-#playerPageModal .modal-content .logo-wrap {
-  left: 248px;
-  right: 38px;
-  bottom: 72px;
-  padding: 0;
-}
-
-#playerPageModal .modal-content .content-top {
-  padding-top: 28px;
-}
-
-#playerPageModal .modal-content .player-source-chip,
-#playerPageModal .modal-content .player-filter-btn,
-#playerPageModal .modal-content .ep-tab {
-  background: #0f2732;
-}
-
-#playerPageModal .modal-content .episodes-view-tabs {
-  background: rgba(15, 39, 50, .72);
-}
-
-#playerPageModal .modal-content .episode-grid-card,
-#playerPageModal .modal-content .episode-compact-card,
-#playerPageModal .modal-content .episode-classic-card,
-#playerPageModal .modal-content .ep-card,
-#playerPageModal .modal-content .rating-card {
-  background: rgba(15, 39, 50, .72);
-}
-
-@media (max-width: 767px) {
-  #playerPageModal .modal-content .hero-img { height: 485px; }
-  #playerPageModal .modal-content .player-hero-poster-wrap {
-    left: 50%;
-    bottom: 126px;
-    width: 132px;
-    transform: translateX(-50%);
-  }
-  #playerPageModal .modal-content .logo-wrap {
-    left: 20px;
-    right: 20px;
-    bottom: 38px;
-    text-align: center;
-  }
-  #playerPageModal .modal-content .kicker { font-size: 21px; }
+    width: min(100%, 1120px);
+    height: 100%;
+    overflow-y: auto;
+    background: var(--bg);
+    color: var(--text);
+    scrollbar-width: thin;
+}
+#playerPageModal .modal-content > .page { display: block !important; }
+#playerPageModal .legacy-episodes-page { display: none !important; }
+#playerPageModal .modal-content * { box-sizing: border-box; }
+#playerPageModal button { font: inherit; }
+
+/* Anime header */
+#playerPageModal .hero-img {
+    position: relative;
+    height: clamp(230px, 45vw, 470px);
+    overflow: hidden;
+    background-color: var(--surface);
+    background-position: center;
+    background-size: cover;
+}
+#playerPageModal .hero-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 35%, var(--bg) 100%);
+}
+#playerPageModal .smoke { position: absolute; inset: 0; z-index: 1; background: inherit; filter: blur(24px); opacity: .28; }
+#playerPageModal .topbar { position: absolute; z-index: 4; top: 16px; left: 16px; right: 16px; display: flex; justify-content: space-between; }
+#playerPageModal .icon-btn {
+    display: inline-flex; width: 42px; height: 42px; align-items: center; justify-content: center;
+    border: 1px solid var(--border); border-radius: 50%; background: color-mix(in srgb, var(--surface) 82%, transparent);
+    color: var(--text); cursor: pointer; backdrop-filter: blur(12px);
+}
+#playerPageModal .top-right-col { display: flex; gap: 8px; align-items: center; }
+#playerPageModal .status-tag, #playerPageModal .badge, #playerPageModal .tv-badge {
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: 9px;
+    background: color-mix(in srgb, var(--surface) 86%, transparent); color: var(--text); font-size: 12px; font-weight: 800;
+}
+#playerPageModal .tv-badge { position: absolute; z-index: 3; top: 74px; left: 18px; }
+#playerPageModal .logo-wrap { position: absolute; z-index: 3; right: 20px; bottom: 28px; left: 20px; }
+#playerPageModal .kicker { max-width: 800px; color: var(--text); font-size: clamp(22px, 4vw, 42px); font-weight: 800; line-height: 1.08; }
+#playerPageModal .title-logo-img { max-width: min(70%, 560px); max-height: 110px; object-fit: contain; object-position: left bottom; }
+#playerPageModal .content-top { padding: 20px 20px 4px; }
+#playerPageModal h1.title { margin: 0 0 8px; color: var(--text); font-size: clamp(24px, 4vw, 38px); }
+#playerPageModal .meta-line, #playerPageModal .details-text { color: var(--text-muted); }
+#playerPageModal .tag-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+#playerPageModal .tag { padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--tag-bg); color: var(--text-secondary); font-size: 11px; }
+#playerPageModal .ratings-row, #playerPageModal .actions { display: flex; gap: 10px; padding: 14px 20px; }
+#playerPageModal .rating-card { min-width: 120px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+#playerPageModal .rating-num { color: var(--text); font-size: 20px; font-weight: 800; }
+#playerPageModal .rating-label { color: var(--text-muted); font-size: 10px; }
+#playerPageModal .actions { padding-top: 4px; }
+#playerPageModal .action-icon { display: inline-flex; width: 42px; height: 42px; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text-secondary); }
+
+/* Video and its native custom controls */
+#playerPageModal .player-section { padding: 12px 20px 0; }
+#playerPageModal .player-video-container {
+    position: relative; display: none; width: 100%; aspect-ratio: 16 / 9; min-height: 220px; overflow: hidden;
+    border: 1px solid var(--border); border-radius: var(--radius-lg); background: #000; box-shadow: var(--shadow-md);
+}
+#playerPageModal .player-video-container.active { display: block; }
+#playerPageModal #playerPageVideo, #playerPageModal .lampa-player-container { position: absolute; inset: 0; width: 100%; height: 100%; }
+#playerPageModal .lampa-player-container { overflow: hidden; background: #000; }
+#playerPageModal .lampa-player-container video { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
+#playerPageModal .video-overlay-topbar { position: absolute; z-index: 8; inset: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 10px; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,.62), transparent); }
+#playerPageModal .video-overlay-topbar .icon-btn { pointer-events: auto; width: 34px; height: 34px; color: #fff; background: rgba(0,0,0,.42); border-color: rgba(255,255,255,.2); }
+#playerPageModal .video-overlay-left { display: flex; flex-direction: column; gap: 4px; max-width: 72%; }
+#playerPageModal .video-overlay-title { overflow: hidden; color: #fff; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+#playerPageModal .video-overlay-episode, #playerPageModal .video-overlay-season { padding: 8px 13px; border-radius: 7px; background: rgba(54,54,54,.72); color: #fff; font-size: 12px; font-weight: 700; backdrop-filter: blur(10px); }
+#playerPageModal .video-overlay-episode:empty, #playerPageModal .video-overlay-season:empty { display: none; }
+#playerPageModal .video-overlay-season { max-width: 28%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#playerPageModal .video-dub-row { position: absolute; z-index: 8; top: 58px; left: 12px; display: flex !important; gap: 6px; max-width: calc(100% - 24px); overflow-x: auto; }
+#playerPageModal .video-dub-row:empty { display: none !important; }
+#playerPageModal .video-dub-row .format-pill { flex: 0 0 auto; padding: 7px 10px; border: 1px solid rgba(255,255,255,.28); border-radius: 8px; background: rgba(0,0,0,.58); color: #fff; }
+#playerPageModal .lp-controls { position: absolute; z-index: 5; right: 0; bottom: 0; left: 0; padding: 10px 12px 8px; color: #fff; background: linear-gradient(0deg, rgba(0,0,0,.82), transparent); }
+#playerPageModal .lp-progress-wrap { height: 4px; margin-bottom: 8px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.3); cursor: pointer; }
+#playerPageModal .lp-progress-fill { height: 100%; background: var(--accent); }
+#playerPageModal .lp-bottom-row { display: flex; align-items: center; gap: 8px; }
+#playerPageModal .lp-btn { display: inline-flex; width: 30px; height: 30px; align-items: center; justify-content: center; padding: 0; border: 0; background: transparent; color: #fff; cursor: pointer; }
+#playerPageModal .lp-time { color: rgba(255,255,255,.9); font-size: 12px; white-space: nowrap; }
+#playerPageModal .lp-spacer { flex: 1; }
+#playerPageModal .lp-volume-wrap { display: flex; align-items: center; gap: 5px; }
+#playerPageModal .lp-volume-slider { width: 76px; accent-color: var(--accent); }
+#playerPageModal .lp-spinner { position: absolute; z-index: 6; top: 50%; left: 50%; width: 34px; height: 34px; border: 3px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; transform: translate(-50%,-50%); animation: playerSpin .8s linear infinite; }
+#playerPageModal .lp-spinner.hidden { display: none; }
+#playerPageModal .lp-center-play { position: absolute; z-index: 4; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+#playerPageModal .lp-center-play-btn { display: grid; width: 76px; height: 76px; place-items: center; border-radius: 50%; background: rgba(0,0,0,.48); color: #fff; }
+@keyframes playerSpin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+/* Overlay-like selectors under the video, matching the reference layout. */
+#playerPageModal .player-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 0 4px; }
+#playerPageModal .player-control-block { min-width: 0; padding: 11px 12px; border-radius: 9px; background: color-mix(in srgb, var(--text) 7%, var(--surface)); }
+#playerPageModal .player-control-label { margin-bottom: 7px; color: var(--text-muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+#playerPageModal .player-control-block:last-child { grid-column: 1 / -1; }
+#playerPageModal .player-dub-controls, #playerPageModal .player-season-select { display: flex; flex-wrap: wrap; gap: 6px; }
+#playerPageModal .player-dub-controls .format-pill, #playerPageModal .player-season-select .season-num, #playerPageModal .player-episode-btn { min-height: 34px; padding: 7px 11px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-secondary); cursor: pointer; font-size: 12px; font-weight: 700; }
+#playerPageModal .player-dub-controls .format-pill.active-format, #playerPageModal .player-season-select .season-num.active, #playerPageModal .player-episode-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+#playerPageModal .player-episode-picker { display: flex; flex-wrap: wrap; gap: 6px; max-height: 150px; overflow-y: auto; }
+#playerPageModal .player-episode-btn { position: relative; min-width: 72px; }
+#playerPageModal .player-episode-title { display: none; }
+#playerPageModal .player-episode-progress { position: absolute; right: 0; bottom: 0; left: 0; height: 3px; background: var(--accent); }
+#playerPageModal .player-empty-episodes { color: var(--text-muted); font-size: 12px; }
+
+/* Cast and synopsis always follow the player. */
+#playerPageModal .modal-content section:not(.player-section) { padding: 18px 20px 4px; border-top: 1px solid var(--border); }
+#playerPageModal .section-title { margin-bottom: 10px; color: var(--text); font-size: 16px; font-weight: 800; }
+#playerPageModal .details-text { max-width: 900px; margin: 0; line-height: 1.65; font-size: 14px; }
+#playerPageModal .hscroll { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; }
+#playerPageModal .hscroll::-webkit-scrollbar { display: none; }
+#playerPageModal .cast-card { flex: 0 0 100px; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+#playerPageModal .cast-avatar { height: 120px; background: var(--tag-bg) center / cover no-repeat; }
+#playerPageModal .cast-name, #playerPageModal .cast-role { padding: 6px 7px 0; color: var(--text); font-size: 11px; font-weight: 700; }
+#playerPageModal .cast-role { padding-top: 2px; padding-bottom: 8px; color: var(--text-muted); font-size: 10px; font-weight: 400; }
+#playerPageModal .synopsis-more-btn { border: 0; background: transparent; color: var(--accent); cursor: pointer; }
+#playerPageModal .player-video-container:fullscreen { width: 100vw; height: 100vh; border-radius: 0; }
+
+@media (min-width: 760px) {
+    #playerPageModal .modal-content { height: min(94vh, 1100px); margin: 3vh auto; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
+    #playerPageModal .content-top, #playerPageModal .ratings-row, #playerPageModal .actions, #playerPageModal .player-section, #playerPageModal .modal-content section:not(.player-section) { padding-right: 42px; padding-left: 42px; }
+    #playerPageModal .player-controls { grid-template-columns: 1fr 1fr 1.6fr; }
+    #playerPageModal .player-control-block:last-child { grid-column: auto; }
 }

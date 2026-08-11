@@ -7426,6 +7426,8 @@ function renderProfilePage() {
             document.getElementById('playerSynopsis').textContent = '';
             document.getElementById('synopsisMoreBtn').style.display = 'none';
             document.getElementById('playerTopbarTitle').textContent = '';
+            document.getElementById('playerVideoEpisodeOverlay').textContent = '';
+            document.getElementById('playerVideoSeasonOverlay').textContent = '';
             document.getElementById('playerKicker').style.display = '';
             const _resetLogoImg = document.getElementById('playerTitleLogo');
             if (_resetLogoImg) { _resetLogoImg.style.display = 'none'; _resetLogoImg.src = ''; }
@@ -7697,6 +7699,8 @@ function renderProfilePage() {
             if (chip) chip.textContent = `Сезон ${playerPageCurrentSeason} · ${playerPageCurrentDub}`;
             const watchFilterValue = document.getElementById('watchFilterValue');
             if (watchFilterValue) watchFilterValue.textContent = `Сезон ${playerPageCurrentSeason} · ${playerPageCurrentDub}`;
+            const videoSeasonEl = document.getElementById('playerVideoSeasonOverlay');
+            if (videoSeasonEl && !playerAnimeIsMovie()) videoSeasonEl.textContent = `Сезон ${playerPageCurrentSeason || '1'}`;
             const dubs = Object.keys(playerPageAnime?.seasons?.[playerPageCurrentSeason] || {}).sort();
             let formatHtml = dubs.map(d => {
                 const active = d === playerPageCurrentDub ? ' active-format' : '';
@@ -8235,7 +8239,11 @@ function renderProfilePage() {
             videoContainer.classList.add('active');
             videoContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const videoTitleEl = document.getElementById('playerTopbarTitle');
-            if (videoTitleEl) videoTitleEl.textContent = playerAnimeIsMovie() ? `${playerPageAnime?.title || ''} · Фільм` : `${playerPageAnime?.title || ''} · Серія ${epNum}`;
+            const videoEpisodeEl = document.getElementById('playerVideoEpisodeOverlay');
+            const videoSeasonEl = document.getElementById('playerVideoSeasonOverlay');
+            if (videoTitleEl) videoTitleEl.textContent = playerPageAnime?.title || '';
+            if (videoEpisodeEl) videoEpisodeEl.textContent = playerAnimeIsMovie() ? 'Фільм' : `Серія ${epNum}`;
+            if (videoSeasonEl) videoSeasonEl.textContent = playerAnimeIsMovie() ? '' : `Сезон ${playerPageCurrentSeason || '1'}`;
             videoDiv.innerHTML = '';
 
             let finalUrl = file;
