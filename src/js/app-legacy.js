@@ -838,55 +838,71 @@ let externalSourceCache = {};
             }
         }
 
+        function normalizeAnimeUrl(href = '') {
+            try {
+                const url = new URL(href, ANIMEUA_BASE);
+                url.hash = '';
+                return url.href;
+            } catch { return ''; }
+        }
+
+        function normalizePosterUrl(src = '') {
+            const value = String(src || '').trim();
+            if (!value || /no-img|placeholder|data:image/i.test(value)) return '';
+            return normalizeAnimeUrl(value);
+        }
+
+        function classifyAnimeuaItem(subtitle = '', href = '') {
+            const text = `${subtitle} ${href}`.toLowerCase();
+            if (/повнометраж|фільм|\bfilm\b|\bmovie\b/.test(text)) return 'movie';
+            if (/\bova\b|\bona\b/.test(text)) return 'ova';
+            return 'tv';
+        }
+
+        function animeTypeLabel(type) {
+            return type === 'movie' ? 'Фільм' : type === 'ova' ? 'OVA/ONA' : 'Серіал';
+        }
+
         function parseAnimeuaCards(doc) {
             const cards = safeQueryAll('.poster', doc);
-            if (cards.length) return cards.map(card => {
+            const parsed = cards.length ? cards.map(card => {
                 const linkEl = card.tagName === 'A' ? card : safeQuery('a', card);
-                const href = linkEl?.getAttribute('href') || '';
+                const href = normalizeAnimeUrl(linkEl?.getAttribute('href') || '');
+                if (!href) return null;
                 const img = safeQuery('img', card);
-                const posterSrc = img?.getAttribute('data-src') || img?.getAttribute('src') || '';
+                const posterSrc = img?.getAttribute('data-src') || img?.getAttribute('data-original') ||
+                    img?.getAttribute('data-lazy-src') || img?.getAttribute('src') || '';
                 const titleEl = safeQuery('.poster__title', card) || safeQuery('h3', card);
-                const title = (titleEl?.textContent || '').trim() || 'Без назви';
-                const synopsisEl = safeQuery('.poster__text', card);
-                const synopsis = (synopsisEl?.textContent || '').trim();
-                const statusEl = safeQuery('.poster__label', card);
-                const status = (statusEl?.textContent || '').trim().toLowerCase();
-                const subtitleEl = safeQuery('.poster__subtitle', card);
-                const subtitle = (subtitleEl?.textContent || '').trim();
-                const genres = subtitle.split(/[\/|,]/).map(v => v.trim()).filter(Boolean);
-                const type = genres.some(v => /повнометраж|фільм/i.test(v)) ? 'movie' : (genres.some(v => /ova/i.test(v)) ? 'ova' : 'tv');
+                const title = (titleEl?.textContent || img?.getAttribute('alt') || '').trim() || 'Без назви';
+                const synopsis = (safeQuery('.poster__text', card)?.textContent || '').trim();
+                const status = (safeQuery('.poster__label', card)?.textContent || '').trim().toLowerCase();
+                const subtitle = (safeQuery('.poster__subtitle', card)?.textContent || '').trim();
+                const genres = Array.from(safeQueryAll('.poster__subtitle li', card)).map(el => el.textContent.trim()).filter(Boolean);
+                const type = classifyAnimeuaItem(`${subtitle} ${genres.join(' ')}`, href);
                 return {
-                    mal_id: href.hashCode(),
-                    title,
-                    url: href.startsWith('http') ? href : ANIMEUA_BASE + href,
-                    images: { jpg: { large_image_url: posterSrc.startsWith('http') ? posterSrc : (posterSrc ?
-                                ANIMEUA_BASE + posterSrc : '') } },
-                    score: null,
-                    year: null,
-                    synopsis,
-                    status,
-                    genres,
-                    type,
-                    from: 'animeua'
+                    mal_id: href.hashCode(), title, url: href,
+                    images: { jpg: { large_image_url: normalizePosterUrl(posterSrc) } },
+                    score: null, year: null, synopsis, status, genres, type,
+                    typeLabel: animeTypeLabel(type), from: 'animeua'
                 };
-            });
-            const links = safeQueryAll('a[href*="/anime/"]', doc);
-            const unique = new Map();
-            links.forEach(a => { if (!unique.has(a.href)) unique.set(a.href, a); });
-            return Array.from(unique.values()).map(a => {
+            }) : Array.from(safeQueryAll('a[href*=".html"]', doc)).map(a => {
+                const href = normalizeAnimeUrl(a.getAttribute('href') || '');
+                if (!href || !/animeua\.club/i.test(href)) return null;
                 const img = safeQuery('img', a);
-                const src = img?.getAttribute('data-src') || img?.getAttribute('src') || '';
-                const title = (safeQuery('.poster__title', a)?.textContent || a.textContent || '').trim();
-                return {
-                    mal_id: a.href.hashCode(),
-                    title: title || 'Без назви',
-                    url: a.href,
-                    images: { jpg: { large_image_url: src.startsWith('http') ? src : ANIMEUA_BASE + src } },
-                    score: null,
-                    year: null,
-                    from: 'animeua'
-                };
+                const title = (safeQuery('.poster__title, .popular__title, .top__title', a)?.textContent || img?.getAttribute('alt') || a.textContent || '').trim();
+                const subtitle = (safeQuery('.poster__subtitle', a)?.textContent || '').trim();
+                const type = classifyAnimeuaItem(subtitle, href);
+                return { mal_id: href.hashCode(), title: title || 'Без назви', url: href,
+                    images: { jpg: { large_image_url: normalizePosterUrl(img?.getAttribute('data-src') || img?.getAttribute('src') || '') } },
+                    score: null, year: null, synopsis: '', status: '', genres: [], type,
+                    typeLabel: animeTypeLabel(type), from: 'animeua' };
             });
+            const unique = new Map();
+            parsed.filter(Boolean).forEach(item => {
+                const key = item.url.toLowerCase();
+                if (!unique.has(key)) unique.set(key, item);
+            });
+            return Array.from(unique.values());
         }
 
         async function fetchAnimeuaMain(page) { const doc = await fetchUA(`${ANIMEUA_BASE}/page/${page}/`); return parseAnimeuaCards(
@@ -4516,8 +4532,8 @@ let externalSourceCache = {};
                     image.classList.add('img--loaded');
                 }
                 const typeBadge = card.querySelector('[data-role="type"]');
-                if (typeBadge && info?.type) {
-                    typeBadge.textContent = info.type;
+                if (typeBadge && item.typeLabel) {
+                    typeBadge.textContent = item.typeLabel;
                     typeBadge.hidden = false;
                 }
                 card.dataset.tmdbType = info?.type || '';
@@ -4579,7 +4595,7 @@ let externalSourceCache = {};
             <div class="anime-card" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
               <div class="anime-poster">
                 <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='${ANIME_CARD_PLACEHOLDER}'">
-                <span class="anime-card-type" data-role="type" hidden></span>
+                <span class="anime-card-type" data-role="type">${escapeHtml(a.typeLabel || animeTypeLabel(a.type))}</span>
               </div>
               <div class="anime-title-under">${title}</div>
             </div>`;
@@ -4688,7 +4704,7 @@ let externalSourceCache = {};
 
                 let html = '';
 
-                const newestWide = newestItems.slice(0, 80).map(a => ({ ...a, typeLabel: 'Серіал' }));
+                const newestWide = newestItems.filter(a => a.type !== 'movie').slice(0, 80).map(a => ({ ...a, typeLabel: animeTypeLabel(a.type) }));
 
                 html += buildHistoryCarouselSectionHtml();
                 html += buildScheduleWidgetHtml(scheduleItems);
@@ -4698,7 +4714,7 @@ let externalSourceCache = {};
                     if (items.length === 0) continue;
                     const sectionId = 'genre-' + genre.slug;
                     if (genre.slug === 'film') {
-                        const filmWide = items.map(a => ({ ...a, typeLabel: 'Фільм' }));
+                        const filmWide = items.filter(a => a.type === 'movie').map(a => ({ ...a, typeLabel: 'Фільм' }));
                         html += buildAnimeCarouselSectionHtml(sectionId, genre.name, filmWide, 'wide');
                     } else {
                         html += buildAnimeCarouselSectionHtml(sectionId, genre.name, items, 'wide');
@@ -7826,21 +7842,27 @@ function renderProfilePage() {
             return isAnimation && isJapanese ? 'Аніме' : 'Серіал';
         }
 
+        function tmdbIsLikelyAnime(hit) {
+            if (!hit || !(hit.genre_ids || []).includes(16)) return false;
+            const language = (hit.original_language || '').toLowerCase();
+            const countries = hit.origin_country || [];
+            return ['ja', 'ko', 'zh'].includes(language) || countries.some(c => ['JP', 'KR', 'CN'].includes(c));
+        }
+
         function tmdbCandidateScore(hit, query) {
             const q = tmdbNormalizeTitle(query);
             const title = tmdbNormalizeTitle(hit.title || hit.name || hit.original_name || '');
+            if (!q || !title) return -1000;
             let score = 0;
-            if (title === q) score += 100;
-            if (title.includes(q) || q.includes(title)) score += 35;
+            if (title === q) score += 140;
+            else if (title.includes(q) || q.includes(title)) score += 45;
             const qTokens = new Set(q.split(' ').filter(Boolean));
             const overlap = title.split(' ').filter(t => qTokens.has(t)).length;
-            score += overlap * 8;
-            if (hit.media_type === 'tv') score += 10;
-            if ((hit.genre_ids || []).includes(16)) score += 18;
-            if (['ja', 'ko'].includes((hit.original_language || '').toLowerCase())) score += 16;
-            if ((hit.origin_country || []).includes('JP')) score += 12;
+            score += overlap * 10;
+            if (hit.media_type === 'tv') score += 8;
+            if (tmdbIsLikelyAnime(hit)) score += 35;
             if (hit.poster_path) score += 5;
-            return score + Math.min(Number(hit.popularity) || 0, 20) * 0.15;
+            return score + Math.min(Number(hit.popularity) || 0, 20) * 0.1;
         }
 
         const tmdbCardFrameCache = new Map();
@@ -7885,20 +7907,24 @@ function renderProfilePage() {
             }
             if (candidates.length) {
                 const unique = [...new Map(candidates.map(r => [`${r.media_type}:${r.id}`, r])).values()];
-                unique.sort((a, b) => tmdbCandidateScore(b, b._query) - tmdbCandidateScore(a, a._query));
                 const preferredType = anime.type === 'movie' ? 'movie' : 'tv';
-                const hit = unique.find(item => item.media_type === preferredType) || unique[0];
-                const frame = await fetchTmdbCardFrame(hit.id, hit.media_type, hit.backdrop_path);
-                const info = {
-                    poster: tmdbImgUrl(hit.poster_path, 'w500'),
-                    frame,
-                    rating: hit.vote_average ? Number(hit.vote_average).toFixed(1) : null,
-                    type: tmdbCardType(hit),
-                    mediaType: hit.media_type,
-                    tmdbId: hit.id
-                };
-                tmdbAnimeCache[cacheKey] = info;
-                return info;
+                const matching = unique
+                    .filter(item => item.media_type === preferredType && tmdbIsLikelyAnime(item))
+                    .sort((a, b) => tmdbCandidateScore(b, b._query) - tmdbCandidateScore(a, a._query));
+                const hit = matching[0];
+                if (hit && tmdbCandidateScore(hit, hit._query) >= 45) {
+                    const frame = await fetchTmdbCardFrame(hit.id, hit.media_type, hit.backdrop_path);
+                    const info = {
+                        poster: tmdbImgUrl(hit.poster_path, 'w500'),
+                        frame,
+                        rating: hit.vote_average ? Number(hit.vote_average).toFixed(1) : null,
+                        type: tmdbCardType(hit),
+                        mediaType: hit.media_type,
+                        tmdbId: hit.id
+                    };
+                    tmdbAnimeCache[cacheKey] = info;
+                    return info;
+                }
             }
             tmdbAnimeCache[cacheKey] = null;
             return null;
@@ -7914,11 +7940,14 @@ function renderProfilePage() {
                     const res = await fetch(`${TMDB_BASE}/search/multi?api_key=${TMDB_API_KEY}&language=uk-UA&query=${encodeURIComponent(q)}&include_adult=false`);
                     if (!res.ok) continue;
                     const data = await res.json();
-                    const candidates = (data.results || []).filter(r => (r.media_type === 'tv' || r.media_type === 'movie'));
+                    const expectedType = playerAnimeIsMovie(anime) ? 'movie' : 'tv';
+                    const candidates = (data.results || []).filter(r =>
+                        r.media_type === expectedType && r.poster_path && tmdbIsLikelyAnime(r)
+                    );
                     if (candidates.length) {
-                        const preferredType = playerAnimeIsMovie(anime) ? 'movie' : 'tv';
                         const ranked = [...candidates].sort((a, b) => tmdbCandidateScore(b, q) - tmdbCandidateScore(a, q));
-                        const best = ranked.find(r => r.media_type === preferredType) || ranked[0];
+                        const best = ranked[0];
+                        if (tmdbCandidateScore(best, q) < 45) continue;
                         const info = { id: best.id, mediaType: best.media_type, poster: best.poster_path, backdrop: best.backdrop_path, seasonsCache: {} };
                         tmdbAnimeCache[cacheKey] = info;
                         return info;
