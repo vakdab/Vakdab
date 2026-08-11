@@ -8418,3 +8418,25 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     object-fit: cover;
     object-position: center;
 }
+
+
+/* Final homepage wide-card overlay fix. */
+.wide-card { position: relative !important; }
+.wide-card .wide-card__frame { position: relative !important; }
+.wide-card .wide-card__frame img { object-fit: fill !important; }
+.wide-card .wide-card__title {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 10 !important;
+    margin: 0 !important;
+    padding: 2.8rem .75rem .7rem !important;
+    color: #fff !important;
+    background: linear-gradient(to top, rgba(0,0,0,.9), transparent) !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,.8) !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+}
