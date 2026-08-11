@@ -61,7 +61,15 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 0%, transparent) 30%, color-mix(in srgb, var(--bg) 55%, transparent) 72%, var(--bg) 100%);
+    /* Змінено градієнт: тепер верхня частина повністю прозора,
+       затемнення починається пізніше і стає м'якшим */
+    background: linear-gradient(
+        180deg,
+        transparent 0%,
+        transparent 50%,
+        color-mix(in srgb, var(--bg) 60%, transparent) 80%,
+        var(--bg) 100%
+    );
 }
 #playerPageModal .smoke {
     position: absolute;
