@@ -1,4 +1,16 @@
-/* VakDab unified player — one source of truth. */
+/* VakDab unified player — one source of truth.
+   Theming: every surface below (hero, info panel, tabs, controls, cast,
+   synopsis) is built entirely from your existing tokens (--bg, --text,
+   --surface, --border, --accent, --text-muted, --text-secondary,
+   --tag-bg, --radius, --radius-lg, --shadow-md, --shadow-lg). Nothing
+   here is hardcoded to light or dark, so whatever theme the site is in,
+   the player matches it automatically the moment those variables flip.
+   The video chrome itself (the controls drawn directly on top of the
+   picture — topbar, dub row, scrubber, center play, spinner) stays a
+   fixed dark/white pair on purpose: that's standard player UX (YouTube,
+   Netflix, etc. all do this) because it has to stay legible over any
+   frame of any video, regardless of site theme. */
+
 #playerPageModal {
     position: fixed;
     inset: 0;
@@ -9,6 +21,8 @@
     padding: 0;
     background: color-mix(in srgb, var(--bg) 76%, transparent);
     color: var(--text);
+    backdrop-filter: blur(6px);
+    animation: vdPlayerFade .18s ease;
 }
 #playerPageModal .modal-content {
     width: min(100%, 1120px);
@@ -17,13 +31,24 @@
     background: var(--bg);
     color: var(--text);
     scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+    animation: vdPlayerRise .28s cubic-bezier(.16,1,.3,1);
 }
+#playerPageModal .modal-content::-webkit-scrollbar { width: 8px; }
+#playerPageModal .modal-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
 #playerPageModal .modal-content > .page { display: block !important; }
 #playerPageModal .legacy-episodes-page { display: none !important; }
 #playerPageModal .modal-content * { box-sizing: border-box; }
 #playerPageModal button { font: inherit; }
+#playerPageModal *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* Anime header */
+@keyframes vdPlayerFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vdPlayerRise { from { opacity: 0; transform: translateY(14px) scale(.99); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+    #playerPageModal, #playerPageModal .modal-content { animation: none; }
+}
+
+/* ============== Anime header ============== */
 #playerPageModal .hero-img {
     position: relative;
     height: clamp(230px, 45vw, 470px);
@@ -36,101 +61,383 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, transparent 35%, var(--bg) 100%);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 0%, transparent) 30%, color-mix(in srgb, var(--bg) 55%, transparent) 72%, var(--bg) 100%);
 }
-#playerPageModal .smoke { position: absolute; inset: 0; z-index: 1; background: inherit; filter: blur(24px); opacity: .28; }
-#playerPageModal .topbar { position: absolute; z-index: 4; top: 16px; left: 16px; right: 16px; display: flex; justify-content: space-between; }
+#playerPageModal .smoke {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: inherit;
+    filter: blur(28px) saturate(1.15);
+    opacity: .32;
+    transform: scale(1.08);
+}
+#playerPageModal .topbar {
+    position: absolute;
+    z-index: 4;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    display: flex;
+    justify-content: space-between;
+}
 #playerPageModal .icon-btn {
-    display: inline-flex; width: 42px; height: 42px; align-items: center; justify-content: center;
-    border: 1px solid var(--border); border-radius: 50%; background: color-mix(in srgb, var(--surface) 82%, transparent);
-    color: var(--text); cursor: pointer; backdrop-filter: blur(12px);
+    display: inline-flex;
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    color: var(--text);
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-md);
+    transition: transform .15s ease, background-color .15s ease, border-color .15s ease;
 }
+#playerPageModal .icon-btn:hover { background: color-mix(in srgb, var(--surface) 96%, transparent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+#playerPageModal .icon-btn:active { transform: scale(.92); }
 #playerPageModal .top-right-col { display: flex; gap: 8px; align-items: center; }
-#playerPageModal .status-tag, #playerPageModal .badge, #playerPageModal .tv-badge {
-    padding: 8px 12px; border: 1px solid var(--border); border-radius: 9px;
-    background: color-mix(in srgb, var(--surface) 86%, transparent); color: var(--text); font-size: 12px; font-weight: 800;
+#playerPageModal .status-tag,
+#playerPageModal .badge,
+#playerPageModal .tv-badge {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--surface) 86%, transparent);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 800;
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-md);
 }
 #playerPageModal .tv-badge { position: absolute; z-index: 3; top: 74px; left: 18px; }
-#playerPageModal .logo-wrap { position: absolute; z-index: 3; right: 20px; bottom: 28px; left: 20px; }
-#playerPageModal .kicker { max-width: 800px; color: var(--text); font-size: clamp(22px, 4vw, 42px); font-weight: 800; line-height: 1.08; }
-#playerPageModal .title-logo-img { max-width: min(70%, 560px); max-height: 110px; object-fit: contain; object-position: left bottom; }
-#playerPageModal .content-top { padding: 20px 20px 4px; }
-#playerPageModal h1.title { margin: 0 0 8px; color: var(--text); font-size: clamp(24px, 4vw, 38px); }
-#playerPageModal .meta-line, #playerPageModal .details-text { color: var(--text-muted); }
-#playerPageModal .tag-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
-#playerPageModal .tag { padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--tag-bg); color: var(--text-secondary); font-size: 11px; }
-#playerPageModal .ratings-row, #playerPageModal .actions { display: flex; gap: 10px; padding: 14px 20px; }
-#playerPageModal .rating-card { min-width: 120px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
-#playerPageModal .rating-num { color: var(--text); font-size: 20px; font-weight: 800; }
-#playerPageModal .rating-label { color: var(--text-muted); font-size: 10px; }
-#playerPageModal .actions { padding-top: 4px; }
-#playerPageModal .action-icon { display: inline-flex; width: 42px; height: 42px; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text-secondary); }
+#playerPageModal .logo-wrap {
+    position: absolute;
+    z-index: 3;
+    right: 20px;
+    bottom: 28px;
+    left: 20px;
+}
+#playerPageModal .kicker {
+    max-width: 800px;
+    color: var(--text);
+    font-size: clamp(22px, 4vw, 42px);
+    font-weight: 800;
+    line-height: 1.08;
+    text-shadow: 0 2px 18px color-mix(in srgb, var(--bg) 70%, transparent);
+}
+#playerPageModal .title-logo-img {
+    max-width: min(70%, 560px);
+    max-height: 110px;
+    object-fit: contain;
+    object-position: left bottom;
+    filter: drop-shadow(0 4px 18px color-mix(in srgb, var(--bg) 65%, transparent));
+}
 
-/* Video and its native custom controls */
+#playerPageModal .content-top { padding: 20px 20px 4px; }
+#playerPageModal h1.title { margin: 0 0 8px; color: var(--text); font-size: clamp(24px, 4vw, 38px); font-weight: 800; letter-spacing: -.01em; }
+#playerPageModal .meta-line,
+#playerPageModal .details-text { color: var(--text-muted); }
+#playerPageModal .tag-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+#playerPageModal .tag {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--tag-bg);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    transition: border-color .15s ease, color .15s ease;
+}
+#playerPageModal .tag:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); color: var(--text); }
+
+#playerPageModal .ratings-row,
+#playerPageModal .actions { display: flex; gap: 10px; padding: 14px 20px; flex-wrap: wrap; }
+#playerPageModal .rating-card {
+    min-width: 120px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+#playerPageModal .rating-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+#playerPageModal .rating-num { color: var(--text); font-size: 20px; font-weight: 800; }
+#playerPageModal .rating-label { color: var(--text-muted); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+#playerPageModal .actions { padding-top: 4px; }
+#playerPageModal .action-icon {
+    display: inline-flex;
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: transform .15s ease, color .15s ease, border-color .15s ease;
+}
+#playerPageModal .action-icon:hover { color: var(--text); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+#playerPageModal .action-icon:active { transform: scale(.92); }
+#playerPageModal .action-icon.is-active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+
+/* ============== Video and its native custom controls ============== */
 #playerPageModal .player-section { padding: 12px 20px 0; }
 #playerPageModal .player-video-container {
-    position: relative; display: none; width: 100%; aspect-ratio: 16 / 9; min-height: 220px; overflow: hidden;
-    border: 1px solid var(--border); border-radius: var(--radius-lg); background: #000; box-shadow: var(--shadow-md);
+    position: relative;
+    display: none;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: 220px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: #000;
+    box-shadow: var(--shadow-lg);
 }
 #playerPageModal .player-video-container.active { display: block; }
-#playerPageModal #playerPageVideo, #playerPageModal .lampa-player-container { position: absolute; inset: 0; width: 100%; height: 100%; }
+#playerPageModal #playerPageVideo,
+#playerPageModal .lampa-player-container { position: absolute; inset: 0; width: 100%; height: 100%; }
 #playerPageModal .lampa-player-container { overflow: hidden; background: #000; }
 #playerPageModal .lampa-player-container video { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
-#playerPageModal .video-overlay-topbar { position: absolute; z-index: 8; inset: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 10px; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,.62), transparent); }
-#playerPageModal .video-overlay-topbar .icon-btn { pointer-events: auto; width: 34px; height: 34px; color: #fff; background: rgba(0,0,0,.42); border-color: rgba(255,255,255,.2); }
+
+/* fixed dark chrome — deliberate, see note at top of file */
+#playerPageModal .video-overlay-topbar {
+    position: absolute;
+    z-index: 8;
+    inset: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(0,0,0,.62), transparent);
+}
+#playerPageModal .video-overlay-topbar .icon-btn {
+    pointer-events: auto;
+    width: 34px;
+    height: 34px;
+    color: #fff;
+    background: rgba(0,0,0,.42);
+    border-color: rgba(255,255,255,.2);
+}
+#playerPageModal .video-overlay-topbar .icon-btn:hover { background: rgba(0,0,0,.6); }
 #playerPageModal .video-overlay-left { display: flex; flex-direction: column; gap: 4px; max-width: 72%; }
 #playerPageModal .video-overlay-title { overflow: hidden; color: #fff; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-#playerPageModal .video-overlay-episode, #playerPageModal .video-overlay-season { padding: 8px 13px; border-radius: 7px; background: rgba(54,54,54,.72); color: #fff; font-size: 12px; font-weight: 700; backdrop-filter: blur(10px); }
-#playerPageModal .video-overlay-episode:empty, #playerPageModal .video-overlay-season:empty { display: none; }
+#playerPageModal .video-overlay-episode,
+#playerPageModal .video-overlay-season {
+    padding: 8px 13px;
+    border-radius: 7px;
+    background: rgba(54,54,54,.72);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    backdrop-filter: blur(10px);
+}
+#playerPageModal .video-overlay-episode:empty,
+#playerPageModal .video-overlay-season:empty { display: none; }
 #playerPageModal .video-overlay-season { max-width: 28%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#playerPageModal .video-dub-row { position: absolute; z-index: 8; top: 58px; left: 12px; display: flex !important; gap: 6px; max-width: calc(100% - 24px); overflow-x: auto; }
+#playerPageModal .video-dub-row {
+    position: absolute;
+    z-index: 8;
+    top: 58px;
+    left: 12px;
+    display: flex !important;
+    gap: 6px;
+    max-width: calc(100% - 24px);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+#playerPageModal .video-dub-row::-webkit-scrollbar { display: none; }
 #playerPageModal .video-dub-row:empty { display: none !important; }
-#playerPageModal .video-dub-row .format-pill { flex: 0 0 auto; padding: 7px 10px; border: 1px solid rgba(255,255,255,.28); border-radius: 8px; background: rgba(0,0,0,.58); color: #fff; }
-#playerPageModal .lp-controls { position: absolute; z-index: 5; right: 0; bottom: 0; left: 0; padding: 10px 12px 8px; color: #fff; background: linear-gradient(0deg, rgba(0,0,0,.82), transparent); }
-#playerPageModal .lp-progress-wrap { height: 4px; margin-bottom: 8px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.3); cursor: pointer; }
-#playerPageModal .lp-progress-fill { height: 100%; background: var(--accent); }
+#playerPageModal .video-dub-row .format-pill {
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 8px;
+    background: rgba(0,0,0,.58);
+    color: #fff;
+    transition: background-color .15s ease, border-color .15s ease;
+}
+#playerPageModal .video-dub-row .format-pill:hover { background: rgba(0,0,0,.78); }
+#playerPageModal .video-dub-row .format-pill.active-format { background: #fff; color: #111; border-color: #fff; }
+
+#playerPageModal .lp-controls {
+    position: absolute;
+    z-index: 5;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 10px 12px 8px;
+    color: #fff;
+    background: linear-gradient(0deg, rgba(0,0,0,.82), transparent);
+    opacity: 1;
+    transition: opacity .2s ease;
+}
+#playerPageModal .lp-progress-wrap {
+    height: 4px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: rgba(255,255,255,.3);
+    cursor: pointer;
+    transition: height .12s ease;
+}
+#playerPageModal .lp-progress-wrap:hover { height: 6px; }
+#playerPageModal .lp-progress-fill { height: 100%; background: var(--accent); position: relative; }
 #playerPageModal .lp-bottom-row { display: flex; align-items: center; gap: 8px; }
-#playerPageModal .lp-btn { display: inline-flex; width: 30px; height: 30px; align-items: center; justify-content: center; padding: 0; border: 0; background: transparent; color: #fff; cursor: pointer; }
-#playerPageModal .lp-time { color: rgba(255,255,255,.9); font-size: 12px; white-space: nowrap; }
+#playerPageModal .lp-btn {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color .15s ease, transform .1s ease;
+}
+#playerPageModal .lp-btn:hover { background: rgba(255,255,255,.12); }
+#playerPageModal .lp-btn:active { transform: scale(.9); }
+#playerPageModal .lp-time { color: rgba(255,255,255,.9); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 #playerPageModal .lp-spacer { flex: 1; }
 #playerPageModal .lp-volume-wrap { display: flex; align-items: center; gap: 5px; }
 #playerPageModal .lp-volume-slider { width: 76px; accent-color: var(--accent); }
-#playerPageModal .lp-spinner { position: absolute; z-index: 6; top: 50%; left: 50%; width: 34px; height: 34px; border: 3px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; transform: translate(-50%,-50%); animation: playerSpin .8s linear infinite; }
+#playerPageModal .lp-spinner {
+    position: absolute;
+    z-index: 6;
+    top: 50%;
+    left: 50%;
+    width: 34px;
+    height: 34px;
+    border: 3px solid rgba(255,255,255,.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    transform: translate(-50%,-50%);
+    animation: playerSpin .8s linear infinite;
+}
 #playerPageModal .lp-spinner.hidden { display: none; }
 #playerPageModal .lp-center-play { position: absolute; z-index: 4; top: 50%; left: 50%; transform: translate(-50%,-50%); }
-#playerPageModal .lp-center-play-btn { display: grid; width: 76px; height: 76px; place-items: center; border-radius: 50%; background: rgba(0,0,0,.48); color: #fff; }
+#playerPageModal .lp-center-play-btn {
+    display: grid;
+    width: 76px;
+    height: 76px;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(0,0,0,.48);
+    color: #fff;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 8px 30px rgba(0,0,0,.4);
+    transition: transform .18s ease, background-color .18s ease;
+}
+#playerPageModal .lp-center-play-btn:hover { background: var(--accent); transform: scale(1.06); }
 @keyframes playerSpin { to { transform: translate(-50%,-50%) rotate(360deg); } }
 
-/* Overlay-like selectors under the video, matching the reference layout. */
+/* ============== Selectors under the video ============== */
 #playerPageModal .player-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 0 4px; }
-#playerPageModal .player-control-block { min-width: 0; padding: 11px 12px; border-radius: 9px; background: color-mix(in srgb, var(--text) 7%, var(--surface)); }
-#playerPageModal .player-control-label { margin-bottom: 7px; color: var(--text-muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+#playerPageModal .player-control-block {
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--text) 4%, var(--surface));
+}
+#playerPageModal .player-control-label {
+    margin-bottom: 7px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
 #playerPageModal .player-control-block:last-child { grid-column: 1 / -1; }
-#playerPageModal .player-dub-controls, #playerPageModal .player-season-select { display: flex; flex-wrap: wrap; gap: 6px; }
-#playerPageModal .player-dub-controls .format-pill, #playerPageModal .player-season-select .season-num, #playerPageModal .player-episode-btn { min-height: 34px; padding: 7px 11px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-secondary); cursor: pointer; font-size: 12px; font-weight: 700; }
-#playerPageModal .player-dub-controls .format-pill.active-format, #playerPageModal .player-season-select .season-num.active, #playerPageModal .player-episode-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
-#playerPageModal .player-episode-picker { display: flex; flex-wrap: wrap; gap: 6px; max-height: 150px; overflow-y: auto; }
-#playerPageModal .player-episode-btn { position: relative; min-width: 72px; }
+#playerPageModal .player-dub-controls,
+#playerPageModal .player-season-select { display: flex; flex-wrap: wrap; gap: 6px; }
+#playerPageModal .player-dub-controls .format-pill,
+#playerPageModal .player-season-select .season-num,
+#playerPageModal .player-episode-btn {
+    min-height: 34px;
+    padding: 7px 11px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    transition: background-color .15s ease, color .15s ease, border-color .15s ease, transform .1s ease;
+}
+#playerPageModal .player-dub-controls .format-pill:hover,
+#playerPageModal .player-season-select .season-num:hover,
+#playerPageModal .player-episode-btn:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); color: var(--text); }
+#playerPageModal .player-dub-controls .format-pill:active,
+#playerPageModal .player-season-select .season-num:active,
+#playerPageModal .player-episode-btn:active { transform: scale(.96); }
+#playerPageModal .player-dub-controls .format-pill.active-format,
+#playerPageModal .player-season-select .season-num.active,
+#playerPageModal .player-episode-btn.active {
+    background: var(--text);
+    color: var(--bg);
+    border-color: var(--text);
+}
+#playerPageModal .player-episode-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 150px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+#playerPageModal .player-episode-btn { position: relative; min-width: 72px; overflow: hidden; }
 #playerPageModal .player-episode-title { display: none; }
 #playerPageModal .player-episode-progress { position: absolute; right: 0; bottom: 0; left: 0; height: 3px; background: var(--accent); }
-#playerPageModal .player-empty-episodes { color: var(--text-muted); font-size: 12px; }
+#playerPageModal .player-empty-episodes { color: var(--text-muted); font-size: 12px; padding: 4px 2px; }
 
-/* Cast and synopsis always follow the player. */
+/* ============== Cast and synopsis ============== */
 #playerPageModal .modal-content section:not(.player-section) { padding: 18px 20px 4px; border-top: 1px solid var(--border); }
 #playerPageModal .section-title { margin-bottom: 10px; color: var(--text); font-size: 16px; font-weight: 800; }
 #playerPageModal .details-text { max-width: 900px; margin: 0; line-height: 1.65; font-size: 14px; }
 #playerPageModal .hscroll { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; }
 #playerPageModal .hscroll::-webkit-scrollbar { display: none; }
-#playerPageModal .cast-card { flex: 0 0 100px; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+#playerPageModal .cast-card {
+    flex: 0 0 100px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+#playerPageModal .cast-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
 #playerPageModal .cast-avatar { height: 120px; background: var(--tag-bg) center / cover no-repeat; }
-#playerPageModal .cast-name, #playerPageModal .cast-role { padding: 6px 7px 0; color: var(--text); font-size: 11px; font-weight: 700; }
+#playerPageModal .cast-name,
+#playerPageModal .cast-role { padding: 6px 7px 0; color: var(--text); font-size: 11px; font-weight: 700; }
 #playerPageModal .cast-role { padding-top: 2px; padding-bottom: 8px; color: var(--text-muted); font-size: 10px; font-weight: 400; }
-#playerPageModal .synopsis-more-btn { border: 0; background: transparent; color: var(--accent); cursor: pointer; }
+#playerPageModal .synopsis-more-btn { border: 0; background: transparent; color: var(--accent); cursor: pointer; font-weight: 700; }
+#playerPageModal .synopsis-more-btn:hover { text-decoration: underline; }
 #playerPageModal .player-video-container:fullscreen { width: 100vw; height: 100vh; border-radius: 0; }
 
 @media (min-width: 760px) {
-    #playerPageModal .modal-content { height: min(94vh, 1100px); margin: 3vh auto; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
-    #playerPageModal .content-top, #playerPageModal .ratings-row, #playerPageModal .actions, #playerPageModal .player-section, #playerPageModal .modal-content section:not(.player-section) { padding-right: 42px; padding-left: 42px; }
+    #playerPageModal .modal-content {
+        height: min(94vh, 1100px);
+        margin: 3vh auto;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+    }
+    #playerPageModal .content-top,
+    #playerPageModal .ratings-row,
+    #playerPageModal .actions,
+    #playerPageModal .player-section,
+    #playerPageModal .modal-content section:not(.player-section) { padding-right: 42px; padding-left: 42px; }
     #playerPageModal .player-controls { grid-template-columns: 1fr 1fr 1.6fr; }
     #playerPageModal .player-control-block:last-child { grid-column: auto; }
 }
