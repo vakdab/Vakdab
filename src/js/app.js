@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=wide-overlay-4';
+import './app-legacy.js?v=player-unified-1';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';
