@@ -4468,8 +4468,8 @@ let externalSourceCache = {};
         );
 
         // ====================================================================
-        //  Лінива TMDB-енріхментація карток (постер + рейтинг) — універсальна
-        //  для всіх .anime-card на сайті (каталог, жанрові каруселі на головній).
+        //  Лінива TMDB-енріхментація метаданих — універсальна
+        //  для всіх .anime-card на сайті. Постери завжди залишаються AnimeUA.
         //  Вантажимо TMDB лише коли картка реально потрапляє у видиму область,
         //  щоб не робити тисячі зайвих запитів і не підвішувати сторінку.
         // ====================================================================
@@ -4507,20 +4507,9 @@ let externalSourceCache = {};
                 const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
                 const info = await Promise.race([fetchTmdbCardInfo(item), timeoutPromise]);
                 if (!document.body.contains(card)) return;
-                if (info?.frame || info?.poster) {
-                    const img = card.querySelector('.anime-poster img');
-                    if (img) {
-                        const swap = new Image();
-                        const artwork = info.frame || info.poster;
-                        swap.onload = () => {
-                            if (document.body.contains(card)) {
-                                img.src = artwork;
-                                img.classList.add('tmdb-episode-frame');
-                            }
-                        };
-                        swap.src = artwork;
-                    }
-                }
+                // Poster source of truth for homepage cards is AnimeUA.
+                // TMDB is allowed to enrich metadata only and must never replace
+                // the poster or turn it into an episode frame.
                 const typeBadge = card.querySelector('[data-role="type"]');
                 if (typeBadge && info?.type) {
                     typeBadge.textContent = info.type;
@@ -4547,8 +4536,7 @@ let externalSourceCache = {};
             return animeCardObserver;
         }
 
-        // TMDB-кадри працюють тільки на головній. Інші сторінки не витрачають
-        // запити й зберігають оригінальні постери AnimeUA.
+        // TMDB додає лише тип/метадані. Оригінальні постери AnimeUA не змінюються.
         function observeAnimeCardsForTmdb(container) {
             if (!container || Router.currentRoute !== 'main' || typeof IntersectionObserver === 'undefined') return;
             const observer = getAnimeCardObserver();
@@ -4640,8 +4628,8 @@ let externalSourceCache = {};
         const genreList = Object.entries(GENRE_MAP).map(([name, slug]) => ({ name, slug }));
         let homeSectionsRequestId = 0;
 
-        // TMDB is the source of truth for homepage artwork. Preload only the
-        // first visible cards before painting the sections; the rest stay lazy.
+        // Homepage artwork comes from AnimeUA. Preload only lightweight
+        // metadata for the first visible cards; posters are never replaced.
         async function preloadHomepageTmdbGroups(groups, limit = 6) {
             const visible = groups.flatMap(group => (group || []).slice(0, limit));
             let cursor = 0;
@@ -4650,7 +4638,6 @@ let externalSourceCache = {};
                     const item = visible[cursor++];
                     try {
                         const info = await fetchTmdbCardInfo(item);
-                        if (info?.poster) item.tmdbPoster = info.poster;
                         if (info?.type) item.tmdbType = info.type;
                     } catch (e) {
                         console.error('Homepage TMDB preload failed', { title: item?.title, error: e });
