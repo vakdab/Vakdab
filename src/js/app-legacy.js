@@ -4523,12 +4523,13 @@ let externalSourceCache = {};
                 const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
                 const info = await Promise.race([fetchTmdbCardInfo(item), timeoutPromise]);
                 if (!document.body.contains(card)) return;
-                // Homepage wide cards use TMDB landscape artwork when available.
-                // Regular portrait cards keep their AnimeUA poster as a fallback.
+                // Підміняємо постер лише після суворого збігу TMDB.
+                // Якщо TMDB нічого не знайшов, картка безпечно лишається з AnimeUA.
                 const image = card.querySelector('img');
-                if (card.classList.contains('wide-card') && image && info?.frame) {
-                    image.src = info.frame;
-                    image.dataset.tmdbFrame = 'true';
+                const verifiedImage = card.classList.contains('wide-card') ? (info?.frame || info?.poster) : info?.poster;
+                if (image && verifiedImage) {
+                    image.src = verifiedImage;
+                    image.dataset.tmdbArtwork = 'true';
                     image.classList.add('img--loaded');
                 }
                 const typeBadge = card.querySelector('[data-role="type"]');
@@ -7815,11 +7816,29 @@ function renderProfilePage() {
         let tmdbAnimeCache = {};
 
         function cleanTitleForTmdb(title) {
-            return (title || '')
+            return String(title || '')
                 .replace(/\[[^\]]*\]/g, '')
                 .replace(/[«»"'`]/g, '')
                 .replace(/\s+/g, ' ')
                 .trim();
+        }
+
+        function tmdbQueryVariants(anime) {
+            const values = [anime?.originalTitle, anime?.title];
+            try {
+                const slug = decodeURIComponent(new URL(anime?.url || '').pathname.split('/').pop() || '')
+                    .replace(/\.(html?|php)$/i, '').replace(/^\d+[-_]+/, '').replace(/[-_]+/g, ' ');
+                values.push(slug);
+            } catch { /* URL may be absent on external items */ }
+            const variants = [];
+            values.filter(Boolean).forEach(value => {
+                const clean = cleanTitleForTmdb(value);
+                if (!clean) return;
+                variants.push(clean);
+                variants.push(clean.replace(/\b(?:сезон|season|частина|part|cour|tv|серіал)\s*\d+\b/gi, '').replace(/\s+/g, ' ').trim());
+                variants.push(clean.split(/\s+[/:|]\s+/)[0].trim());
+            });
+            return [...new Set(variants.filter(v => v.length >= 2))].slice(0, 8);
         }
 
         function tmdbImgUrl(path, size) {
@@ -7891,18 +7910,21 @@ function renderProfilePage() {
             if (!anime || !TMDB_API_KEY) return null;
             const cacheKey = 'card:' + (anime.url || anime.title);
             if (tmdbAnimeCache[cacheKey] !== undefined) return tmdbAnimeCache[cacheKey];
-            const queries = [...new Set([cleanTitleForTmdb(anime.originalTitle), cleanTitleForTmdb(anime.title)].filter(Boolean))];
+            const queries = tmdbQueryVariants(anime);
+            const languages = ['uk-UA', 'en-US', 'ru-RU'];
             let candidates = [];
             for (const q of queries) {
-                try {
-                    const res = await fetch(`${TMDB_BASE}/search/multi?api_key=${TMDB_API_KEY}&language=en-US&query=${encodeURIComponent(q)}&include_adult=false`);
-                    if (!res.ok) continue;
-                    const data = await res.json();
-                    candidates.push(...(data.results || []).filter(r =>
-                        (r.media_type === 'tv' || r.media_type === 'movie') && r.poster_path
-                    ).map(r => ({ ...r, _query: q })));
-                } catch (e) {
-                    console.error('TMDB card search failed', { query: q, error: e });
+                for (const language of languages) {
+                    try {
+                        const res = await fetch(`${TMDB_BASE}/search/multi?api_key=${TMDB_API_KEY}&language=${language}&query=${encodeURIComponent(q)}&include_adult=false`);
+                        if (!res.ok) continue;
+                        const data = await res.json();
+                        candidates.push(...(data.results || []).filter(r =>
+                            (r.media_type === 'tv' || r.media_type === 'movie') && r.poster_path
+                        ).map(r => ({ ...r, _query: q })));
+                    } catch (e) {
+                        console.error('TMDB card search failed', { query: q, language, error: e });
+                    }
                 }
             }
             if (candidates.length) {
@@ -7934,25 +7956,29 @@ function renderProfilePage() {
             if (!anime || !TMDB_API_KEY) return null;
             const cacheKey = anime.url || anime.title;
             if (tmdbAnimeCache[cacheKey] !== undefined) return tmdbAnimeCache[cacheKey];
-            const queries = [cleanTitleForTmdb(anime.originalTitle), cleanTitleForTmdb(anime.title)].filter(Boolean);
+            const queries = tmdbQueryVariants(anime);
+            const languages = ['uk-UA', 'en-US', 'ru-RU'];
+            const expectedType = playerAnimeIsMovie(anime) ? 'movie' : 'tv';
+            let allCandidates = [];
             for (const q of queries) {
-                try {
-                    const res = await fetch(`${TMDB_BASE}/search/multi?api_key=${TMDB_API_KEY}&language=uk-UA&query=${encodeURIComponent(q)}&include_adult=false`);
-                    if (!res.ok) continue;
-                    const data = await res.json();
-                    const expectedType = playerAnimeIsMovie(anime) ? 'movie' : 'tv';
-                    const candidates = (data.results || []).filter(r =>
-                        r.media_type === expectedType && r.poster_path && tmdbIsLikelyAnime(r)
-                    );
-                    if (candidates.length) {
-                        const ranked = [...candidates].sort((a, b) => tmdbCandidateScore(b, q) - tmdbCandidateScore(a, q));
-                        const best = ranked[0];
-                        if (tmdbCandidateScore(best, q) < 45) continue;
-                        const info = { id: best.id, mediaType: best.media_type, poster: best.poster_path, backdrop: best.backdrop_path, seasonsCache: {} };
-                        tmdbAnimeCache[cacheKey] = info;
-                        return info;
-                    }
-                } catch (e) { console.warn('TMDB search failed', e); }
+                for (const language of languages) {
+                    try {
+                        const res = await fetch(`${TMDB_BASE}/search/multi?api_key=${TMDB_API_KEY}&language=${language}&query=${encodeURIComponent(q)}&include_adult=false`);
+                        if (!res.ok) continue;
+                        const data = await res.json();
+                        allCandidates.push(...(data.results || []).filter(r =>
+                            r.media_type === expectedType && r.poster_path && tmdbIsLikelyAnime(r)
+                        ).map(r => ({ ...r, _query: q })));
+                    } catch (e) { console.warn('TMDB search failed', { query: q, language, error: e }); }
+                }
+            }
+            const ranked = [...new Map(allCandidates.map(r => [`${r.media_type}:${r.id}`, r])).values()]
+                .sort((a, b) => tmdbCandidateScore(b, b._query) - tmdbCandidateScore(a, a._query));
+            const best = ranked[0];
+            if (best && tmdbCandidateScore(best, best._query) >= 45) {
+                const info = { id: best.id, mediaType: best.media_type, poster: best.poster_path, backdrop: best.backdrop_path, seasonsCache: {} };
+                tmdbAnimeCache[cacheKey] = info;
+                return info;
             }
             tmdbAnimeCache[cacheKey] = null;
             return null;
