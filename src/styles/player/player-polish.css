@@ -189,7 +189,7 @@
 #playerPageModal .player-section { padding: 12px 20px 0; }
 #playerPageModal .player-video-container {
     position: relative;
-    display: none;
+    display: block;
     width: 100%;
     aspect-ratio: 16 / 9;
     min-height: 220px;
@@ -441,3 +441,15 @@
     #playerPageModal .player-controls { grid-template-columns: 1fr 1fr 1.6fr; }
     #playerPageModal .player-control-block:last-child { grid-column: auto; }
 }
+
+
+
+/* Final player cleanup: one visible video and one selector panel. */
+#playerPageModal #playerFormatRow,
+#playerPageModal #playerVideoDubRow,
+#playerPageModal #videoBackBtn,
+#playerPageModal #playerVideoEpisodeOverlay,
+#playerPageModal #playerVideoSeasonOverlay,
+#playerPageModal #playerPlayFab { display: none !important; }
+#playerPageModal .player-video-container { display: block !important; visibility: visible !important; opacity: 1 !important; }
+#playerPageModal .player-controls { position: relative; z-index: 2; }
