@@ -7702,7 +7702,7 @@ function renderProfilePage() {
                 const active = d === playerPageCurrentDub ? ' active-format' : '';
                 return `<span class="format-pill${active}" data-dub="${d}" style="cursor:pointer;">${String(d).toUpperCase()}</span>`;
             }).join('');
-            [document.getElementById('playerFormatRow'), document.getElementById('watchFormatRow'), document.getElementById('playerVideoDubRow')].forEach(formatRow => {
+            [document.getElementById('playerFormatRow'), document.getElementById('watchFormatRow'), document.getElementById('playerVideoDubRow'), document.getElementById('playerDubControls')].forEach(formatRow => {
                 if (!formatRow) return;
                 formatRow.innerHTML = formatHtml;
                 formatRow.querySelectorAll('.format-pill[data-dub]').forEach(pill => {
@@ -7738,9 +7738,8 @@ function renderProfilePage() {
             if (!playerPageAnime) { showToast('Аніме ще завантажується'); return; }
             // Episodes now live below the anime information on the same page.
             document.getElementById('page-info')?.classList.add('active');
-            document.getElementById('page-episodes')?.classList.add('active');
-            const episodesSection = document.querySelector('#playerPageModal #page-episodes');
-            if (episodesSection) episodesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const episodesSection = document.querySelector('#playerPageModal #playerVideoContainer');
+            if (episodesSection) episodesSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const cw = findContinueWatching(playerPageAnime);
             if (cw && cw.progress < 95 && (cw.season !== playerPageCurrentSeason || cw.dub !== playerPageCurrentDub)) {
                 playerPageCurrentSeason = cw.season;
@@ -7753,8 +7752,7 @@ function renderProfilePage() {
         function closeWatchPage() {
             // Return to the details section without changing the page.
             document.getElementById('page-info')?.classList.add('active');
-            document.getElementById('page-episodes')?.classList.add('active');
-            const infoSection = document.querySelector('#playerPageModal #page-info');
+            const infoSection = document.querySelector('#playerPageModal #playerControls');
             if (infoSection) infoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
             if (playerPagePlayer) {
                 if (playerPagePlayer._timeUpdateListener && playerPagePlayer.videoRef) {
@@ -8170,25 +8168,30 @@ function renderProfilePage() {
         }
 
         function renderAllEpisodeViews(episodes, epMap, tmdbInfo) {
-            const gridContainer = document.getElementById('episodeViewGrid');
+            const picker = document.getElementById('episodeViewGrid');
             const compactContainer = document.getElementById('episodeViewCompact');
             const classicContainer = document.getElementById('episodeViewClassic');
-            if (!gridContainer) return;
+            if (!picker) return;
             if (!episodes.length) {
-                const emptyHtml = '<div class="review-empty" style="min-width:100%;">Серії ще не знайдені на цьому джерелі.</div>';
-                gridContainer.innerHTML = emptyHtml;
-                if (compactContainer) compactContainer.innerHTML = emptyHtml;
-                if (classicContainer) classicContainer.innerHTML = emptyHtml;
+                const emptyHtml = '<div class="player-empty-episodes">Серії ще не знайдені на цьому джерелі.</div>';
+                picker.innerHTML = emptyHtml;
+                if (compactContainer) compactContainer.innerHTML = '';
+                if (classicContainer) classicContainer.innerHTML = '';
                 return;
             }
-            const posterUrl = playerPageAnime?.images?.jpg?.large_image_url || '';
-            gridContainer.innerHTML = episodes.map(ep => buildGridCard(ep, posterUrl, epMap, tmdbInfo)).join('');
-            if (compactContainer) compactContainer.innerHTML = episodes.map(ep => buildCompactRow(ep, posterUrl, epMap, tmdbInfo)).join('');
-            if (classicContainer) classicContainer.innerHTML = episodes.map(ep => buildClassicRow(ep, posterUrl, epMap, tmdbInfo)).join('');
-            attachEpisodeClickHandlers(gridContainer);
-            attachEpisodeClickHandlers(compactContainer);
-            attachEpisodeClickHandlers(classicContainer);
-            if (window.lucide) lucide.createIcons();
+            // The new player deliberately uses buttons instead of a poster grid.
+            picker.innerHTML = episodes.map(ep => {
+                const active = String(ep.episode) === String(playerPageCurrentEpisodeNum) ? ' active' : '';
+                const progress = getEpisodeProgress(ep.episode);
+                return `<button type="button" class="player-episode-btn${active}" data-file="${escapeHtml(ep.file || '')}" data-episode="${escapeHtml(ep.episode || '')}">
+                    <span class="player-episode-number">${escapeHtml(ep.episode || '—')}</span>
+                    <span class="player-episode-title">${escapeHtml(ep.title || `Серія ${ep.episode || ''}`)}</span>
+                    ${progress > 0 ? `<span class="player-episode-progress" style="--progress:${progress}%"></span>` : ''}
+                </button>`;
+            }).join('');
+            if (compactContainer) compactContainer.innerHTML = '';
+            if (classicContainer) classicContainer.innerHTML = '';
+            attachEpisodeClickHandlers(picker);
         }
 
         async function buildEpisodeViews() {
@@ -8230,6 +8233,7 @@ function renderProfilePage() {
             const videoContainer = document.getElementById('playerVideoContainer');
             const videoDiv = document.getElementById('playerPageVideo');
             videoContainer.classList.add('active');
+            videoContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const videoTitleEl = document.getElementById('playerTopbarTitle');
             if (videoTitleEl) videoTitleEl.textContent = playerAnimeIsMovie() ? `${playerPageAnime?.title || ''} · Фільм` : `${playerPageAnime?.title || ''} · Серія ${epNum}`;
             videoDiv.innerHTML = '';
@@ -8813,7 +8817,7 @@ function renderProfilePage() {
 
         document.getElementById('playerShareBtn').addEventListener('click', shareAnime);
         document.getElementById('playerPlayFab')?.addEventListener('click', openWatchPage);
-        document.getElementById('watchBackBtn').addEventListener('click', closeWatchPage);
+        document.getElementById('watchBackBtn')?.addEventListener('click', closeWatchPage);
         document.getElementById('watchSourcePill')?.addEventListener('click', () => openBottomSheet('source'));
         document.getElementById('watchFilterPill')?.addEventListener('click', () => openBottomSheet('full'));
 
