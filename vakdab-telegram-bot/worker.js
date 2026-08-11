@@ -3,6 +3,7 @@ const ANIMEUA_BASE = 'https://animeua.club';
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
+const MAX_HISTORY_MESSAGES = 20; // ~10 user/assistant turns kept per chat
 
 const userStates = new Map();
 let popularCache = null;
@@ -83,10 +84,16 @@ async function handleMessage(message, env) {
     return;
   }
 
+  if (/^\/forget(?:@\w+)?(?:\s|$)/i.test(text)) {
+    await clearUserHistory(chatId, env);
+    await sendMessage(chatId, 'Гаразд, я забула нашу попередню розмову. Починаємо з чистого аркуша 🙂', { reply_markup: backHomeKeyboard() }, env);
+    return;
+  }
+
   if (/^\/(?:makima|ask)(?:@\w+)?(?:\s|$)/i.test(text)) {
     const prompt = text.replace(/^\/(?:makima|ask)(?:@\w+)?\s*/i, '').trim();
     if (!prompt) {
-      await sendMessage(chatId, 'Напиши запит після команди, наприклад: <code>/makima розкажи про Макіму</code>.', {}, env);
+      await sendMessage(chatId, 'Напиши запит після команди, наприклад: <code>/makima розкажи про останні новини аніме</code>.', {}, env);
       return;
     }
     await handleMakimaMessage(chatId, prompt, env);
@@ -124,10 +131,29 @@ async function handleMessage(message, env) {
 // ==================== GROQ / Makima ====================
 const GROQ_API_BASE = 'https://api.groq.com/openai/v1';
 
+const MAKIMA_SYSTEM_PROMPT = `Тебе звати Макіма. Ти — теплий, розумний співрозмовник і помічник, який спілкується
+природно та дружньо, як жива людина, а не як персонаж з аніме чи учасник рольової гри. Не грай роль, не додавай
+театральних ремарок чи опису дій — просто розмовляй по-людськи, щиро й просто.
+
+Ти добре пам'ятаєш попередні повідомлення цього користувача (вони йдуть нижче в історії розмови) і використовуєш
+цей контекст, щоб відповідати послідовно — так, ніби добре знайома людина, а не бот, що щоразу забуває розмову.
+Якщо користувач раніше щось розповідав про себе (ім'я, вподобання, плани), природно врахуй це, коли це доречно,
+без зайвого нагадування "я пам'ятаю, що ти казав...".
+
+Допомагай знаходити інформацію, відповідай по суті, став уточнювальні запитання, коли це справді потрібно, і
+будь одночасно корисним помічником і приємним другом у спілкуванні. Відповідай українською мовою, без зайвого
+пафосу чи награності.`;
+
 async function handleMakimaMessage(chatId, userMessage, env) {
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
-    const responseText = await callMakimaAI(userMessage, env);
+    const history = await getUserHistory(chatId, env);
+    const responseText = await callMakimaAI(userMessage, history, env);
+
+    history.push({ role: 'user', content: userMessage });
+    history.push({ role: 'assistant', content: responseText });
+    await saveUserHistory(chatId, history, env);
+
     await sendMessage(chatId, escapeHtml(responseText), { reply_markup: backHomeKeyboard() }, env);
   } catch (error) {
     console.error('[makima] failed:', safeError(error));
@@ -135,10 +161,16 @@ async function handleMakimaMessage(chatId, userMessage, env) {
   }
 }
 
-async function callMakimaAI(prompt, env) {
+async function callMakimaAI(prompt, history, env) {
   const apiKey = String(env.GROQ_API_KEY || '').trim();
   if (!apiKey) throw new Error('GROQ_API_KEY is not configured');
   const model = String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
+
+  const messages = [
+    { role: 'system', content: MAKIMA_SYSTEM_PROMPT },
+    ...history,
+    { role: 'user', content: String(prompt || '') }
+  ];
 
   const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
     method: 'POST',
@@ -148,10 +180,7 @@ async function callMakimaAI(prompt, env) {
     },
     body: JSON.stringify({
       model,
-      messages: [
-        { role: 'system', content: 'Ти Макіма з аніме Людина-бензопила. Відповідай українською мовою. Будь спокійною, розумною, загадковою.' },
-        { role: 'user', content: String(prompt || '') }
-      ],
+      messages,
       temperature: 0.7,
       max_tokens: 1024
     })
@@ -162,6 +191,45 @@ async function callMakimaAI(prompt, env) {
   const generatedText = data?.choices?.[0]?.message?.content?.trim();
   if (!generatedText) throw new Error('Groq returned no text');
   return generatedText;
+}
+
+// ==================== Persistent per-user memory (Cloudflare KV) ====================
+// Requires a KV namespace bound in wrangler.toml as `MAKIMA_MEMORY`, e.g.:
+//   [[kv_namespaces]]
+//   binding = "MAKIMA_MEMORY"
+//   id = "<your-kv-namespace-id>"
+// If the binding is missing, memory is silently skipped (Makima still works, just without recall).
+
+async function getUserHistory(chatId, env) {
+  if (!env.MAKIMA_MEMORY) return [];
+  try {
+    const raw = await env.MAKIMA_MEMORY.get(`history:${chatId}`);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('[memory] read failed:', safeError(error));
+    return [];
+  }
+}
+
+async function saveUserHistory(chatId, history, env) {
+  if (!env.MAKIMA_MEMORY) return;
+  try {
+    const trimmed = history.slice(-MAX_HISTORY_MESSAGES);
+    await env.MAKIMA_MEMORY.put(`history:${chatId}`, JSON.stringify(trimmed));
+  } catch (error) {
+    console.error('[memory] write failed:', safeError(error));
+  }
+}
+
+async function clearUserHistory(chatId, env) {
+  if (!env.MAKIMA_MEMORY) return;
+  try {
+    await env.MAKIMA_MEMORY.delete(`history:${chatId}`);
+  } catch (error) {
+    console.error('[memory] clear failed:', safeError(error));
+  }
 }
 
 async function handleCallbackQuery(callback, env) {
