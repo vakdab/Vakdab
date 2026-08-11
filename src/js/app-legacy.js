@@ -7415,7 +7415,7 @@ function renderProfilePage() {
             playerPageCurrentAnimeUrl = url;
             playerPageHistoryUpdated = false;
             playerPageWatchStartTime = 0;
-            document.getElementById('playerVideoContainer').classList.remove('active');
+            document.getElementById('playerVideoContainer').classList.add('active');
             document.getElementById('playerPageVideo').innerHTML = '';
             document.getElementById('episodeViewGrid').innerHTML = '';
             document.getElementById('episodeViewCompact').innerHTML = '';
@@ -7426,8 +7426,8 @@ function renderProfilePage() {
             document.getElementById('playerSynopsis').textContent = '';
             document.getElementById('synopsisMoreBtn').style.display = 'none';
             document.getElementById('playerTopbarTitle').textContent = '';
-            document.getElementById('playerVideoEpisodeOverlay').textContent = '';
-            document.getElementById('playerVideoSeasonOverlay').textContent = '';
+            document.getElementById('playerVideoEpisodeOverlay')?.replaceChildren();
+            document.getElementById('playerVideoSeasonOverlay')?.replaceChildren();
             document.getElementById('playerKicker').style.display = '';
             const _resetLogoImg = document.getElementById('playerTitleLogo');
             if (_resetLogoImg) { _resetLogoImg.style.display = 'none'; _resetLogoImg.src = ''; }
@@ -7699,14 +7699,12 @@ function renderProfilePage() {
             if (chip) chip.textContent = `Сезон ${playerPageCurrentSeason} · ${playerPageCurrentDub}`;
             const watchFilterValue = document.getElementById('watchFilterValue');
             if (watchFilterValue) watchFilterValue.textContent = `Сезон ${playerPageCurrentSeason} · ${playerPageCurrentDub}`;
-            const videoSeasonEl = document.getElementById('playerVideoSeasonOverlay');
-            if (videoSeasonEl && !playerAnimeIsMovie()) videoSeasonEl.textContent = `Сезон ${playerPageCurrentSeason || '1'}`;
             const dubs = Object.keys(playerPageAnime?.seasons?.[playerPageCurrentSeason] || {}).sort();
             let formatHtml = dubs.map(d => {
                 const active = d === playerPageCurrentDub ? ' active-format' : '';
                 return `<span class="format-pill${active}" data-dub="${d}" style="cursor:pointer;">${String(d).toUpperCase()}</span>`;
             }).join('');
-            [document.getElementById('playerFormatRow'), document.getElementById('watchFormatRow'), document.getElementById('playerVideoDubRow'), document.getElementById('playerDubControls')].forEach(formatRow => {
+            [document.getElementById('playerDubControls')].forEach(formatRow => {
                 if (!formatRow) return;
                 formatRow.innerHTML = formatHtml;
                 formatRow.querySelectorAll('.format-pill[data-dub]').forEach(pill => {
@@ -8234,16 +8232,13 @@ function renderProfilePage() {
             if (!file) { showToast('Немає файлу для відтворення'); return; }
             playerPageActiveEpisodeFile = file;
             playerPageCurrentEpisodeNum = epNum || '1';
+            renderAllEpisodeViews(getCurrentEpisodes(), null, null);
             const videoContainer = document.getElementById('playerVideoContainer');
             const videoDiv = document.getElementById('playerPageVideo');
             videoContainer.classList.add('active');
             videoContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const videoTitleEl = document.getElementById('playerTopbarTitle');
-            const videoEpisodeEl = document.getElementById('playerVideoEpisodeOverlay');
-            const videoSeasonEl = document.getElementById('playerVideoSeasonOverlay');
             if (videoTitleEl) videoTitleEl.textContent = playerPageAnime?.title || '';
-            if (videoEpisodeEl) videoEpisodeEl.textContent = playerAnimeIsMovie() ? 'Фільм' : `Серія ${epNum}`;
-            if (videoSeasonEl) videoSeasonEl.textContent = playerAnimeIsMovie() ? '' : `Сезон ${playerPageCurrentSeason || '1'}`;
             videoDiv.innerHTML = '';
 
             let finalUrl = file;
@@ -8824,7 +8819,6 @@ function renderProfilePage() {
         }
 
         document.getElementById('playerShareBtn').addEventListener('click', shareAnime);
-        document.getElementById('playerPlayFab')?.addEventListener('click', openWatchPage);
         document.getElementById('watchBackBtn')?.addEventListener('click', closeWatchPage);
         document.getElementById('watchSourcePill')?.addEventListener('click', () => openBottomSheet('source'));
         document.getElementById('watchFilterPill')?.addEventListener('click', () => openBottomSheet('full'));
