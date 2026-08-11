@@ -7838,7 +7838,7 @@ function renderProfilePage() {
                 variants.push(clean.replace(/\b(?:сезон|season|частина|part|cour|tv|серіал)\s*\d+\b/gi, '').replace(/\s+/g, ' ').trim());
                 variants.push(clean.split(/\s+[/:|]\s+/)[0].trim());
             });
-            return [...new Set(variants.filter(v => v.length >= 2))].slice(0, 8);
+            return [...new Set(variants.filter(v => v.length >= 2))].slice(0, 6);
         }
 
         function tmdbImgUrl(path, size) {
@@ -7911,7 +7911,7 @@ function renderProfilePage() {
             const cacheKey = 'card:' + (anime.url || anime.title);
             if (tmdbAnimeCache[cacheKey] !== undefined) return tmdbAnimeCache[cacheKey];
             const queries = tmdbQueryVariants(anime);
-            const languages = ['uk-UA', 'en-US', 'ru-RU'];
+            const languages = ['uk-UA', 'en-US'];
             let candidates = [];
             for (const q of queries) {
                 for (const language of languages) {
