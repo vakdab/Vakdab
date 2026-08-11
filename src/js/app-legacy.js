@@ -4796,8 +4796,8 @@ let externalSourceCache = {};
                                 ${badges.length ? `<div class="wide-card__badges">${badges.join('')}</div>` : ''}
                                 <div class="wide-card__play"><i class="fas fa-play"></i></div>
                                 ${progressHtml}
+                                <div class="wide-card__title">${title}</div>
                               </div>
-                              <div class="wide-card__title">${title}</div>
                             </div>
                           `;
             }).join('');
