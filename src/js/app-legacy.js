@@ -4507,9 +4507,14 @@ let externalSourceCache = {};
                 const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
                 const info = await Promise.race([fetchTmdbCardInfo(item), timeoutPromise]);
                 if (!document.body.contains(card)) return;
-                // Poster source of truth for homepage cards is AnimeUA.
-                // TMDB is allowed to enrich metadata only and must never replace
-                // the poster or turn it into an episode frame.
+                // Homepage wide cards use TMDB landscape artwork when available.
+                // Regular portrait cards keep their AnimeUA poster as a fallback.
+                const image = card.querySelector('img');
+                if (card.classList.contains('wide-card') && image && info?.frame) {
+                    image.src = info.frame;
+                    image.dataset.tmdbFrame = 'true';
+                    image.classList.add('img--loaded');
+                }
                 const typeBadge = card.querySelector('[data-role="type"]');
                 if (typeBadge && info?.type) {
                     typeBadge.textContent = info.type;
@@ -4536,11 +4541,11 @@ let externalSourceCache = {};
             return animeCardObserver;
         }
 
-        // TMDB додає лише тип/метадані. Оригінальні постери AnimeUA не змінюються.
+        // TMDB додає тип і wide-карткам landscape artwork; portrait-картки мають fallback AnimeUA.
         function observeAnimeCardsForTmdb(container) {
             if (!container || Router.currentRoute !== 'main' || typeof IntersectionObserver === 'undefined') return;
             const observer = getAnimeCardObserver();
-            container.querySelectorAll('.anime-card').forEach(card => observer.observe(card));
+            container.querySelectorAll('.anime-card, .wide-card').forEach(card => observer.observe(card));
         }
 
         function renderCards(list) {
@@ -4687,16 +4692,16 @@ let externalSourceCache = {};
 
                 html += buildHistoryCarouselSectionHtml();
                 html += buildScheduleWidgetHtml(scheduleItems);
-                html += buildAnimeCarouselSectionHtml('genre-newest', 'Нові аніме', newestWide);
+                html += buildAnimeCarouselSectionHtml('genre-newest', 'Нові аніме', newestWide, 'wide');
 
                 for (const { genre, items } of results) {
                     if (items.length === 0) continue;
                     const sectionId = 'genre-' + genre.slug;
                     if (genre.slug === 'film') {
                         const filmWide = items.map(a => ({ ...a, typeLabel: 'Фільм' }));
-                        html += buildAnimeCarouselSectionHtml(sectionId, genre.name, filmWide);
+                        html += buildAnimeCarouselSectionHtml(sectionId, genre.name, filmWide, 'wide');
                     } else {
-                        html += buildAnimeCarouselSectionHtml(sectionId, genre.name, items);
+                        html += buildAnimeCarouselSectionHtml(sectionId, genre.name, items, 'wide');
                     }
                 }
 
