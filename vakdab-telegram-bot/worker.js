@@ -3,7 +3,10 @@ const ANIMEUA_BASE = 'https://animeua.club';
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
-const MAX_HISTORY_MESSAGES = 20; // ~10 user/assistant turns kept per chat
+// Історія розмови в KV зберігається ПОВНІСТЮ і без обрізання — не втрачається навіть після /start.
+// В саму AI-модель на кожен запит надсилається лише "хвіст" останніх повідомлень (ліміт контексту API),
+// але повний архів лишається у пам'яті користувача.
+const MAX_CONTEXT_MESSAGES_FOR_API = 40; // ~20 останніх user/assistant реплік передаються моделі як контекст
 
 const userStates = new Map();
 let popularCache = null;
@@ -75,17 +78,20 @@ async function handleMessage(message, env) {
   const chatId = message.chat?.id;
   if (!chatId) return;
 
+  const memoryKey = getMemoryKey(message.from);
   const text = (message.text || '').trim();
 
   if (text === '/start') {
     const state = getState(chatId);
     state.screen = 'home';
+    // /start скидає лише поточний екран меню — розмова з Макімою і вся її пам'ять
+    // по ніку користувача НЕ видаляються.
     await sendMessage(chatId, 'Привіт! Оберіть дію:', { reply_markup: mainKeyboard() }, env);
     return;
   }
 
   if (/^\/forget(?:@\w+)?(?:\s|$)/i.test(text)) {
-    await clearUserHistory(chatId, env);
+    await clearUserHistory(memoryKey, env);
     await sendMessage(chatId, 'Гаразд, я забула нашу попередню розмову. Починаємо з чистого аркуша 🙂', { reply_markup: backHomeKeyboard() }, env);
     return;
   }
@@ -96,14 +102,14 @@ async function handleMessage(message, env) {
       await sendMessage(chatId, 'Напиши запит після команди, наприклад: <code>/makima розкажи про останні новини аніме</code>.', {}, env);
       return;
     }
-    await handleMakimaMessage(chatId, prompt, env);
+    await handleMakimaMessage(chatId, memoryKey, prompt, env);
     return;
   }
 
   if (text.toLowerCase().includes('макіма')) {
     const state = getState(chatId);
     state.screen = 'makima';
-    await handleMakimaMessage(chatId, text, env);
+    await handleMakimaMessage(chatId, memoryKey, text, env);
     return;
   }
 
@@ -112,7 +118,7 @@ async function handleMessage(message, env) {
   const state = getState(chatId);
 
   if (state.screen === 'waiting_for_makima') {
-    await handleMakimaMessage(chatId, text, env);
+    await handleMakimaMessage(chatId, memoryKey, text, env);
     return;
   }
 
@@ -127,7 +133,17 @@ async function handleMessage(message, env) {
 
   // За замовчуванням — просто вільна розмова з Макімою,
   // щоб з нею можна було поспілкуватися без команд і кнопок.
-  await handleMakimaMessage(chatId, text, env);
+  await handleMakimaMessage(chatId, memoryKey, text, env);
+}
+
+// Ключ пам'яті будується за Telegram-ніком (username), якщо він є — саме так, як просив користувач.
+// Якщо в людини не встановлено username, використовуємо її незмінний Telegram user id як запасний варіант,
+// щоб пам'ять теж не губилася.
+function getMemoryKey(from) {
+  const username = String(from?.username || '').trim().toLowerCase();
+  if (username) return `u:${username}`;
+  const id = from?.id;
+  return id ? `id:${id}` : 'unknown';
 }
 
 // ==================== GROQ / Makima ====================
@@ -189,15 +205,16 @@ const MAKIMA_SYSTEM_PROMPT = `Тебе звати Макіма. Ти — роз�
 Кожен користувач повинен відчувати, що спілкується з розумною, доброю та уважною подругою-помічницею, яка
 завжди готова допомогти.`;
 
-async function handleMakimaMessage(chatId, userMessage, env) {
+async function handleMakimaMessage(chatId, memoryKey, userMessage, env) {
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
-    const history = await getUserHistory(chatId, env);
-    const responseText = await callMakimaAI(userMessage, history, env);
+    const fullHistory = await getUserHistory(memoryKey, env);
+    const responseText = await callMakimaAI(userMessage, fullHistory, env);
 
-    history.push({ role: 'user', content: userMessage });
-    history.push({ role: 'assistant', content: responseText });
-    await saveUserHistory(chatId, history, env);
+    fullHistory.push({ role: 'user', content: userMessage });
+    fullHistory.push({ role: 'assistant', content: responseText });
+    // Зберігаємо ПОВНУ історію без обрізання — розмова не втрачається навіть після /start.
+    await saveUserHistory(memoryKey, fullHistory, env);
 
     await sendMessage(chatId, escapeHtml(responseText), { reply_markup: backHomeKeyboard() }, env);
   } catch (error) {
@@ -206,14 +223,18 @@ async function handleMakimaMessage(chatId, userMessage, env) {
   }
 }
 
-async function callMakimaAI(prompt, history, env) {
+async function callMakimaAI(prompt, fullHistory, env) {
   const apiKey = String(env.GROQ_API_KEY || '').trim();
   if (!apiKey) throw new Error('GROQ_API_KEY is not configured');
   const model = String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
 
+  // Моделі надсилаємо лише останній фрагмент довгої історії (ліміт контексту API),
+  // хоча в KV увесь архів розмови зберігається без втрат.
+  const recentHistory = fullHistory.slice(-MAX_CONTEXT_MESSAGES_FOR_API);
+
   const messages = [
     { role: 'system', content: MAKIMA_SYSTEM_PROMPT },
-    ...history,
+    ...recentHistory,
     { role: 'user', content: String(prompt || '') }
   ];
 
@@ -245,10 +266,10 @@ async function callMakimaAI(prompt, history, env) {
 //   id = "<your-kv-namespace-id>"
 // If the binding is missing, memory is silently skipped (Makima still works, just without recall).
 
-async function getUserHistory(chatId, env) {
+async function getUserHistory(memoryKey, env) {
   if (!env.MAKIMA_MEMORY) return [];
   try {
-    const raw = await env.MAKIMA_MEMORY.get(`history:${chatId}`);
+    const raw = await env.MAKIMA_MEMORY.get(`history:${memoryKey}`);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -258,20 +279,20 @@ async function getUserHistory(chatId, env) {
   }
 }
 
-async function saveUserHistory(chatId, history, env) {
+async function saveUserHistory(memoryKey, fullHistory, env) {
   if (!env.MAKIMA_MEMORY) return;
   try {
-    const trimmed = history.slice(-MAX_HISTORY_MESSAGES);
-    await env.MAKIMA_MEMORY.put(`history:${chatId}`, JSON.stringify(trimmed));
+    // Без обрізання — зберігаємо всю розмову від початку й до кінця.
+    await env.MAKIMA_MEMORY.put(`history:${memoryKey}`, JSON.stringify(fullHistory));
   } catch (error) {
     console.error('[memory] write failed:', safeError(error));
   }
 }
 
-async function clearUserHistory(chatId, env) {
+async function clearUserHistory(memoryKey, env) {
   if (!env.MAKIMA_MEMORY) return;
   try {
-    await env.MAKIMA_MEMORY.delete(`history:${chatId}`);
+    await env.MAKIMA_MEMORY.delete(`history:${memoryKey}`);
   } catch (error) {
     console.error('[memory] clear failed:', safeError(error));
   }
