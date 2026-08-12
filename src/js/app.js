@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=anime-page-v4';
+import './app-legacy.js?v=anime-page-v5';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';
