@@ -1,0 +1,13 @@
+/* schedule page styles are currently preserved in ../../legacy.css during the safe migration. */
+
+/* Grouped weekly schedule */
+.schedule-week-content { display:grid; gap:18px; }
+.schedule-week-day { padding:14px; border:1px solid var(--border); border-radius:16px; background:var(--surface); }
+.schedule-week-day.is-today { border-color:var(--accent); box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 18%,transparent); }
+.schedule-week-day__title { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:10px; text-transform:capitalize; }
+.schedule-week-day__title strong { color:var(--text); font-size:16px; }
+.schedule-week-day__title span { color:var(--text-muted); font-size:12px; }
+.schedule-week-list { display:grid; gap:8px; }
+.schedule-week-item { margin:0; }
+.schedule-countdown { display:block; margin-top:5px; color:var(--accent); font-size:11px; font-weight:700; }
+@media (max-width:620px) { .schedule-week-day { padding:11px; } .schedule-week-day__title strong { font-size:15px; } }
