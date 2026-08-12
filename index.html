@@ -194,6 +194,16 @@
             </section>
 
             <!-- MAIN CHARACTERS -->
+            <section id="mainCharactersSection" style="display:none;">
+                <div class="section-heading-row"><div class="section-title">Головні персонажі</div><button class="section-more-btn" id="mainCharactersMoreBtn" type="button" hidden aria-label="Показати всіх персонажів">→</button></div>
+                <div class="hscroll" id="mainCharactersList">
+                    <div class="cast-card"><div class="cast-avatar"></div><div class="cast-name"></div><div class="cast-role"></div></div>
+                    <div class="cast-card"><div class="cast-avatar"></div><div class="cast-name"></div><div class="cast-role"></div></div>
+                    <div class="cast-card"><div class="cast-avatar"></div><div class="cast-name"></div><div class="cast-role"></div></div>
+                </div>
+            </section>
+
+
             <section id="castSection">
                 <div class="section-heading-row"><div class="section-title">Актори</div></div>
                 <div class="hscroll" id="castList">
@@ -202,24 +212,15 @@
                     <div class="cast-card"><div class="cast-avatar"></div><div class="cast-name"></div><div class="cast-role"></div></div>
                 </div>
             </section>
-            <section id="mainCharactersSection" style="display:none;">
-                <div class="section-heading-row"><div class="section-title">Головні персонажі</div><button class="section-more-btn" id="mainCharactersMoreBtn" type="button" hidden>Усі</button></div>
-                <div class="hscroll" id="mainCharactersList">
-                    <div class="cast-card"><div class="cast-avatar"></div><div class="cast-name"></div><div class="cast-role"></div></div>
-                    <div class="cast-card"><div class="cast-avatar"></div><div class="cast-name"></div><div class="cast-role"></div></div>
-                    <div class="cast-card"><div class="cast-avatar"></div><div class="cast-name"></div><div class="cast-role"></div></div>
-                </div>
-            </section>
-
             <!-- RELATED ANIME -->
             <section id="relatedSection" class="related-section">
-                <div class="section-heading-row"><div class="section-title">Пов’язане <span id="relatedCount"></span></div><button class="section-more-btn" id="relatedMoreBtn" type="button" hidden>Усі</button></div>
+                <div class="section-heading-row"><div class="section-title">Пов’язане <span id="relatedCount"></span></div><button class="section-more-btn" id="relatedMoreBtn" type="button" hidden aria-label="Показати всі пов’язані аніме">→</button></div>
                 <div class="related-list" id="relatedList"></div>
             </section>
 
             <!-- MEDIA -->
             <section id="mediaSection" class="media-section">
-                <div class="section-heading-row"><div class="section-title">Медіа <span class="media-tab">Музика</span></div><button class="section-more-btn" id="mediaMoreBtn" type="button" hidden>Усі</button></div>
+                <div class="section-heading-row"><div class="section-title">Медіа <span class="media-tab">Музика</span></div><button class="section-more-btn" id="mediaMoreBtn" type="button" hidden aria-label="Показати всю медіа">→</button></div>
                 <div class="media-list" id="mediaList"></div>
             </section>
 
