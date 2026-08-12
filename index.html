@@ -38,8 +38,8 @@
         }
     </script>
 
-    <link rel="stylesheet" href="src/styles/app.css?v=player-fix-4" />
-    <link rel="stylesheet" href="src/styles/pages/main.css?v=player-fix-4" />
+    <link rel="stylesheet" href="src/styles/app.css?v=player-fix-6" />
+    <link rel="stylesheet" href="src/styles/pages/main.css?v=player-fix-6" />
 </head>
 <body class="appletv-agnative-topnav">
 
@@ -195,8 +195,16 @@
 
             <!-- MAIN CHARACTERS -->
             <section id="castSection">
-                <div class="section-heading-row"><div class="section-title">Головні персонажі</div><button class="section-more-btn" id="castMoreBtn" type="button" hidden>Усі</button></div>
+                <div class="section-heading-row"><div class="section-title">Актори</div></div>
                 <div class="hscroll" id="castList">
+                    <div class="cast-card"><div class="cast-avatar"></div><div class="cast-name"></div><div class="cast-role"></div></div>
+                    <div class="cast-card"><div class="cast-avatar"></div><div class="cast-name"></div><div class="cast-role"></div></div>
+                    <div class="cast-card"><div class="cast-avatar"></div><div class="cast-name"></div><div class="cast-role"></div></div>
+                </div>
+            </section>
+            <section id="mainCharactersSection" style="display:none;">
+                <div class="section-heading-row"><div class="section-title">Головні персонажі</div><button class="section-more-btn" id="mainCharactersMoreBtn" type="button" hidden>Усі</button></div>
+                <div class="hscroll" id="mainCharactersList">
                     <div class="cast-card"><div class="cast-avatar"></div><div class="cast-name"></div><div class="cast-role"></div></div>
                     <div class="cast-card"><div class="cast-avatar"></div><div class="cast-name"></div><div class="cast-role"></div></div>
                     <div class="cast-card"><div class="cast-avatar"></div><div class="cast-name"></div><div class="cast-role"></div></div>
@@ -294,7 +302,7 @@
     </div>
 
 
-    <script type="module" src="src/js/app.js?v=player-fix-4"></script>
+    <script type="module" src="src/js/app.js?v=player-fix-6"></script>
 
     <!-- ===== BOTTOM NAV ===== -->
     <nav class="bottom-nav" id="bottomNav" role="navigation" aria-label="Навігація">
