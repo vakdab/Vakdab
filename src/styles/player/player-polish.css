@@ -208,7 +208,7 @@
 #playerPageModal .lampa-player-container { overflow: hidden; background: #000; }
 #playerPageModal .lampa-player-container video { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
 
-/* topbar над відео — тепер реагує на тему сайту */
+/* topbar над відео — реагує на тему сайту */
 #playerPageModal .video-overlay-topbar {
     position: absolute;
     z-index: 8;
@@ -350,22 +350,60 @@
 #playerPageModal .lp-time { color: color-mix(in srgb, var(--text) 78%, transparent); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 #playerPageModal .lp-spacer { flex: 1; }
 
-/* mute toggle — без слайдера, лише вкл/викл звуку */
+/* mute toggle — без слайдера, лише вкл/викл звуку.
+   Слайдер гучності приховано повністю (CSS-запобіжник, незалежно
+   від того, чи його рендерить розмітка, чи JS динамічно додає). */
 #playerPageModal .lp-mute-btn svg { transition: transform .2s ease, opacity .2s ease; }
 #playerPageModal .lp-mute-btn.is-muted svg { opacity: .55; }
 #playerPageModal .lp-mute-btn:hover svg { transform: scale(1.12); }
 
+#playerPageModal input[type="range"],
+#playerPageModal .volume-slider,
+#playerPageModal .lp-volume-slider,
+#playerPageModal .lp-volume,
+#playerPageModal [class*="volume"] input[type="range"],
+#playerPageModal .lp-mute-btn ~ input[type="range"],
+#playerPageModal .lp-mute-btn ~ .slider,
+#playerPageModal .lp-mute-btn ~ [class*="volume"] {
+    display: none !important;
+    width: 0 !important;
+    pointer-events: none !important;
+}
+
 /* кнопка вибору якості + випадаюче меню */
 #playerPageModal .lp-quality-wrap { position: relative; }
 #playerPageModal .lp-quality-btn {
+    display: inline-flex;
     width: auto;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
     padding: 0 9px;
     gap: 4px;
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+    color: var(--text);
     font-size: 11px;
     font-weight: 800;
     letter-spacing: .02em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
 }
+#playerPageModal .lp-quality-btn:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); transform: scale(1.05); }
+#playerPageModal .lp-quality-btn:active { transform: scale(.95); }
 #playerPageModal .lp-quality-btn .lp-quality-current { color: var(--text); }
+#playerPageModal .lp-quality-btn::after {
+    content: '';
+    width: 0;
+    height: 0;
+    margin-left: 2px;
+    border-top: 3px solid currentColor;
+    border-right: 3px solid transparent;
+    border-left: 3px solid transparent;
+    opacity: .6;
+}
 #playerPageModal .lp-quality-menu {
     position: absolute;
     z-index: 9;
@@ -401,7 +439,7 @@
     transition: background-color .15s ease, color .15s ease;
 }
 #playerPageModal .lp-quality-option:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--text); }
-#playerPageModal .lp-quality-option.active { color: var(--accent); }
+#playerPageModal .lp-quality-option.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 
 #playerPageModal .lp-spinner {
     position: absolute;
@@ -536,14 +574,34 @@
     #playerPageModal .player-control-block:last-child { grid-column: auto; }
 }
 
-/* мобільна адаптація плеєра */
+/* ===== Мобільна адаптація плеєра ===== */
 @media (max-width: 620px) {
-    #playerPageModal .lp-controls { padding: 10px 8px 8px; }
-    #playerPageModal .lp-btn { width: 30px; height: 30px; }
-    #playerPageModal .lp-time { font-size: 11px; }
-    #playerPageModal .lp-quality-menu { min-width: 84px; }
-    #playerPageModal .lp-center-play-btn { width: 60px; height: 60px; }
-    #playerPageModal .video-overlay-topbar .icon-btn { width: 30px; height: 30px; }
+    #playerPageModal .modal-content { height: 100vh; margin: 0; border-radius: 0; border: none; }
+
+    #playerPageModal .player-video-container { aspect-ratio: 16 / 9; min-height: 180px; border-radius: 0; border-left: none; border-right: none; }
+
+    #playerPageModal .lp-controls { padding: 8px 6px 6px; }
+    #playerPageModal .lp-btn { width: 28px; height: 28px; }
+    #playerPageModal .lp-time { font-size: 10px; }
+
+    #playerPageModal .video-overlay-topbar { padding: 6px 8px; }
+    #playerPageModal .video-overlay-topbar .icon-btn { width: 28px; height: 28px; }
+    #playerPageModal .video-overlay-title { font-size: 11px; }
+
+    #playerPageModal .lp-quality-btn { padding: 0 6px; font-size: 10px; }
+    #playerPageModal .lp-quality-menu { min-width: 80px; bottom: 36px; }
+
+    #playerPageModal .lp-center-play-btn { width: 52px; height: 52px; }
+
+    #playerPageModal .player-controls { grid-template-columns: 1fr; gap: 8px; padding: 10px 12px 4px; }
+    #playerPageModal .player-control-block:last-child { grid-column: 1 / -1; }
+}
+
+/* Дуже маленькі екрани */
+@media (max-width: 380px) {
+    #playerPageModal .player-video-container { min-height: 160px; }
+    #playerPageModal .lp-bottom-row { gap: 4px; }
+    #playerPageModal .lp-time { font-size: 9px; }
 }
 
 /* Final player cleanup: one visible video and one selector panel. */
