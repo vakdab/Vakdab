@@ -1,4 +1,4 @@
-/* VakDab styles — migrated from legacy.css; module 03 */
+/* VakDab styles — module extracted from the former monolith; module 03 */
         /* ===== Розклад виходу — home widget, deliberately distinct from the poster carousels ===== */
         .home-schedule-widget {
             background: linear-gradient(160deg, #181818, #060606);

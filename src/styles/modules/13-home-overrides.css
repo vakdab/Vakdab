@@ -1,4 +1,4 @@
-/* VakDab styles — migrated from legacy.css; module 13 */
+/* VakDab styles — module extracted from the former monolith; module 13 */
 /* Homepage refinement: compact, readable cards on every screen size. */
 #genreSectionsContainer {
     gap: clamp(1.35rem, 3vw, 2.4rem);
