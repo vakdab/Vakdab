@@ -8205,7 +8205,7 @@ function renderProfilePage() {
         const ANILIST_FORMAT_LABELS = { TV: 'TV Серіал', TV_SHORT: 'TV Серіал', MOVIE: 'Фільм', OVA: 'OVA', ONA: 'ONA', SPECIAL: 'Спешл', MUSIC: 'Музика' };
 
         const ANILIST_SEARCH_QUERY = `query ($search: String) { Page(perPage: 5) { media(search: $search, type: ANIME, sort: SEARCH_MATCH) {
-            id title { romaji english native } format status season seasonYear episodes duration averageScore siteUrl
+            id title { romaji english native } format status season seasonYear episodes duration averageScore genres siteUrl
             studios(isMain: true) { nodes { name } }
             nextAiringEpisode { airingAt episode }
             characters(sort: ROLE, perPage: 10) { edges { role node { name { full native } image { large } } voiceActors(language: JAPANESE) { name { full } } } } }
@@ -8227,7 +8227,7 @@ function renderProfilePage() {
 
         async function fetchAnilistRelations(anilistId) {
             const query = `query ($id: Int) { Media(id: $id) { relations { edges { relationType(version: 2) node {
-                id title { romaji english } format startDate { year } coverImage { large } siteUrl } } } } }`;
+                id type title { romaji english } format startDate { year } coverImage { large } siteUrl } } } } }`;
             const res = await fetchAnilist(query, { id: anilistId });
             return res?.data?.Media?.relations?.edges || [];
         }
@@ -8251,7 +8251,7 @@ function renderProfilePage() {
                 _nextAiringDate: media.nextAiringEpisode ? new Date(media.nextAiringEpisode.airingAt * 1000) : null,
                 _nextEpisode: media.nextAiringEpisode?.episode || null,
                 rating: media.averageScore ? `AniList ${(media.averageScore / 10).toFixed(1)}` : null,
-                studios, characters
+                genres: media.genres || [], studios, characters
             };
         }
 
@@ -8282,7 +8282,7 @@ function renderProfilePage() {
             if (stableAnilistId) {
                 try {
                     const query = `query ($id: Int) { Media(id: $id, type: ANIME) {
-                        id title { romaji english native } format status season seasonYear episodes duration averageScore siteUrl
+                        id title { romaji english native } format status season seasonYear episodes duration averageScore genres siteUrl
                         studios(isMain: true) { nodes { name } } nextAiringEpisode { airingAt episode }
                         characters(sort: ROLE, perPage: 10) { edges { role node { name { full native } image { large } } voiceActors(language: JAPANESE) { name { full } } } } } }`;
                     const res = await fetchAnilist(query, { id: stableAnilistId });
@@ -8377,6 +8377,7 @@ function renderProfilePage() {
                 ['Сезон / рік', seasonYear], ['Епізоди', episodeCount || '—'], ['Наступний епізод', next],
                 ['Тривалість епізоду', formatJikanDuration(data?.duration) || (details?.episode_run_time?.[0] ? `${details.episode_run_time[0]} хвилин` : '—')],
                 ['Рейтинг', rating],
+                ['Жанри', (data?.genres || []).map(g => typeof g === 'string' ? g : g.name).filter(Boolean).join(' · ') || (details?.genres || []).map(g => g.name).filter(Boolean).join(' · ') || '—'],
                 ['Студія', studioLogo ? `${escapeHtml(studio)}<img class="anime-info-studio-logo" src="${escapeHtml(studioLogo)}" alt="" loading="lazy" onerror="this.remove()">` : studio]
             ];
             root.innerHTML = rows.map(([label, value]) => `<div class="anime-info-row"><span>${escapeHtml(label)}</span><strong>${String(value).includes('anime-info-badge') || String(value).includes('anime-info-studio-logo') ? value : escapeHtml(String(value))}</strong></div>`).join('');
@@ -8402,8 +8403,24 @@ function renderProfilePage() {
         }
 
         function relatedCardMarkup(x) {
-            return `<article class="related-card" data-url="${escapeHtml(x.url || '')}"><img src="${escapeHtml(x.image || '')}" alt="" loading="lazy"><div><strong>${escapeHtml(x.title || '')}</strong><span>${escapeHtml([x.year, x.typeLabel, x.relationLabel].filter(Boolean).join(' · '))}</span></div></article>`;
+            return `<article class="related-card" data-related-title="${escapeHtml(x.title || '')}" data-related-title-en="${escapeHtml(x.titleEn || '')}"><img src="${escapeHtml(x.image || '')}" alt="" loading="lazy"><div><strong>${escapeHtml(x.title || '')}</strong><span>${escapeHtml([x.year, x.typeLabel, x.relationLabel].filter(Boolean).join(' · '))}</span></div></article>`;
         }
+
+        async function openRelatedAnimeInPlayer(card) {
+            if (!card || card.classList.contains('is-loading')) return;
+            const title = card.dataset.relatedTitle || '';
+            const titleEn = card.dataset.relatedTitleEn || '';
+            if (!title && !titleEn) return;
+            card.classList.add('is-loading');
+            try {
+                let results = await searchAnimeua(title, 1);
+                if ((!results || !results.length) && titleEn && titleEn !== title) results = await searchAnimeua(titleEn, 1);
+                if (results?.length) openPlayerPage(results[0].url);
+                else showToast(`«${title}» ще не знайдено в каталозі VakDab`);
+            } catch (e) { showToast('Не вдалося відкрити пов’язане аніме'); }
+            finally { card.classList.remove('is-loading'); }
+        }
+
 
         async function renderRelatedAnimeFromJikan(data) {
             const current = Number(data?.mal_id);
@@ -8422,7 +8439,7 @@ function renderProfilePage() {
         async function renderRelatedAnimeFromAnilist(data) {
             if (!data?._anilistId) return [];
             const edges = await fetchAnilistRelations(data._anilistId);
-            const filtered = edges.filter(e => e.node?.id !== data._anilistId);
+            const filtered = edges.filter(e => e.node?.id !== data._anilistId && e.node?.type === 'ANIME');
             const unique = [...new Map(filtered.map(e => [e.node.id, e])).values()];
             return unique.map(e => ({
                 url: e.node.siteUrl, image: e.node.coverImage?.large,
@@ -8479,6 +8496,7 @@ function renderProfilePage() {
                 playerJikanData = data;
                 renderAnimeInformation(data, tmdbInfo, details);
                 renderMainCharacters(data);
+                if (document.getElementById('castSection')?.style.display === 'none') renderVoiceCast(data);
                 renderAnimeMedia(data);
                 await renderRelatedAnime(data);
             } catch (e) {
@@ -8511,6 +8529,24 @@ function renderProfilePage() {
                     <div class="cast-name">${escapeHtml(c.name || '')}</div>
                     <div class="cast-role">${escapeHtml(c.character || '')}</div>
                 </div>`;
+            }).join('');
+        }
+
+        function renderVoiceCast(data) {
+            const section = document.getElementById('castSection');
+            const list = document.getElementById('castList');
+            if (!section || !list) return;
+            const cast = (data?.characters || []).filter(x => x?.character?.name && x?.voice_actors?.length).slice(0, 12);
+            if (!cast.length) return;
+            section.style.display = '';
+            section.querySelector('.section-title').textContent = 'Актори / сейю';
+            list.innerHTML = cast.map(x => {
+                const c = x.character;
+                const voice = x.voice_actors?.find(v => v.language === 'Japanese') || x.voice_actors?.[0];
+                const person = voice?.person || {};
+                const avatar = jikanImage(person);
+                const style = avatar ? `background-image:url('${escapeHtml(avatar)}');` : '';
+                return `<article class="cast-card"><div class="cast-avatar" style="${style}"></div><div class="cast-name">${escapeHtml(person.name || 'Сейю невідомий')}</div><div class="cast-role">${escapeHtml(c.name || '')}</div></article>`;
             }).join('');
         }
 
