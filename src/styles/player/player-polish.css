@@ -491,3 +491,17 @@
 #playerPageModal .media-track strong { overflow:hidden; color:var(--text-secondary); font-size:12px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
 #playerPageModal .anime-info-placeholder { padding:15px; color:var(--text-muted); font-size:12px; }
 @media (max-width:620px) { #playerPageModal .related-list { grid-template-columns:1fr; } #playerPageModal .anime-info-row { min-height:42px; } }
+
+
+/* Extended anime information refinements. */
+#playerPageModal .anime-info-row strong { display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0; }
+#playerPageModal .anime-info-studio-logo { width:28px; height:28px; flex:0 0 28px; object-fit:contain; border-radius:7px; background:var(--surface); border:1px solid var(--border); padding:3px; }
+#playerPageModal .character-original { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#playerPageModal .related-card { min-height:86px; }
+#playerPageModal .related-card img { object-fit:cover; }
+@media (max-width:620px) {
+  #playerPageModal .character-card { flex-basis:calc((100vw - 80px) / 3.4); min-width:88px; max-width:112px; }
+  #playerPageModal .character-card .cast-avatar { height:clamp(118px, 35vw, 145px); }
+  #playerPageModal .anime-info-row { align-items:flex-start; }
+  #playerPageModal .anime-info-row strong { max-width:62%; }
+}
