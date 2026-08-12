@@ -8443,7 +8443,7 @@ function renderProfilePage() {
             const unique = [...new Map(filtered.map(e => [e.node.id, e])).values()];
             return unique.map(e => ({
                 url: e.node.siteUrl, image: e.node.coverImage?.large,
-                title: e.node.title?.romaji || e.node.title?.english, year: e.node.startDate?.year,
+                title: e.node.title?.romaji || e.node.title?.english, titleEn: e.node.title?.english || e.node.title?.romaji, year: e.node.startDate?.year,
                 typeLabel: ANILIST_FORMAT_LABELS[e.node.format] || e.node.format,
                 relationLabel: ANILIST_RELATION_LABELS[e.relationType] || null
             }));
