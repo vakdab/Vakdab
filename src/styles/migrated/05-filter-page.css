@@ -1,0 +1,258 @@
+/* VakDab styles — migrated from legacy.css; module 05 */
+        /* ===================================================================
+           ФІЛЬТР АНІМЕ — повна сторінка (Меню → Фільтри)
+           =================================================================== */
+        .filter-page {
+            max-width: 640px;
+            margin: 0 auto;
+        }
+        .filter-page__header {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            margin-bottom: 1.3rem;
+        }
+        .filter-page__back {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1.5px solid var(--border);
+            background: var(--tag-bg);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            font-size: 0.95rem;
+            transition: all var(--transition);
+        }
+        .filter-page__back:hover {
+            background: var(--accent);
+            color: var(--accent-text);
+            border-color: var(--accent);
+        }
+        .filter-page__eyebrow {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+        }
+        .filter-page__title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--text);
+            margin-top: 0.15rem;
+        }
+        .filter-page__section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.1rem 1.2rem;
+            margin-bottom: 0.9rem;
+        }
+        .filter-page__section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .filter-page__section-sub {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+        .filter-page__soon-badge {
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            padding: 0.14rem 0.5rem;
+            border-radius: 999px;
+            background: var(--tag-bg);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            text-transform: uppercase;
+        }
+        .filter-page__genre-toggle {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            font-family: inherit;
+            color: var(--text);
+        }
+        .filter-page__genre-toggle-value {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .filter-page__genre-toggle-value i {
+            transition: transform var(--transition);
+        }
+        .filter-page__genre-toggle.open .filter-page__genre-toggle-value i {
+            transform: rotate(90deg);
+        }
+        .filter-page__genre-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height var(--transition-smooth);
+        }
+        .filter-page__genre-panel.open {
+            max-height: 800px;
+            margin-top: 1rem;
+        }
+        .filter-page__checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.7rem 1rem;
+        }
+        .filter-page__checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            font-size: 0.84rem;
+            color: var(--text);
+            cursor: pointer;
+        }
+        .filter-page__checkbox input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .filter-page__checkbox--soon {
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+        .filter-page__checkbox--soon em {
+            font-style: normal;
+            font-size: 0.72rem;
+        }
+        .filter-page__number-row {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-top: 0.9rem;
+        }
+        .filter-page__number-box {
+            flex: 1;
+            background: var(--tag-bg);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.6rem 0.7rem;
+            color: var(--text);
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+        .filter-page__number-sep {
+            color: var(--text-muted);
+        }
+        .filter-page__dual-range {
+            position: relative;
+            height: 24px;
+            margin-top: 1rem;
+        }
+        .filter-page__dual-range-track {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            transform: translateY(-50%);
+            background: var(--border);
+            border-radius: 2px;
+        }
+        .filter-page__dual-range-fill {
+            position: absolute;
+            top: 50%;
+            height: 4px;
+            transform: translateY(-50%);
+            background: var(--accent);
+            border-radius: 2px;
+        }
+        .filter-page__dual-range-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 24px;
+            margin: 0;
+            -webkit-appearance: none;
+            appearance: none;
+            background: none;
+            pointer-events: none;
+        }
+        .filter-page__dual-range-input::-webkit-slider-runnable-track {
+            background: transparent;
+            height: 24px;
+        }
+        .filter-page__dual-range-input::-moz-range-track {
+            background: transparent;
+            height: 24px;
+        }
+        .filter-page__dual-range-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            pointer-events: auto;
+            width: 18px;
+            height: 18px;
+            margin-top: 3px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: 2px solid var(--surface);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+        }
+        .filter-page__dual-range-input::-moz-range-thumb {
+            pointer-events: auto;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: 2px solid var(--surface);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+        }
+        .filter-page__dual-range--disabled {
+            opacity: 0.45;
+        }
+        .filter-page__dual-range--disabled .filter-page__dual-range-input::-webkit-slider-thumb,
+        .filter-page__dual-range--disabled .filter-page__dual-range-input::-moz-range-thumb {
+            cursor: not-allowed;
+        }
+        .filter-page__select {
+            width: 100%;
+            background: var(--tag-bg);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.65rem 0.8rem;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.88rem;
+        }
+        .filter-page__select:disabled {
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+        .filter-page__reset-btn {
+            width: 100%;
+            justify-content: center;
+            margin: 0.4rem 0 1.2rem;
+        }
+        .filter-page__results-meta {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 0.8rem;
+        }
+

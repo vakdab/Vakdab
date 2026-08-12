@@ -1,0 +1,507 @@
+/* VakDab styles — migrated from legacy.css; module 01 */
+        /* ===== HERO BANNER v2 — Black & White Glassmorphism ===== */
+        .hero-wrapper {
+            position: relative;
+            width: calc(100% + 1.5rem);
+            max-width: none;
+            margin-left: -0.75rem;
+            margin-right: -0.75rem;
+            margin-top: 0;
+            border-radius: 0;
+            overflow: hidden;
+            box-shadow: none;
+            background: #0a0a0a;
+            height: 62vh;
+            height: 62svh;
+            min-height: 420px;
+            max-height: 620px;
+        }
+        @media (max-width: 768px) {
+            .hero-wrapper {
+                height: 52vh;
+                height: 52svh;
+                min-height: 340px;
+                max-height: 480px;
+                width: calc(100% + 2rem);
+                margin-left: -1rem;
+                margin-right: -1rem;
+                margin-top: 0;
+            }
+        }
+        @media (max-width: 480px) {
+            .hero-wrapper {
+                height: 48vh;
+                height: 48svh;
+                min-height: 300px;
+                max-height: 420px;
+                width: calc(100% + 1.5rem);
+                margin-left: -0.75rem;
+                margin-right: -0.75rem;
+                margin-top: 0;
+            }
+        }
+        body:not(.dark-mode) .hero-wrapper {
+            background: #0a0a0a;
+            margin-top: 0;
+        }
+
+        #heroSlidesContainer {
+            position: absolute;
+            inset: 0;
+        }
+
+        .hero-slide {
+            display: none;
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .hero-slide.active {
+            display: block;
+            animation: heroFadeIn 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Background with grayscale → color on hover */
+        .hero-slide-bg {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center top;
+            filter: grayscale(0) contrast(1);
+            transform: scale(1.08);
+            transition: transform 8s ease, filter 0.6s ease;
+        }
+        .hero-slide.active .hero-slide-bg {
+            transform: scale(1);
+        }
+        .hero-wrapper:hover .hero-slide-bg {
+            filter: grayscale(0) contrast(1);
+        }
+
+        /* Gradient overlays — B&W glassmorphism */
+        .hero-slide-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top,
+                rgba(10,10,10,0.95) 0%,
+                rgba(10,10,10,0.7) 25%,
+                rgba(10,10,10,0.3) 55%,
+                rgba(10,10,10,0.1) 80%,
+                transparent 100%);
+            z-index: 1;
+        }
+        .hero-slide-overlay::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(105deg,
+                rgba(10,10,10,0.6) 0%,
+                transparent 50%);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+        }
+        body:not(.dark-mode) .hero-slide-overlay {
+            background: linear-gradient(to top,
+                rgba(10,10,10,0.92) 0%,
+                rgba(10,10,10,0.6) 25%,
+                rgba(10,10,10,0.2) 55%,
+                rgba(10,10,10,0.05) 80%,
+                transparent 100%);
+        }
+
+        /* Content container */
+        .hero-slide-content {
+            position: absolute;
+            inset: 0;
+            bottom: auto;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-start;
+            text-align: left;
+            gap: clamp(8px, 1.4vh, 18px);
+            padding: 50px 20px 70px;
+            height: 100%;
+            box-sizing: border-box;
+            background: transparent;
+        }
+
+        /* Rating badge — glassmorphism */
+        .hero-rating-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .hero-rating-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff !important;
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            letter-spacing: 0.3px;
+        }
+        .hero-rating-badge .star {
+            color: #fff;
+            font-size: 0.8rem;
+            filter: drop-shadow(0 0 4px rgba(255,255,255,0.3));
+        }
+        .hero-meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.10);
+            color: rgba(255,255,255,0.8) !important;
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            letter-spacing: 0.3px;
+        }
+        .hero-meta-dot {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.4);
+            display: inline-block;
+        }
+
+        /* Title */
+        .hero-slide-title {
+            font-size: clamp(1.5rem, 4.5vw, 3.5rem);
+            font-weight: 800;
+            color: #ffffff !important;
+            line-height: 1.15;
+            text-align: left;
+            text-shadow: 0 2px 30px rgba(0,0,0,0.8);
+            max-width: 80%;
+            letter-spacing: -0.5px;
+        }
+        @media (max-width: 480px) {
+            .hero-slide-title {
+                font-size: 1.5rem;
+                max-width: 92%;
+            }
+        }
+
+        /* Synopsis */
+        .hero-slide-desc {
+            color: rgba(255,255,255,0.75) !important;
+            font-size: clamp(0.85rem, 1.2vw, 1rem);
+            line-height: 1.6;
+            max-width: 55%;
+            text-align: left;
+            text-shadow: 0 1px 8px rgba(0,0,0,0.5);
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin: 0;
+        }
+        @media (max-width: 768px) {
+            .hero-slide-desc {
+                max-width: 85%;
+                -webkit-line-clamp: 2;
+            }
+        }
+        @media (max-width: 480px) {
+            .hero-slide-desc {
+                max-width: 92%;
+                font-size: 0.82rem;
+                -webkit-line-clamp: 2;
+            }
+        }
+
+        /* Tags */
+        .hero-slide-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            text-align: left;
+        }
+        .hero-tag {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.92) !important;
+            padding: 5px 16px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            text-shadow: 0 1px 6px rgba(0,0,0,0.3);
+            letter-spacing: 0.3px;
+            transition: all 0.25s ease;
+        }
+        .hero-tag.genre-tag {
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.82) !important;
+        }
+        .hero-tag:hover {
+            background: rgba(255,255,255,0.18);
+            border-color: rgba(255,255,255,0.25);
+            transform: translateY(-1px);
+        }
+
+        /* Rating/meta row — now sits at the bottom, where the watch button used to be.
+           The whole slide is tap-to-open, so this reads as info, not a control. */
+        .hero-rating-row--bottom {
+            margin-top: 4px;
+        }
+
+        /* Dot indicators */
+        .hero-dots {
+            position: absolute;
+            bottom: clamp(30px, 5.5vh, 72px);
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 20;
+            align-items: center;
+        }
+        .hero-dot {
+            width: 24px;
+            height: 3px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.25);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .hero-dot.active {
+            background: #ffffff;
+            width: 40px;
+            box-shadow: 0 0 8px rgba(255,255,255,0.3);
+        }
+
+        /* Auto-play progress bar */
+        .hero-progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(255,255,255,0.08);
+            z-index: 25;
+        }
+        .hero-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: rgba(255,255,255,0.6);
+            transition: width 0.1s linear;
+        }
+
+        @media (min-width: 480px) {
+            .hero-slide-content { padding: 50px 5% 60px; }
+        }
+        @media (min-width: 768px) {
+            .hero-slide-content { padding: 55px 6% 65px; }
+        }
+        @media (min-width: 1024px) {
+            .hero-slide-content { padding: 55px 8% 65px; }
+        }
+        @media (max-width: 480px) {
+            .hero-slide-content {
+                padding: 40px 16px 50px;
+                gap: clamp(8px, 1.5vh, 16px);
+            }
+            .hero-dots { bottom: 20px; gap: 6px; }
+            .hero-dot { width: 16px; height: 2px; }
+            .hero-dot.active { width: 26px; }
+        }
+
+        .dark-mode .hero-slide-content { background: transparent; }
+
+        .anime-card {
+            background: var(--surface);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+            animation: fadeInUp 0.5s ease both;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            min-height: 160px;
+        }
+        .anime-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md), 0 8px 24px rgba(0,0,0,0.18), 0 0 0 1px var(--accent-light);
+            border-color: rgba(var(--accent-rgb), 0.4);
+        }
+        .anime-card:active {
+            transform: translateY(-1px);
+        }
+        .anime-card:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+        @media (min-width:480px) {
+            .anime-card {
+                border-radius: 18px;
+                min-height: 180px;
+            }
+            .anime-card:hover {
+                transform: translateY(-6px);
+            }
+        }
+
+        .anime-poster {
+            width: 100%;
+            aspect-ratio: 2/3;
+            background: #e0e0e0;
+            border-radius: 16px 16px 0 0;
+            overflow: hidden;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .dark-mode .anime-poster {
+            background: #2a2a2a;
+        }
+        .anime-poster::after {
+            content: "";
+            position: absolute;
+            inset: auto 0 0 0;
+            height: 45%;
+            background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 100%);
+            pointer-events: none;
+        }
+        .anime-poster img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease, opacity 0.3s ease;
+        }
+        .anime-card:hover .anime-poster img {
+            transform: scale(1.06);
+        }
+
+        .anime-card-rating {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            transition: opacity 0.25s ease;
+        }
+        .anime-card-rating i { color: #ffcf4d; font-size: 0.6rem; }
+        .anime-card-rating--hidden { opacity: 0; pointer-events: none; }
+
+        /* TMDB type badge: the homepage shows only the useful classification. */
+        .anime-card-type {
+            position: absolute;
+            left: 8px;
+            bottom: 8px;
+            z-index: 3;
+            padding: 4px 8px;
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 7px;
+            background: rgba(10,10,12,0.72);
+            color: #fff;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            font-size: 0.62rem;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: 0.01em;
+        }
+
+        .anime-title-under {
+            padding: 0.5rem 0.4rem 0.45rem;
+            font-weight: 700;
+            font-size: 0.78rem;
+            line-height: 1.25;
+            color: var(--text);
+            text-align: center;
+            background: transparent;
+            flex: 1 1 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            word-break: break-word;
+            min-height: 2.2em;
+            letter-spacing: 0.005em;
+        }
+        @media (min-width:480px) {
+            .anime-title-under {
+                font-size: 0.8rem;
+                padding: 0.45rem 0.35rem 0.4rem;
+                min-height: 2.4em;
+            }
+        }
+        @media (min-width:768px) {
+            .anime-title-under {
+                font-size: 0.85rem;
+                padding: 0.5rem 0.4rem 0.4rem;
+                min-height: 2.6em;
+            }
+        }
+
+        .grid-3cols {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8rem;
+            margin-top: 0.5rem;
+            flex: 1;
+        }
+        @media (min-width:480px) {
+            .grid-3cols { gap: 1rem; }
+        }
+        @media (min-width:1024px) {
+            .grid-3cols { gap: 1.6rem; }
+        }
+
+        .anime-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.8rem;
+            margin-top: 0.5rem;
+            flex: 1;
+        }
+        @media (min-width:480px) {
+            .anime-grid { gap: 1rem; }
+        }
+        @media (min-width:768px) {
+            .anime-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1.4rem;
+            }
+        }
+        @media (min-width:1024px) {
+            .anime-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1.6rem;
+            }
+        }
+        .anime-grid .anime-card {
+            animation: fadeInUp 0.5s ease both;
+        }
+

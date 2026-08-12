@@ -1,0 +1,145 @@
+/* VakDab styles — migrated from legacy.css; module 04 */
+        /* ===================================================================
+           МЕНЮ — попап зі швидкими діями (Фільтри / Жанри / Налаштування)
+           =================================================================== */
+        .menu-popover-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            z-index: 1200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition);
+        }
+        .menu-popover-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .menu-popover {
+            position: fixed;
+            right: 12px;
+            bottom: 76px;
+            width: 224px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            padding: 0.4rem;
+            z-index: 1201;
+            transform: translateY(12px) scale(0.96);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform var(--transition), opacity var(--transition);
+        }
+        @supports (backdrop-filter: blur(10px)) {
+            .menu-popover { backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+        }
+        .menu-popover-overlay.visible .menu-popover {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .menu-popover-item {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            padding: 0.7rem 0.8rem;
+            border-radius: var(--radius-md);
+            border: none;
+            background: none;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: left;
+            transition: background var(--transition);
+        }
+        .menu-popover-item i {
+            width: 1.2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        .menu-popover-item:hover {
+            background: var(--hover);
+        }
+        .menu-popover-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 0.3rem 0.4rem;
+        }
+
+        /* ===================================================================
+           ФІЛЬТРИ — швидкий сортувальний bottom-sheet
+           =================================================================== */
+        .filter-sheet-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .filter-sheet-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .filter-sheet {
+            width: 100%;
+            max-width: 520px;
+            background: var(--surface);
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+            border: 1px solid var(--border);
+            border-bottom: none;
+            padding: 0.6rem 1.2rem 1.6rem;
+            transform: translateY(100%);
+            transition: transform var(--transition-smooth);
+        }
+        .filter-sheet-overlay.visible .filter-sheet {
+            transform: translateY(0);
+        }
+        .filter-sheet-handle {
+            width: 40px;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--border-hover);
+            margin: 0.4rem auto 1rem;
+        }
+        .filter-sheet-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 0.9rem;
+        }
+        .filter-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+        }
+        .filter-chip {
+            padding: 0.55rem 1.1rem;
+            border-radius: var(--radius-xl);
+            border: 2px solid var(--border);
+            background: var(--tag-bg);
+            color: var(--text);
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .filter-chip:hover {
+            border-color: var(--border-hover);
+        }
+        .filter-chip.active {
+            background: var(--accent);
+            color: var(--accent-text);
+            border-color: var(--accent);
+        }
+
