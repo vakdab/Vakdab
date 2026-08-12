@@ -8410,11 +8410,12 @@ function renderProfilePage() {
             const entries = (data?.relations || []).flatMap(group => (group.entry || []).map(entry => ({ ...entry, relation: group.relation })))
                 .filter(x => x.mal_id && Number(x.mal_id) !== current);
             const unique = [...new Map(entries.map(x => [x.mal_id, x])).values()];
-            const displayItems = unique.slice(0, 24);
-            const details = await Promise.allSettled(displayItems.map(x => fetchJikan(`/anime/${x.mal_id}`)));
-            return displayItems.map((x, i) => {
-                const full = details[i].status === 'fulfilled' ? details[i].value.data : {};
-                return { url: full.url || x.url, image: jikanImage(full), title: full.title || x.name, year: full.year || (full.aired?.from || '').slice(0, 4), typeLabel: full.type, relationLabel: x.relation };
+            const detailItems = unique.slice(0, 24);
+            const details = await Promise.allSettled(detailItems.map(x => fetchJikan(`/anime/${x.mal_id}`)));
+            return unique.map((x, i) => {
+                const result = i < details.length ? details[i] : null;
+                const full = result?.status === 'fulfilled' ? result.value.data : {};
+                return { url: full.url || x.url, image: jikanImage(full) || jikanImage(x), title: full.title || x.name, year: full.year || (full.aired?.from || '').slice(0, 4), typeLabel: full.type || '', relationLabel: x.relation };
             });
         }
 
