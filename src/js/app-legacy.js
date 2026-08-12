@@ -8420,7 +8420,7 @@ function renderProfilePage() {
             const status = data?._statusLabel || JIKAN_STATUS_LABELS[data?.status] || ANILIST_STATUS_LABELS[data?.status] || data?.status || '—';
             const derivedYear = data?.year || (details?.first_air_date || details?.release_date || '').slice(0, 4);
             const seasonYear = data?.season && derivedYear ? `${SEASON_LABELS[data.season] || data.season} ${derivedYear}` : (derivedYear || '—');
-            const episodeCount = data?.episodes ?? details?.number_of_episodes ?? playerPageAnime?.totalEpisodes ?? '—';
+            const episodeCount = playerPageAnime?.totalEpisodes ?? '—';
             const nextDate = data?._nextAiringDate instanceof Date && !Number.isNaN(data._nextAiringDate.getTime())
                 ? data._nextAiringDate : (data?.airing ? nextBroadcastDate(data.broadcast) : null);
             const nextEpisode = data?._nextEpisode || (data?.airing && Number.isFinite(Number(data?.episodes)) ? Number(data.episodes) + 1 : null);
@@ -8433,7 +8433,7 @@ function renderProfilePage() {
                 ['Сезон / рік', seasonYear], ['Епізоди', episodeCount || '—'], ['Наступний епізод', next],
                 ['Тривалість епізоду', formatJikanDuration(data?.duration) || (details?.episode_run_time?.[0] ? `${details.episode_run_time[0]} хвилин` : '—')],
                 ['Рейтинг', rating],
-                ['Жанри', (data?.genres || []).map(g => typeof g === 'string' ? g : g.name).filter(Boolean).join(' · ') || (details?.genres || []).map(g => g.name).filter(Boolean).join(' · ') || '—'],
+                ['Жанри', normalizeGenreList(playerPageAnime?.genres).join(' · ') || '—'],
                 ['Студія', studioLogo ? `${escapeHtml(studio)}<img class="anime-info-studio-logo" src="${escapeHtml(studioLogo)}" alt="" loading="lazy" onerror="this.remove()">` : studio]
             ];
             root.innerHTML = rows.map(([label, value]) => `<div class="anime-info-row"><span>${escapeHtml(label)}</span><strong>${String(value).includes('anime-info-badge') || String(value).includes('anime-info-studio-logo') ? value : escapeHtml(String(value))}</strong></div>`).join('');
