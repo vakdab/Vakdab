@@ -8460,7 +8460,7 @@ function renderProfilePage() {
             setSectionState('relatedSection', true);
             const visible = playerRelatedItems.slice(0, 4);
             list.innerHTML = visible.map(relatedCardMarkup).join('');
-            list.querySelectorAll('.related-card').forEach(card => card.addEventListener('click', () => { if (card.dataset.url) window.open(card.dataset.url, '_blank', 'noopener'); }));
+            list.querySelectorAll('.related-card').forEach(card => card.addEventListener('click', () => openRelatedAnimeInPlayer(card)));
             const count = document.getElementById('relatedCount');
             if (count) count.textContent = `(${playerRelatedItems.length})`;
             if (more) more.hidden = playerRelatedItems.length <= 4;
@@ -9113,7 +9113,7 @@ function renderProfilePage() {
             const list = document.getElementById('relatedList');
             if (!list) return;
             list.innerHTML = playerRelatedItems.map(relatedCardMarkup).join('');
-            list.querySelectorAll('.related-card').forEach(card => card.addEventListener('click', () => { if (card.dataset.url) window.open(card.dataset.url, '_blank', 'noopener'); }));
+            list.querySelectorAll('.related-card').forEach(card => card.addEventListener('click', () => openRelatedAnimeInPlayer(card)));
             document.getElementById('relatedMoreBtn').hidden = true;
         });
 
