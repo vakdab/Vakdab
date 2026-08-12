@@ -1,5 +1,5 @@
-/* Dedicated toast styles. */
-.toast {
+/* Toast notifications. */
+        .toast {
             position: fixed;
             bottom: 20px;
             left: 50%;
@@ -18,13 +18,13 @@
             max-width: 90%;
             text-align: center;
         }
-
+        @media (min-width:480px) {
             .toast {
                 padding: 0.7rem 1.5rem;
                 font-size: 0.85rem;
                 bottom: 30px;
             }
-
+        }
         .toast.show {
             transform: translateX(-50%) translateY(0);
             opacity: 1;

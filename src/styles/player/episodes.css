@@ -1,1 +1,26 @@
-/* Episode grid styles removed. Episode selection belongs to player-polish.css. */
+/* Episode card and season controls. */
+    .episode-grid-card, .episode-compact-card, .episode-classic-card {
+        position: relative;
+        overflow: hidden;
+    }
+    .episode-grid-badge, .episode-compact-badge, .episode-classic-badge {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    }
+    .episode-grid-title, .episode-compact-ep-title, .episode-classic-ep-title {
+        font-family: 'Space Grotesk', sans-serif;
+        color: var(--text);
+    }
+    .episode-grid-meta .rating, .episode-compact-meta .rating, .episode-classic-meta .rating {
+        color: var(--accent);
+        font-weight: 600;
+    }
+
+    .episode-season-btn {
+        font-family: inherit;
+    }
+    .episode-season-btn.active {
+        background: var(--accent);
+        color: var(--accent-text);
+    }

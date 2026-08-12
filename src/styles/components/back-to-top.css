@@ -1,5 +1,5 @@
-/* Dedicated back-to-top styles. */
-.back-to-top {
+/* Back-to-top control. */
+        .back-to-top {
             position: fixed;
             bottom: 1.5rem;
             right: 1.5rem;
@@ -23,19 +23,18 @@
             pointer-events: none;
             transform: translateY(20px);
         }
-
+        @media (min-width:480px) {
             .back-to-top {
                 bottom: 2rem;
                 right: 2rem;
                 font-size: 1.2rem;
             }
-
+        }
         .back-to-top.visible {
             opacity: 1;
             pointer-events: auto;
             transform: translateY(0);
         }
-
         .back-to-top:hover {
             background: var(--accent);
             color: var(--accent-text);
