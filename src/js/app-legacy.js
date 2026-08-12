@@ -7468,6 +7468,14 @@ function renderProfilePage() {
             playerCharacterExpanded = false;
             playerRelatedItems = [];
             if (playerCountdownTimer) { clearInterval(playerCountdownTimer); playerCountdownTimer = null; }
+            const infoGridReset = document.getElementById('animeInfoGrid');
+            if (infoGridReset) infoGridReset.innerHTML = '<div class="anime-info-placeholder">Завантаження інформації…</div>';
+            const countdownReset = document.getElementById('animeCountdown');
+            if (countdownReset) countdownReset.textContent = '';
+            setSectionState('relatedSection', false);
+            setSectionState('mediaSection', false);
+            const castMoreReset = document.getElementById('castMoreBtn');
+            if (castMoreReset) castMoreReset.hidden = true;
             playerPageCurrentAnimeUrl = url;
             playerPageHistoryUpdated = false;
             playerPageWatchStartTime = 0;
@@ -8297,7 +8305,14 @@ function renderProfilePage() {
         async function loadAndRenderJikanExtras(anime, tmdbInfo, details) {
             try {
                 const data = await resolveJikanAnime(anime);
-                if (!data || playerPageCurrentAnimeUrl !== anime.url) return;
+                if (playerPageCurrentAnimeUrl !== anime.url) return;
+                if (!data) {
+                    const infoGrid = document.getElementById('animeInfoGrid');
+                    if (infoGrid) infoGrid.innerHTML = '<div class="anime-info-placeholder">Розширена інформація тимчасово недоступна</div>';
+                    setSectionState('relatedSection', false);
+                    setSectionState('mediaSection', false);
+                    return;
+                }
                 playerJikanData = data;
                 renderAnimeInformation(data, tmdbInfo, details);
                 renderMainCharacters(data);
@@ -8305,7 +8320,15 @@ function renderProfilePage() {
                 await renderRelatedAnime(data);
             } catch (e) {
                 console.warn('Jikan anime extras unavailable:', e);
-                setSectionState('animeInfoSection', false);
+                const infoGrid = document.getElementById('animeInfoGrid');
+                if (infoGrid) infoGrid.innerHTML = '<div class="anime-info-placeholder">Розширена інформація тимчасово недоступна</div>';
+                const castList = document.getElementById('castList');
+                if (castList && !playerCharacterItems.length && !castList.querySelector('.character-card') && !castList.querySelector('.cast-card')) {
+                    setSectionState('castSection', true);
+                    castList.innerHTML = '<div class="player-empty-episodes">Персонажі тимчасово недоступні</div>';
+                }
+                setSectionState('relatedSection', false);
+                setSectionState('mediaSection', false);
             }
         }
 
