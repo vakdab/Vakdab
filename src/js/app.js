@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=player-fix-3';
+import './app-legacy.js?v=player-fix-4';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';
@@ -21,3 +21,4 @@ window.VakDabModules = Object.freeze({
     Router: window.Router,
     openPlayerPage: window.openPlayerPage
 });
+
