@@ -1797,10 +1797,12 @@ let externalSourceCache = {};
                 v.addEventListener('playing', () => {
                     this.state.loading = false;
                     this._spinner.classList.add('hidden');
+                    this._clearPlaybackError();
                 });
                 v.addEventListener('canplay', () => {
                     this.state.loading = false;
                     this._spinner.classList.add('hidden');
+                    this._clearPlaybackError();
                 });
                 v.addEventListener('error', () => {
                     this.state.loading = false;
@@ -1965,6 +1967,7 @@ let externalSourceCache = {};
                 // Ensure https
                 if (src && src.startsWith('http://')) src = 'https://' + src.slice(7);
                 this.state.src = src;
+                this._clearPlaybackError();
                 const v = this.videoRef;
                 this.state.loading = true;
                 this.state.playing = false;
@@ -2036,6 +2039,10 @@ let externalSourceCache = {};
                     sc.onerror = () => { v.src = proxyUrl; v.load(); this.state.loading = false; this._spinner.classList.add('hidden'); };
                     document.head.appendChild(sc);
                 }
+            }
+
+            _clearPlaybackError() {
+                this.containerRef?.querySelector('.lp-error')?.remove();
             }
 
             _showPlaybackError(message) {
@@ -7635,10 +7642,12 @@ function renderProfilePage() {
                         // Artwork always remains from AnimeUA. TMDB is metadata-only.
                         const isMovie = tmdbInfo.mediaType === 'movie' || playerAnimeIsMovie(anime);
                         const animeUaPoster = posterUrl || ANIME_CARD_PLACEHOLDER;
+                        const tmdbPoster = normalizePosterUrl(tmdbImgUrl(details.poster_path, 'w780'), animeUaPoster);
                         const title = details.name || anime.title;
                         const originalTitle = details.original_name || anime.originalTitle || anime.title;
                         const year = (details.release_date || details.first_air_date || '').slice(0, 4) || anime.year || '—';
-                        const numEpisodes = details.number_of_episodes || totalEpisodes;
+                        // Кількість епізодів належить AnimeUA: TDMB не може її замінювати.
+                        const numEpisodes = totalEpisodes || anime.totalEpisodes || 0;
                         const runtime = formatMovieRuntime(details.runtime) || formatMovieRuntime(anime.runtimeMinutes);
                         const statusLabel = isMovie ? 'Фільм' : (TMDB_STATUS_LABELS[details.status] || (totalEpisodes > 0 ? 'Онгоїнг' : 'Завершено'));
                         // Жанри належать AnimeUA. TMDB використовується лише для додаткових метаданих.
@@ -7646,11 +7655,12 @@ function renderProfilePage() {
                         const ageRating = tmdbAgeRating(details);
                         const logoUrl = tmdbBestLogo(details);
 
-                        document.getElementById('playerPosterImg').src = animeUaPoster;
+                        // Постери плеєра — з TMDB, fallback залишається AnimeUA.
+                        document.getElementById('playerPosterImg').src = tmdbPoster;
                         const heroPoster = document.getElementById('playerHeroPoster');
-                        if (heroPoster) { heroPoster.src = animeUaPoster; heroPoster.alt = title || ''; }
+                        if (heroPoster) { heroPoster.src = tmdbPoster; heroPoster.alt = title || ''; }
                         const tmdbBackdrop = tmdbBestBackdrop(details);
-                        document.getElementById('playerBlurBg').style.backgroundImage = `url(${tmdbBackdrop || animeUaPoster})`;
+                        document.getElementById('playerBlurBg').style.backgroundImage = `url(${tmdbBackdrop || tmdbPoster})`;
                         document.getElementById('playerPosterTitle').textContent = title;
                         document.getElementById('playerKicker').textContent = originalTitle;
                         document.getElementById('playerTopbarTitle').textContent = title;
