@@ -7425,6 +7425,8 @@ function renderProfilePage() {
         let playerCharacterItems = [];
         let playerCharacterExpanded = false;
         let playerRelatedItems = [];
+        let playerMediaItems = [];
+        let playerMediaExpanded = false;
         let playerCountdownTimer = null;
 
         const QUALITY_OPTIONS = ['Максимальна', '2160p (4K)', '1440p', '1080p', '720p', '480p', '360p'];
@@ -7467,6 +7469,8 @@ function renderProfilePage() {
             playerCharacterItems = [];
             playerCharacterExpanded = false;
             playerRelatedItems = [];
+            playerMediaItems = [];
+            playerMediaExpanded = false;
             if (playerCountdownTimer) { clearInterval(playerCountdownTimer); playerCountdownTimer = null; }
             const infoGridReset = document.getElementById('animeInfoGrid');
             if (infoGridReset) infoGridReset.innerHTML = '<div class="anime-info-placeholder">Завантаження інформації…</div>';
@@ -8245,6 +8249,7 @@ function renderProfilePage() {
                 episodes: media.episodes, duration: media.duration, _durationMinutes: media.duration,
                 airing: media.status === 'RELEASING',
                 _nextAiringDate: media.nextAiringEpisode ? new Date(media.nextAiringEpisode.airingAt * 1000) : null,
+                _nextEpisode: media.nextAiringEpisode?.episode || null,
                 rating: media.averageScore ? `AniList ${(media.averageScore / 10).toFixed(1)}` : null,
                 studios, characters
             };
@@ -8304,7 +8309,8 @@ function renderProfilePage() {
         }
 
         function formatJikanDuration(value) {
-            if (!value) return '';
+            if (value === null || value === undefined || value === '') return '';
+            if (Number.isFinite(Number(value))) return `${Number(value)} хвилин`;
             const m = String(value).match(/(\d+)\s*min/i);
             return m ? `${m[1]} хвилин` : String(value);
         }
@@ -8355,26 +8361,29 @@ function renderProfilePage() {
             if (!root) return;
             const type = data?.type || (playerAnimeIsMovie() ? 'Movie' : 'TV');
             const typeLabel = type === 'TV' ? 'TV Серіал' : type === 'Movie' ? 'Фільм' : (type || '—');
-            const status = JIKAN_STATUS_LABELS[data?.status] || data?.status || '—';
-            const seasonYear = data?.season && data?.year ? `${SEASON_LABELS[data.season] || data.season} ${data.year}` : (data?.year || '—');
+            const status = data?._statusLabel || JIKAN_STATUS_LABELS[data?.status] || ANILIST_STATUS_LABELS[data?.status] || data?.status || '—';
+            const derivedYear = data?.year || (details?.first_air_date || details?.release_date || '').slice(0, 4);
+            const seasonYear = data?.season && derivedYear ? `${SEASON_LABELS[data.season] || data.season} ${derivedYear}` : (derivedYear || '—');
             const episodeCount = data?.episodes ?? details?.number_of_episodes ?? playerPageAnime?.totalEpisodes ?? '—';
-            const nextDate = data?.airing ? nextBroadcastDate(data.broadcast) : null;
-            const next = nextDate ? formatNextEpisodeDate(nextDate) : (data?.airing ? 'Дата невідома' : '—');
-            const studio = data?.studios?.[0]?.name || '—';
+            const nextDate = data?._nextAiringDate instanceof Date && !Number.isNaN(data._nextAiringDate.getTime())
+                ? data._nextAiringDate : (data?.airing ? nextBroadcastDate(data.broadcast) : null);
+            const nextEpisode = data?._nextEpisode || (data?.airing && Number.isFinite(Number(data?.episodes)) ? Number(data.episodes) + 1 : null);
+            const next = nextDate ? `${nextEpisode ? `Епізод ${nextEpisode} · ` : ''}${formatNextEpisodeDate(nextDate)}` : (data?.airing ? 'Дата невідома' : '—');
+            const studio = data?.studios?.[0]?.name || details?.production_companies?.[0]?.name || '—';
+            const studioLogo = data?.studios?.[0]?.logo || (details?.production_companies?.[0]?.logo_path ? tmdbImgUrl(details.production_companies[0].logo_path, 'w185') : '');
             const rating = data?.rating || (details?.vote_average ? `TMDB ${details.vote_average.toFixed(1)}` : '—');
-            root.innerHTML = [
+            const rows = [
                 ['Тип', typeLabel], ['Статус', `<span class="anime-info-badge">${escapeHtml(status)}</span>`],
                 ['Сезон / рік', seasonYear], ['Епізоди', episodeCount || '—'], ['Наступний епізод', next],
-                ['Тривалість епізоду', formatJikanDuration(data?.duration) || '—'], ['Рейтинг', rating], ['Студія', studio]
-            ].map(([label, value]) => `<div class="anime-info-row"><span>${escapeHtml(label)}</span><strong>${typeof value === 'string' && value.includes('anime-info-badge') ? value : escapeHtml(value)}</strong></div>`).join('');
-            if (nextDate) {
-                const countdown = document.getElementById('animeCountdown');
-                if (countdown) countdown.textContent = countdownText(nextDate);
-                if (playerCountdownTimer) clearInterval(playerCountdownTimer);
-                playerCountdownTimer = setInterval(() => {
-                    if (countdown) countdown.textContent = countdownText(nextDate);
-                }, 60000);
-            }
+                ['Тривалість епізоду', formatJikanDuration(data?.duration) || (details?.episode_run_time?.[0] ? `${details.episode_run_time[0]} хвилин` : '—')],
+                ['Рейтинг', rating],
+                ['Студія', studioLogo ? `${escapeHtml(studio)}<img class="anime-info-studio-logo" src="${escapeHtml(studioLogo)}" alt="" loading="lazy" onerror="this.remove()">` : studio]
+            ];
+            root.innerHTML = rows.map(([label, value]) => `<div class="anime-info-row"><span>${escapeHtml(label)}</span><strong>${String(value).includes('anime-info-badge') || String(value).includes('anime-info-studio-logo') ? value : escapeHtml(String(value))}</strong></div>`).join('');
+            const countdown = document.getElementById('animeCountdown');
+            if (playerCountdownTimer) { clearInterval(playerCountdownTimer); playerCountdownTimer = null; }
+            if (countdown) countdown.textContent = nextDate ? countdownText(nextDate) : '';
+            if (nextDate) playerCountdownTimer = setInterval(() => { if (countdown) countdown.textContent = countdownText(nextDate); }, 60000);
         }
 
         function renderMainCharacters(data) {
@@ -8384,12 +8393,12 @@ function renderProfilePage() {
             playerCharacterItems = (data?.characters || []).filter(x => x?.character?.name).map(x => ({
                 name: x.character.name, original: x.character.name_kanji, role: x.role,
                 image: jikanImage(x.character), voice: x.voice_actors?.find(v => v.language === 'Japanese')?.person?.name || ''
-            }));
+            })).sort((a, b) => (a.role === 'Main' ? 0 : 1) - (b.role === 'Main' ? 0 : 1));
             const items = playerCharacterExpanded ? playerCharacterItems : playerCharacterItems.slice(0, 8);
             if (!items.length) { setSectionState('mainCharactersSection', false); return; }
             setSectionState('mainCharactersSection', true);
             list.innerHTML = items.map(c => `<article class="cast-card character-card"><div class="cast-avatar" style="${c.image ? `background-image:url('${escapeHtml(c.image)}')` : ''}"></div><div class="cast-name">${escapeHtml(c.name)}</div>${c.original ? `<div class="character-original">${escapeHtml(c.original)}</div>` : ''}<div class="cast-role">${escapeHtml([c.role, c.voice ? `Сейю: ${c.voice}` : ''].filter(Boolean).join(' · '))}</div></article>`).join('');
-            if (more) { more.hidden = playerCharacterItems.length <= 8; more.textContent = playerCharacterExpanded ? 'Згорнути' : 'Усі'; }
+            if (more) { more.hidden = playerCharacterItems.length <= 8; more.textContent = playerCharacterExpanded ? '←' : '→'; }
         }
 
         function relatedCardMarkup(x) {
@@ -8401,8 +8410,9 @@ function renderProfilePage() {
             const entries = (data?.relations || []).flatMap(group => (group.entry || []).map(entry => ({ ...entry, relation: group.relation })))
                 .filter(x => x.mal_id && Number(x.mal_id) !== current);
             const unique = [...new Map(entries.map(x => [x.mal_id, x])).values()];
-            const details = await Promise.allSettled(unique.slice(0, 12).map(x => fetchJikan(`/anime/${x.mal_id}`)));
-            return unique.slice(0, 12).map((x, i) => {
+            const displayItems = unique.slice(0, 24);
+            const details = await Promise.allSettled(displayItems.map(x => fetchJikan(`/anime/${x.mal_id}`)));
+            return displayItems.map((x, i) => {
                 const full = details[i].status === 'fulfilled' ? details[i].value.data : {};
                 return { url: full.url || x.url, image: jikanImage(full), title: full.title || x.name, year: full.year || (full.aired?.from || '').slice(0, 4), typeLabel: full.type, relationLabel: x.relation };
             });
@@ -8413,7 +8423,7 @@ function renderProfilePage() {
             const edges = await fetchAnilistRelations(data._anilistId);
             const filtered = edges.filter(e => e.node?.id !== data._anilistId);
             const unique = [...new Map(filtered.map(e => [e.node.id, e])).values()];
-            return unique.slice(0, 12).map(e => ({
+            return unique.map(e => ({
                 url: e.node.siteUrl, image: e.node.coverImage?.large,
                 title: e.node.title?.romaji || e.node.title?.english, year: e.node.startDate?.year,
                 typeLabel: ANILIST_FORMAT_LABELS[e.node.format] || e.node.format,
@@ -8440,11 +8450,17 @@ function renderProfilePage() {
 
         function renderAnimeMedia(data) {
             const list = document.getElementById('mediaList');
+            const more = document.getElementById('mediaMoreBtn');
             if (!list) return;
-            const tracks = [...(data?.theme?.openings || []), ...(data?.theme?.endings || [])];
-            if (!tracks.length) { setSectionState('mediaSection', false); return; }
+            playerMediaItems = [
+                ...(data?.theme?.openings || []).map(x => ({ label: 'Opening', title: x })),
+                ...(data?.theme?.endings || []).map(x => ({ label: 'Ending', title: x }))
+            ].filter(x => x.title).filter((x, i, arr) => arr.findIndex(y => y.label === x.label && y.title === x.title) === i);
+            if (!playerMediaItems.length) { setSectionState('mediaSection', false); return; }
             setSectionState('mediaSection', true);
-            list.innerHTML = tracks.slice(0, 8).map((x, i) => `<div class="media-track"><span>${i + 1}</span><strong>${escapeHtml(x)}</strong></div>`).join('');
+            const items = playerMediaExpanded ? playerMediaItems : playerMediaItems.slice(0, 8);
+            list.innerHTML = items.map((x, i) => `<div class="media-track"><span>${escapeHtml(x.label)}</span><strong>${escapeHtml(x.title)}</strong></div>`).join('');
+            if (more) { more.hidden = playerMediaItems.length <= 8; more.textContent = playerMediaExpanded ? '←' : '→'; }
         }
 
         async function loadAndRenderJikanExtras(anime, tmdbInfo, details) {
@@ -9051,6 +9067,10 @@ function renderProfilePage() {
         document.getElementById('mainCharactersMoreBtn')?.addEventListener('click', () => {
             playerCharacterExpanded = !playerCharacterExpanded;
             renderMainCharacters(playerJikanData);
+        });
+        document.getElementById('mediaMoreBtn')?.addEventListener('click', () => {
+            playerMediaExpanded = !playerMediaExpanded;
+            renderAnimeMedia(playerJikanData);
         });
         document.getElementById('relatedMoreBtn')?.addEventListener('click', () => {
             const list = document.getElementById('relatedList');
