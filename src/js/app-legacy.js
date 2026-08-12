@@ -1061,6 +1061,21 @@ let externalSourceCache = {};
             const ratingEl = doc.querySelector('.pmovie__age p, .pmovie__age');
             if (ratingEl) rating = ratingEl.textContent.replace('Рейтинг:', '').trim();
 
+            // AnimeUA pages may contain stable external links. Keep them instead of
+            // treating a URL hash as a MAL identifier.
+            const externalIds = { mal_id: null, anilist_id: null };
+            safeQueryAll('a[href]', doc).forEach(a => {
+                const href = a.getAttribute('href') || '';
+                let m = href.match(/myanimelist\.net\/(?:anime|manga)\/(\d+)/i);
+                if (m && !externalIds.mal_id) externalIds.mal_id = Number(m[1]);
+                m = href.match(/anilist\.co\/anime\/(\d+)/i);
+                if (m && !externalIds.anilist_id) externalIds.anilist_id = Number(m[1]);
+            });
+            const rawMal = rawHtml.match(/myanimelist\.net\/(?:anime|manga)\/(\d+)/i);
+            if (rawMal && !externalIds.mal_id) externalIds.mal_id = Number(rawMal[1]);
+            const rawAni = rawHtml.match(/anilist\.co\/anime\/(\d+)/i);
+            if (rawAni && !externalIds.anilist_id) externalIds.anilist_id = Number(rawAni[1]);
+
             // Movie runtime from AnimeUA, used immediately while TMDB metadata is loading.
             let runtimeMinutes = null;
             const runtimeText = safeQuery('.pmovie__duration, .movie-duration, .duration, [class*="duration"]', doc)?.textContent || '';
@@ -1234,7 +1249,8 @@ let externalSourceCache = {};
             diag.failedStage = diag.emptyObject ? diag.failedStage : 'OK — усі етапи пройдено успішно';
 
             return {
-                mal_id: animeUrl.hashCode(),
+                mal_id: externalIds.mal_id || animeUrl.hashCode(),
+                externalIds,
                 title, originalTitle: (typeof originalTitle !== "undefined" && originalTitle ? originalTitle : ""),
                 images: { jpg: { large_image_url: poster, image_url: poster } },
                 genres,
@@ -7251,7 +7267,7 @@ function renderProfilePage() {
         //  РОЗКЛАД ВИХОДУ (дані з animeon.club, проксі через PROXY_URL)
         // ====================================================================
         const ANIMEON_API_BASE = 'https://animeon.club/api';
-        const scheduleState = { dayOffset: 0, cache: {}, loadingOffset: null };
+        const scheduleState = { dayOffset: 0, cache: {}, loadingOffset: null, weekLoading: false, weekTimer: null };
         const WEEKDAY_SHORT_UA = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
         function scheduleDateForOffset(offset) {
@@ -7287,34 +7303,64 @@ function renderProfilePage() {
             return data;
         }
 
+        function scheduleItemDate(item, offset) {
+            const raw = item?.nextEpisodeAt || item?.airDate || item?.releaseDate || item?.releasedAt || item?.dateTime || item?.datetime;
+            if (raw) { const d = new Date(raw); if (!Number.isNaN(d.getTime())) return d; }
+            const time = item?.time || item?.airTime || item?.broadcast?.time || item?.anime?.broadcast?.time;
+            if (time && /^\d{1,2}:\d{2}/.test(String(time))) {
+                const base = scheduleDateForOffset(offset);
+                const [h, m] = String(time).split(':').map(Number);
+                base.setHours(h, m, 0, 0);
+                return base;
+            }
+            return null;
+        }
+
+        function scheduleCard(item, offset) {
+            const a = item?.anime || {};
+            const poster = a.image?.preview ? `https://animeon.club/api/uploads/images/${a.image.preview}` : (a.image?.url || a.images?.jpg?.image_url || '');
+            const title = a.titleUa || a.titleEn || a.title || 'Без назви';
+            const date = scheduleItemDate(item, offset);
+            const dateText = date ? new Intl.DateTimeFormat('uk-UA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(date) : 'Час невідомий';
+            const countdown = date && date.getTime() > Date.now() ? `<span class="schedule-countdown" data-time="${date.toISOString()}">${countdownText(date)}</span>` : '';
+            return `<article class="schedule-item schedule-week-item" data-title="${escapeHtml(title)}" data-title-en="${escapeHtml(a.titleEn || '')}" data-slug="${escapeHtml(a.slug || '')}">
+                <div class="schedule-item__poster"><img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.style.opacity=0"></div>
+                <div class="schedule-item__info"><div class="schedule-item__title">${escapeHtml(title)}</div><div class="schedule-item__ep">${item?.episode ? `Епізод ${escapeHtml(item.episode)}` : 'Наступний епізод'} · ${escapeHtml(dateText)}</div>${countdown}</div><i class="fas fa-chevron-right schedule-item__arrow"></i>
+            </article>`;
+        }
+
+        async function loadScheduleWeek() {
+            const content = document.getElementById('scheduleWeekContent');
+            if (!content || scheduleState.weekLoading) return;
+            scheduleState.weekLoading = true;
+            content.innerHTML = '<div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження розкладу…</div>';
+            try {
+                const results = await Promise.allSettled(Array.from({ length: 7 }, (_, i) => fetchScheduleByOffset(i)));
+                const sections = results.map((result, offset) => {
+                    const list = result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : [];
+                    if (!list.length) return '';
+                    const d = scheduleDateForOffset(offset);
+                    const day = new Intl.DateTimeFormat('uk-UA', { weekday: 'long' }).format(d);
+                    return `<section class="schedule-week-day${offset === 0 ? ' is-today' : ''}"><div class="schedule-week-day__title"><strong>${day}</strong><span>${offset === 0 ? 'Сьогодні' : formatScheduleDisplayDate(d)}</span></div><div class="schedule-week-list">${list.map(item => scheduleCard(item, offset)).join('')}</div></section>`;
+                }).join('');
+                content.innerHTML = sections || '<div class="loader">На найближчі дні розкладу немає</div>';
+                content.querySelectorAll('.schedule-week-item').forEach(el => el.addEventListener('click', () => openScheduleItemInPlayer(el.dataset.title, el)));
+                if (scheduleState.weekTimer) clearInterval(scheduleState.weekTimer);
+                scheduleState.weekTimer = setInterval(() => content.querySelectorAll('.schedule-countdown').forEach(el => { const d = new Date(el.dataset.time); el.textContent = countdownText(d); }), 60000);
+            } catch (e) { content.innerHTML = `<div class="loader">Не вдалося завантажити розклад. <button class="btn-outline" type="button" onclick="loadScheduleWeek()">Повторити</button></div>`; }
+            finally { scheduleState.weekLoading = false; }
+        }
+        window.loadScheduleWeek = loadScheduleWeek;
+
         function renderSchedulePage() {
             const container = document.getElementById('schedulePageContainer');
             if (!container) return;
-            let tabsHtml = '';
-            for (let i = 0; i < 7; i++) {
-                const d = scheduleDateForOffset(i);
-                const label = i === 0 ? 'Сьогодні' : WEEKDAY_SHORT_UA[d.getDay()];
-                tabsHtml += `<button class="schedule-day-tab${i === 0 ? ' active' : ''}" data-offset="${i}">
-                    <span class="schedule-day-tab__label">${label}</span>
-                    <span class="schedule-day-tab__date">${formatScheduleDisplayDate(d)}</span>
-                </button>`;
-            }
             container.innerHTML = `
                 <div class="genre-page-header"><h2>Розклад виходу</h2></div>
-                <p class="schedule-page-hint">Розклад ведеться за датою виходу епізодів у Японії — на сайт епізод потрапляє за 1-2 дні.</p>
-                <div class="schedule-day-tabs" id="scheduleDayTabs">${tabsHtml}</div>
-                <div id="scheduleDayContent" class="schedule-day-content"></div>
+                <p class="schedule-page-hint">Актуальний розклад онґоїнг-аніме, згрупований за днями. Час показується лише коли його повертає джерело.</p>
+                <div id="scheduleWeekContent" class="schedule-week-content"></div>
             `;
-            container.querySelectorAll('.schedule-day-tab').forEach(tab => {
-                tab.addEventListener('click', () => {
-                    const offset = parseInt(tab.dataset.offset, 10);
-                    scheduleState.dayOffset = offset;
-                    container.querySelectorAll('.schedule-day-tab').forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    loadScheduleDayContent(offset);
-                });
-            });
-            loadScheduleDayContent(0);
+            loadScheduleWeek();
         }
 
         async function loadScheduleDayContent(offset) {
@@ -7375,6 +7421,11 @@ function renderProfilePage() {
         let playerPageHistoryUpdated = false;
         let playerPageWatchStartTime = 0;
         let playerRatingSourceIsTmdb = false; // TMDB рейтинг має пріоритет над локальним рейтингом глядачів
+        let playerJikanData = null;
+        let playerCharacterItems = [];
+        let playerCharacterExpanded = false;
+        let playerRelatedItems = [];
+        let playerCountdownTimer = null;
 
         const QUALITY_OPTIONS = ['Максимальна', '2160p (4K)', '1440p', '1080p', '720p', '480p', '360p'];
 
@@ -7412,6 +7463,11 @@ function renderProfilePage() {
             if (playerPagePlayer) { playerPagePlayer.destroy();
                 playerPagePlayer = null; }
             playerPageAnime = null;
+            playerJikanData = null;
+            playerCharacterItems = [];
+            playerCharacterExpanded = false;
+            playerRelatedItems = [];
+            if (playerCountdownTimer) { clearInterval(playerCountdownTimer); playerCountdownTimer = null; }
             playerPageCurrentAnimeUrl = url;
             playerPageHistoryUpdated = false;
             playerPageWatchStartTime = 0;
@@ -7509,10 +7565,10 @@ function renderProfilePage() {
                     try {
                         const tmdbInfo = await fetchTmdbForAnime(anime);
                         if (_thisSignal.aborted || playerPageCurrentAnimeUrl !== url) return;
-                        if (!tmdbInfo) return;
+                        if (!tmdbInfo) { await loadAndRenderJikanExtras(anime, null, null); return; }
                         const details = await fetchTmdbFullDetails(tmdbInfo);
                         if (_thisSignal.aborted || playerPageCurrentAnimeUrl !== url) return;
-                        if (!details) return;
+                        if (!details) { await loadAndRenderJikanExtras(anime, tmdbInfo, null); return; }
 
                         // Artwork always remains from AnimeUA. TMDB is metadata-only.
                         const isMovie = tmdbInfo.mediaType === 'movie' || playerAnimeIsMovie(anime);
@@ -7565,6 +7621,7 @@ function renderProfilePage() {
                             logoImg.src = logoUrl;
                         }
                         renderCast(details);
+                        loadAndRenderJikanExtras(anime, tmdbInfo, details);
                     } catch (e) {
                         console.warn('TMDB metadata enrich failed', e);
                     }
@@ -8060,6 +8117,197 @@ function renderProfilePage() {
             'Planned': 'Заплановано',
             'Pilot': 'Пілот'
         };
+
+        // ====================================================================
+        //  JIKAN / MAL — персонажі, сейю, зв'язки, студія, broadcast та media.
+        //  Дані завжди прив'язані до MAL ID; пошук за назвою використовується
+        //  тільки коли сторінка AnimeUA не має зовнішнього ID.
+        // ====================================================================
+        const JIKAN_BASE = 'https://api.jikan.moe/v4';
+        const jikanCache = new Map();
+        const JIKAN_STATUS_LABELS = {
+            'Currently Airing': 'Онґоїнг', 'Finished Airing': 'Завершено',
+            'Not yet aired': 'Майбутнє', 'Discontinued': 'Скасовано', 'On Hiatus': 'Призупинено'
+        };
+        const SEASON_LABELS = { winter: 'Зима', spring: 'Весна', summer: 'Літо', fall: 'Осінь' };
+
+        async function fetchJikan(path) {
+            if (jikanCache.has(path)) return jikanCache.get(path);
+            const promise = fetch(`${JIKAN_BASE}${path}`, { cache: 'force-cache' }).then(r => {
+                if (!r.ok) throw new Error(`Jikan HTTP ${r.status}`);
+                return r.json();
+            });
+            jikanCache.set(path, promise);
+            try { return await promise; } catch (e) { jikanCache.delete(path); throw e; }
+        }
+
+        function normalizeJikanTitle(v) {
+            return String(v || '').toLowerCase().replace(/[«»'"`]/g, '')
+                .replace(/\b(season|сезон|part|частина|cour|tv|серіал|anime)\s*\d*\b/gi, ' ')
+                .replace(/[^a-zа-яіїєґ0-9]+/gi, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        async function resolveJikanAnime(anime) {
+            const stableId = Number(anime?.externalIds?.mal_id);
+            if (stableId) return (await fetchJikan(`/anime/${stableId}/full`)).data || null;
+            const query = anime?.originalTitle || anime?.title;
+            if (!query) return null;
+            const result = await fetchJikan(`/anime?q=${encodeURIComponent(query)}&limit=5&sfw=true`);
+            const target = normalizeJikanTitle(query);
+            const candidates = (result.data || []).map(x => {
+                const names = [x.title, x.title_english, x.title_japanese, ...(x.title_synonyms || [])].map(normalizeJikanTitle);
+                let score = names.includes(target) ? 100 : 0;
+                if (names.some(n => n && (n.includes(target) || target.includes(n)))) score += 35;
+                if (x.type === 'TV') score += 4;
+                return { x, score };
+            }).sort((a, b) => b.score - a.score);
+            const best = candidates[0];
+            // Do not attach a weak unrelated title just because search returned something.
+            if (!best || best.score < 35) return null;
+            return (await fetchJikan(`/anime/${best.x.mal_id}/full`)).data || null;
+        }
+
+        function jikanImage(item) {
+            return item?.images?.webp?.image_url || item?.images?.jpg?.image_url || '';
+        }
+
+        function setSectionState(id, visible) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = visible ? '' : 'none';
+        }
+
+        function formatJikanDuration(value) {
+            if (!value) return '';
+            const m = String(value).match(/(\d+)\s*min/i);
+            return m ? `${m[1]} хвилин` : String(value);
+        }
+
+        function formatNextEpisodeDate(date) {
+            if (!date) return 'Дата невідома';
+            return new Intl.DateTimeFormat('uk-UA', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+        }
+
+        function nextBroadcastDate(broadcast) {
+            if (!broadcast?.day || !broadcast?.time) return null;
+            const days = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
+            const targetDay = days[String(broadcast.day).toLowerCase()];
+            if (targetDay === undefined) return null;
+            const [hour, minute] = String(broadcast.time).split(':').map(Number);
+            if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+            // Build the wall-clock date in Tokyo and convert it through Intl, never by a fixed offset.
+            const now = new Date();
+            const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+            }).formatToParts(now).filter(x => x.type !== 'literal').map(x => [x.type, Number(x.value)]));
+            const tokyoWall = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour % 24, parts.minute, parts.second));
+            const currentDay = tokyoWall.getUTCDay();
+            let delta = (targetDay - currentDay + 7) % 7;
+            const candidateWall = new Date(tokyoWall);
+            candidateWall.setUTCDate(candidateWall.getUTCDate() + delta);
+            candidateWall.setUTCHours(hour, minute, 0, 0);
+            if (candidateWall <= tokyoWall) candidateWall.setUTCDate(candidateWall.getUTCDate() + 7);
+            const tokyoOffset = tokyoWall.getTime() - now.getTime();
+            return new Date(candidateWall.getTime() - tokyoOffset);
+        }
+
+        function countdownText(date) {
+            const ms = new Date(date).getTime() - Date.now();
+            if (!Number.isFinite(ms) || ms <= 0) return 'Очікуємо оновлення';
+            const totalMinutes = Math.floor(ms / 60000);
+            const days = Math.floor(totalMinutes / 1440);
+            const hours = Math.floor((totalMinutes % 1440) / 60);
+            const mins = totalMinutes % 60;
+            if (days) return `Вихід через ${days} дн. ${hours} год.`;
+            if (hours) return `Вихід через ${hours} год. ${mins} хв.`;
+            return `Вихід через ${Math.max(mins, 1)} хв.`;
+        }
+
+        function renderAnimeInformation(data, tmdbInfo, details) {
+            const root = document.getElementById('animeInfoGrid');
+            if (!root) return;
+            const type = data?.type || (playerAnimeIsMovie() ? 'Movie' : 'TV');
+            const typeLabel = type === 'TV' ? 'TV Серіал' : type === 'Movie' ? 'Фільм' : (type || '—');
+            const status = JIKAN_STATUS_LABELS[data?.status] || data?.status || '—';
+            const seasonYear = data?.season && data?.year ? `${SEASON_LABELS[data.season] || data.season} ${data.year}` : (data?.year || '—');
+            const episodeCount = data?.episodes ?? details?.number_of_episodes ?? playerPageAnime?.totalEpisodes ?? '—';
+            const nextDate = data?.airing ? nextBroadcastDate(data.broadcast) : null;
+            const next = nextDate ? formatNextEpisodeDate(nextDate) : (data?.airing ? 'Дата невідома' : '—');
+            const studio = data?.studios?.[0]?.name || '—';
+            const rating = data?.rating || (details?.vote_average ? `TMDB ${details.vote_average.toFixed(1)}` : '—');
+            root.innerHTML = [
+                ['Тип', typeLabel], ['Статус', `<span class="anime-info-badge">${escapeHtml(status)}</span>`],
+                ['Сезон / рік', seasonYear], ['Епізоди', episodeCount || '—'], ['Наступний епізод', next],
+                ['Тривалість епізоду', formatJikanDuration(data?.duration) || '—'], ['Рейтинг', rating], ['Студія', studio]
+            ].map(([label, value]) => `<div class="anime-info-row"><span>${escapeHtml(label)}</span><strong>${typeof value === 'string' && value.includes('anime-info-badge') ? value : escapeHtml(value)}</strong></div>`).join('');
+            if (nextDate) {
+                const countdown = document.getElementById('animeCountdown');
+                if (countdown) countdown.textContent = countdownText(nextDate);
+                if (playerCountdownTimer) clearInterval(playerCountdownTimer);
+                playerCountdownTimer = setInterval(() => {
+                    if (countdown) countdown.textContent = countdownText(nextDate);
+                }, 60000);
+            }
+        }
+
+        function renderMainCharacters(data) {
+            const list = document.getElementById('castList');
+            const more = document.getElementById('castMoreBtn');
+            if (!list) return;
+            playerCharacterItems = (data?.characters || []).filter(x => x?.character?.name).map(x => ({
+                name: x.character.name, original: x.character.name_kanji, role: x.role,
+                image: jikanImage(x.character), voice: x.voice_actors?.find(v => v.language === 'Japanese')?.person?.name || ''
+            }));
+            const items = playerCharacterExpanded ? playerCharacterItems : playerCharacterItems.slice(0, 8);
+            if (!items.length) { setSectionState('castSection', false); return; }
+            setSectionState('castSection', true);
+            list.innerHTML = items.map(c => `<article class="cast-card character-card"><div class="cast-avatar" style="${c.image ? `background-image:url('${escapeHtml(c.image)}')` : ''}"></div><div class="cast-name">${escapeHtml(c.name)}</div>${c.original ? `<div class="character-original">${escapeHtml(c.original)}</div>` : ''}<div class="cast-role">${escapeHtml([c.role, c.voice ? `Сейю: ${c.voice}` : ''].filter(Boolean).join(' · '))}</div></article>`).join('');
+            if (more) { more.hidden = playerCharacterItems.length <= 8; more.textContent = playerCharacterExpanded ? 'Згорнути' : 'Усі'; }
+        }
+
+        async function renderRelatedAnime(data) {
+            const list = document.getElementById('relatedList');
+            const more = document.getElementById('relatedMoreBtn');
+            if (!list) return;
+            const current = Number(playerJikanData?.mal_id);
+            const entries = (data?.relations || []).flatMap(group => (group.entry || []).map(entry => ({ ...entry, relation: group.relation })))
+                .filter(x => x.mal_id && Number(x.mal_id) !== current);
+            const unique = [...new Map(entries.map(x => [x.mal_id, x])).values()];
+            const details = await Promise.allSettled(unique.slice(0, 12).map(x => fetchJikan(`/anime/${x.mal_id}`)));
+            playerRelatedItems = unique.slice(0, 12).map((x, i) => ({ ...x, ...(details[i].status === 'fulfilled' ? details[i].value.data : {}) }));
+            if (!playerRelatedItems.length) { setSectionState('relatedSection', false); return; }
+            setSectionState('relatedSection', true);
+            const visible = playerRelatedItems.slice(0, 4);
+            list.innerHTML = visible.map(x => `<article class="related-card" data-url="${escapeHtml(x.url || '')}"><img src="${escapeHtml(jikanImage(x))}" alt="" loading="lazy"><div><strong>${escapeHtml(x.title || x.name || '')}</strong><span>${escapeHtml([x.year || x.aired?.from?.slice(0,4), x.type, x.relation].filter(Boolean).join(' · '))}</span></div></article>`).join('');
+            list.querySelectorAll('.related-card').forEach(card => card.addEventListener('click', () => { if (card.dataset.url) window.open(card.dataset.url, '_blank', 'noopener'); }));
+            const count = document.getElementById('relatedCount');
+            if (count) count.textContent = `(${playerRelatedItems.length})`;
+            if (more) more.hidden = playerRelatedItems.length <= 4;
+        }
+
+        function renderAnimeMedia(data) {
+            const list = document.getElementById('mediaList');
+            if (!list) return;
+            const tracks = [...(data?.theme?.openings || []), ...(data?.theme?.endings || [])];
+            if (!tracks.length) { setSectionState('mediaSection', false); return; }
+            setSectionState('mediaSection', true);
+            list.innerHTML = tracks.slice(0, 8).map((x, i) => `<div class="media-track"><span>${i + 1}</span><strong>${escapeHtml(x)}</strong></div>`).join('');
+        }
+
+        async function loadAndRenderJikanExtras(anime, tmdbInfo, details) {
+            try {
+                const data = await resolveJikanAnime(anime);
+                if (!data || playerPageCurrentAnimeUrl !== anime.url) return;
+                playerJikanData = data;
+                renderAnimeInformation(data, tmdbInfo, details);
+                renderMainCharacters(data);
+                renderAnimeMedia(data);
+                await renderRelatedAnime(data);
+            } catch (e) {
+                console.warn('Jikan anime extras unavailable:', e);
+                setSectionState('animeInfoSection', false);
+            }
+        }
 
         function renderCast(details) {
             const section = document.getElementById('castSection');
@@ -8629,6 +8877,18 @@ function renderProfilePage() {
                 const mode = tab.dataset.view;
                 showViewMode(mode);
             });
+        });
+
+        document.getElementById('castMoreBtn')?.addEventListener('click', () => {
+            playerCharacterExpanded = !playerCharacterExpanded;
+            renderMainCharacters(playerJikanData);
+        });
+        document.getElementById('relatedMoreBtn')?.addEventListener('click', () => {
+            const list = document.getElementById('relatedList');
+            if (!list) return;
+            list.innerHTML = playerRelatedItems.map(x => `<article class="related-card" data-url="${escapeHtml(x.url || '')}"><img src="${escapeHtml(jikanImage(x))}" alt="" loading="lazy"><div><strong>${escapeHtml(x.title || x.name || '')}</strong><span>${escapeHtml([x.year || x.aired?.from?.slice(0,4), x.type, x.relation].filter(Boolean).join(' · '))}</span></div></article>`).join('');
+            list.querySelectorAll('.related-card').forEach(card => card.addEventListener('click', () => { if (card.dataset.url) window.open(card.dataset.url, '_blank', 'noopener'); }));
+            document.getElementById('relatedMoreBtn').hidden = true;
         });
 
         document.getElementById('likeBtn').addEventListener('click', toggleLike);
