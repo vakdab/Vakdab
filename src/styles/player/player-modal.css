@@ -1,1 +1,29 @@
-/* player-modal styles are currently preserved in ../../legacy.css during the safe migration. */
+/* Dedicated player-modal styles. */
+#playerPageModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            z-index: 2000;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 0;
+            overflow-y: auto;
+        }
+
+        #playerPageModal .modal-content {
+            background: transparent;
+            max-width: 100%;
+            width: 100%;
+            min-height: 100vh;
+            border-radius: 0;
+            border: none;
+            box-shadow: none;
+            margin: 0;
+            overflow-y: visible;
+            position: relative;
+            padding-bottom: 2rem;
+        }

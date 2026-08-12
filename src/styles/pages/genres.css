@@ -1,1 +1,11 @@
-/* genres page styles are currently preserved in ../../legacy.css during the safe migration. */
+/* Dedicated genres styles. */
+.genres-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 16px 0;
+        }
+
+            .genres-grid { grid-template-columns: repeat(3, 1fr); }
+
+            .genres-grid { grid-template-columns: repeat(4, 1fr); }

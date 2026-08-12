@@ -1,1 +1,19 @@
-/* pagination styles are currently preserved in ../legacy.css during the safe migration. */
+/* Dedicated pagination styles. */
+.pagination-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+            .pagination-row {
+                gap: 0.5rem;
+                margin-top: 2rem;
+            }
+
+            .pagination-row {
+                gap: 0.6rem;
+                margin-top: 2.5rem;
+            }

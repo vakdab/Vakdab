@@ -1,1 +1,86 @@
-/* search page styles are currently preserved in ../../legacy.css during the safe migration. */
+/* Dedicated search styles. */
+.search-page-header {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+        }
+
+        .search-page-header h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+            .search-page-header h2 { font-size: 1.6rem; }
+
+            .search-page-header h2 { font-size: 1.8rem; }
+
+        .search-page-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 0.5rem 0.9rem;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-sm);
+            flex: 1 1 100%;
+            max-width: 600px;
+        }
+
+        .search-page-input-wrap:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-light), var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .search-page-input-wrap i {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-right: 0.6rem;
+            transition: color var(--transition);
+            flex-shrink: 0;
+        }
+
+        .search-page-input-wrap:focus-within i {
+            color: var(--accent);
+        }
+
+        .search-page-clear {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0.2rem;
+            margin-left: 0.2rem;
+            border-radius: 50%;
+            width: 32px;
+            min-width: 32px;
+            height: 32px;
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            flex-shrink: 0;
+        }
+
+        .search-page-clear.visible {
+            opacity: 0.7;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .search-page-clear:hover {
+            opacity: 1;
+            color: var(--accent);
+            background: var(--hover);
+            transform: scale(1.1);
+        }

@@ -1,1 +1,40 @@
-/* stickers page styles are currently preserved in ../../legacy.css during the safe migration. */
+/* Dedicated stickers styles. */
+.settings-sticker-summary {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            background: var(--tag-bg);
+            padding: 1rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .settings-sticker-summary-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.7rem;
+        }
+
+        .settings-sticker-summary-row:last-of-type { margin-bottom: 0; }
+
+        .settings-sticker-summary-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .settings-sticker-summary-empty {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+        }
+
+        .settings-sticker-medals-mini { display: flex; gap: 0.35rem; }
+
+        .settings-sticker-mini {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 4px;
+            color: var(--text);
+        }

@@ -1,1 +1,10 @@
-/* loader styles are currently preserved in ../legacy.css during the safe migration. */
+/* Dedicated loader styles. */
+.popular-card__poster.skeleton { border-radius: 50%; }
+
+        .skeleton {
+            background: var(--tag-bg);
+            background-image: linear-gradient(90deg, var(--tag-bg) 0px, var(--border-light) 40px, var(--tag-bg) 80px);
+            background-size: 200px 100%;
+            animation: skeletonShimmer 1.6s infinite;
+            border-radius: var(--radius-sm);
+        }

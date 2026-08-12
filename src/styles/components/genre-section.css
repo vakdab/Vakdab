@@ -1,1 +1,9 @@
-/* genre-section styles are currently preserved in ../legacy.css during the safe migration. */
+/* Dedicated genre-section styles. */
+.genre-section {
+            position: relative;
+        }
+
+            .genre-section:hover .carousel-btn {
+                opacity: 1;
+                pointer-events: auto;
+            }

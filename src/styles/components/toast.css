@@ -1,1 +1,31 @@
-/* toast styles are currently preserved in ../legacy.css during the safe migration. */
+/* Dedicated toast styles. */
+.toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--accent);
+            color: var(--accent-text);
+            padding: 0.6rem 1.2rem;
+            border-radius: var(--radius-xl);
+            font-weight: 600;
+            font-size: 0.8rem;
+            z-index: 9999;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            box-shadow: var(--shadow-lg);
+            pointer-events: none;
+            opacity: 0;
+            max-width: 90%;
+            text-align: center;
+        }
+
+            .toast {
+                padding: 0.7rem 1.5rem;
+                font-size: 0.85rem;
+                bottom: 30px;
+            }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
