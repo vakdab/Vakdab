@@ -1077,3 +1077,80 @@
         @media (min-width:480px) {
             .loader i { font-size: 2rem; }
         }
+
+/* Profile auth: scoped mobile-safe layout and deterministic panel state. */
+#profilePageContainer .auth-card {
+    width: min(100%, 420px);
+    max-width: 420px;
+    margin: 1.25rem auto 2rem;
+    padding: clamp(1.25rem, 5vw, 2rem) clamp(1rem, 5vw, 1.5rem) 1.4rem;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+#profilePageContainer .auth-card .mark {
+    width: 34px;
+    height: 34px;
+}
+#profilePageContainer .auth-card .switcher {
+    width: 100%;
+    box-sizing: border-box;
+}
+#profilePageContainer .auth-card .google-btn,
+#profilePageContainer .auth-card .submit-btn,
+#profilePageContainer .auth-card .guest-btn {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#profilePageContainer .auth-card .google-btn {
+    min-height: 46px;
+    white-space: normal;
+    line-height: 1.35;
+}
+#profilePageContainer .auth-card .google-btn svg {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px;
+    flex: 0 0 18px;
+}
+#profilePageContainer .auth-card .panel {
+    display: none !important;
+    width: 100%;
+    min-width: 0;
+}
+#profilePageContainer .auth-card .panel.active {
+    display: block !important;
+}
+#profilePageContainer .auth-card .panel form {
+    width: 100%;
+    min-width: 0;
+}
+#profilePageContainer .auth-card .field input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+#profilePageContainer .auth-card .row-between {
+    gap: .75rem;
+    flex-wrap: wrap;
+}
+#profilePageContainer .auth-card .remember {
+    min-width: 0;
+}
+#profilePageContainer .auth-card .remember input {
+    flex: 0 0 auto;
+}
+@media (max-width: 480px) {
+    #profilePageContainer .auth-card {
+        border-radius: 16px;
+        margin-top: .75rem;
+    }
+    #profilePageContainer .auth-card h1 {
+        font-size: 20px;
+    }
+    #profilePageContainer .auth-card .row-between {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: .45rem;
+    }
+}
