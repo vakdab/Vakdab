@@ -846,10 +846,29 @@ let externalSourceCache = {};
             } catch { return ''; }
         }
 
-        function normalizePosterUrl(src = '') {
+        const ANIMEUA_POSTER_FALLBACK = './android-chrome-512x512.png';
+
+        function normalizePosterUrl(src = '', fallback = ANIMEUA_POSTER_FALLBACK) {
             const value = String(src || '').trim();
-            if (!value || /no-img|placeholder|data:image/i.test(value)) return '';
-            return normalizeAnimeUrl(value);
+            if (!value || /^(?:data:|blob:)/i.test(value) || /no-img|placeholder/i.test(value)) return fallback;
+            try {
+                const url = new URL(value, ANIMEUA_BASE);
+                if (!/^https?:$/i.test(url.protocol) || !url.hostname) return fallback;
+                return url.href;
+            } catch {
+                return fallback;
+            }
+        }
+
+        function normalizeGenreList(values) {
+            const result = [];
+            const seen = new Set();
+            for (const value of Array.isArray(values) ? values : [values]) {
+                const label = String(typeof value === 'object' ? value?.name : value || '').replace(/\s+/g, ' ').trim();
+                const key = label.toLocaleLowerCase('uk-UA');
+                if (label && !seen.has(key)) { seen.add(key); result.push(label); }
+            }
+            return result;
         }
 
         function classifyAnimeuaItem(subtitle = '', href = '') {
@@ -877,7 +896,7 @@ let externalSourceCache = {};
                 const synopsis = (safeQuery('.poster__text', card)?.textContent || '').trim();
                 const status = (safeQuery('.poster__label', card)?.textContent || '').trim().toLowerCase();
                 const subtitle = (safeQuery('.poster__subtitle', card)?.textContent || '').trim();
-                const genres = Array.from(safeQueryAll('.poster__subtitle li', card)).map(el => el.textContent.trim()).filter(Boolean);
+                const genres = normalizeGenreList(Array.from(safeQueryAll('.poster__subtitle li', card)).map(el => el.textContent));
                 const type = classifyAnimeuaItem(`${subtitle} ${genres.join(' ')}`, href);
                 return {
                     mal_id: href.hashCode(), title, url: href,
@@ -1047,7 +1066,7 @@ let externalSourceCache = {};
                 if (el) { const src = el.getAttribute('data-src') || el.getAttribute('src') || '';
                     if (src) { poster = src.startsWith('http') ? src : ANIMEUA_BASE + src; break; } }
             }
-            const genres = safeQueryAll('.pmovie__genres a, .genres a', doc).map(a => a.textContent.trim()).filter(Boolean);
+            const genres = normalizeGenreList(safeQueryAll('.pmovie__genres a, .genres a').map(a => a.textContent));
             const yearEl = safeQuery('.pmovie__year, .release-year', doc);
             const yearMatch = (yearEl?.textContent || '').match(/\d{4}/);
             let year = yearMatch ? parseInt(yearMatch[0]) : null;
@@ -1589,6 +1608,11 @@ let externalSourceCache = {};
                 .lp-btn:hover { opacity: 1; transform: scale(1.1); }
                 .lp-btn svg { width: 20px; height: 20px; fill: #fff; }
                 .lp-btn.lp-fs-btn svg { width: 18px; height: 18px; }
+                .lp-select { background: rgba(20,20,26,.78); color: #fff; border: 1px solid rgba(255,255,255,.22); border-radius: 6px; padding: 4px 5px; font-size: 11px; min-height: 28px; }
+                .lp-select:focus { outline: 2px solid rgba(255,255,255,.55); outline-offset: 1px; }
+                .lampa-player-container:fullscreen, .lampa-player-container:-webkit-full-screen { width: 100vw; height: 100vh; max-width: none; max-height: none; aspect-ratio: auto; border-radius: 0; }
+                .lampa-player-container:fullscreen video, .lampa-player-container:-webkit-full-screen video { object-fit: contain; }
+                @media (max-width: 600px) { .lp-volume-slider { width: 48px; } .lp-select { font-size: 10px; padding-inline: 2px; } .lp-controls { padding: 8px 8px 10px; } }
                 .lp-time {
                     font-size: 12px;
                     color: rgba(255,255,255,0.85);
@@ -1678,7 +1702,7 @@ let externalSourceCache = {};
                 this.container = container;
                 this.options = options || {};
                 this.hls = null;
-                this.state = { playing: false, currentTime: 0, duration: 0, volume: 0.8, muted: false, fullscreen: false, loading: true, src: null };
+                this.state = { playing: false, currentTime: 0, duration: 0, volume: 0.8, muted: false, fullscreen: false, loading: true, src: null, speed: 1 };
                 this.videoRef = null;
                 this.containerRef = null;
                 this._controlsTimer = null;
@@ -1697,6 +1721,8 @@ let externalSourceCache = {};
                 v.setAttribute('crossorigin', 'anonymous');
                 v.setAttribute('playsinline', '');
                 v.controls = false;
+                v.preload = 'metadata';
+                v.poster = normalizePosterUrl(this.options.poster);
                 this.videoRef = v;
                 wrap.appendChild(v);
 
@@ -1729,7 +1755,11 @@ let externalSourceCache = {};
                             <button class="lp-btn" id="lpVolBtn" title="Mute">${LP_ICONS.volOn}</button>
                             <input type="range" class="lp-volume-slider" id="lpVolSlider" min="0" max="1" step="0.05" value="0.8">
                         </div>
-                        <button class="lp-btn lp-fs-btn" id="lpFsBtn" title="Fullscreen">${LP_ICONS.fsEnter}</button>
+                        <select class="lp-select" id="lpSpeedSelect" title="Швидкість" aria-label="Швидкість">
+                            <option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option>
+                        </select>
+                        <select class="lp-select lp-quality-select" id="lpQualitySelect" title="Якість" aria-label="Якість" hidden></select>
+                        <button class="lp-btn lp-fs-btn" id="lpFsBtn" title="Fullscreen" aria-label="Fullscreen">${LP_ICONS.fsEnter}</button>
                     </div>
                 `;
                 this._controls = controls;
@@ -1838,13 +1868,22 @@ let externalSourceCache = {};
                 // Fullscreen
                 const fsBtn = wrap.querySelector('#lpFsBtn');
                 if (fsBtn) fsBtn.addEventListener('click', e => { e.stopPropagation(); this.toggleFullscreen(); });
+                const speed = wrap.querySelector('#lpSpeedSelect');
+                speed?.addEventListener('change', e => { v.playbackRate = Number(e.target.value) || 1; this.state.speed = v.playbackRate; });
+                this._qualitySelect = wrap.querySelector('#lpQualitySelect');
 
-                document.addEventListener('fullscreenchange', () => {
-                    this.state.fullscreen = !!document.fullscreenElement;
+                const syncFullscreenState = () => {
+                    this.state.fullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
                     if (fsBtn) fsBtn.innerHTML = this.state.fullscreen ? LP_ICONS.fsExit : LP_ICONS.fsEnter;
-                    const fsIcon = document.querySelector('#playerFullscreenBtn i');
-                    if (fsIcon) fsIcon.className = this.state.fullscreen ? 'fas fa-compress' : 'fas fa-expand';
-                });
+                    const pageFs = document.getElementById('playerFullscreenBtn');
+                    if (pageFs) {
+                        pageFs.title = this.state.fullscreen ? 'Вийти з повного екрана' : 'Повний екран';
+                        pageFs.setAttribute('aria-label', pageFs.title);
+                        pageFs.classList.toggle('is-fullscreen', this.state.fullscreen);
+                    }
+                };
+                document.addEventListener('fullscreenchange', syncFullscreenState);
+                document.addEventListener('webkitfullscreenchange', syncFullscreenState);
 
                 // Keyboard
                 this._onKeyDown = e => {
@@ -1951,6 +1990,12 @@ let externalSourceCache = {};
                     hls.loadSource(proxyUrl);
                     hls.attachMedia(v);
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        const quality = this._qualitySelect;
+                        if (quality && hls.levels?.length > 1) {
+                            quality.hidden = false;
+                            quality.innerHTML = `<option value="-1">Авто</option>` + hls.levels.map((level, index) => `<option value="${index}">${level.height ? level.height + 'p' : 'Рівень ' + (index + 1)}</option>`).join('');
+                            quality.onchange = e => { hls.currentLevel = Number(e.target.value); };
+                        }
                         this.state.loading = false;
                         this._spinner.classList.add('hidden');
                         v.play().catch(() => {});
@@ -2014,8 +2059,9 @@ let externalSourceCache = {};
                     ? this.containerRef : this.container;
                 if (!target) return;
                 if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                    const p = target.requestFullscreen ? target.requestFullscreen() : (target.webkitRequestFullscreen ? target.webkitRequestFullscreen() : null);
-                    if (p && p.catch) p.catch(() => {});
+                    const request = target.requestFullscreen || target.webkitRequestFullscreen || target.msRequestFullscreen;
+                    if (request) Promise.resolve(request.call(target)).catch(() => {});
+                    else if (this.videoRef?.webkitEnterFullscreen) this.videoRef.webkitEnterFullscreen();
                 } else {
                     if (document.exitFullscreen) document.exitFullscreen();
                     else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
@@ -7485,6 +7531,9 @@ function renderProfilePage() {
             playerPageHistoryUpdated = false;
             playerPageWatchStartTime = 0;
             document.getElementById('playerVideoContainer').classList.add('active');
+            const posterTargets = [document.getElementById('playerPosterImg'), document.getElementById('playerHeroPoster')];
+            posterTargets.forEach(img => { if (img) { img.src = ANIMEUA_POSTER_FALLBACK; img.alt = ''; } });
+            document.getElementById('playerBlurBg').style.backgroundImage = `url(${ANIMEUA_POSTER_FALLBACK})`;
             document.getElementById('playerPageVideo').innerHTML = '';
             document.getElementById('episodeViewGrid').innerHTML = '';
             document.getElementById('episodeViewCompact').innerHTML = '';
@@ -7519,7 +7568,7 @@ function renderProfilePage() {
                 externalSourceCache = {};
                 playerPageSources = ['Основне'];
                 playerPageCurrentSource = 'Основне';
-                const posterUrl = anime.images?.jpg?.large_image_url || '';
+                const posterUrl = normalizePosterUrl(anime.images?.jpg?.large_image_url);
                 document.getElementById('playerPosterImg').src = posterUrl;
                 const heroPoster = document.getElementById('playerHeroPoster');
                 if (heroPoster) { heroPoster.src = posterUrl; heroPoster.alt = anime.title || ''; }
@@ -7537,7 +7586,7 @@ function renderProfilePage() {
                     ? `${anime.year || '—'}, Фільм${animeRuntime ? ` · ${animeRuntime}` : ''}`
                     : `${anime.year || '—'}, ${totalEpisodes} еп.`;
                 document.getElementById('playerTagRow').innerHTML =
-                    (anime.genres || []).slice(0, 4).map(g => `<span class="tag">${g}</span>`).join('');
+                    normalizeGenreList(anime.genres).slice(0, 4).map(g => `<span class="tag">${escapeHtml(g)}</span>`).join('');
                 document.getElementById('playerEpisodeCountNum').textContent = totalEpisodes;
                 const synopsisEl = document.getElementById('playerSynopsis');
                 synopsisEl.textContent = anime.synopsis || 'Опис відсутній.';
@@ -7592,7 +7641,7 @@ function renderProfilePage() {
                         const numEpisodes = details.number_of_episodes || totalEpisodes;
                         const runtime = formatMovieRuntime(details.runtime) || formatMovieRuntime(anime.runtimeMinutes);
                         const statusLabel = isMovie ? 'Фільм' : (TMDB_STATUS_LABELS[details.status] || (totalEpisodes > 0 ? 'Онгоїнг' : 'Завершено'));
-                        const genres = (details.genres || []).map(g => g.name).filter(Boolean);
+                        // Жанри належать AnimeUA. TMDB використовується лише для додаткових метаданих.
                         const overview = details.overview || anime.synopsis || '';
                         const ageRating = tmdbAgeRating(details);
                         const logoUrl = tmdbBestLogo(details);
@@ -7608,10 +7657,7 @@ function renderProfilePage() {
                         document.getElementById('playerAgeBadge').textContent = ageRating || anime.score || '—';
                         document.getElementById('playerStatusTag').textContent = statusLabel;
                         document.getElementById('playerMetaLine').textContent = isMovie ? `${year}, Фільм${runtime ? ` · ${runtime}` : ''}` : `${year}, ${numEpisodes} еп.`;
-                        if (genres.length) {
-                            document.getElementById('playerTagRow').innerHTML =
-                                genres.slice(0, 4).map(g => `<span class="tag">${escapeHtml(g)}</span>`).join('');
-                        }
+                        // Не перезаписуємо жанри AnimeUA навіть коли TMDB повернув свої жанри.
                         document.getElementById('playerEpisodeCountNum').textContent = numEpisodes;
                         // Description comes from AnimeUA. TMDB is not allowed to replace it.
                         if (!String(anime.synopsis || '').trim() && overview) {
@@ -8413,9 +8459,22 @@ function renderProfilePage() {
             if (!title && !titleEn) return;
             card.classList.add('is-loading');
             try {
-                let results = await searchAnimeua(title, 1);
-                if ((!results || !results.length) && titleEn && titleEn !== title) results = await searchAnimeua(titleEn, 1);
-                if (results?.length) openPlayerPage(results[0].url);
+                const queries = [...new Set([title, titleEn].filter(Boolean))];
+                let results = [];
+                for (const query of queries) {
+                    results = await searchAnimeua(query, 1);
+                    if (results?.length) break;
+                }
+                const normalizeTitle = value => String(value || '').toLocaleLowerCase('uk-UA')
+                    .replace(/[\u2010-\u2015:!?.,'’"()\[\]{}]/g, ' ')
+                    .replace(/\s+/g, ' ').trim();
+                const wanted = queries.map(normalizeTitle).filter(Boolean);
+                const exact = (results || []).find(item => {
+                    const names = [item.title, item.originalTitle, ...(item.alternativeTitles || [])].map(normalizeTitle);
+                    return names.some(name => wanted.includes(name) || wanted.some(q => q === name || q.includes(name) || name.includes(q)));
+                });
+                const match = exact || results?.[0];
+                if (match?.url && /^https?:\/\/.*animeua\.club/i.test(match.url)) openPlayerPage(match.url);
                 else showToast(`«${title}» ще не знайдено в каталозі VakDab`);
             } catch (e) { showToast('Не вдалося відкрити пов’язане аніме'); }
             finally { card.classList.remove('is-loading'); }
@@ -8717,7 +8776,7 @@ function renderProfilePage() {
 
             if (playerPagePlayer) { playerPagePlayer.destroy();
                 playerPagePlayer = null; }
-            playerPagePlayer = new LampaPlayer(videoDiv, {});
+            playerPagePlayer = new LampaPlayer(videoDiv, { poster: playerPageAnime?.images?.jpg?.large_image_url });
             playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || '', `Серія ${epNum}`);
             playerPageHistoryUpdated = false;
             playerPageWatchStartTime = Date.now();
@@ -8788,6 +8847,9 @@ function renderProfilePage() {
             if (_playerLoadController) {
                 _playerLoadController.abort();
                 _playerLoadController = null;
+            }
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen)?.call(document);
             }
             closeWatchPage();
             modal.style.display = 'none';
@@ -9056,20 +9118,17 @@ function renderProfilePage() {
             playerFsBtn.addEventListener('click', () => {
                 // Використовуємо toggleFullscreen з LampaPlayer якщо доступний
                 // Always use playerVideoContainer directly for fullscreen
+                if (playerPagePlayer) { playerPagePlayer.toggleFullscreen(); return; }
                 const container = document.getElementById('playerVideoContainer');
                 if (!container) return;
-                if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                    if (container.requestFullscreen) {
-                        const p = container.requestFullscreen();
-                        if (p && p.catch) p.catch(()=>{});
-                    }
-                    else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
-                    else if (container.msRequestFullscreen) container.msRequestFullscreen();
-                } else {
-                    if (document.exitFullscreen) document.exitFullscreen();
-                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-                    else if (document.msExitFullscreen) document.msExitFullscreen();
+                if (document.fullscreenElement || document.webkitFullscreenElement) {
+                    (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen)?.call(document);
+                    return;
                 }
+                const target = container.querySelector('.lampa-player-container') || container;
+                const request = target.requestFullscreen || target.webkitRequestFullscreen || target.msRequestFullscreen;
+                if (request) Promise.resolve(request.call(target)).catch(() => {});
+                else if (target.querySelector('video')?.webkitEnterFullscreen) target.querySelector('video').webkitEnterFullscreen();
             });
         }
 
