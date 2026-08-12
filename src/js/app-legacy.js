@@ -1751,15 +1751,26 @@ let externalSourceCache = {};
                         <button class="lp-btn" id="lpPlayBtn" title="Play/Pause">${LP_ICONS.play}</button>
                         <span class="lp-time" id="lpTime">0:00 / 0:00</span>
                         <div class="lp-spacer"></div>
+                        <div class="lp-settings-wrap">
+                            <div class="lp-menu-wrap">
+                                <button class="lp-control-pill" id="lpSpeedBtn" title="Швидкість">1x</button>
+                                <div class="lp-popover lp-speed-menu" id="lpSpeedMenu" hidden>
+                                    <button type="button" data-speed="0.75">0.75x</button>
+                                    <button type="button" data-speed="1">1x</button>
+                                    <button type="button" data-speed="1.25">1.25x</button>
+                                    <button type="button" data-speed="1.5">1.5x</button>
+                                    <button type="button" data-speed="2">2x</button>
+                                </div>
+                            </div>
+                            <div class="lp-menu-wrap">
+                                <button class="lp-control-pill lp-quality-pill" id="lpQualityBtn" title="Якість">Авто</button>
+                                <div class="lp-popover lp-quality-menu" id="lpQualityMenu" hidden></div>
+                            </div>
+                        </div>
                         <div class="lp-volume-wrap">
                             <button class="lp-btn" id="lpVolBtn" title="Mute">${LP_ICONS.volOn}</button>
                             <input type="range" class="lp-volume-slider" id="lpVolSlider" min="0" max="1" step="0.05" value="0.8">
                         </div>
-                        <select class="lp-select" id="lpSpeedSelect" title="Швидкість" aria-label="Швидкість">
-                            <option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option>
-                        </select>
-                        <select class="lp-select lp-quality-select" id="lpQualitySelect" title="Якість" aria-label="Якість" hidden></select>
-                        <button class="lp-btn lp-fs-btn" id="lpFsBtn" title="Fullscreen" aria-label="Fullscreen">${LP_ICONS.fsEnter}</button>
                     </div>
                 `;
                 this._controls = controls;
@@ -1867,12 +1878,45 @@ let externalSourceCache = {};
                     this._updateVolBtn();
                 });
 
+                // Playback speed and quality menus.
+                const speedBtn = wrap.querySelector('#lpSpeedBtn');
+                const speedMenu = wrap.querySelector('#lpSpeedMenu');
+                const qualityBtn = wrap.querySelector('#lpQualityBtn');
+                const qualityMenu = wrap.querySelector('#lpQualityMenu');
+                const closePlayerMenus = () => {
+                    if (speedMenu) speedMenu.hidden = true;
+                    if (qualityMenu) qualityMenu.hidden = true;
+                };
+                if (speedBtn && speedMenu) speedBtn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    if (qualityMenu) qualityMenu.hidden = true;
+                    speedMenu.hidden = !speedMenu.hidden;
+                });
+                if (qualityBtn && qualityMenu) qualityBtn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    if (speedMenu) speedMenu.hidden = true;
+                    this._refreshQualityMenu();
+                    qualityMenu.hidden = !qualityMenu.hidden;
+                });
+                speedMenu?.querySelectorAll('[data-speed]').forEach(option => option.addEventListener('click', e => {
+                    e.stopPropagation();
+                    const rate = Number(option.dataset.speed) || 1;
+                    v.playbackRate = rate;
+                    if (speedBtn) speedBtn.textContent = rate + 'x';
+                    closePlayerMenus();
+                }));
+                qualityMenu?.addEventListener('click', e => {
+                    const option = e.target.closest('[data-quality-index]');
+                    if (!option || !this.hls) return;
+                    this.hls.currentLevel = Number(option.dataset.qualityIndex);
+                    if (qualityBtn) qualityBtn.textContent = option.dataset.qualityLabel || 'Авто';
+                    closePlayerMenus();
+                });
+                document.addEventListener('click', closePlayerMenus);
+                this._closePlayerMenus = closePlayerMenus;
+                this._refreshQualityMenu();
+
                 // Fullscreen
-                const fsBtn = wrap.querySelector('#lpFsBtn');
-                if (fsBtn) fsBtn.addEventListener('click', e => { e.stopPropagation(); this.toggleFullscreen(); });
-                const speed = wrap.querySelector('#lpSpeedSelect');
-                speed?.addEventListener('change', e => { v.playbackRate = Number(e.target.value) || 1; this.state.speed = v.playbackRate; });
-                this._qualitySelect = wrap.querySelector('#lpQualitySelect');
 
                 const syncFullscreenState = () => {
                     this.state.fullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
@@ -1899,6 +1943,26 @@ let externalSourceCache = {};
                     else if (e.code === 'KeyM') { e.preventDefault(); v.muted = !v.muted; this.state.muted = v.muted; this._updateVolBtn(); }
                 };
                 document.addEventListener('keydown', this._onKeyDown);
+            }
+
+            _refreshQualityMenu() {
+                const menu = this.containerRef?.querySelector('#lpQualityMenu');
+                const button = this.containerRef?.querySelector('#lpQualityBtn');
+                if (!menu || !button) return;
+                const levels = this.hls?.levels || [];
+                if (!levels.length) {
+                    menu.innerHTML = '<button type="button" data-quality-index="-1" data-quality-label="Авто">Авто</button>';
+                    button.textContent = 'Авто';
+                    return;
+                }
+                const unique = [];
+                levels.forEach((level, index) => {
+                    const label = level.height ? `${level.height}p` : `Рівень ${index + 1}`;
+                    if (!unique.some(item => item.label === label)) unique.push({ label, index });
+                });
+                menu.innerHTML = '<button type="button" data-quality-index="-1" data-quality-label="Авто">Авто</button>' +
+                    unique.sort((a, b) => parseInt(b.label) - parseInt(a.label))
+                        .map(item => `<button type="button" data-quality-index="${item.index}" data-quality-label="${item.label}">${item.label}</button>`).join('');
             }
 
             _updatePlayBtn() {
@@ -1993,12 +2057,7 @@ let externalSourceCache = {};
                     hls.loadSource(proxyUrl);
                     hls.attachMedia(v);
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                        const quality = this._qualitySelect;
-                        if (quality && hls.levels?.length > 1) {
-                            quality.hidden = false;
-                            quality.innerHTML = `<option value="-1">Авто</option>` + hls.levels.map((level, index) => `<option value="${index}">${level.height ? level.height + 'p' : 'Рівень ' + (index + 1)}</option>`).join('');
-                            quality.onchange = e => { hls.currentLevel = Number(e.target.value); };
-                        }
+                        this._refreshQualityMenu();
                         this.state.loading = false;
                         this._spinner.classList.add('hidden');
                         v.play().catch(() => {});
@@ -2078,6 +2137,7 @@ let externalSourceCache = {};
             destroy() {
                 clearTimeout(this._controlsTimer);
                 if (this._onKeyDown) document.removeEventListener('keydown', this._onKeyDown);
+                if (this._closePlayerMenus) document.removeEventListener('click', this._closePlayerMenus);
                 clearTimeout(this._centerTimer);
                 if (this.hls) { this.hls.destroy(); this.hls = null; }
                 if (this.videoRef) { this.videoRef.pause(); this.videoRef.removeAttribute('src'); this.videoRef.load(); }

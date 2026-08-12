@@ -667,3 +667,143 @@
   #playerPageModal .anime-info-row { align-items:flex-start; }
   #playerPageModal .anime-info-row strong { max-width:62%; }
 }
+
+/* Video card controls: compact, white-on-black and touch friendly */
+#playerPageModal .modal-content .video-overlay-topbar {
+  min-height: 58px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .94), rgba(0, 0, 0, .58) 72%, transparent);
+}
+
+#playerPageModal .modal-content .video-overlay-title {
+  color: #fff !important;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .65);
+}
+
+#playerPageModal .modal-content .lp-settings-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#playerPageModal .modal-content .lp-menu-wrap {
+  position: relative;
+}
+
+#playerPageModal .modal-content .lp-control-pill {
+  min-width: 43px;
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 255, 255, .24);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, .72);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 30px;
+  text-align: center;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+#playerPageModal .modal-content .lp-control-pill:hover,
+#playerPageModal .modal-content .lp-control-pill:focus-visible {
+  background: #111;
+  border-color: rgba(255, 255, 255, .7);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+#playerPageModal .modal-content .lp-quality-pill {
+  min-width: 54px;
+}
+
+#playerPageModal .modal-content .lp-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 9px);
+  z-index: 80;
+  min-width: 104px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 10px;
+  background: rgba(8, 8, 10, .97);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+#playerPageModal .modal-content .lp-popover[hidden] {
+  display: none;
+}
+
+#playerPageModal .modal-content .lp-popover button {
+  display: flex;
+  width: 100%;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(255, 255, 255, .78);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+#playerPageModal .modal-content .lp-popover button:hover,
+#playerPageModal .modal-content .lp-popover button:focus-visible {
+  background: rgba(255, 255, 255, .13);
+  color: #fff;
+  outline: none;
+}
+
+#playerPageModal .modal-content .lp-progress-wrap {
+  height: 5px !important;
+  border: 1px solid rgba(255, 255, 255, .3);
+  background: rgba(255, 255, 255, .26) !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .2);
+}
+
+#playerPageModal .modal-content .lp-progress-fill {
+  background: #fff !important;
+  box-shadow: 0 0 8px rgba(255, 255, 255, .55);
+}
+
+#playerPageModal .modal-content .lp-progress-fill::after {
+  width: 14px;
+  height: 14px;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .2), 0 1px 8px rgba(0, 0, 0, .45);
+}
+
+#playerPageModal .modal-content .lp-volume-wrap {
+  gap: 4px;
+}
+
+@media (max-width: 480px) {
+  #playerPageModal .modal-content .lp-controls {
+    padding: 12px 10px 13px !important;
+  }
+  #playerPageModal .modal-content .lp-settings-wrap {
+    gap: 4px;
+  }
+  #playerPageModal .modal-content .lp-control-pill {
+    min-width: 39px;
+    height: 30px;
+    padding: 0 7px;
+    font-size: 11px;
+    line-height: 28px;
+  }
+  #playerPageModal .modal-content .lp-quality-pill {
+    min-width: 48px;
+  }
+  #playerPageModal .modal-content .lp-volume-slider {
+    width: 48px;
+  }
+}
