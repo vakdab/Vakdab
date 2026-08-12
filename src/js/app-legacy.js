@@ -8456,6 +8456,7 @@ function renderProfilePage() {
                     if (infoGrid) infoGrid.innerHTML = '<div class="anime-info-placeholder">Розширена інформація тимчасово недоступна</div>';
                     setSectionState('relatedSection', false);
                     setSectionState('mediaSection', false);
+                    setSectionState('mainCharactersSection', false);
                     return;
                 }
                 playerJikanData = data;
