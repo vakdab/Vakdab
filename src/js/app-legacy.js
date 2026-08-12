@@ -7474,8 +7474,9 @@ function renderProfilePage() {
             if (countdownReset) countdownReset.textContent = '';
             setSectionState('relatedSection', false);
             setSectionState('mediaSection', false);
-            const castMoreReset = document.getElementById('castMoreBtn');
-            if (castMoreReset) castMoreReset.hidden = true;
+            setSectionState('mainCharactersSection', false);
+            const mainCharactersMoreReset = document.getElementById('mainCharactersMoreBtn');
+            if (mainCharactersMoreReset) mainCharactersMoreReset.hidden = true;
             playerPageCurrentAnimeUrl = url;
             playerPageHistoryUpdated = false;
             playerPageWatchStartTime = 0;
@@ -8155,11 +8156,13 @@ function renderProfilePage() {
                 .replace(/[^a-zа-яіїєґ0-9]+/gi, ' ').replace(/\s+/g, ' ').trim();
         }
 
-        async function resolveJikanAnime(anime) {
-            const stableId = Number(anime?.externalIds?.mal_id);
-            if (stableId) return (await fetchJikan(`/anime/${stableId}/full`)).data || null;
-            const query = anime?.originalTitle || anime?.title;
-            if (!query) return null;
+        async function resolveJikanById(malId) {
+            const data = (await fetchJikan(`/anime/${malId}/full`)).data;
+            if (data) data._provider = 'jikan';
+            return data || null;
+        }
+
+        async function resolveJikanByTitle(query) {
             const result = await fetchJikan(`/anime?q=${encodeURIComponent(query)}&limit=5&sfw=true`);
             const target = normalizeJikanTitle(query);
             const candidates = (result.data || []).map(x => {
@@ -8172,7 +8175,123 @@ function renderProfilePage() {
             const best = candidates[0];
             // Do not attach a weak unrelated title just because search returned something.
             if (!best || best.score < 35) return null;
-            return (await fetchJikan(`/anime/${best.x.mal_id}/full`)).data || null;
+            return resolveJikanById(best.x.mal_id);
+        }
+
+        // ====================================================================
+        //  ANILIST — другий стабільний ID у пріоритеті користувача. Використовуємо,
+        //  коли Jikan/MAL недоступний (live search на MAL часто падає з 504,
+        //  хоча вже кешовані ID-запити можуть проходити) або не знайшов збіг.
+        //  AniList повертає персонажів, зв'язки, студію та nextAiringEpisode
+        //  (Unix-час, тому конвертація часової зони відбувається без ручних зсувів)
+        //  усе в одному GraphQL-запиті.
+        // ====================================================================
+        const ANILIST_BASE = 'https://graphql.anilist.co';
+        const anilistCache = new Map();
+        const ANILIST_STATUS_LABELS = {
+            RELEASING: 'Онґоїнг', FINISHED: 'Завершено', NOT_YET_RELEASED: 'Майбутнє',
+            CANCELLED: 'Скасовано', HIATUS: 'Призупинено'
+        };
+        const ANILIST_RELATION_LABELS = {
+            PREQUEL: 'попередній сезон', SEQUEL: 'наступний сезон', SIDE_STORY: 'спін-оф',
+            SPIN_OFF: 'спін-оф', ALTERNATIVE: "альтернативна версія", SUMMARY: 'короткий переказ',
+            ADAPTATION: 'адаптація', PARENT: 'пов’язаний твір', CHARACTER: 'пов’язаний твір',
+            FULL_STORY: 'повна історія', OTHER: 'пов’язаний твір'
+        };
+        const ANILIST_FORMAT_LABELS = { TV: 'TV Серіал', TV_SHORT: 'TV Серіал', MOVIE: 'Фільм', OVA: 'OVA', ONA: 'ONA', SPECIAL: 'Спешл', MUSIC: 'Музика' };
+
+        const ANILIST_SEARCH_QUERY = `query ($search: String) { Page(perPage: 5) { media(search: $search, type: ANIME, sort: SEARCH_MATCH) {
+            id title { romaji english native } format status season seasonYear episodes duration averageScore siteUrl
+            studios(isMain: true) { nodes { name } }
+            nextAiringEpisode { airingAt episode }
+            characters(sort: ROLE, perPage: 10) { edges { role node { name { full native } image { large } } voiceActors(language: JAPANESE) { name { full } } } } }
+        } }`;
+
+        async function fetchAnilist(query, variables) {
+            const key = JSON.stringify({ query, variables });
+            if (anilistCache.has(key)) return anilistCache.get(key);
+            const promise = fetch(ANILIST_BASE, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ query, variables })
+            }).then(r => { if (!r.ok) throw new Error(`AniList HTTP ${r.status}`); return r.json(); });
+            anilistCache.set(key, promise);
+            try { return await promise; } catch (e) { anilistCache.delete(key); throw e; }
+        }
+
+        function normalizeAnilistTitle(v) { return normalizeJikanTitle(v); }
+
+        async function fetchAnilistRelations(anilistId) {
+            const query = `query ($id: Int) { Media(id: $id) { relations { edges { relationType(version: 2) node {
+                id title { romaji english } format startDate { year } coverImage { large } siteUrl } } } } }`;
+            const res = await fetchAnilist(query, { id: anilistId });
+            return res?.data?.Media?.relations?.edges || [];
+        }
+
+        function adaptAnilistMedia(media) {
+            const studios = (media.studios?.nodes || []).map(n => ({ name: n.name }));
+            const characters = (media.characters?.edges || []).map(e => ({
+                character: { name: e.node?.name?.full, name_kanji: e.node?.name?.native, images: { webp: { image_url: e.node?.image?.large } } },
+                role: e.role === 'MAIN' ? 'Головна роль' : 'Другорядна роль',
+                voice_actors: e.voiceActors?.length ? [{ language: 'Japanese', person: { name: e.voiceActors[0].name.full } }] : []
+            }));
+            const seasonMap = { WINTER: 'winter', SPRING: 'spring', SUMMER: 'summer', FALL: 'fall' };
+            return {
+                _provider: 'anilist', _anilistId: media.id,
+                title: media.title?.romaji || media.title?.english, url: media.siteUrl,
+                type: media.format === 'MOVIE' ? 'Movie' : 'TV',
+                status: media.status, _statusLabel: ANILIST_STATUS_LABELS[media.status] || null,
+                season: seasonMap[media.season] || null, year: media.seasonYear,
+                episodes: media.episodes, duration: media.duration, _durationMinutes: media.duration,
+                airing: media.status === 'RELEASING',
+                _nextAiringDate: media.nextAiringEpisode ? new Date(media.nextAiringEpisode.airingAt * 1000) : null,
+                rating: media.averageScore ? `AniList ${(media.averageScore / 10).toFixed(1)}` : null,
+                studios, characters
+            };
+        }
+
+        async function resolveAnilistByTitle(query) {
+            const res = await fetchAnilist(ANILIST_SEARCH_QUERY, { search: query });
+            const list = res?.data?.Page?.media || [];
+            const target = normalizeAnilistTitle(query);
+            const candidates = list.map(m => {
+                const names = [m.title?.romaji, m.title?.english, m.title?.native].map(normalizeAnilistTitle);
+                let score = names.includes(target) ? 100 : 0;
+                if (names.some(n => n && (n.includes(target) || target.includes(n)))) score += 35;
+                if (m.format === 'TV') score += 4;
+                return { m, score };
+            }).sort((a, b) => b.score - a.score);
+            const best = candidates[0];
+            if (!best || best.score < 35) return null;
+            return adaptAnilistMedia(best.m);
+        }
+
+        async function resolveJikanAnime(anime) {
+            const stableMalId = Number(anime?.externalIds?.mal_id);
+            const stableAnilistId = Number(anime?.externalIds?.anilist_id);
+            // Priority 1: MAL ID. Priority 2: AniList ID. Priority 3/4 handled by title fallback below.
+            if (stableMalId) {
+                try { const byId = await resolveJikanById(stableMalId); if (byId) return byId; }
+                catch (e) { console.warn('Jikan ID lookup failed, trying other sources:', e); }
+            }
+            if (stableAnilistId) {
+                try {
+                    const query = `query ($id: Int) { Media(id: $id, type: ANIME) {
+                        id title { romaji english native } format status season seasonYear episodes duration averageScore siteUrl
+                        studios(isMain: true) { nodes { name } } nextAiringEpisode { airingAt episode }
+                        characters(sort: ROLE, perPage: 10) { edges { role node { name { full native } image { large } } voiceActors(language: JAPANESE) { name { full } } } } } }`;
+                    const res = await fetchAnilist(query, { id: stableAnilistId });
+                    if (res?.data?.Media) return adaptAnilistMedia(res.data.Media);
+                } catch (e) { console.warn('AniList ID lookup failed, trying title fallback:', e); }
+            }
+            const query = anime?.originalTitle || anime?.title;
+            if (!query) return null;
+            // Priority 4: title fallback — try Jikan first, then AniList (independent live datasets).
+            try { const byTitle = await resolveJikanByTitle(query); if (byTitle) return byTitle; }
+            catch (e) { console.warn('Jikan title search unavailable, falling back to AniList:', e); }
+            try { const anilistMatch = await resolveAnilistByTitle(query); if (anilistMatch) return anilistMatch; }
+            catch (e) { console.warn('AniList title search also unavailable:', e); }
+            return null;
         }
 
         function jikanImage(item) {
@@ -8259,34 +8378,60 @@ function renderProfilePage() {
         }
 
         function renderMainCharacters(data) {
-            const list = document.getElementById('castList');
-            const more = document.getElementById('castMoreBtn');
+            const list = document.getElementById('mainCharactersList');
+            const more = document.getElementById('mainCharactersMoreBtn');
             if (!list) return;
             playerCharacterItems = (data?.characters || []).filter(x => x?.character?.name).map(x => ({
                 name: x.character.name, original: x.character.name_kanji, role: x.role,
                 image: jikanImage(x.character), voice: x.voice_actors?.find(v => v.language === 'Japanese')?.person?.name || ''
             }));
             const items = playerCharacterExpanded ? playerCharacterItems : playerCharacterItems.slice(0, 8);
-            if (!items.length) { setSectionState('castSection', false); return; }
-            setSectionState('castSection', true);
+            if (!items.length) { setSectionState('mainCharactersSection', false); return; }
+            setSectionState('mainCharactersSection', true);
             list.innerHTML = items.map(c => `<article class="cast-card character-card"><div class="cast-avatar" style="${c.image ? `background-image:url('${escapeHtml(c.image)}')` : ''}"></div><div class="cast-name">${escapeHtml(c.name)}</div>${c.original ? `<div class="character-original">${escapeHtml(c.original)}</div>` : ''}<div class="cast-role">${escapeHtml([c.role, c.voice ? `Сейю: ${c.voice}` : ''].filter(Boolean).join(' · '))}</div></article>`).join('');
             if (more) { more.hidden = playerCharacterItems.length <= 8; more.textContent = playerCharacterExpanded ? 'Згорнути' : 'Усі'; }
+        }
+
+        function relatedCardMarkup(x) {
+            return `<article class="related-card" data-url="${escapeHtml(x.url || '')}"><img src="${escapeHtml(x.image || '')}" alt="" loading="lazy"><div><strong>${escapeHtml(x.title || '')}</strong><span>${escapeHtml([x.year, x.typeLabel, x.relationLabel].filter(Boolean).join(' · '))}</span></div></article>`;
+        }
+
+        async function renderRelatedAnimeFromJikan(data) {
+            const current = Number(data?.mal_id);
+            const entries = (data?.relations || []).flatMap(group => (group.entry || []).map(entry => ({ ...entry, relation: group.relation })))
+                .filter(x => x.mal_id && Number(x.mal_id) !== current);
+            const unique = [...new Map(entries.map(x => [x.mal_id, x])).values()];
+            const details = await Promise.allSettled(unique.slice(0, 12).map(x => fetchJikan(`/anime/${x.mal_id}`)));
+            return unique.slice(0, 12).map((x, i) => {
+                const full = details[i].status === 'fulfilled' ? details[i].value.data : {};
+                return { url: full.url || x.url, image: jikanImage(full), title: full.title || x.name, year: full.year || (full.aired?.from || '').slice(0, 4), typeLabel: full.type, relationLabel: x.relation };
+            });
+        }
+
+        async function renderRelatedAnimeFromAnilist(data) {
+            if (!data?._anilistId) return [];
+            const edges = await fetchAnilistRelations(data._anilistId);
+            const filtered = edges.filter(e => e.node?.id !== data._anilistId);
+            const unique = [...new Map(filtered.map(e => [e.node.id, e])).values()];
+            return unique.slice(0, 12).map(e => ({
+                url: e.node.siteUrl, image: e.node.coverImage?.large,
+                title: e.node.title?.romaji || e.node.title?.english, year: e.node.startDate?.year,
+                typeLabel: ANILIST_FORMAT_LABELS[e.node.format] || e.node.format,
+                relationLabel: ANILIST_RELATION_LABELS[e.relationType] || null
+            }));
         }
 
         async function renderRelatedAnime(data) {
             const list = document.getElementById('relatedList');
             const more = document.getElementById('relatedMoreBtn');
             if (!list) return;
-            const current = Number(playerJikanData?.mal_id);
-            const entries = (data?.relations || []).flatMap(group => (group.entry || []).map(entry => ({ ...entry, relation: group.relation })))
-                .filter(x => x.mal_id && Number(x.mal_id) !== current);
-            const unique = [...new Map(entries.map(x => [x.mal_id, x])).values()];
-            const details = await Promise.allSettled(unique.slice(0, 12).map(x => fetchJikan(`/anime/${x.mal_id}`)));
-            playerRelatedItems = unique.slice(0, 12).map((x, i) => ({ ...x, ...(details[i].status === 'fulfilled' ? details[i].value.data : {}) }));
+            try {
+                playerRelatedItems = data?._provider === 'anilist' ? await renderRelatedAnimeFromAnilist(data) : await renderRelatedAnimeFromJikan(data);
+            } catch (e) { console.warn('Related anime lookup failed:', e); playerRelatedItems = []; }
             if (!playerRelatedItems.length) { setSectionState('relatedSection', false); return; }
             setSectionState('relatedSection', true);
             const visible = playerRelatedItems.slice(0, 4);
-            list.innerHTML = visible.map(x => `<article class="related-card" data-url="${escapeHtml(x.url || '')}"><img src="${escapeHtml(jikanImage(x))}" alt="" loading="lazy"><div><strong>${escapeHtml(x.title || x.name || '')}</strong><span>${escapeHtml([x.year || x.aired?.from?.slice(0,4), x.type, x.relation].filter(Boolean).join(' · '))}</span></div></article>`).join('');
+            list.innerHTML = visible.map(relatedCardMarkup).join('');
             list.querySelectorAll('.related-card').forEach(card => card.addEventListener('click', () => { if (card.dataset.url) window.open(card.dataset.url, '_blank', 'noopener'); }));
             const count = document.getElementById('relatedCount');
             if (count) count.textContent = `(${playerRelatedItems.length})`;
@@ -8322,10 +8467,10 @@ function renderProfilePage() {
                 console.warn('Jikan anime extras unavailable:', e);
                 const infoGrid = document.getElementById('animeInfoGrid');
                 if (infoGrid) infoGrid.innerHTML = '<div class="anime-info-placeholder">Розширена інформація тимчасово недоступна</div>';
-                const castList = document.getElementById('castList');
-                if (castList && !playerCharacterItems.length && !castList.querySelector('.character-card') && !castList.querySelector('.cast-card')) {
-                    setSectionState('castSection', true);
-                    castList.innerHTML = '<div class="player-empty-episodes">Персонажі тимчасово недоступні</div>';
+                const mainCharactersList = document.getElementById('mainCharactersList');
+                if (mainCharactersList && !playerCharacterItems.length) {
+                    setSectionState('mainCharactersSection', true);
+                    mainCharactersList.innerHTML = '<div class="player-empty-episodes">Персонажі тимчасово недоступні</div>';
                 }
                 setSectionState('relatedSection', false);
                 setSectionState('mediaSection', false);
@@ -8902,14 +9047,14 @@ function renderProfilePage() {
             });
         });
 
-        document.getElementById('castMoreBtn')?.addEventListener('click', () => {
+        document.getElementById('mainCharactersMoreBtn')?.addEventListener('click', () => {
             playerCharacterExpanded = !playerCharacterExpanded;
             renderMainCharacters(playerJikanData);
         });
         document.getElementById('relatedMoreBtn')?.addEventListener('click', () => {
             const list = document.getElementById('relatedList');
             if (!list) return;
-            list.innerHTML = playerRelatedItems.map(x => `<article class="related-card" data-url="${escapeHtml(x.url || '')}"><img src="${escapeHtml(jikanImage(x))}" alt="" loading="lazy"><div><strong>${escapeHtml(x.title || x.name || '')}</strong><span>${escapeHtml([x.year || x.aired?.from?.slice(0,4), x.type, x.relation].filter(Boolean).join(' · '))}</span></div></article>`).join('');
+            list.innerHTML = playerRelatedItems.map(relatedCardMarkup).join('');
             list.querySelectorAll('.related-card').forEach(card => card.addEventListener('click', () => { if (card.dataset.url) window.open(card.dataset.url, '_blank', 'noopener'); }));
             document.getElementById('relatedMoreBtn').hidden = true;
         });
