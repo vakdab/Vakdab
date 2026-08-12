@@ -5,11 +5,8 @@
    --tag-bg, --radius, --radius-lg, --shadow-md, --shadow-lg). Nothing
    here is hardcoded to light or dark, so whatever theme the site is in,
    the player matches it automatically the moment those variables flip.
-   The video chrome itself (the controls drawn directly on top of the
-   picture — topbar, dub row, scrubber, center play, spinner) stays a
-   fixed dark/white pair on purpose: that's standard player UX (YouTube,
-   Netflix, etc. all do this) because it has to stay legible over any
-   frame of any video, regardless of site theme. */
+   The video chrome now also follows the theme (light UI on light theme,
+   dark UI on dark theme), same as the rest of the interface. */
 
 #playerPageModal {
     position: fixed;
@@ -61,8 +58,6 @@
     content: '';
     position: absolute;
     inset: 0;
-    /* Змінено градієнт: тепер верхня частина повністю прозора,
-       затемнення починається пізніше і стає м'якшим */
     background: linear-gradient(
         180deg,
         transparent 0%,
@@ -213,7 +208,7 @@
 #playerPageModal .lampa-player-container { overflow: hidden; background: #000; }
 #playerPageModal .lampa-player-container video { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
 
-/* fixed dark chrome — deliberate, see note at top of file */
+/* topbar над відео — тепер реагує на тему сайту */
 #playerPageModal .video-overlay-topbar {
     position: absolute;
     z-index: 8;
@@ -223,25 +218,31 @@
     justify-content: space-between;
     padding: 10px;
     pointer-events: none;
-    background: linear-gradient(180deg, rgba(0,0,0,.62), transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 70%, transparent), transparent);
+    opacity: 1;
+    transition: opacity .25s ease;
 }
 #playerPageModal .video-overlay-topbar .icon-btn {
     pointer-events: auto;
     width: 34px;
     height: 34px;
-    color: #fff;
-    background: rgba(0,0,0,.42);
-    border-color: rgba(255,255,255,.2);
+    color: var(--text);
+    background: color-mix(in srgb, var(--surface) 55%, transparent);
+    border-color: color-mix(in srgb, var(--border) 80%, transparent);
+    backdrop-filter: blur(10px);
+    transition: transform .18s cubic-bezier(.34,1.56,.64,1), background-color .15s ease, border-color .15s ease;
 }
-#playerPageModal .video-overlay-topbar .icon-btn:hover { background: rgba(0,0,0,.6); }
+#playerPageModal .video-overlay-topbar .icon-btn:hover { background: color-mix(in srgb, var(--surface) 85%, transparent); border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); transform: scale(1.08); }
+#playerPageModal .video-overlay-topbar .icon-btn:active { transform: scale(.9); }
 #playerPageModal .video-overlay-left { display: flex; flex-direction: column; gap: 4px; max-width: 72%; }
-#playerPageModal .video-overlay-title { overflow: hidden; color: #fff; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+#playerPageModal .video-overlay-title { overflow: hidden; color: var(--text); font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 #playerPageModal .video-overlay-episode,
 #playerPageModal .video-overlay-season {
     padding: 8px 13px;
     border-radius: 7px;
-    background: rgba(54,54,54,.72);
-    color: #fff;
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+    color: var(--text);
     font-size: 12px;
     font-weight: 700;
     backdrop-filter: blur(10px);
@@ -249,6 +250,7 @@
 #playerPageModal .video-overlay-episode:empty,
 #playerPageModal .video-overlay-season:empty { display: none; }
 #playerPageModal .video-overlay-season { max-width: 28%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 #playerPageModal .video-dub-row {
     position: absolute;
     z-index: 8;
@@ -265,59 +267,142 @@
 #playerPageModal .video-dub-row .format-pill {
     flex: 0 0 auto;
     padding: 7px 10px;
-    border: 1px solid rgba(255,255,255,.28);
+    border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
     border-radius: 8px;
-    background: rgba(0,0,0,.58);
-    color: #fff;
-    transition: background-color .15s ease, border-color .15s ease;
+    background: color-mix(in srgb, var(--surface) 65%, transparent);
+    color: var(--text);
+    backdrop-filter: blur(8px);
+    transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
 }
-#playerPageModal .video-dub-row .format-pill:hover { background: rgba(0,0,0,.78); }
-#playerPageModal .video-dub-row .format-pill.active-format { background: #fff; color: #111; border-color: #fff; }
+#playerPageModal .video-dub-row .format-pill:hover { background: color-mix(in srgb, var(--surface) 92%, transparent); transform: translateY(-1px); }
+#playerPageModal .video-dub-row .format-pill.active-format { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 
+/* нижня панель керування */
 #playerPageModal .lp-controls {
     position: absolute;
     z-index: 5;
     right: 0;
     bottom: 0;
     left: 0;
-    padding: 10px 12px 8px;
-    color: #fff;
-    background: linear-gradient(0deg, rgba(0,0,0,.82), transparent);
+    padding: 14px 12px 10px;
+    color: var(--text);
+    background: linear-gradient(0deg, color-mix(in srgb, var(--bg) 88%, transparent), transparent);
     opacity: 1;
-    transition: opacity .2s ease;
+    transform: translateY(0);
+    transition: opacity .25s ease, transform .25s ease;
 }
+#playerPageModal .player-video-container.controls-hidden .lp-controls,
+#playerPageModal .player-video-container.controls-hidden .video-overlay-topbar {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(6px);
+}
+
 #playerPageModal .lp-progress-wrap {
+    position: relative;
     height: 4px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     overflow: hidden;
     border-radius: 99px;
-    background: rgba(255,255,255,.3);
+    background: color-mix(in srgb, var(--text) 22%, transparent);
     cursor: pointer;
-    transition: height .12s ease;
+    transition: height .15s ease;
 }
-#playerPageModal .lp-progress-wrap:hover { height: 6px; }
-#playerPageModal .lp-progress-fill { height: 100%; background: var(--accent); position: relative; }
-#playerPageModal .lp-bottom-row { display: flex; align-items: center; gap: 8px; }
+#playerPageModal .lp-progress-wrap:hover { height: 7px; }
+#playerPageModal .lp-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    position: relative;
+    transition: width .12s linear;
+}
+#playerPageModal .lp-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -5px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+    transform: translateY(-50%) scale(0);
+    transition: transform .15s ease;
+}
+#playerPageModal .lp-progress-wrap:hover .lp-progress-fill::after { transform: translateY(-50%) scale(1); }
+
+#playerPageModal .lp-bottom-row { display: flex; align-items: center; gap: 6px; }
 #playerPageModal .lp-btn {
     display: inline-flex;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     align-items: center;
     justify-content: center;
     padding: 0;
     border: 0;
     background: transparent;
-    color: #fff;
+    color: var(--text);
     cursor: pointer;
-    border-radius: 6px;
-    transition: background-color .15s ease, transform .1s ease;
+    border-radius: 8px;
+    transition: background-color .15s ease, transform .15s cubic-bezier(.34,1.56,.64,1);
 }
-#playerPageModal .lp-btn:hover { background: rgba(255,255,255,.12); }
-#playerPageModal .lp-btn:active { transform: scale(.9); }
-#playerPageModal .lp-time { color: rgba(255,255,255,.9); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#playerPageModal .lp-btn:hover { background: color-mix(in srgb, var(--text) 12%, transparent); transform: scale(1.1); }
+#playerPageModal .lp-btn:active { transform: scale(.88); }
+#playerPageModal .lp-time { color: color-mix(in srgb, var(--text) 78%, transparent); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 #playerPageModal .lp-spacer { flex: 1; }
-#playerPageModal .lp-volume-wrap { display: flex; align-items: center; gap: 5px; }
-#playerPageModal .lp-volume-slider { width: 76px; accent-color: var(--accent); }
+
+/* mute toggle — без слайдера, лише вкл/викл звуку */
+#playerPageModal .lp-mute-btn svg { transition: transform .2s ease, opacity .2s ease; }
+#playerPageModal .lp-mute-btn.is-muted svg { opacity: .55; }
+#playerPageModal .lp-mute-btn:hover svg { transform: scale(1.12); }
+
+/* кнопка вибору якості + випадаюче меню */
+#playerPageModal .lp-quality-wrap { position: relative; }
+#playerPageModal .lp-quality-btn {
+    width: auto;
+    padding: 0 9px;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .02em;
+}
+#playerPageModal .lp-quality-btn .lp-quality-current { color: var(--text); }
+#playerPageModal .lp-quality-menu {
+    position: absolute;
+    z-index: 9;
+    right: 0;
+    bottom: 40px;
+    min-width: 96px;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px) scale(.94);
+    transform-origin: bottom right;
+    transition: opacity .18s ease, transform .18s cubic-bezier(.16,1,.3,1), visibility .18s;
+}
+#playerPageModal .lp-quality-wrap.open .lp-quality-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+#playerPageModal .lp-quality-wrap.open .lp-quality-btn { background: color-mix(in srgb, var(--text) 12%, transparent); }
+#playerPageModal .lp-quality-option {
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: color-mix(in srgb, var(--text) 78%, transparent);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: right;
+    transition: background-color .15s ease, color .15s ease;
+}
+#playerPageModal .lp-quality-option:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--text); }
+#playerPageModal .lp-quality-option.active { color: var(--accent); }
+
 #playerPageModal .lp-spinner {
     position: absolute;
     z-index: 6;
@@ -325,8 +410,8 @@
     left: 50%;
     width: 34px;
     height: 34px;
-    border: 3px solid rgba(255,255,255,.35);
-    border-top-color: #fff;
+    border: 3px solid color-mix(in srgb, var(--text) 25%, transparent);
+    border-top-color: var(--accent);
     border-radius: 50%;
     transform: translate(-50%,-50%);
     animation: playerSpin .8s linear infinite;
@@ -335,17 +420,18 @@
 #playerPageModal .lp-center-play { position: absolute; z-index: 4; top: 50%; left: 50%; transform: translate(-50%,-50%); }
 #playerPageModal .lp-center-play-btn {
     display: grid;
-    width: 76px;
-    height: 76px;
+    width: 72px;
+    height: 72px;
     place-items: center;
     border-radius: 50%;
-    background: rgba(0,0,0,.48);
-    color: #fff;
-    backdrop-filter: blur(6px);
-    box-shadow: 0 8px 30px rgba(0,0,0,.4);
-    transition: transform .18s ease, background-color .18s ease;
+    background: color-mix(in srgb, var(--bg) 55%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    color: var(--text);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 30px color-mix(in srgb, var(--bg) 40%, transparent);
+    transition: transform .22s cubic-bezier(.34,1.56,.64,1), background-color .18s ease;
 }
-#playerPageModal .lp-center-play-btn:hover { background: var(--accent); transform: scale(1.06); }
+#playerPageModal .lp-center-play-btn:hover { background: var(--accent); color: var(--bg); transform: translate(-50%,-50%) scale(1.08); }
 @keyframes playerSpin { to { transform: translate(-50%,-50%) rotate(360deg); } }
 
 /* ============== Selectors under the video ============== */
@@ -450,7 +536,15 @@
     #playerPageModal .player-control-block:last-child { grid-column: auto; }
 }
 
-
+/* мобільна адаптація плеєра */
+@media (max-width: 620px) {
+    #playerPageModal .lp-controls { padding: 10px 8px 8px; }
+    #playerPageModal .lp-btn { width: 30px; height: 30px; }
+    #playerPageModal .lp-time { font-size: 11px; }
+    #playerPageModal .lp-quality-menu { min-width: 84px; }
+    #playerPageModal .lp-center-play-btn { width: 60px; height: 60px; }
+    #playerPageModal .video-overlay-topbar .icon-btn { width: 30px; height: 30px; }
+}
 
 /* Final player cleanup: one visible video and one selector panel. */
 #playerPageModal #playerFormatRow,
@@ -491,7 +585,6 @@
 #playerPageModal .media-track strong { overflow:hidden; color:var(--text-secondary); font-size:12px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
 #playerPageModal .anime-info-placeholder { padding:15px; color:var(--text-muted); font-size:12px; }
 @media (max-width:620px) { #playerPageModal .related-list { grid-template-columns:1fr; } #playerPageModal .anime-info-row { min-height:42px; } }
-
 
 /* Extended anime information refinements. */
 #playerPageModal .anime-info-row strong { display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0; }
