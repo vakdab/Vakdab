@@ -4831,8 +4831,13 @@ let externalSourceCache = {};
                     return [];
                 });
 
-                const [results, newestItems, scheduleItems] = await Promise.all([
-                    Promise.all(genrePromises), newestPromise, schedulePromise
+                const popularPromise = fetchAnimeuaTop100().catch(e => {
+                    console.error('Помилка завантаження популярних аніме:', e);
+                    return [];
+                });
+
+                const [results, newestItems, scheduleItems, popularItems] = await Promise.all([
+                    Promise.all(genrePromises), newestPromise, schedulePromise, popularPromise
                 ]);
                 if (requestId !== homeSectionsRequestId) return;
 
@@ -4842,6 +4847,7 @@ let externalSourceCache = {};
 
                 html += buildHistoryCarouselSectionHtml();
                 html += buildScheduleWidgetHtml(scheduleItems);
+                html += buildPopularVerticalSectionHtml(popularItems);
                 html += buildAnimeCarouselSectionHtml('genre-newest', 'Нові аніме', newestWide, 'wide');
 
                 for (const { genre, items } of results) {
@@ -4866,10 +4872,14 @@ let externalSourceCache = {};
                 for (const { items } of results) registerAnimeCardData(items);
                 observeAnimeCardsForTmdb(container);
 
-                container.querySelectorAll('.anime-card, .wide-card').forEach(card => {
+                container.querySelectorAll('.anime-card, .wide-card, .popular-card').forEach(card => {
                     card.addEventListener('click', () => openPlayerPage(card.dataset.url));
                     card.addEventListener('keydown', e => { if (e.key === 'Enter') openPlayerPage(card.dataset
                             .url); });
+                });
+
+                document.getElementById('homePopularShowAllBtn')?.addEventListener('click', () => {
+                    document.getElementById('top100Btn')?.click();
                 });
 
                 container.querySelectorAll('.carousel-btn').forEach(btn => {
@@ -4962,6 +4972,37 @@ let externalSourceCache = {};
                           ${cardsHtml}
                         </div>
                         <button class="carousel-btn carousel-btn-right" data-target="${sectionId}" aria-label="Вправо"><i class="fas fa-chevron-right"></i></button>
+                      </div>
+                    </div>
+                  `;
+        }
+
+        function buildPopularVerticalSectionHtml(items) {
+            if (!items || items.length === 0) return '';
+            const top = items.slice(0, 10);
+            const cardsHtml = top.map((a, idx) => {
+                const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
+                const title = a.title || 'Без назви';
+                return `
+                    <div class="popular-card popular-card--compact" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
+                      <div class="popular-card__poster-wrap">
+                        <div class="popular-card__poster">
+                          <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add(\'img--loaded\')" onerror="this.src=\'${ANIME_CARD_PLACEHOLDER}\'">
+                        </div>
+                        <div class="popular-card__rank">${idx + 1}</div>
+                      </div>
+                      <div class="popular-card__title">${title}</div>
+                    </div>
+                  `;
+            }).join('');
+            return `
+                    <div class="genre-section" id="genre-popular">
+                      <div class="genre-title genre-title--row">
+                        <span class="genre-name">Популярні</span>
+                        <button class="genre-title-link" id="homePopularShowAllBtn" type="button">Показати всі</button>
+                      </div>
+                      <div class="popular-list popular-list--home">
+                        ${cardsHtml}
                       </div>
                     </div>
                   `;
