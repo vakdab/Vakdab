@@ -1743,6 +1743,9 @@ let externalSourceCache = {};
                 // Controls
                 const controls = document.createElement('div');
                 controls.className = 'lp-controls';
+                const LP_CHEVRON = '<svg class="lp-chevron" viewBox="0 0 24 24" width="10" height="10"><path d="M7 14l5-5 5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                const LP_CHECK = '<svg class="lp-check" viewBox="0 0 24 24" width="14" height="14"><path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                const lpSpeedOption = (value, label, active) => `<button type="button" class="${active ? 'is-active' : ''}" data-speed="${value}" role="menuitemradio" aria-checked="${active}"><span>${label}</span>${LP_CHECK}</button>`;
                 controls.innerHTML = `
                     <div class="lp-progress-wrap" id="lpProgress">
                         <div class="lp-progress-fill" id="lpProgressFill" style="width:0%"></div>
@@ -1753,24 +1756,30 @@ let externalSourceCache = {};
                         <div class="lp-spacer"></div>
                         <div class="lp-settings-wrap">
                             <div class="lp-menu-wrap">
-                                <button class="lp-control-pill" id="lpSpeedBtn" title="Швидкість">1x</button>
-                                <div class="lp-popover lp-speed-menu" id="lpSpeedMenu" hidden>
-                                    <button type="button" data-speed="0.75">0.75x</button>
-                                    <button type="button" data-speed="1">1x</button>
-                                    <button type="button" data-speed="1.25">1.25x</button>
-                                    <button type="button" data-speed="1.5">1.5x</button>
-                                    <button type="button" data-speed="2">2x</button>
+                                <button class="lp-control-pill" id="lpSpeedBtn" title="Швидкість відтворення" aria-haspopup="true" aria-expanded="false">
+                                    <span class="lp-pill-label" id="lpSpeedLabel">1x</span>${LP_CHEVRON}
+                                </button>
+                                <div class="lp-popover lp-speed-menu" id="lpSpeedMenu" role="menu" aria-hidden="true">
+                                    <div class="lp-popover-label">Швидкість</div>
+                                    ${lpSpeedOption('0.75', '0.75x', false)}
+                                    ${lpSpeedOption('1', '1x', true)}
+                                    ${lpSpeedOption('1.25', '1.25x', false)}
+                                    ${lpSpeedOption('1.5', '1.5x', false)}
+                                    ${lpSpeedOption('2', '2x', false)}
                                 </div>
                             </div>
-                            <div class="lp-menu-wrap">
-                                <button class="lp-control-pill lp-quality-pill" id="lpQualityBtn" title="Якість">Авто</button>
-                                <div class="lp-popover lp-quality-menu" id="lpQualityMenu" hidden></div>
+                            <div class="lp-menu-wrap" id="lpQualityWrap">
+                                <button class="lp-control-pill lp-quality-pill" id="lpQualityBtn" title="Якість відео" aria-haspopup="true" aria-expanded="false">
+                                    <span class="lp-pill-label" id="lpQualityLabel">Авто</span>${LP_CHEVRON}
+                                </button>
+                                <div class="lp-popover lp-quality-menu" id="lpQualityMenu" role="menu" aria-hidden="true"></div>
                             </div>
                         </div>
                         <div class="lp-volume-wrap">
                             <button class="lp-btn" id="lpVolBtn" title="Mute">${LP_ICONS.volOn}</button>
-                            <input type="range" class="lp-volume-slider" id="lpVolSlider" min="0" max="1" step="0.05" value="0.8">
+                            <input type="range" class="lp-volume-slider" id="lpVolSlider" min="0" max="1" step="0.05" value="0.8" aria-label="Гучність">
                         </div>
+                        <button class="lp-btn lp-fs-btn" id="lpFsBtn" title="Повний екран">${LP_ICONS.fsEnter}</button>
                     </div>
                 `;
                 this._controls = controls;
@@ -1878,51 +1887,82 @@ let externalSourceCache = {};
                     this._updateVolBtn();
                 });
 
-                // Playback speed and quality menus.
+                // Playback speed and quality menus — class-based, animated.
                 const speedBtn = wrap.querySelector('#lpSpeedBtn');
                 const speedMenu = wrap.querySelector('#lpSpeedMenu');
+                const speedLabel = wrap.querySelector('#lpSpeedLabel');
                 const qualityBtn = wrap.querySelector('#lpQualityBtn');
                 const qualityMenu = wrap.querySelector('#lpQualityMenu');
-                const closePlayerMenus = () => {
-                    if (speedMenu) speedMenu.hidden = true;
-                    if (qualityMenu) qualityMenu.hidden = true;
+                const qualityLabel = wrap.querySelector('#lpQualityLabel');
+                const fsBtn = wrap.querySelector('#lpFsBtn');
+
+                const setMenuOpen = (menu, btn, open) => {
+                    if (!menu || !btn) return;
+                    menu.classList.toggle('is-open', open);
+                    menu.setAttribute('aria-hidden', String(!open));
+                    btn.setAttribute('aria-expanded', String(open));
+                    btn.classList.toggle('is-open', open);
                 };
+                const isMenuOpen = (menu) => menu && menu.classList.contains('is-open');
+                const closePlayerMenus = () => {
+                    setMenuOpen(speedMenu, speedBtn, false);
+                    setMenuOpen(qualityMenu, qualityBtn, false);
+                };
+
                 if (speedBtn && speedMenu) speedBtn.addEventListener('click', e => {
                     e.stopPropagation();
-                    if (qualityMenu) qualityMenu.hidden = true;
-                    speedMenu.hidden = !speedMenu.hidden;
+                    const willOpen = !isMenuOpen(speedMenu);
+                    setMenuOpen(qualityMenu, qualityBtn, false);
+                    setMenuOpen(speedMenu, speedBtn, willOpen);
                 });
                 if (qualityBtn && qualityMenu) qualityBtn.addEventListener('click', e => {
                     e.stopPropagation();
-                    if (speedMenu) speedMenu.hidden = true;
+                    const willOpen = !isMenuOpen(qualityMenu);
+                    setMenuOpen(speedMenu, speedBtn, false);
                     this._refreshQualityMenu();
-                    qualityMenu.hidden = !qualityMenu.hidden;
+                    setMenuOpen(qualityMenu, qualityBtn, willOpen);
                 });
+
                 speedMenu?.querySelectorAll('[data-speed]').forEach(option => option.addEventListener('click', e => {
                     e.stopPropagation();
                     const rate = Number(option.dataset.speed) || 1;
                     v.playbackRate = rate;
-                    if (speedBtn) speedBtn.textContent = rate + 'x';
+                    this.state.speed = rate;
+                    if (speedLabel) speedLabel.textContent = rate + 'x';
+                    speedMenu.querySelectorAll('[data-speed]').forEach(o => {
+                        const a = Number(o.dataset.speed) === rate;
+                        o.classList.toggle('is-active', a);
+                        o.setAttribute('aria-checked', String(a));
+                    });
                     closePlayerMenus();
                 }));
                 qualityMenu?.addEventListener('click', e => {
                     const option = e.target.closest('[data-quality-index]');
-                    if (!option || !this.hls) return;
-                    this.hls.currentLevel = Number(option.dataset.qualityIndex);
-                    if (qualityBtn) qualityBtn.textContent = option.dataset.qualityLabel || 'Авто';
+                    if (!option) return;
+                    e.stopPropagation();
+                    const idx = Number(option.dataset.qualityIndex);
+                    if (this.hls) this.hls.currentLevel = idx;
+                    if (qualityLabel) qualityLabel.textContent = option.dataset.qualityLabel || 'Авто';
+                    qualityMenu.querySelectorAll('[data-quality-index]').forEach(o => {
+                        const a = o === option;
+                        o.classList.toggle('is-active', a);
+                        o.setAttribute('aria-checked', String(a));
+                    });
                     closePlayerMenus();
                 });
                 document.addEventListener('click', closePlayerMenus);
                 this._closePlayerMenus = closePlayerMenus;
                 this._refreshQualityMenu();
 
-                // Fullscreen
+                // Fullscreen — in-player button + topbar button synced.
 
+                if (fsBtn) fsBtn.addEventListener('click', e => { e.stopPropagation(); this.toggleFullscreen(); });
                 const syncFullscreenState = () => {
                     this.state.fullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
                     if (fsBtn) fsBtn.innerHTML = this.state.fullscreen ? LP_ICONS.fsExit : LP_ICONS.fsEnter;
                     const pageFs = document.getElementById('playerFullscreenBtn');
                     if (pageFs) {
+                        pageFs.innerHTML = this.state.fullscreen ? LP_ICONS.fsExit : LP_ICONS.fsEnter;
                         pageFs.title = this.state.fullscreen ? 'Вийти з повного екрана' : 'Повний екран';
                         pageFs.setAttribute('aria-label', pageFs.title);
                         pageFs.classList.toggle('is-fullscreen', this.state.fullscreen);
@@ -1947,12 +1987,14 @@ let externalSourceCache = {};
 
             _refreshQualityMenu() {
                 const menu = this.containerRef?.querySelector('#lpQualityMenu');
-                const button = this.containerRef?.querySelector('#lpQualityBtn');
-                if (!menu || !button) return;
+                const labelEl = this.containerRef?.querySelector('#lpQualityLabel');
+                if (!menu) return;
+                const checkSvg = '<svg class="lp-check" viewBox="0 0 24 24" width="14" height="14"><path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                const mkBtn = (idx, label, active) => `<button type="button" class="${active ? 'is-active' : ''}" data-quality-index="${idx}" data-quality-label="${label}" role="menuitemradio" aria-checked="${active}"><span>${label}</span>${checkSvg}</button>`;
                 const levels = this.hls?.levels || [];
                 if (!levels.length) {
-                    menu.innerHTML = '<button type="button" data-quality-index="-1" data-quality-label="Авто">Авто</button>';
-                    button.textContent = 'Авто';
+                    menu.innerHTML = '<div class="lp-popover-label">Якість</div>' + mkBtn(-1, 'Авто', true);
+                    if (labelEl) labelEl.textContent = 'Авто';
                     return;
                 }
                 const unique = [];
@@ -1960,9 +2002,11 @@ let externalSourceCache = {};
                     const label = level.height ? `${level.height}p` : `Рівень ${index + 1}`;
                     if (!unique.some(item => item.label === label)) unique.push({ label, index });
                 });
-                menu.innerHTML = '<button type="button" data-quality-index="-1" data-quality-label="Авто">Авто</button>' +
-                    unique.sort((a, b) => parseInt(b.label) - parseInt(a.label))
-                        .map(item => `<button type="button" data-quality-index="${item.index}" data-quality-label="${item.label}">${item.label}</button>`).join('');
+                unique.sort((a, b) => parseInt(b.label) - parseInt(a.label));
+                menu.innerHTML = '<div class="lp-popover-label">Якість</div>' +
+                    mkBtn(-1, 'Авто', true) +
+                    unique.map(item => mkBtn(item.index, item.label, false)).join('');
+                if (labelEl) labelEl.textContent = 'Авто';
             }
 
             _updatePlayBtn() {
