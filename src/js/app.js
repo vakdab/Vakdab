@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=video-controls-2';
+import './app-legacy.js?v=home-popular-1';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';
