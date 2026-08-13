@@ -334,3 +334,71 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
 }
+
+/* ===== Популярні на головній — окрема вертикальна секція (не карусель), той самий стиль .popular-card ===== */
+.genre-title--row {
+    justify-content: space-between;
+    gap: .75rem;
+}
+.genre-title--row::after { display: none; }
+.genre-title-link {
+    flex: none;
+    background: none;
+    border: none;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: .2rem .1rem;
+    white-space: nowrap;
+}
+.genre-title-link:hover, .genre-title-link:focus-visible { color: var(--accent); }
+
+.popular-list--home {
+    display: flex;
+    flex-direction: column;
+    gap: .9rem;
+    margin-top: 0;
+}
+.popular-card--compact {
+    padding: .85rem .9rem .85rem 5.4rem;
+    text-align: left;
+    min-height: 4.4rem;
+    display: flex;
+    align-items: center;
+    overflow: visible;
+}
+.popular-card--compact .popular-card__poster-wrap {
+    position: absolute;
+    top: 50%;
+    left: .85rem;
+    transform: translateY(-50%);
+    width: 3.4rem;
+    height: 3.4rem;
+}
+.popular-card--compact .popular-card__poster {
+    border-radius: 10px;
+    border-width: 0;
+}
+.popular-card--compact .popular-card__rank {
+    top: -.3rem;
+    right: -.3rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: .66rem;
+}
+.popular-card--compact .popular-card__title {
+    margin-top: 0;
+    font-size: .9rem;
+    -webkit-line-clamp: 2;
+}
+@media (min-width:600px) {
+    .popular-list--home {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: .8rem;
+    }
+}
+@media (min-width:1024px) {
+    .popular-list--home { grid-template-columns: repeat(3, 1fr); }
+}
