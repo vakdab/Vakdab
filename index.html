@@ -22,7 +22,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
     <link rel="manifest" href="./site.webmanifest" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#0f0f13" />
     <meta name="description" content="VakDab — твій аніме каталог. Переглядай аніме онлайн, відстежуй прогрес, спілкуйся зі спільнотою." />
     <meta name="keywords" content="аніме, аніме онлайн, дивитися аніме, аніме каталог, VakDab, anime" />
     <meta name="author" content="VakDab" />
@@ -39,64 +39,514 @@
     </script>
 
     <link rel="stylesheet" href="src/styles/app.css?v=home-popular-1" />
+
+    <style>
+        /* ===== REDESIGN: Homepage Professional Overhaul ===== */
+
+        :root {
+            --redesign-bg: #0f0f13;
+            --redesign-surface: #1a1a24;
+            --redesign-surface-hover: #22222e;
+            --redesign-accent: #7c3aed;
+            --redesign-accent-light: #a78bfa;
+            --redesign-text: #ffffff;
+            --redesign-text-muted: #a1a1aa;
+            --redesign-border: rgba(255,255,255,0.06);
+            --redesign-gradient: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+            --redesign-radius: 14px;
+            --redesign-radius-sm: 8px;
+        }
+
+        /* Top Navigation Bar */
+        .redesign-topnav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            background: rgba(15, 15, 19, 0.85);
+            backdrop-filter: blur(20px) saturate(1.4);
+            -webkit-backdrop-filter: blur(20px) saturate(1.4);
+            border-bottom: 1px solid var(--redesign-border);
+            transition: background 0.3s ease;
+        }
+
+        .redesign-topnav-logo {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--redesign-text);
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .redesign-topnav-logo .logo-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--redesign-accent);
+            box-shadow: 0 0 12px var(--redesign-accent);
+        }
+
+        .redesign-topnav-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .redesign-topnav-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: var(--redesign-surface);
+            color: var(--redesign-text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1rem;
+        }
+
+        .redesign-topnav-btn:hover {
+            background: var(--redesign-surface-hover);
+            color: var(--redesign-text);
+            transform: scale(1.05);
+        }
+
+        /* Hero Cinematic Section */
+        .redesign-hero-wrapper {
+            position: relative;
+            width: 100%;
+            margin-top: 64px;
+            border-radius: 0 0 24px 24px;
+            overflow: hidden;
+        }
+
+        .redesign-hero-wrapper .hero-wrapper {
+            position: relative;
+            min-height: 420px;
+            border-radius: 0;
+        }
+
+        .redesign-hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                to bottom,
+                rgba(15, 15, 19, 0.1) 0%,
+                rgba(15, 15, 19, 0.4) 50%,
+                rgba(15, 15, 19, 0.95) 85%,
+                rgba(15, 15, 19, 1) 100%
+            );
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .redesign-hero-content {
+            position: absolute;
+            bottom: 60px;
+            left: 24px;
+            right: 24px;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .redesign-hero-content .hero-cta-btn {
+            pointer-events: all;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            background: var(--redesign-gradient);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+            margin-top: 16px;
+        }
+
+        .redesign-hero-content .hero-cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(124, 58, 237, 0.6);
+        }
+
+        /* Genre Pills Navigation */
+        .redesign-genre-pills {
+            display: flex;
+            gap: 10px;
+            padding: 20px 20px 10px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .redesign-genre-pills::-webkit-scrollbar {
+            display: none;
+        }
+
+        .redesign-genre-pills .action-pill {
+            flex-shrink: 0;
+            padding: 10px 20px;
+            border-radius: 50px;
+            border: 1px solid var(--redesign-border);
+            background: var(--redesign-surface);
+            color: var(--redesign-text-muted);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+        }
+
+        .redesign-genre-pills .action-pill:hover {
+            background: var(--redesign-accent);
+            color: var(--redesign-text);
+            border-color: var(--redesign-accent);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+        }
+
+        .redesign-genre-pills .action-pill i {
+            margin-right: 6px;
+        }
+
+        /* Genre Sections & Card Grid */
+        .redesign-content-area {
+            padding: 10px 16px 100px;
+        }
+
+        .redesign-content-area #genreSectionsContainer .genre-section {
+            margin-bottom: 32px;
+        }
+
+        .redesign-content-area #genreSectionsContainer .genre-section .section-title,
+        .redesign-content-area #genreSectionsContainer .genre-section .genre-section-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--redesign-text);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .redesign-content-area #genreSectionsContainer .genre-section .section-title::before,
+        .redesign-content-area #genreSectionsContainer .genre-section .genre-section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: var(--redesign-gradient);
+            border-radius: 2px;
+        }
+
+        /* Anime Cards Enhancement */
+        .redesign-content-area .anime-card,
+        .redesign-content-area .card {
+            border-radius: var(--redesign-radius);
+            overflow: hidden;
+            background: var(--redesign-surface);
+            border: 1px solid var(--redesign-border);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            position: relative;
+        }
+
+        .redesign-content-area .anime-card:hover,
+        .redesign-content-area .card:hover {
+            transform: translateY(-6px) scale(1.02);
+            border-color: rgba(124, 58, 237, 0.3);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(124, 58, 237, 0.1);
+        }
+
+        .redesign-content-area .anime-card img,
+        .redesign-content-area .card img {
+            border-radius: var(--redesign-radius) var(--redesign-radius) 0 0;
+            transition: transform 0.4s ease;
+        }
+
+        .redesign-content-area .anime-card:hover img,
+        .redesign-content-area .card:hover img {
+            transform: scale(1.05);
+        }
+
+        /* Footer */
+        .redesign-footer {
+            background: var(--redesign-surface);
+            border-top: 1px solid var(--redesign-border);
+            padding: 40px 24px 100px;
+            text-align: center;
+        }
+
+        .redesign-footer-brand {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--redesign-text);
+            margin-bottom: 16px;
+        }
+
+        .redesign-footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .redesign-footer-links a {
+            color: var(--redesign-text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .redesign-footer-links a:hover {
+            color: var(--redesign-accent-light);
+        }
+
+        .redesign-footer-copy {
+            color: var(--redesign-text-muted);
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .redesign-footer-social {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .redesign-footer-social a {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(124, 58, 237, 0.1);
+            color: var(--redesign-accent-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .redesign-footer-social a:hover {
+            background: var(--redesign-accent);
+            color: #fff;
+            transform: scale(1.1);
+        }
+
+        /* Page Body Override for dark theme */
+        body.redesign-dark {
+            background: var(--redesign-bg) !important;
+            color: var(--redesign-text);
+        }
+
+        body.redesign-dark .app-container {
+            background: transparent;
+        }
+
+        /* Hero Progress Bar Redesign */
+        .redesign-hero-wrapper .hero-progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 24px;
+            right: 24px;
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            z-index: 5;
+        }
+
+        .redesign-hero-wrapper .hero-progress-fill {
+            background: var(--redesign-gradient) !important;
+            border-radius: 2px;
+        }
+
+        .redesign-hero-wrapper .hero-dots {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+        }
+
+        /* Hide original header in favor of redesign topnav */
+        body.redesign-dark .header {
+            display: none !important;
+        }
+
+        /* Smooth page transitions */
+        .redesign-content-area > * {
+            animation: redesignFadeUp 0.5s ease forwards;
+            opacity: 0;
+        }
+
+        .redesign-content-area > *:nth-child(1) { animation-delay: 0.1s; }
+        .redesign-content-area > *:nth-child(2) { animation-delay: 0.2s; }
+        .redesign-content-area > *:nth-child(3) { animation-delay: 0.3s; }
+        .redesign-content-area > *:nth-child(4) { animation-delay: 0.4s; }
+        .redesign-content-area > *:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes redesignFadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (min-width: 768px) {
+            .redesign-hero-wrapper .hero-wrapper {
+                min-height: 520px;
+            }
+            .redesign-content-area {
+                padding: 20px 32px 100px;
+            }
+            .redesign-topnav {
+                padding: 14px 32px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .redesign-hero-wrapper .hero-wrapper {
+                min-height: 600px;
+            }
+            .redesign-content-area {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 24px 40px 100px;
+            }
+        }
+
+        /* Scrollbar styling */
+        body.redesign-dark ::-webkit-scrollbar {
+            width: 6px;
+        }
+        body.redesign-dark ::-webkit-scrollbar-track {
+            background: var(--redesign-bg);
+        }
+        body.redesign-dark ::-webkit-scrollbar-thumb {
+            background: var(--redesign-surface-hover);
+            border-radius: 3px;
+        }
+        body.redesign-dark ::-webkit-scrollbar-thumb:hover {
+            background: var(--redesign-accent);
+        }
+    </style>
 </head>
-<body class="appletv-agnative-topnav">
+<body class="appletv-agnative-topnav redesign-dark">
+
+    <!-- ===== REDESIGN: Top Navigation Bar ===== -->
+    <nav class="redesign-topnav" id="redesignTopnav">
+        <div class="redesign-topnav-logo" id="logoHome" title="На головну">
+            <span class="logo-dot"></span>
+            <span>VakDab</span>
+        </div>
+        <div class="redesign-topnav-actions">
+            <button class="redesign-topnav-btn search-circle-btn" id="searchCircleBtn" title="Пошук (/)">
+                <i class="fas fa-search"></i>
+            </button>
+            <button class="redesign-topnav-btn" id="bnProfile" data-route="profile" title="Профіль">
+                <i class="fas fa-user"></i>
+            </button>
+            <button class="redesign-topnav-btn" id="bnMenu" data-route="genres" title="Меню">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
 
     <main class="app-container" id="appRoot">
 
+        <!-- Original header (hidden by CSS, preserved for JS compatibility) -->
         <header class="header">
             <div class="header-left">
-
-                <div class="logo" id="logoHome" title="На головну">
+                <div class="logo" title="На головну">
                     <div class="logo-text">
                         <div class="logo-title-row">
                             <h1>VakDab</h1>
-
                         </div>
-
                     </div>
                 </div>
             </div>
-
             <div class="header-actions">
-                <button class="search-circle-btn" id="searchCircleBtn" title="Пошук (/)">
+                <button class="search-circle-btn" title="Пошук (/)">
                     <i class="fas fa-search"></i>
                 </button>
             </div>
-
             <div class="agnative-topnav-clock" id="agnativeTopnavClock">00:00</div>
         </header>
 
+        <!-- ===== REDESIGN: Cinematic Hero Section ===== -->
+        <section class="redesign-hero-wrapper">
+            <div class="hero-wrapper" id="heroWrapper">
+                <div id="heroSlidesContainer"></div>
+                <div class="hero-dots" id="heroDots"></div>
+                <div class="hero-progress-bar"><div class="hero-progress-fill" id="heroProgressFill"></div></div>
+            </div>
+            <div class="redesign-hero-overlay"></div>
+            <div class="redesign-hero-content">
+                <button class="hero-cta-btn" id="heroCtaBtn" onclick="document.getElementById('genreSectionsContainer')?.scrollIntoView({behavior:'smooth'})">
+                    <i class="fas fa-play"></i> Дивитися зараз
+                </button>
+            </div>
+        </section>
 
-
-        <div class="hero-wrapper" id="heroWrapper">
-            <div id="heroSlidesContainer"></div>
-            <div class="hero-dots" id="heroDots"></div>
-            <div class="hero-progress-bar"><div class="hero-progress-fill" id="heroProgressFill"></div></div>
-        </div>
-
-        <div class="actions-row" id="actionsRow">
+        <!-- ===== REDESIGN: Genre Pills Navigation ===== -->
+        <div class="redesign-genre-pills actions-row" id="actionsRow">
             <button class="action-pill" id="top100Btn" title="Популярні аніме"><i class="fas fa-crown"></i> Популярні</button>
             <button class="action-pill" id="randomBtn" title="Випадкове аніме (R)"><i class="fas fa-dice-d6"></i> Випадкове</button>
         </div>
 
-        <div id="genreSectionsContainer"></div>
-        <div id="animeContainer" class="anime-grid" style="display:none;">
-            <div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження аніме...</div>
+        <!-- ===== REDESIGN: Content Area ===== -->
+        <div class="redesign-content-area">
+            <div id="genreSectionsContainer"></div>
+            <div id="animeContainer" class="anime-grid" style="display:none;">
+                <div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження аніме...</div>
+            </div>
+
+            <div id="searchPageContainer"></div>
+            <div id="settingsPageContainer"></div>
+            <div id="profilePageContainer"></div>
+            <div id="genrePageContainer"></div>
+            <div id="genresPageContainer"></div>
+            <div id="ratingPageContainer"></div>
+            <div id="schedulePageContainer"></div>
+            <div id="stickersPageContainer"></div>
+
+            <div class="pagination-row" id="paginationRow"></div>
         </div>
 
-        <div id="searchPageContainer"></div>
-        <div id="settingsPageContainer"></div>
-        <div id="profilePageContainer"></div>
-        <div id="genrePageContainer"></div>
-        <div id="genresPageContainer"></div>
-        <div id="ratingPageContainer"></div>
-        <div id="schedulePageContainer"></div>
-        <div id="stickersPageContainer"></div>
-
-        <div class="pagination-row" id="paginationRow"></div>
-
-        <footer><span>VakDab 2026 — Усі права захищено • Клавіші: / пошук, M меню, T тема, R випадкове, Esc закрити</span></footer>
+        <!-- ===== REDESIGN: Professional Footer ===== -->
+        <footer class="redesign-footer">
+            <div class="redesign-footer-brand">VakDab</div>
+            <div class="redesign-footer-links">
+                <a href="#" title="Про нас">Про нас</a>
+                <a href="#" title="Контакти">Контакти</a>
+                <a href="https://t.me/vakdab" target="_blank" rel="noopener" title="Telegram">Telegram</a>
+                <a href="#" title="Політика конфіденційності">Конфіденційність</a>
+            </div>
+            <div class="redesign-footer-social">
+                <a href="https://t.me/vakdab" target="_blank" rel="noopener" title="Telegram"><i class="fab fa-telegram-plane"></i></a>
+                <a href="#" title="GitHub"><i class="fab fa-github"></i></a>
+            </div>
+            <p class="redesign-footer-copy">VakDab 2026 — Усі права захищено</p>
+        </footer>
     </main>
 
     <button class="back-to-top" id="backToTopBtn" title="Нагору" aria-label="Прокрутити нагору">
@@ -202,7 +652,6 @@
                 </div>
             </section>
 
-
             <section id="castSection">
                 <div class="section-heading-row"><div class="section-title">Актори</div></div>
                 <div class="hscroll" id="castList">
@@ -211,9 +660,10 @@
                     <div class="cast-card"><div class="cast-avatar"></div><div class="cast-name"></div><div class="cast-role"></div></div>
                 </div>
             </section>
+
             <!-- RELATED ANIME -->
             <section id="relatedSection" class="related-section">
-                <div class="section-heading-row"><div class="section-title">Пов’язане <span id="relatedCount"></span></div><button class="section-more-btn" id="relatedMoreBtn" type="button" hidden aria-label="Показати всі пов’язані аніме">→</button></div>
+                <div class="section-heading-row"><div class="section-title">Пов'язане <span id="relatedCount"></span></div><button class="section-more-btn" id="relatedMoreBtn" type="button" hidden aria-label="Показати всі пов'язані аніме">→</button></div>
                 <div class="related-list" id="relatedList"></div>
             </section>
 
@@ -245,7 +695,7 @@
           </div>
           <!-- ==================== /PAGE 1 ==================== -->
 
-          <!-- Legacy compatibility containers; the visible player is above. -->
+          <!-- Legacy compatibility containers -->
           <div class="page legacy-episodes-page" id="page-episodes" aria-hidden="true">
               <div class="ep-compact-list hidden" id="episodeViewCompact"></div>
               <div class="ep-classic-list hidden" id="episodeViewClassic"></div>
@@ -301,7 +751,6 @@
         </div>
     </div>
 
-
     <script type="module" src="src/js/app.js?v=home-popular-1"></script>
 
     <!-- ===== BOTTOM NAV ===== -->
@@ -328,14 +777,14 @@
             </div>
         </button>
         <!-- Профіль -->
-        <button class="bn-item" id="bnProfile" data-route="profile" title="Профіль" aria-label="Профіль">
+        <button class="bn-item" data-route="profile" title="Профіль" aria-label="Профіль">
             <div class="bn-pill">
                 <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 <span class="bn-label">Профіль</span>
             </div>
         </button>
         <!-- Меню -->
-        <button class="bn-item" id="bnMenu" data-route="genres" title="Меню" aria-label="Меню">
+        <button class="bn-item" data-route="genres" title="Меню" aria-label="Меню">
             <div class="bn-pill">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                 <span class="bn-label">Меню</span>
@@ -345,5 +794,3 @@
 
 </body>
 </html>
-
-
