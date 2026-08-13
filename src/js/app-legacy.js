@@ -1607,12 +1607,11 @@ let externalSourceCache = {};
                 }
                 .lp-btn:hover { opacity: 1; transform: scale(1.1); }
                 .lp-btn svg { width: 20px; height: 20px; fill: #fff; }
-                .lp-btn.lp-fs-btn svg { width: 18px; height: 18px; }
                 .lp-select { background: rgba(20,20,26,.78); color: #fff; border: 1px solid rgba(255,255,255,.22); border-radius: 6px; padding: 4px 5px; font-size: 11px; min-height: 28px; }
                 .lp-select:focus { outline: 2px solid rgba(255,255,255,.55); outline-offset: 1px; }
                 .lampa-player-container:fullscreen, .lampa-player-container:-webkit-full-screen { width: 100vw; height: 100vh; max-width: none; max-height: none; aspect-ratio: auto; border-radius: 0; }
                 .lampa-player-container:fullscreen video, .lampa-player-container:-webkit-full-screen video { object-fit: contain; }
-                @media (max-width: 600px) { .lp-volume-slider { width: 48px; } .lp-select { font-size: 10px; padding-inline: 2px; } .lp-controls { padding: 8px 8px 10px; } }
+                @media (max-width: 600px) { .lp-select { font-size: 10px; padding-inline: 2px; } .lp-controls { padding: 8px 8px 10px; } }
                 .lp-time {
                     font-size: 12px;
                     color: rgba(255,255,255,0.85);
@@ -1621,29 +1620,6 @@ let externalSourceCache = {};
                     flex-shrink: 0;
                 }
                 .lp-spacer { flex: 1; }
-                .lp-volume-wrap {
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                }
-                .lp-volume-slider {
-                    width: 72px;
-                    height: 4px;
-                    -webkit-appearance: none;
-                    appearance: none;
-                    background: rgba(255,255,255,0.3);
-                    border-radius: 4px;
-                    outline: none;
-                    cursor: pointer;
-                }
-                .lp-volume-slider::-webkit-slider-thumb {
-                    -webkit-appearance: none;
-                    width: 12px;
-                    height: 12px;
-                    border-radius: 50%;
-                    background: #fff;
-                    cursor: pointer;
-                }
                 .lp-center-play {
                     position: absolute;
                     inset: 0;
@@ -1775,11 +1751,7 @@ let externalSourceCache = {};
                                 <div class="lp-popover lp-quality-menu" id="lpQualityMenu" role="menu" aria-hidden="true"></div>
                             </div>
                         </div>
-                        <div class="lp-volume-wrap">
-                            <button class="lp-btn" id="lpVolBtn" title="Mute">${LP_ICONS.volOn}</button>
-                            <input type="range" class="lp-volume-slider" id="lpVolSlider" min="0" max="1" step="0.05" value="0.8" aria-label="Гучність">
-                        </div>
-                        <button class="lp-btn lp-fs-btn" id="lpFsBtn" title="Повний екран">${LP_ICONS.fsEnter}</button>
+                        <button class="lp-btn" id="lpVolBtn" title="Mute">${LP_ICONS.volOn}</button>
                     </div>
                 `;
                 this._controls = controls;
@@ -1867,19 +1839,9 @@ let externalSourceCache = {};
                     progress.addEventListener('touchmove', e => { seek(e.touches[0]); }, { passive: true });
                 }
 
-                // Volume
-                const volSlider = wrap.querySelector('#lpVolSlider');
+                // Volume — mute/unmute toggle only (no slider)
                 const volBtn = wrap.querySelector('#lpVolBtn');
-                if (volSlider) {
-                    volSlider.value = this.state.volume;
-                    v.volume = this.state.volume;
-                    volSlider.addEventListener('input', () => {
-                        v.volume = parseFloat(volSlider.value);
-                        this.state.volume = v.volume;
-                        this.state.muted = v.volume === 0;
-                        this._updateVolBtn();
-                    });
-                }
+                v.volume = this.state.volume ?? 1;
                 if (volBtn) volBtn.addEventListener('click', e => {
                     e.stopPropagation();
                     v.muted = !v.muted;
@@ -1894,7 +1856,6 @@ let externalSourceCache = {};
                 const qualityBtn = wrap.querySelector('#lpQualityBtn');
                 const qualityMenu = wrap.querySelector('#lpQualityMenu');
                 const qualityLabel = wrap.querySelector('#lpQualityLabel');
-                const fsBtn = wrap.querySelector('#lpFsBtn');
 
                 const setMenuOpen = (menu, btn, open) => {
                     if (!menu || !btn) return;
@@ -1954,12 +1915,11 @@ let externalSourceCache = {};
                 this._closePlayerMenus = closePlayerMenus;
                 this._refreshQualityMenu();
 
-                // Fullscreen — in-player button + topbar button synced.
+                // Fullscreen — single button lives in the video topbar (works for both
+                // the custom player and iframe-based sources).
 
-                if (fsBtn) fsBtn.addEventListener('click', e => { e.stopPropagation(); this.toggleFullscreen(); });
                 const syncFullscreenState = () => {
                     this.state.fullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
-                    if (fsBtn) fsBtn.innerHTML = this.state.fullscreen ? LP_ICONS.fsExit : LP_ICONS.fsEnter;
                     const pageFs = document.getElementById('playerFullscreenBtn');
                     if (pageFs) {
                         pageFs.innerHTML = this.state.fullscreen ? LP_ICONS.fsExit : LP_ICONS.fsEnter;

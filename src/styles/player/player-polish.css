@@ -362,29 +362,7 @@
 #playerPageModal .lp-spacer { flex: 1; }
 
 /* volume slider — visible, with hover-expand */
-#playerPageModal .lp-volume-slider {
-    width: 64px;
-    height: 4px;
-    -webkit-appearance: none;
-    appearance: none;
-    background: rgba(255, 255, 255, .25);
-    border-radius: 99px;
-    outline: none;
-    cursor: pointer;
-    transition: width .25s ease;
-}
-#playerPageModal .lp-volume-slider:hover { width: 80px; }
-#playerPageModal .lp-volume-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 12px; height: 12px;
-    border-radius: 50%; background: #fff;
-    cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.4);
-}
-#playerPageModal .lp-volume-slider::-moz-range-thumb {
-    width: 12px; height: 12px; border: none;
-    border-radius: 50%; background: #fff;
-    cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.4);
-}
+/* volume slider removed — mute toggle only, per design */
 #playerPageModal .lp-spinner {
     position: absolute;
     z-index: 6;
@@ -599,16 +577,18 @@
 }
 
 /* ════════════════════════════════════════════════════════════════
-   Video player overlay controls — professional, minimal, animated.
-   All elements sit ON TOP OF the video (black background), so
-   text/icons are always white regardless of site theme.
+   Video player overlay controls — modern WHITE glass style.
+   A single floating light control bar sits above the bottom edge
+   of the video (not edge-to-edge), with dark icons/text for
+   contrast against any video frame. Independent of site theme —
+   this stays white/light by design, like iOS/Apple TV overlays.
    ════════════════════════════════════════════════════════════════ */
 
-/* Topbar gradient + title — lighter weight, elegant */
+/* Topbar — keep minimal: just the title + the single fullscreen button */
 #playerPageModal .modal-content .video-overlay-topbar {
-  min-height: 52px;
+  min-height: 48px;
   padding: 12px 14px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, .82), rgba(0, 0, 0, .35) 65%, transparent);
+  background: linear-gradient(180deg, rgba(0, 0, 0, .55), transparent);
 }
 
 #playerPageModal .modal-content .video-overlay-title {
@@ -618,6 +598,72 @@
   letter-spacing: -.01em;
   line-height: 1.35;
   text-shadow: 0 1px 8px rgba(0, 0, 0, .7);
+}
+
+/* Floating white control bar — replaces the old full-width dark gradient */
+#playerPageModal .modal-content .lp-controls {
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  padding: 10px 12px 11px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .28), 0 0 0 1px rgba(0, 0, 0, .04);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+
+/* Play/pause + mute icon buttons — dark on white */
+#playerPageModal .modal-content .lp-btn {
+  color: #17181c;
+}
+
+#playerPageModal .modal-content .lp-btn svg {
+  fill: #17181c;
+}
+
+#playerPageModal .modal-content .lp-btn:hover {
+  background: rgba(0, 0, 0, .07);
+}
+
+#playerPageModal .modal-content .lp-btn:active {
+  background: rgba(0, 0, 0, .12);
+}
+
+/* Time label — dark, muted */
+#playerPageModal .modal-content .lp-time {
+  color: rgba(23, 24, 28, .62);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Progress bar — light track, dark fill */
+#playerPageModal .modal-content .lp-progress-wrap {
+  height: 4px !important;
+  border: none;
+  background: rgba(23, 24, 28, .14) !important;
+  box-shadow: none;
+  border-radius: 99px;
+  margin-bottom: 8px;
+}
+
+#playerPageModal .modal-content .lp-progress-wrap:hover {
+  height: 6px !important;
+}
+
+#playerPageModal .modal-content .lp-progress-fill {
+  background: #17181c !important;
+  box-shadow: none;
+  border-radius: 99px;
+}
+
+#playerPageModal .modal-content .lp-progress-fill::after {
+  width: 12px;
+  height: 12px;
+  background: #17181c !important;
+  box-shadow: 0 0 0 3px rgba(23, 24, 28, .12), 0 2px 6px rgba(0, 0, 0, .2);
 }
 
 /* Settings row (speed + quality) */
@@ -631,32 +677,30 @@
   position: relative;
 }
 
-/* Control pill — glassy, compact, with chevron */
+/* Control pill — light gray, dark text, chevron */
 #playerPageModal .modal-content .lp-control-pill {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   min-width: 42px;
-  height: 32px;
+  height: 30px;
   padding: 0 10px;
-  border: 1px solid rgba(255, 255, 255, .18);
+  border: 1px solid rgba(23, 24, 28, .1);
   border-radius: 8px;
-  background: rgba(0, 0, 0, .6);
-  color: #fff;
+  background: rgba(23, 24, 28, .06);
+  color: #17181c;
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
   text-align: center;
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   transition: background .2s ease, border-color .2s ease, transform .15s ease;
 }
 
 #playerPageModal .modal-content .lp-control-pill:hover,
 #playerPageModal .modal-content .lp-control-pill:focus-visible {
-  background: rgba(255, 255, 255, .14);
-  border-color: rgba(255, 255, 255, .4);
+  background: rgba(23, 24, 28, .1);
+  border-color: rgba(23, 24, 28, .2);
   outline: none;
 }
 
@@ -665,8 +709,8 @@
 }
 
 #playerPageModal .modal-content .lp-control-pill.is-open {
-  background: rgba(255, 255, 255, .18);
-  border-color: rgba(255, 255, 255, .45);
+  background: rgba(23, 24, 28, .12);
+  border-color: rgba(23, 24, 28, .24);
 }
 
 #playerPageModal .modal-content .lp-pill-label {
@@ -674,20 +718,21 @@
 }
 
 #playerPageModal .modal-content .lp-chevron {
-  opacity: .65;
+  color: #17181c;
+  opacity: .55;
   transition: transform .25s cubic-bezier(.4, 0, .2, 1), opacity .2s ease;
 }
 
 #playerPageModal .modal-content .lp-control-pill.is-open .lp-chevron {
   transform: rotate(180deg);
-  opacity: 1;
+  opacity: .9;
 }
 
 #playerPageModal .modal-content .lp-quality-pill {
   min-width: 52px;
 }
 
-/* Popover menu — smooth slide-up animation */
+/* Popover menu — white card, smooth slide-up animation */
 #playerPageModal .modal-content .lp-popover {
   position: absolute;
   right: 0;
@@ -695,10 +740,10 @@
   z-index: 80;
   min-width: 112px;
   padding: 6px;
-  border: 1px solid rgba(255, 255, 255, .14);
+  border: 1px solid rgba(23, 24, 28, .08);
   border-radius: 12px;
-  background: rgba(12, 12, 14, .96);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, .55), 0 0 0 1px rgba(0, 0, 0, .3);
+  background: rgba(255, 255, 255, .98);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .22), 0 0 0 1px rgba(0, 0, 0, .03);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   opacity: 0;
@@ -723,14 +768,14 @@
 
 #playerPageModal .modal-content .lp-popover-label {
   padding: 4px 10px 6px;
-  color: rgba(255, 255, 255, .42);
+  color: rgba(23, 24, 28, .45);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .06em;
   text-transform: uppercase;
 }
 
-/* Menu option row — label + checkmark */
+/* Menu option row — label + checkmark, dark on white */
 #playerPageModal .modal-content .lp-popover button {
   display: flex;
   width: 100%;
@@ -741,7 +786,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: rgba(255, 255, 255, .75);
+  color: rgba(23, 24, 28, .72);
   font-size: 12px;
   font-weight: 600;
   text-align: left;
@@ -756,139 +801,26 @@
 #playerPageModal .modal-content .lp-popover button .lp-check {
   opacity: 0;
   transform: scale(.7);
+  color: #17181c;
   transition: opacity .2s ease, transform .2s cubic-bezier(.34, 1.56, .64, 1);
 }
 
 #playerPageModal .modal-content .lp-popover button:hover,
 #playerPageModal .modal-content .lp-popover button:focus-visible {
-  background: rgba(255, 255, 255, .1);
-  color: #fff;
+  background: rgba(23, 24, 28, .07);
+  color: #17181c;
   outline: none;
 }
 
-/* Active option — accent color + visible checkmark */
+/* Active option — dark text + visible checkmark */
 #playerPageModal .modal-content .lp-popover button.is-active {
-  color: #fff;
-  background: rgba(255, 255, 255, .08);
+  color: #17181c;
+  background: rgba(23, 24, 28, .05);
 }
 
 #playerPageModal .modal-content .lp-popover button.is-active .lp-check {
   opacity: 1;
   transform: scale(1);
-  color: #fff;
-}
-
-/* Progress bar — slimmer, accent fill */
-#playerPageModal .modal-content .lp-progress-wrap {
-  height: 4px !important;
-  border: none;
-  background: rgba(255, 255, 255, .2) !important;
-  box-shadow: none;
-  border-radius: 99px;
-}
-
-#playerPageModal .modal-content .lp-progress-wrap:hover {
-  height: 6px !important;
-}
-
-#playerPageModal .modal-content .lp-progress-fill {
-  background: rgba(255, 255, 255, .95) !important;
-  box-shadow: 0 0 6px rgba(255, 255, 255, .35);
-  border-radius: 99px;
-}
-
-#playerPageModal .modal-content .lp-progress-fill::after {
-  width: 13px;
-  height: 13px;
-  background: #fff !important;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, .15), 0 2px 6px rgba(0, 0, 0, .4);
-}
-
-/* Volume — show the slider, remove the old hidden hack */
-#playerPageModal .modal-content .lp-volume-wrap {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-#playerPageModal .modal-content .lp-volume-slider {
-  display: block !important;
-  width: 64px !important;
-  height: 4px;
-  -webkit-appearance: none;
-  appearance: none;
-  background: rgba(255, 255, 255, .25);
-  border-radius: 99px;
-  outline: none;
-  cursor: pointer;
-  transition: width .25s ease, opacity .2s ease;
-}
-
-#playerPageModal .modal-content .lp-volume-slider:hover {
-  width: 80px !important;
-}
-
-#playerPageModal .modal-content .lp-volume-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #fff;
-  cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, .4);
-}
-
-#playerPageModal .modal-content .lp-volume-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  border: none;
-  border-radius: 50%;
-  background: #fff;
-  cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, .4);
-}
-
-/* Remove the old "hide all volume sliders" nuclear override */
-#playerPageModal input[type="range"],
-#playerPageModal .lp-volume-slider {
-  display: revert !important;
-  width: revert;
-  pointer-events: auto !important;
-}
-
-/* Time display */
-#playerPageModal .modal-content .lp-time {
-  font-size: 12px;
-  color: rgba(255, 255, 255, .8);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* Fullscreen button in player controls */
-#playerPageModal .modal-content .lp-fs-btn {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: transparent;
-  color: #fff;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: background .15s ease, transform .15s ease;
-}
-
-#playerPageModal .modal-content .lp-fs-btn:hover {
-  background: rgba(255, 255, 255, .14);
-  transform: scale(1.1);
-}
-
-#playerPageModal .modal-content .lp-fs-btn svg {
-  width: 18px;
-  height: 18px;
-  fill: #fff;
 }
 
 /* Responsive */
@@ -897,25 +829,23 @@
     font-size: 12px;
   }
   #playerPageModal .modal-content .lp-controls {
-    padding: 10px 10px 12px !important;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    padding: 8px 10px 10px !important;
+    border-radius: 14px;
   }
   #playerPageModal .modal-content .lp-settings-wrap {
     gap: 4px;
   }
   #playerPageModal .modal-content .lp-control-pill {
     min-width: 38px;
-    height: 30px;
+    height: 28px;
     padding: 0 8px;
     font-size: 11px;
   }
   #playerPageModal .modal-content .lp-quality-pill {
     min-width: 46px;
-  }
-  #playerPageModal .modal-content .lp-volume-slider {
-    width: 44px !important;
-  }
-  #playerPageModal .modal-content .lp-volume-slider:hover {
-    width: 56px !important;
   }
   #playerPageModal .modal-content .lp-popover {
     min-width: 96px;
