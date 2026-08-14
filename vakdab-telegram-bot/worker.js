@@ -1,15 +1,18 @@
+
 const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const ANIMEUA_BASE = 'https://animeua.club';
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
-// Історія розмови в KV зберігається ПОВНІСТЮ і без обрізання — не втрачається навіть після /start.
-// В саму AI-модель на кожен запит надсилається лише "хвіст" останніх повідомлень (ліміт контексту API),
-// але повний архів лишається у пам'яті користувача.
-const MAX_CONTEXT_MESSAGES_FOR_API = 40; // ~20 останніх user/assistant реплік передаються моделі як контекст
 
-// Обмеження на розмір масивів у профілі користувача, щоб він не розростався нескінченно.
-const PROFILE_ARRAY_MAX_ITEMS = 20;
+// Скільки останніх повідомлень йде в модель як "жива" пам'ять
+const MAX_CONTEXT_MESSAGES_FOR_API = 50;
+
+// Коли історія довша за це — старі повідомлення згортаються в summary
+const SUMMARY_TRIGGER_MESSAGES = 60;
+const SUMMARY_KEEP_RECENT = 30; // скільки останніх повідомлень залишаємо без згортання
+
+const PROFILE_ARRAY_MAX_ITEMS = 25;
 
 const userStates = new Map();
 let popularCache = null;
@@ -87,20 +90,20 @@ async function handleMessage(message, env) {
   if (text === '/start') {
     const state = getState(chatId);
     state.screen = 'home';
-    // /start скидає лише поточний екран меню — розмова з Макімою і вся її пам'ять
-    // по ніку користувача НЕ видаляються.
     await sendMessage(chatId, 'Привіт! Оберіть дію:', { reply_markup: mainKeyboard() }, env);
     return;
   }
 
   if (/^\/forget(?:@\w+)?(?:\s|$)/i.test(text)) {
     await clearUserHistory(memoryKey, env);
+    await clearUserSummary(memoryKey, env);
     await sendMessage(chatId, 'Гаразд, я забула нашу попередню розмову. Починаємо з чистого аркуша 🙂', { reply_markup: backHomeKeyboard() }, env);
     return;
   }
 
   if (/^\/forgetall(?:@\w+)?(?:\s|$)/i.test(text)) {
     await clearUserHistory(memoryKey, env);
+    await clearUserSummary(memoryKey, env);
     await clearUserProfile(memoryKey, env);
     await sendMessage(chatId, 'Я повністю забула і нашу розмову, і все, що знала про тебе. Знайомимось заново 🙂', { reply_markup: backHomeKeyboard() }, env);
     return;
@@ -141,14 +144,10 @@ async function handleMessage(message, env) {
     return;
   }
 
-  // За замовчуванням — просто вільна розмова з Макімою,
-  // щоб з нею можна було поспілкуватися без команд і кнопок.
+  // За замовчуванням — вільна розмова з Макімою
   await handleMakimaMessage(chatId, memoryKey, text, env);
 }
 
-// Ключ пам'яті будується за Telegram-ніком (username), якщо він є — саме так, як просив користувач.
-// Якщо в людини не встановлено username, використовуємо її незмінний Telegram user id як запасний варіант,
-// щоб пам'ять теж не губилася.
 function getMemoryKey(from) {
   const username = String(from?.username || '').trim().toLowerCase();
   if (username) return `u:${username}`;
@@ -206,10 +205,9 @@ const MAKIMA_SYSTEM_PROMPT = `Тебе звати Макіма. Ти — роз�
 ситуацію і допоможи користувачу отримати правильну відповідь.
 
 ПАМ'ЯТЬ:
-Ти добре пам'ятаєш попередні повідомлення цього користувача (вони йдуть нижче в історії розмови) і використовуєш
-цей контекст, щоб відповідати послідовно — так, ніби добре знайома людина, а не бот, що щоразу забуває розмову.
-Якщо користувач раніше розповідав про себе (ім'я, вподобання, плани), природно врахуй це, коли це доречно, без
-зайвого нагадування "я пам'ятаю, що ти казав...".
+Ти добре пам'ятаєш попередні повідомлення цього користувача і використовуєш цей контекст, щоб відповідати послідовно —
+так, ніби добре знайома людина. Якщо користувач раніше розповідав про себе (ім'я, вподобання, плани), природно
+врахуй це, коли це доречно, без зайвого нагадування "я пам'ятаю, що ти казав...".
 
 ГОЛОВНЕ:
 Кожен користувач повинен відчувати, що спілкується з розумною, доброю та уважною подругою-помічницею, яка
@@ -218,19 +216,28 @@ const MAKIMA_SYSTEM_PROMPT = `Тебе звати Макіма. Ти — роз�
 async function handleMakimaMessage(chatId, memoryKey, userMessage, env) {
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
+
     const fullHistory = await getUserHistory(memoryKey, env);
     const profile = await getUserProfile(memoryKey, env);
-    const responseText = await callMakimaAI(userMessage, fullHistory, profile, env);
+    let summary = await getUserSummary(memoryKey, env);
+
+    // Якщо історія вже довга — оновлюємо summary (асинхронно, щоб не блокувати відповідь)
+    if (fullHistory.length >= SUMMARY_TRIGGER_MESSAGES) {
+      // Не чекаємо на summary, щоб відповідь була швидшою
+      updateSummaryIfNeeded(memoryKey, fullHistory, summary, env).catch(err => {
+        console.error('[summary] background update failed:', safeError(err));
+      });
+    }
+
+    const responseText = await callMakimaAI(userMessage, fullHistory, profile, summary, env);
 
     fullHistory.push({ role: 'user', content: userMessage });
     fullHistory.push({ role: 'assistant', content: responseText });
-    // Зберігаємо ПОВНУ історію без обрізання — розмова не втрачається навіть після /start.
     await saveUserHistory(memoryKey, fullHistory, env);
 
     await sendMessage(chatId, escapeHtml(responseText), { reply_markup: backHomeKeyboard() }, env);
 
-    // Аналіз і оновлення профілю виконуємо ПІСЛЯ відправки відповіді користувачу і в окремому
-    // try/catch: будь-яка помилка тут не повинна ламати основну розмову.
+    // Оновлення профілю після відповіді
     try {
       const extracted = await extractMemory(userMessage, profile, env);
       if (extracted && Object.keys(extracted).length > 0) {
@@ -246,18 +253,24 @@ async function handleMakimaMessage(chatId, memoryKey, userMessage, env) {
   }
 }
 
-async function callMakimaAI(prompt, fullHistory, profile, env) {
+async function callMakimaAI(prompt, fullHistory, profile, summary, env) {
   const apiKey = String(env.GROQ_API_KEY || '').trim();
   if (!apiKey) throw new Error('GROQ_API_KEY is not configured');
   const model = String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
 
-  // Моделі надсилаємо лише останній фрагмент довгої історії (ліміт контексту API),
-  // хоча в KV увесь архів розмови зберігається без втрат.
   const recentHistory = fullHistory.slice(-MAX_CONTEXT_MESSAGES_FOR_API);
   const profileContext = buildProfileContext(profile);
 
-  const systemPrompt = profileContext
-    ? `${MAKIMA_SYSTEM_PROMPT}\n\nІНФОРМАЦІЯ ПРО КОРИСТУВАЧА:\n${profileContext}\n\nПРАВИЛА ВИКОРИСТАННЯ ЦІЄЇ ІНФОРМАЦІЇ:\nВикористовуй її тільки коли вона реально покращує відповідь і доречна за темою розмови.\nНе згадуй випадкові факти, якщо вони не стосуються поточного питання.\nНе кажи "я пам'ятаю" або подібних фраз.\nГовори природно, ніби добре знайома людина, а не бот, що звіряється з базою даних.`
+  let memoryBlock = '';
+  if (profileContext) {
+    memoryBlock += `ІНФОРМАЦІЯ ПРО КОРИСТУВАЧА:\n${profileContext}\n\n`;
+  }
+  if (summary) {
+    memoryBlock += `КОРОТКИЙ ПІДСУМОК РАНІШОЇ РОЗМОВИ:\n${summary}\n\n`;
+  }
+
+  const systemPrompt = memoryBlock
+    ? `${MAKIMA_SYSTEM_PROMPT}\n\n${memoryBlock}ПРАВИЛА ВИКОРИСТАННЯ ЦІЄЇ ІНФОРМАЦІЇ:\nВикористовуй її тільки коли вона реально покращує відповідь і доречна за темою.\nНе згадуй випадкові факти, якщо вони не стосуються поточного питання.\nНе кажи "я пам'ятаю" або подібних фраз.\nГовори природно, ніби добре знайома людина.`
     : MAKIMA_SYSTEM_PROMPT;
 
   const messages = [
@@ -287,12 +300,100 @@ async function callMakimaAI(prompt, fullHistory, profile, env) {
   return generatedText;
 }
 
-// ==================== Persistent per-user memory (Cloudflare KV) ====================
-// Requires a KV namespace bound in wrangler.toml as `MAKIMA_MEMORY`, e.g.:
-//   [[kv_namespaces]]
-//   binding = "MAKIMA_MEMORY"
-//   id = "<your-kv-namespace-id>"
-// If the binding is missing, memory is silently skipped (Makima still works, just without recall).
+// ==================== Summary (довготривала пам'ять розмови) ====================
+
+async function getUserSummary(memoryKey, env) {
+  if (!env.MAKIMA_MEMORY) return '';
+  try {
+    const raw = await env.MAKIMA_MEMORY.get(`summary:${memoryKey}`);
+    return raw ? String(raw) : '';
+  } catch (error) {
+    console.error('[summary] read failed:', safeError(error));
+    return '';
+  }
+}
+
+async function saveUserSummary(memoryKey, summary, env) {
+  if (!env.MAKIMA_MEMORY) return;
+  try {
+    await env.MAKIMA_MEMORY.put(`summary:${memoryKey}`, String(summary || ''));
+  } catch (error) {
+    console.error('[summary] write failed:', safeError(error));
+  }
+}
+
+async function clearUserSummary(memoryKey, env) {
+  if (!env.MAKIMA_MEMORY) return;
+  try {
+    await env.MAKIMA_MEMORY.delete(`summary:${memoryKey}`);
+  } catch (error) {
+    console.error('[summary] clear failed:', safeError(error));
+  }
+}
+
+async function updateSummaryIfNeeded(memoryKey, fullHistory, currentSummary, env) {
+  if (!env.MAKIMA_MEMORY || fullHistory.length < SUMMARY_TRIGGER_MESSAGES) return;
+
+  // Беремо повідомлення, які вже "старі" (все крім останніх SUMMARY_KEEP_RECENT)
+  const oldMessages = fullHistory.slice(0, -SUMMARY_KEEP_RECENT);
+  if (oldMessages.length < 20) return;
+
+  const apiKey = String(env.GROQ_API_KEY || '').trim();
+  if (!apiKey) return;
+  const model = String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
+
+  // Формуємо текст для summary (обмежуємо, щоб не перевищити контекст)
+  const textForSummary = oldMessages
+    .slice(-80) // беремо не більше 80 старих повідомлень
+    .map(m => `${m.role === 'user' ? 'Користувач' : 'Макіма'}: ${m.content}`)
+    .join('\n');
+
+  const summaryPrompt = `Ти — модуль стиснення пам'яті.
+Твоя задача: створити короткий, інформативний підсумок розмови українською мовою.
+
+Поточний підсумок (якщо є):
+${currentSummary || '(немає)'}
+
+Нові повідомлення для врахування:
+${textForSummary}
+
+Правила:
+- Збережи важливі факти про користувача, його вподобання, плани, теми, які обговорювали.
+- Не включай дрібниці та одноразові питання.
+- Пиши стисло, 1–3 абзаци.
+- Відповідай ТІЛЬКИ текстом підсумку, без пояснень.`;
+
+  try {
+    const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: 'Ти стискаєш історію розмови в короткий корисний підсумок.' },
+          { role: 'user', content: summaryPrompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 500
+      })
+    });
+
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const newSummary = data?.choices?.[0]?.message?.content?.trim();
+    if (newSummary) {
+      await saveUserSummary(memoryKey, newSummary, env);
+    }
+  } catch (error) {
+    console.error('[summary] generation failed:', safeError(error));
+  }
+}
+
+// ==================== Persistent memory (KV) ====================
 
 async function getUserHistory(memoryKey, env) {
   if (!env.MAKIMA_MEMORY) return [];
@@ -310,7 +411,6 @@ async function getUserHistory(memoryKey, env) {
 async function saveUserHistory(memoryKey, fullHistory, env) {
   if (!env.MAKIMA_MEMORY) return;
   try {
-    // Без обрізання — зберігаємо всю розмову від початку й до кінця.
     await env.MAKIMA_MEMORY.put(`history:${memoryKey}`, JSON.stringify(fullHistory));
   } catch (error) {
     console.error('[memory] write failed:', safeError(error));
@@ -325,8 +425,6 @@ async function clearUserHistory(memoryKey, env) {
     console.error('[memory] clear failed:', safeError(error));
   }
 }
-
-// ---- Профіль користувача (стабільні факти, НЕ історія повідомлень) ----
 
 function defaultProfile() {
   return {
@@ -349,7 +447,6 @@ async function getUserProfile(memoryKey, env) {
     if (!raw) return defaultProfile();
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return defaultProfile();
-    // Захист від пошкодженого/неповного JSON у KV — доповнюємо дефолтами
     return { ...defaultProfile(), ...parsed };
   } catch (error) {
     console.error('[profile] read failed:', safeError(error));
@@ -376,8 +473,6 @@ async function clearUserProfile(memoryKey, env) {
   }
 }
 
-// Формує короткий текстовий блок з профілю для system prompt.
-// Порожні поля не включаються, щоб не засмічувати контекст.
 function buildProfileContext(profile) {
   if (!profile) return '';
   const lines = [];
@@ -405,8 +500,6 @@ function buildProfileContext(profile) {
   return lines.join('\n');
 }
 
-// ---- Автоматичне вилучення довготривалих фактів з повідомлення ----
-
 const MEMORY_EXTRACT_SYSTEM_PROMPT = `Ти — модуль аналізу пам'яті для AI-асистентки Макіми.
 Твоя єдина задача: проаналізувати ОДНЕ повідомлення користувача і поточний профіль, та повернути ТІЛЬКИ JSON
 з новими або оновленими довготривалими фактами про користувача.
@@ -417,7 +510,7 @@ const MEMORY_EXTRACT_SYSTEM_PROMPT = `Ти — модуль аналізу па�
 НЕ включай:
 - випадкові одноразові питання;
 - тимчасові емоції чи настрій;
-- технічні питання без особистого контексту (наприклад "як зробити React компонент" — це НЕ факт про користувача);
+- технічні питання без особистого контексту;
 - інформацію, якої немає в повідомленні (нічого не вигадуй).
 
 Якщо в повідомленні немає жодного нового довготривалого факту — поверни порожній об'єкт {}.
@@ -461,7 +554,6 @@ async function extractMemory(userMessage, profile, env) {
     const rawText = data?.choices?.[0]?.message?.content?.trim();
     if (!rawText) return {};
 
-    // Прибираємо можливі markdown-огорожі ```json ... ```
     const cleaned = rawText.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
 
     let parsed;
@@ -479,8 +571,6 @@ async function extractMemory(userMessage, profile, env) {
     return {};
   }
 }
-
-// ---- Об'єднання нового фрагмента фактів з існуючим профілем ----
 
 const PROFILE_ARRAY_FIELDS = ['favoriteAnime', 'favoriteGenres', 'hobbies', 'projects', 'preferences', 'facts'];
 const PROFILE_STRING_FIELDS = ['name', 'birthday', 'age'];
@@ -513,7 +603,6 @@ function mergeProfile(oldProfile, extracted) {
         }
       }
 
-      // Обрізаємо до ліміту, залишаючи НАЙНОВІШІ факти (вони важливіші за старі одноразові згадки)
       merged[field] = combined.length > PROFILE_ARRAY_MAX_ITEMS
         ? combined.slice(combined.length - PROFILE_ARRAY_MAX_ITEMS)
         : combined;
