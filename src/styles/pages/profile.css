@@ -1157,7 +1157,6 @@
 
 /* Profile sticker board: 28 fixed transparent slots. */
 .profile-medals-heading { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; }
-.profile-medals-locked { font-size:0.65rem; color:var(--text-muted); white-space:nowrap; }
 .profile-sticker-slots {
     display:grid;
     grid-template-columns:repeat(7, minmax(0, 1fr));
@@ -1189,8 +1188,12 @@
 /* The sticker backing is not a solid tile: it is a locked, soft color glow. */
 .profile-medal-slot.is-filled { background:transparent !important; }
 .profile-medal-slot.is-filled::before {
-    content:''; position:absolute; inset:12%; border-radius:40%;
-    background:var(--sticker-color, var(--accent)); opacity:.48;
-    filter:blur(16px); transform:scale(1.12); z-index:-1; pointer-events:none;
+    content:''; position:absolute; inset:10%; border-radius:40%;
+    background:var(--sticker-color, var(--accent)); opacity:.52;
+    filter:blur(18px) saturate(1.35); transform:scale(1.2); z-index:0; pointer-events:none;
 }
+.profile-medal-slot.is-filled > * { position:relative; z-index:1; }
+.profile-medal-slot.is-touch-dragging { opacity:.42; transform:scale(.94); }
+.profile-medal-slot.is-drag-over { transform:scale(1.04); }
+
 .profile-medal-slot.is-filled::after { display:none; }

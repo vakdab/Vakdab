@@ -6465,8 +6465,7 @@ function renderProfilePage() {
                 </div>
                 <div class="profile-medals-section">
                   <div class="profile-medals-heading">
-                    <div class="profile-medals-count">Наліпки профілю · ${profileStickerKeys.length}/${PROFILE_STICKER_SLOTS}</div>
-                    <span class="profile-medals-locked" title="Фон слотів заблокований"><i class="fas fa-lock"></i> фон заблоковано</span>
+                    <div class="profile-medals-count">НАЛІПКИ ПРОФІЛЮ · ${profileStickerKeys.length}/${PROFILE_STICKER_SLOTS}</div>
                   </div>
                   <div class="profile-medals-row profile-sticker-slots" id="profileStickerSlots">${profileStickerSlots}</div>
                   <div class="profile-medals-hint">Натисніть дві наліпки або перетягніть, щоб поміняти місцями</div>
@@ -6511,19 +6510,61 @@ function renderProfilePage() {
             const profileSlots = document.querySelectorAll('.profile-medal-slot');
             let selectedMedalIndex = null;
             let draggedMedalIndex = null;
+            let touchDrag = null;
+            let holdTimer = null;
+            let suppressNextClick = false;
+            const clearTouchDrag = () => {
+                clearTimeout(holdTimer);
+                holdTimer = null;
+                document.querySelectorAll('.profile-medal-slot.is-touch-dragging,.profile-medal-slot.is-drag-over').forEach(el => el.classList.remove('is-touch-dragging','is-drag-over'));
+                touchDrag = null;
+            };
+            const slotAtPoint = (x, y) => document.elementFromPoint(x, y)?.closest('.profile-medal-slot');
+            const dropTouchSticker = (event) => {
+                clearTimeout(holdTimer);
+                if (!touchDrag) return clearTouchDrag();
+                const target = slotAtPoint(event.clientX, event.clientY);
+                const to = target ? Number(target.dataset.medalIndex) : null;
+                const from = touchDrag.from;
+                if (to !== null && to !== from) {
+                    suppressNextClick = true;
+                    moveProfileMedal(from, to);
+                }
+                clearTouchDrag();
+            };
             const moveProfileMedal = (from, to) => {
                 if (from === to || from === null || to === null) return;
                 const current = Storage.getStickers();
                 const keys = (current.medals || []).slice(0, PROFILE_STICKER_SLOTS);
                 if (!keys[from]) return;
                 while (keys.length < PROFILE_STICKER_SLOTS) keys.push(null);
+                const targetWasFilled = Boolean(keys[to]);
                 [keys[from], keys[to]] = [keys[to], keys[from]];
                 current.medals = keys.filter(Boolean).slice(0, PROFILE_STICKER_SLOTS);
                 Storage.setStickers(current);
                 renderProfilePage();
+                showToast(targetWasFilled ? 'Наліпки замінено' : 'Наліпку переміщено');
             };
             profileSlots.forEach(slot => {
+                slot.addEventListener('pointerdown', event => {
+                    const index = Number(slot.dataset.medalIndex);
+                    if (!slot.classList.contains('is-filled')) return;
+                    holdTimer = setTimeout(() => {
+                        touchDrag = { from: index };
+                        slot.classList.add('is-touch-dragging');
+                        try { slot.setPointerCapture(event.pointerId); } catch {}
+                    }, 300);
+                });
+                slot.addEventListener('pointermove', event => {
+                    if (!touchDrag) return;
+                    const target = slotAtPoint(event.clientX, event.clientY);
+                    document.querySelectorAll('.profile-medal-slot.is-drag-over').forEach(el => el.classList.remove('is-drag-over'));
+                    if (target && target.dataset.medalIndex !== String(touchDrag.from)) target.classList.add('is-drag-over');
+                });
+                slot.addEventListener('pointerup', dropTouchSticker);
+                slot.addEventListener('pointercancel', clearTouchDrag);
                 slot.addEventListener('click', () => {
+                    if (suppressNextClick) { suppressNextClick = false; return; }
                     const index = Number(slot.dataset.medalIndex);
                     if (selectedMedalIndex === null) {
                         if (slot.classList.contains('is-filled')) {
