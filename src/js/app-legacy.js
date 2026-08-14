@@ -6421,7 +6421,8 @@ function renderProfilePage() {
             const profileStickerKeys = (stickerData.medals || []).slice(0, PROFILE_STICKER_SLOTS);
             const profileStickerSlots = Array.from({ length: PROFILE_STICKER_SLOTS }, (_, index) => {
                 const key = profileStickerKeys[index];
-                return `<button type="button" class="profile-medal-slot${key ? ' is-filled' : ''}" data-medal-index="${index}" draggable="${key ? 'true' : 'false'}" aria-label="${key ? 'Наліпка ' + (index + 1) : 'Порожній слот ' + (index + 1)}">${key ? renderStickerFaceByKey(stickerData, key) : '<i class="fas fa-plus"></i>'}</button>`;
+                const slotColor = key ? (stickerData.colors?.[key] || 'var(--accent)') : 'transparent';
+                return `<button type="button" class="profile-medal-slot${key ? ' is-filled' : ''}" data-medal-index="${index}" draggable="${key ? 'true' : 'false'}" aria-label="${key ? 'Наліпка ' + (index + 1) : 'Порожній слот ' + (index + 1)}" style="--sticker-color:${escapeHtml(slotColor)}">${key ? renderStickerFaceByKey(stickerData, key) : '<i class="fas fa-plus"></i>'}</button>`;
             }).join('');
             container.innerHTML = `
             <div class="profile-wrapper">
