@@ -1,4 +1,3 @@
-
 const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const ANIMEUA_BASE = 'https://animeua.club';
 const PAGE_SIZE = 10;
@@ -6,7 +5,7 @@ const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
 
 // Скільки останніх повідомлень йде в модель як "жива" пам'ять
-const MAX_CONTEXT_MESSAGES_FOR_API = 50;
+const MAX_CONTEXT_MESSAGES_FOR_API = 15;
 
 // Коли історія довша за це — старі повідомлення згортаються в summary
 const SUMMARY_TRIGGER_MESSAGES = 60;
@@ -85,6 +84,7 @@ async function handleMessage(message, env) {
   if (!chatId) return;
 
   const memoryKey = getMemoryKey(message.from);
+  const firstName = String(message.from?.first_name || '').trim();
   const text = (message.text || '').trim();
 
   if (text === '/start') {
@@ -115,14 +115,14 @@ async function handleMessage(message, env) {
       await sendMessage(chatId, 'Напиши запит після команди, наприклад: <code>/makima розкажи про останні новини аніме</code>.', {}, env);
       return;
     }
-    await handleMakimaMessage(chatId, memoryKey, prompt, env);
+    await handleMakimaMessage(chatId, memoryKey, prompt, firstName, env);
     return;
   }
 
   if (text.toLowerCase().includes('макіма')) {
     const state = getState(chatId);
     state.screen = 'makima';
-    await handleMakimaMessage(chatId, memoryKey, text, env);
+    await handleMakimaMessage(chatId, memoryKey, text, firstName, env);
     return;
   }
 
@@ -131,7 +131,7 @@ async function handleMessage(message, env) {
   const state = getState(chatId);
 
   if (state.screen === 'waiting_for_makima') {
-    await handleMakimaMessage(chatId, memoryKey, text, env);
+    await handleMakimaMessage(chatId, memoryKey, text, firstName, env);
     return;
   }
 
@@ -145,7 +145,7 @@ async function handleMessage(message, env) {
   }
 
   // За замовчуванням — вільна розмова з Макімою
-  await handleMakimaMessage(chatId, memoryKey, text, env);
+  await handleMakimaMessage(chatId, memoryKey, text, firstName, env);
 }
 
 function getMemoryKey(from) {
@@ -213,7 +213,7 @@ const MAKIMA_SYSTEM_PROMPT = `Тебе звати Макіма. Ти — роз�
 Кожен користувач повинен відчувати, що спілкується з розумною, доброю та уважною подругою-помічницею, яка
 завжди готова допомогти.`;
 
-async function handleMakimaMessage(chatId, memoryKey, userMessage, env) {
+async function handleMakimaMessage(chatId, memoryKey, userMessage, firstName, env) {
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
 
@@ -229,7 +229,7 @@ async function handleMakimaMessage(chatId, memoryKey, userMessage, env) {
       });
     }
 
-    const responseText = await callMakimaAI(userMessage, fullHistory, profile, summary, env);
+    const responseText = await callMakimaAI(userMessage, fullHistory, profile, summary, firstName, env);
 
     fullHistory.push({ role: 'user', content: userMessage });
     fullHistory.push({ role: 'assistant', content: responseText });
@@ -253,7 +253,7 @@ async function handleMakimaMessage(chatId, memoryKey, userMessage, env) {
   }
 }
 
-async function callMakimaAI(prompt, fullHistory, profile, summary, env) {
+async function callMakimaAI(prompt, fullHistory, profile, summary, firstName, env) {
   const apiKey = String(env.GROQ_API_KEY || '').trim();
   if (!apiKey) throw new Error('GROQ_API_KEY is not configured');
   const model = String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
@@ -262,6 +262,9 @@ async function callMakimaAI(prompt, fullHistory, profile, summary, env) {
   const profileContext = buildProfileContext(profile);
 
   let memoryBlock = '';
+  if (firstName) {
+    memoryBlock += `Ім'я користувача в Telegram: ${firstName}\n`;
+  }
   if (profileContext) {
     memoryBlock += `ІНФОРМАЦІЯ ПРО КОРИСТУВАЧА:\n${profileContext}\n\n`;
   }
@@ -270,7 +273,7 @@ async function callMakimaAI(prompt, fullHistory, profile, summary, env) {
   }
 
   const systemPrompt = memoryBlock
-    ? `${MAKIMA_SYSTEM_PROMPT}\n\n${memoryBlock}ПРАВИЛА ВИКОРИСТАННЯ ЦІЄЇ ІНФОРМАЦІЇ:\nВикористовуй її тільки коли вона реально покращує відповідь і доречна за темою.\nНе згадуй випадкові факти, якщо вони не стосуються поточного питання.\nНе кажи "я пам'ятаю" або подібних фраз.\nГовори природно, ніби добре знайома людина.`
+    ? `${MAKIMA_SYSTEM_PROMPT}\n\n=== ПАМ'ЯТЬ ПРО КОРИСТУВАЧА ===\n${memoryBlock}=== КІНЕЦЬ ПАМ'ЯТІ ===\n\nПРАВИЛА ВИКОРИСТАННЯ ЦІЄЇ ІНФОРМАЦІЇ:\nВикористовуй її тільки коли вона реально покращує відповідь і доречна за темою.\nНе згадуй випадкові факти, якщо вони не стосуються поточного питання.\nНе кажи "я пам'ятаю" або подібних фраз.\nГовори природно, ніби добре знайома людина.`
     : MAKIMA_SYSTEM_PROMPT;
 
   const messages = [
@@ -554,22 +557,74 @@ async function extractMemory(userMessage, profile, env) {
     const rawText = data?.choices?.[0]?.message?.content?.trim();
     if (!rawText) return {};
 
-    const cleaned = rawText.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-
-    let parsed;
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch (parseError) {
-      console.error('[memory] extract JSON parse failed:', safeError(parseError));
-      return {};
-    }
-
+    const parsed = extractJsonObject(rawText);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
     return parsed;
   } catch (error) {
     console.error('[memory] extract request failed:', safeError(error));
     return {};
   }
+}
+
+// Надійно витягує перший валідний JSON-об'єкт {...} з тексту моделі,
+// навіть якщо модель додала зайвий текст до/після нього або обгорнула у ```.
+function extractJsonObject(rawText) {
+  const text = String(rawText || '');
+
+  // Спочатку прибираємо можливі markdown-огорожі ```json ... ```
+  const withoutFences = text.replace(/```(?:json)?/gi, '').trim();
+
+  // Пробуємо напряму, якщо текст вже чистий JSON
+  try {
+    const direct = JSON.parse(withoutFences);
+    if (direct && typeof direct === 'object' && !Array.isArray(direct)) return direct;
+  } catch {
+    // ігноруємо, шукаємо підрядок нижче
+  }
+
+  // Шукаємо перший символ "{" і відповідний йому закриваючий "}" з урахуванням вкладеності
+  const start = withoutFences.indexOf('{');
+  if (start === -1) return {};
+
+  let depth = 0;
+  let inString = false;
+  let escapeNext = false;
+
+  for (let i = start; i < withoutFences.length; i++) {
+    const char = withoutFences[i];
+
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+    if (char === '\\') {
+      escapeNext = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+
+    if (char === '{') depth++;
+    if (char === '}') {
+      depth--;
+      if (depth === 0) {
+        const candidate = withoutFences.slice(start, i + 1);
+        try {
+          const parsed = JSON.parse(candidate);
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+          return {};
+        } catch (error) {
+          console.error('[memory] extract JSON parse failed:', safeError(error));
+          return {};
+        }
+      }
+    }
+  }
+
+  return {};
 }
 
 const PROFILE_ARRAY_FIELDS = ['favoriteAnime', 'favoriteGenres', 'hobbies', 'projects', 'preferences', 'facts'];
