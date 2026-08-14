@@ -6566,6 +6566,10 @@ function renderProfilePage() {
                 slot.addEventListener('click', () => {
                     if (suppressNextClick) { suppressNextClick = false; return; }
                     const index = Number(slot.dataset.medalIndex);
+                    if (!slot.classList.contains('is-filled')) {
+                        Router.goTo('stickers');
+                        return;
+                    }
                     if (selectedMedalIndex === null) {
                         if (slot.classList.contains('is-filled')) {
                             selectedMedalIndex = index;
