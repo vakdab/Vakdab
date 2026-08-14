@@ -464,7 +464,8 @@
             border: 1px solid var(--border);
             margin-bottom: 1.2rem;
         }
-        .settings-preview-panel img.preview-banner-img {
+        .settings-preview-panel img.preview-banner-img,
+        .settings-preview-panel video.preview-banner-img {
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -479,7 +480,8 @@
             width: 60px;
             height: 60px;
         }
-        .settings-preview-avatar-wrap img {
+        .settings-preview-avatar-wrap img,
+        .settings-preview-avatar-wrap video {
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -662,14 +664,22 @@
         }
 
         /* Фільтри банера — юзер сам обирає стиль, більше не форсимо ч/б */
-        .profile-banner.banner-effect-grayscale img { filter: grayscale(100%) contrast(1.1); }
-        .profile-banner.banner-effect-contrast img { filter: contrast(1.4) saturate(1.15) brightness(0.95); }
-        .profile-banner.banner-effect-muted img { filter: grayscale(45%) saturate(0.55); }
-        .profile-banner.banner-effect-sepia img { filter: sepia(0.55) contrast(1.05); }
-        .profile-banner.banner-effect-invert img { filter: invert(1) hue-rotate(180deg); }
-        .profile-banner.banner-effect-blur img { filter: grayscale(55%) contrast(1.05) blur(2.5px); }
-        .profile-banner.banner-effect-grain img { filter: grayscale(70%) contrast(1.3) brightness(0.9); }
-        .profile-banner.banner-effect-fog img { filter: grayscale(60%) brightness(0.85); }
+        .profile-banner.banner-effect-grayscale img,
+        .profile-banner.banner-effect-grayscale video { filter: grayscale(100%) contrast(1.1); }
+        .profile-banner.banner-effect-contrast img,
+        .profile-banner.banner-effect-contrast video { filter: contrast(1.4) saturate(1.15) brightness(0.95); }
+        .profile-banner.banner-effect-muted img,
+        .profile-banner.banner-effect-muted video { filter: grayscale(45%) saturate(0.55); }
+        .profile-banner.banner-effect-sepia img,
+        .profile-banner.banner-effect-sepia video { filter: sepia(0.55) contrast(1.05); }
+        .profile-banner.banner-effect-invert img,
+        .profile-banner.banner-effect-invert video { filter: invert(1) hue-rotate(180deg); }
+        .profile-banner.banner-effect-blur img,
+        .profile-banner.banner-effect-blur video { filter: grayscale(55%) contrast(1.05) blur(2.5px); }
+        .profile-banner.banner-effect-grain img,
+        .profile-banner.banner-effect-grain video { filter: grayscale(70%) contrast(1.3) brightness(0.9); }
+        .profile-banner.banner-effect-fog img,
+        .profile-banner.banner-effect-fog video { filter: grayscale(60%) brightness(0.85); }
         .profile-banner.banner-effect-grain::before {
             content: '';
             position: absolute;
@@ -732,7 +742,8 @@
             .profile-banner { height: 150px; }
         }
 
-        .profile-banner img {
+        .profile-banner img,
+        .profile-banner video {
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -741,15 +752,18 @@
             filter: none;
             transition: opacity .3s ease, filter .3s ease;
         }
-        .profile-banner:hover img {
+        .profile-banner:hover img,
+        .profile-banner:hover video {
             opacity: 0.75;
         }
         /* GIF autoplay: no grayscale on GIF banners */
-        .profile-banner.is-gif img {
+        .profile-banner.is-gif img,
+        .profile-banner.is-gif video {
             filter: none;
             opacity: 0.65;
         }
-        .profile-banner.is-gif:hover img {
+        .profile-banner.is-gif:hover img,
+        .profile-banner.is-gif:hover video {
             opacity: 0.85;
         }
         .profile-banner-overlay {
@@ -843,7 +857,8 @@
             align-items: center;
             justify-content: center;
         }
-        .profile-avatar img {
+        .profile-avatar img,
+        .profile-avatar video {
             width: 100%;
             height: 100%;
             object-fit: contain;
@@ -851,7 +866,8 @@
             filter: grayscale(60%) contrast(1.05);
         }
         /* GIF autoplay: no grayscale on GIF avatars */
-        .profile-avatar.is-gif img {
+        .profile-avatar.is-gif img,
+        .profile-avatar.is-gif video {
             filter: none;
         }
         .profile-avatar .avatar-placeholder {
@@ -891,3 +907,6 @@
             width: 12px;
             height: 12px;
         }
+
+/* Profile video media */
+.profile-avatar video { object-fit: cover; filter: none; }
