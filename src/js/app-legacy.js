@@ -5376,12 +5376,12 @@ let externalSourceCache = {};
             const decorationClass = (profile.avatarDecoration && profile.avatarDecoration !== 'none') ? ` avatar-decoration-${profile.avatarDecoration}` : '';
             panel.innerHTML = `
               <div class="profile-banner${bannerEffectClass}">
-                ${profile.banner ? `<img class="preview-banner-img" src="${profile.banner}" alt="banner">` : ''}
+                ${profile.bannerVideo ? profileMediaMarkup(profile.bannerVideo, 'preview-banner-img', 'video banner') : (profile.banner ? profileMediaMarkup(profile.banner, 'preview-banner-img', 'banner') : '')}
                 ${profile.atmosphere && profile.atmosphere !== 'none' ? `<div class="atmosphere-${profile.atmosphere}"></div>` : ''}
                 ${profile.effect && profile.effect !== 'none' ? buildEffectOverlayHtml(profile.effect) : ''}
               </div>
               <div class="settings-preview-avatar-wrap${decorationClass}">
-                ${profile.avatar ? `<img src="${profile.avatar}" alt="avatar">` : ''}
+                ${profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, '', 'video avatar') : (profile.avatar ? profileMediaMarkup(profile.avatar, '', 'avatar') : '')}
               </div>
             `;
         }
@@ -5583,11 +5583,11 @@ let externalSourceCache = {};
         }
 
         function buildBannerFilterStripHtml(profile) {
-            const src = profile.banner || '';
+            const src = profile.bannerVideo || profile.banner || '';
             const current = profile.bannerEffect || 'none';
             return '<div class="banner-filter-strip">' + BANNER_EFFECTS.map(o => `
                 <button class="banner-filter-chip${o.id === current ? ' active' : ''}" data-group="bannerEffect" data-value="${o.id}">
-                  <span class="banner-filter-thumb banner-filter-thumb--${o.id}">${src ? `<img src="${src}" alt="${o.label}">` : ''}</span>
+                  <span class="banner-filter-thumb banner-filter-thumb--${o.id}">${src ? (isVideoUrl(src) ? `<video src="${escapeHtml(src)}" muted loop autoplay playsinline></video>` : `<img src="${escapeHtml(src)}" alt="${o.label}">`) : ''}</span>
                   <span class="banner-filter-label">${o.label}</span>
                 </button>`).join('') + '</div>';
         }
@@ -5612,7 +5612,9 @@ let externalSourceCache = {};
 
         function buildAppearanceTabHtml(profile) {
             const bannerSrc = profile.banner || '';
+            const bannerVideoSrc = profile.bannerVideo || '';
             const avatarSrc = profile.avatar || '';
+            const avatarVideoSrc = profile.avatarVideo || '';
             return `
             <div class="settings-section-title">Опис профілю</div>
             <div class="settings-field">
@@ -5623,24 +5625,24 @@ let externalSourceCache = {};
             <div class="settings-section-title">Банер</div>
             <div class="settings-media-card">
               <div class="settings-media-preview--banner" id="settingsBannerPreview">
-                ${bannerSrc ? `<img src="${bannerSrc}" alt="banner">` : ''}
+                ${bannerVideoSrc ? profileMediaMarkup(bannerVideoSrc, '', 'video banner') : (bannerSrc ? profileMediaMarkup(bannerSrc, '', 'banner') : '')}
                 <div class="settings-media-actions">
                   <button class="settings-media-btn" id="settingsBannerUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
-                  ${bannerSrc ? `<button class="settings-media-delete" id="settingsBannerRemoveBtn" title="Видалити банер"><i class="fas fa-trash"></i></button>` : ''}
+                  ${(bannerSrc || bannerVideoSrc) ? `<button class="settings-media-delete" id="settingsBannerRemoveBtn" title="Видалити банер"><i class="fas fa-trash"></i></button>` : ''}
                 </div>
               </div>
             </div>
-            <div class="settings-hint-text">JPG, PNG, WebP, GIF · Макс. 15 МБ</div>
+            <div class="settings-hint-text">JPG, PNG, WebP, GIF, MP4, WebM, MOV · відео до 50 МБ</div>
 
             <div class="settings-section-title">Аватар</div>
             <div class="settings-media-card settings-media-card--avatar">
-              <div class="settings-media-preview--avatar" id="settingsAvatarPreview">${avatarSrc ? `<img src="${avatarSrc}" alt="avatar">` : '<i class="fas fa-user"></i>'}</div>
+              <div class="settings-media-preview--avatar" id="settingsAvatarPreview">${avatarVideoSrc ? profileMediaMarkup(avatarVideoSrc, '', 'video avatar') : (avatarSrc ? profileMediaMarkup(avatarSrc, '', 'avatar') : '<i class="fas fa-user"></i>')}</div>
               <div class="settings-media-actions">
                 <button class="settings-media-btn" id="settingsAvatarUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
-                ${avatarSrc ? `<button class="settings-media-delete" id="settingsAvatarRemoveBtn" title="Видалити аватар"><i class="fas fa-trash"></i></button>` : ''}
+                ${(avatarSrc || avatarVideoSrc) ? `<button class="settings-media-delete" id="settingsAvatarRemoveBtn" title="Видалити аватар"><i class="fas fa-trash"></i></button>` : ''}
               </div>
             </div>
-            <div class="settings-hint-text">JPG, PNG, WebP, GIF · Макс. 15 МБ</div>
+            <div class="settings-hint-text">JPG, PNG, WebP, GIF, MP4, WebM, MOV · відео до 50 МБ</div>
 
             <button class="settings-preview-toggle-btn" id="settingsPreviewToggleBtn">
               <i class="fas fa-eye${settingsState.previewOpen ? '-slash' : ''}"></i> ${settingsState.previewOpen ? "Сховати прев'ю" : "Прев'ю"}
@@ -5817,6 +5819,7 @@ let externalSourceCache = {};
                 if (!confirm('Видалити банер?')) return;
                 const p = getProfile();
                 p.banner = '';
+                p.bannerVideo = '';
                 saveProfile(p);
                 showToast('Банер видалено');
                 renderSettingsPage();
@@ -5826,6 +5829,7 @@ let externalSourceCache = {};
                 if (!confirm('Видалити аватар?')) return;
                 const p = getProfile();
                 p.avatar = '';
+                p.avatarVideo = '';
                 saveProfile(p);
                 showToast('Аватарку видалено');
                 renderSettingsPage();
@@ -5930,7 +5934,9 @@ let externalSourceCache = {};
             return {
                 nickname: 'Користувач',
                 avatar: '',
+                avatarVideo: '',
                 banner: '',
+                bannerVideo: '',
                 bio: 'Аніме ентузіаст. Дивлюсь усе підряд — від слайс-оф-лайф до психологічного трилера.',
                 realName: '',
                 birthdate: '',
@@ -6080,11 +6086,11 @@ let externalSourceCache = {};
 
         // Uploads a file/blob to Cloudinary AS-IS, no canvas resize/compression.
         // Used for GIFs so the animation survives (canvas would flatten it to 1 frame).
-        async function uploadRawToCloudinary(fileOrBlob, filename) {
+        async function uploadRawToCloudinary(fileOrBlob, filename, resourceType = 'image') {
             const formData = new FormData();
-            formData.append('file', fileOrBlob, filename || 'upload.gif');
+            formData.append('file', fileOrBlob, filename || (resourceType === 'video' ? 'upload.mp4' : 'upload.gif'));
             formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-            const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+            const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
             const resp = await fetch(uploadUrl, { method: 'POST', body: formData, mode: 'cors', credentials: 'omit' });
             if (!resp.ok) {
                 const errText = await resp.text().catch(() => '');
@@ -6093,6 +6099,27 @@ let externalSourceCache = {};
             const data = await resp.json();
             if (!data.secure_url) throw new Error('Cloudinary: no secure_url in response');
             return data.secure_url;
+        }
+
+        async function uploadVideoToCloudinary(file, filename) {
+            return uploadRawToCloudinary(file, filename || 'profile-video.mp4', 'video');
+        }
+
+        function isVideoFile(file) {
+            return !!file && (String(file.type || '').startsWith('video/') || /\.(mp4|webm|mov|m4v|ogv)$/i.test(file.name || ''));
+        }
+
+        function isVideoUrl(url) {
+            return !!url && (/\/video\/upload\//i.test(url) || /\.(mp4|webm|mov|m4v|ogv)(?:[?#]|$)/i.test(url));
+        }
+
+        function profileMediaMarkup(url, className, alt) {
+            if (!url) return '';
+            const safeUrl = escapeHtml(url);
+            if (isVideoUrl(url)) {
+                return `<video class="${className}" src="${safeUrl}" autoplay muted loop playsinline preload="metadata" aria-label="${escapeHtml(alt || '')}"></video>`;
+            }
+            return `<img class="${className}" src="${safeUrl}" alt="${escapeHtml(alt || '')}" loading="lazy">`;
         }
 
         // Uploads an already-cropped Blob (from the image editor canvas) to Cloudinary.
@@ -6111,8 +6138,10 @@ let externalSourceCache = {};
             // mode: 'avatar' (1:1 circle) or 'banner' (wide rect w/ device guide)
             const objectUrl = URL.createObjectURL(file);
             const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
+            const previousBodyOverflow = document.body.style.overflow;
             const overlay = document.createElement('div');
             overlay.className = 'imgedit-overlay';
+            document.body.style.overflow = 'hidden';
             overlay.innerHTML = `
                 <div class="imgedit-topbar">
                     <button class="imgedit-back" id="imgeditBack" title="Скасувати">
@@ -6287,7 +6316,11 @@ let externalSourceCache = {};
             function closeEditor() {
                 overlay.classList.remove('open');
                 window.removeEventListener('resize', layoutFrame);
-                setTimeout(() => { overlay.remove(); URL.revokeObjectURL(objectUrl); }, 200);
+                setTimeout(() => {
+                    overlay.remove();
+                    URL.revokeObjectURL(objectUrl);
+                    document.body.style.overflow = previousBodyOverflow;
+                }, 200);
             }
             backBtn.addEventListener('click', closeEditor);
 
@@ -6373,8 +6406,10 @@ function renderProfilePage() {
             const profile = getProfile();
             const stats = getProfileStats();
             // GIF detection — use isGifUrl helper
-            const isGifBanner = isGifUrl(profile.banner);
-            const isGifAvatar = isGifUrl(profile.avatar);
+            const activeBanner = profile.bannerVideo || profile.banner || '';
+            const activeAvatar = profile.avatarVideo || profile.avatar || '';
+            const isGifBanner = isGifUrl(activeBanner);
+            const isGifAvatar = isGifUrl(activeAvatar);
             const bannerEffectClass = (profile.bannerEffect && profile.bannerEffect !== 'none') ? ` banner-effect-${profile.bannerEffect}` : '';
             const decorationClass = (profile.avatarDecoration && profile.avatarDecoration !== 'none') ? ` avatar-decoration-${profile.avatarDecoration}` : '';
             const tabsStyleClass = (profile.tabStyle && profile.tabStyle !== 'underline') ? ` profile-tabs--${profile.tabStyle}` : '';
@@ -6384,7 +6419,7 @@ function renderProfilePage() {
             container.innerHTML = `
             <div class="profile-wrapper">
               <div class="${bannerClass}">
-                <img src="${profile.banner}" alt="banner" onerror="this.style.display='none'">
+                ${profile.bannerVideo ? profileMediaMarkup(profile.bannerVideo, 'profile-banner-media', 'video banner') : (profile.banner ? `<img class="profile-banner-media" src="${escapeHtml(profile.banner)}" alt="banner" onerror="this.style.display='none'">` : '')}
                 ${profile.atmosphere && profile.atmosphere !== 'none' ? `<div class="atmosphere-${profile.atmosphere}"></div>` : ''}
                 ${profile.effect && profile.effect !== 'none' ? buildEffectOverlayHtml(profile.effect) : ''}
                 <div class="profile-banner-overlay"></div>
@@ -6392,7 +6427,7 @@ function renderProfilePage() {
               <div class="profile-info">
                 <div class="profile-avatar-wrap${decorationClass}">
                   <div class="${avatarClass}">
-                    <img src="${profile.avatar}" alt="avatar" onerror="this.style.display='none'; this.parentElement.querySelector('.avatar-placeholder').style.display='flex'">
+                    ${profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, 'profile-avatar-media', 'video avatar') : (profile.avatar ? `<img class="profile-avatar-media" src="${escapeHtml(profile.avatar)}" alt="avatar" onerror="this.style.display='none'; this.parentElement.querySelector('.avatar-placeholder').style.display='flex'">` : '')}
                     <span class="avatar-placeholder" style="display:none;">${profile.nickname.charAt(0).toUpperCase()}</span>
                   </div>
                 </div>
@@ -6880,16 +6915,18 @@ function renderProfilePage() {
         document.getElementById('avatarFileInput').addEventListener('change', async function(e) {
             const file = e.target.files[0];
             if (!file) return;
-            const isGif = file.type === 'image/gif';
-            const maxSize = isGif ? 10 * 1024 * 1024 : 15 * 1024 * 1024;
-            if (file.size > maxSize) { showToast(isGif ? 'GIF занадто великий (максимум 10 МБ) — стисни його або вибери коротший' : 'Файл занадто великий (максимум 15 МБ)'); e.target.value = ''; return; }
+            const isVideo = isVideoFile(file);
+            const isGif = !isVideo && file.type === 'image/gif';
+            const maxSize = isVideo ? 50 * 1024 * 1024 : (isGif ? 10 * 1024 * 1024 : 15 * 1024 * 1024);
+            if (file.size > maxSize) { showToast(isVideo ? 'Відео занадто велике (максимум 50 МБ)' : (isGif ? 'GIF занадто великий (максимум 10 МБ) — стисни його або вибери коротший' : 'Файл занадто великий (максимум 15 МБ)')); e.target.value = ''; return; }
 
-            const doUpload = async (blobOrFile, raw) => {
-                showToast(isGif ? 'Завантаження GIF-аватарки...' : 'Завантаження аватарки...');
+            const doUpload = async (blobOrFile, raw, mediaType = 'image') => {
+                showToast(mediaType === 'video' ? 'Завантаження відео-аватарки...' : (isGif ? 'Завантаження GIF-аватарки...' : 'Завантаження аватарки...'));
                 try {
-                    const imageUrl = raw ? await uploadRawToCloudinary(blobOrFile, 'avatar.gif') : await uploadBlobToCloudinary(blobOrFile, 'avatar.jpg');
+                    const imageUrl = mediaType === 'video' ? await uploadVideoToCloudinary(blobOrFile, 'avatar.mp4') : (raw ? await uploadRawToCloudinary(blobOrFile, 'avatar.gif') : await uploadBlobToCloudinary(blobOrFile, 'avatar.jpg'));
                     const profile = getProfile();
-                    profile.avatar = imageUrl;
+                    if (mediaType === 'video') { profile.avatarVideo = imageUrl; profile.avatar = ''; }
+                    else { profile.avatar = imageUrl; profile.avatarVideo = ''; }
                     saveProfile(profile);
                     if (Router.currentRoute === 'profile') renderProfilePage();
                     if (Router.currentRoute === 'settings') renderSettingsPage();
@@ -6900,7 +6937,9 @@ function renderProfilePage() {
                 }
             };
 
-            if (isGif) {
+            if (isVideo) {
+                await doUpload(file, true, 'video');
+            } else if (isGif) {
                 // GIFs skip the cropper — canvas cropping would flatten the animation to 1 frame.
                 showToast('GIF без кадрування — щоб зберегти анімацію');
                 await doUpload(file, true);
@@ -6939,16 +6978,18 @@ function renderProfilePage() {
         document.getElementById('bannerFileInput').addEventListener('change', async function(e) {
             const file = e.target.files[0];
             if (!file) return;
-            const isGif = file.type === 'image/gif';
-            const maxSize = isGif ? 10 * 1024 * 1024 : 15 * 1024 * 1024;
-            if (file.size > maxSize) { showToast(isGif ? 'GIF занадто великий (максимум 10 МБ) — стисни його або вибери коротший' : 'Файл занадто великий (максимум 15 МБ)'); e.target.value = ''; return; }
+            const isVideo = isVideoFile(file);
+            const isGif = !isVideo && file.type === 'image/gif';
+            const maxSize = isVideo ? 50 * 1024 * 1024 : (isGif ? 10 * 1024 * 1024 : 15 * 1024 * 1024);
+            if (file.size > maxSize) { showToast(isVideo ? 'Відео занадто велике (максимум 50 МБ)' : (isGif ? 'GIF занадто великий (максимум 10 МБ) — стисни його або вибери коротший' : 'Файл занадто великий (максимум 15 МБ)')); e.target.value = ''; return; }
 
-            const doUpload = async (blobOrFile, raw) => {
-                showToast(isGif ? 'Завантаження GIF-банера...' : 'Завантаження банера...');
+            const doUpload = async (blobOrFile, raw, mediaType = 'image') => {
+                showToast(mediaType === 'video' ? 'Завантаження відео-банера...' : (isGif ? 'Завантаження GIF-банера...' : 'Завантаження банера...'));
                 try {
-                    const imageUrl = raw ? await uploadRawToCloudinary(blobOrFile, 'banner.gif') : await uploadBlobToCloudinary(blobOrFile, 'banner.jpg');
+                    const imageUrl = mediaType === 'video' ? await uploadVideoToCloudinary(blobOrFile, 'banner.mp4') : (raw ? await uploadRawToCloudinary(blobOrFile, 'banner.gif') : await uploadBlobToCloudinary(blobOrFile, 'banner.jpg'));
                     const profile = getProfile();
-                    profile.banner = imageUrl;
+                    if (mediaType === 'video') { profile.bannerVideo = imageUrl; profile.banner = ''; }
+                    else { profile.banner = imageUrl; profile.bannerVideo = ''; }
                     saveProfile(profile);
                     if (Router.currentRoute === 'profile') renderProfilePage();
                     if (Router.currentRoute === 'settings') renderSettingsPage();
@@ -6959,7 +7000,9 @@ function renderProfilePage() {
                 }
             };
 
-            if (isGif) {
+            if (isVideo) {
+                await doUpload(file, true, 'video');
+            } else if (isGif) {
                 showToast('GIF без кадрування — щоб зберегти анімацію');
                 await doUpload(file, true);
             } else {
