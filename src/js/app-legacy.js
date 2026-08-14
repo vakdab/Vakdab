@@ -6422,7 +6422,7 @@ function renderProfilePage() {
             const profileStickerSlots = Array.from({ length: PROFILE_STICKER_SLOTS }, (_, index) => {
                 const key = profileStickerKeys[index];
                 const slotColor = key ? (stickerData.colors?.[key] || 'var(--accent)') : 'transparent';
-                return `<button type="button" class="profile-medal-slot${key ? ' is-filled' : ''}" data-medal-index="${index}" draggable="${key ? 'true' : 'false'}" aria-label="${key ? 'Наліпка ' + (index + 1) : 'Порожній слот ' + (index + 1)}" style="--sticker-color:${escapeHtml(slotColor)}">${key ? renderStickerFaceByKey(stickerData, key) : '<i class="fas fa-plus"></i>'}</button>`;
+                return `<button type="button" class="profile-medal-slot${key ? ' is-filled' : ''}" data-medal-index="${index}" draggable="${key ? 'true' : 'false'}" aria-label="${key ? 'Наліпка ' + (index + 1) : 'Порожній слот ' + (index + 1)}" style="--sticker-color:${escapeHtml(slotColor)}">${key ? '<span class="profile-medal-glow" aria-hidden="true"></span>' + renderStickerFaceByKey(stickerData, key) : '<i class="fas fa-plus"></i>'}</button>`;
             }).join('');
             container.innerHTML = `
             <div class="profile-wrapper">
@@ -7056,9 +7056,15 @@ function renderProfilePage() {
                     const isPngFile = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
                     const imageUrl = await uploadBlobToCloudinary(blob, isPngFile ? 'sticker.png' : 'sticker.jpg');
                     const cur = Storage.getStickers();
-                    cur.singles.unshift({ id: 'sng_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), image: imageUrl, favorite: false, addedAt: Date.now() });
+                    const stickerId = 'sng_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+                    const stickerKey = 'img:' + stickerId;
+                    cur.singles.unshift({ id: stickerId, image: imageUrl, favorite: false, addedAt: Date.now() });
+                    if (!Array.isArray(cur.medals)) cur.medals = [];
+                    if (!cur.medals.includes(stickerKey) && cur.medals.length < 28) cur.medals.push(stickerKey);
+                    if (!cur.colors) cur.colors = {};
+                    if (!cur.colors[stickerKey]) cur.colors[stickerKey] = '#7c8494';
                     Storage.setStickers(cur);
-                    showToast('Наліпку додано');
+                    showToast(cur.medals.includes(stickerKey) ? 'Наліпку додано в профіль' : 'Наліпку додано');
                     if (window.stickersUI) window.stickersUI.step = null;
                     if (Router.currentRoute === 'stickers') window.renderStickersPage();
                     if (Router.currentRoute === 'profile') renderProfilePage();
@@ -10400,9 +10406,15 @@ function renderProfilePage() {
                 document.getElementById('stickersConfirmSingle')?.addEventListener('click', () => {
                     if (ui.pickedSingle === null) return;
                     const cur = data();
-                    cur.singles.unshift({ id: 'sng_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), variant: ui.pickedSingle, favorite: false, addedAt: Date.now() });
+                    const stickerId = 'sng_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+                    const stickerKey = 'v:' + ui.pickedSingle;
+                    cur.singles.unshift({ id: stickerId, variant: ui.pickedSingle, favorite: false, addedAt: Date.now() });
+                    if (!Array.isArray(cur.medals)) cur.medals = [];
+                    if (!cur.medals.includes(stickerKey) && cur.medals.length < 28) cur.medals.push(stickerKey);
+                    if (!cur.colors) cur.colors = {};
+                    if (!cur.colors[stickerKey]) cur.colors[stickerKey] = '#7c8494';
                     saveData(cur);
-                    showToast('Наліпку додано');
+                    showToast(cur.medals.includes(stickerKey) ? 'Наліпку додано в профіль' : 'Наліпку додано');
                     closeOverlay();
                 });
 

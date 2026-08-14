@@ -1178,3 +1178,20 @@
 .profile-medal-slot.is-filled:hover, .profile-medal-slot.is-selected, .profile-medal-slot.is-drag-over { border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 65%,transparent); transform:scale(1.04); }
 .profile-medal-slot.is-dragging, .profile-medal-slot.is-touch-dragging { opacity:.35; transform:scale(.94); }
 .profile-medals-hint { margin-top:.45rem; color:var(--text-muted); font-size:.67rem; }
+
+/* Dedicated blur layer: stays behind the sticker art and above the transparent slot. */
+.profile-medal-glow {
+    position:absolute !important;
+    z-index:0 !important;
+    inset:10% !important;
+    width:auto !important;
+    height:auto !important;
+    border-radius:42%;
+    background:var(--sticker-color,var(--accent));
+    opacity:.62;
+    filter:blur(20px) saturate(1.4);
+    transform:scale(1.22);
+    pointer-events:none;
+}
+.profile-medal-slot > .sticker-svg-visual,
+.profile-medal-slot > img { position:relative; z-index:1; }
