@@ -10250,7 +10250,7 @@ function renderProfilePage() {
                                 <div style="width:56px;height:56px;background:var(--tag-bg);border-radius:14px;padding:${s.image ? '0' : '0.6rem'};flex-shrink:0;overflow:hidden;">${renderStickerVisual(s)}</div>
                                 <div style="font-size:1rem;font-weight:800;">${s.image ? 'Власна наліпка' : ('Наліпка #' + (s.variant + 1))}</div>
                             </div>
-                            ${!s.image ? `<label class="sticker-color-control">Колір наліпки <input id="stickerColorInput" type="color" value="${escapeHtml(d.colors?.[sKey] || '#111111')}" title="Змінити колір наліпки"><span>Фон наліпки заблокований</span></label>` : '<div class="sticker-color-note">Для завантаженого зображення колір не змінюється.</div>'}
+                            <label class="sticker-color-control">Колір стікера та blur <input id="stickerColorInput" type="color" value="${escapeHtml(d.colors?.[sKey] || '#7c8494')}" title="Змінити колір стікера"><span>фон — тільки розмиття</span></label>
                             <div style="display:flex;flex-direction:column;gap:0.5rem;">
                                 <button class="sticker-action-btn" data-act="favorite" data-single-id="${s.id}">${sIconRow(s.favorite ? 'fa-star' : 'fa-star', s.favorite ? 'Прибрати з улюблених' : 'Додати в улюблені')}</button>
                                 <button class="sticker-action-btn" data-act="nick" data-single-id="${s.id}">${sIconRow('fa-id-badge', isNick ? 'Прибрати біля ніку' : 'Встановити біля ніку')}</button>

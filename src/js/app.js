@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=stickers-profile-v2';
+import './app-legacy.js?v=stickers-profile-v3';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';

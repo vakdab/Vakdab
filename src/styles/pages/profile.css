@@ -1185,3 +1185,12 @@
 .profile-medal-slot.is-filled::after { content:''; position:absolute; inset:4px; border-radius:.6rem; background:color-mix(in srgb, var(--sticker-color, var(--accent)) 9%, transparent); z-index:-1; pointer-events:none; }
 .profile-medal-slot > img, .profile-medal-slot > .sticker-svg-visual { width:100% !important; height:100% !important; max-width:100%; max-height:100%; object-fit:contain; display:block; }
 .profile-medal-slot > .sticker-svg-visual svg { width:100%; height:100%; display:block; }
+
+/* The sticker backing is not a solid tile: it is a locked, soft color glow. */
+.profile-medal-slot.is-filled { background:transparent !important; }
+.profile-medal-slot.is-filled::before {
+    content:''; position:absolute; inset:12%; border-radius:40%;
+    background:var(--sticker-color, var(--accent)); opacity:.48;
+    filter:blur(16px); transform:scale(1.12); z-index:-1; pointer-events:none;
+}
+.profile-medal-slot.is-filled::after { display:none; }
