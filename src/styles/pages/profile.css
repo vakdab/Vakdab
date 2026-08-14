@@ -1154,3 +1154,26 @@
         gap: .45rem;
     }
 }
+
+/* Profile sticker board: 28 fixed transparent slots. */
+.profile-medals-heading { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; }
+.profile-medals-locked { font-size:0.65rem; color:var(--text-muted); white-space:nowrap; }
+.profile-sticker-slots {
+    display:grid;
+    grid-template-columns:repeat(7, minmax(0, 1fr));
+    gap:0.45rem;
+    max-width:360px;
+}
+.profile-medal-slot {
+    width:100%; aspect-ratio:1; min-width:0; border:0; padding:0.22rem;
+    border-radius:0.7rem; background:transparent !important; color:var(--text-muted);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    transition:transform .18s ease, opacity .18s ease, box-shadow .18s ease;
+}
+.profile-medal-slot > * { width:100%; height:100%; }
+.profile-medal-slot:not(.is-filled) { border:1px dashed var(--border) !important; opacity:.42; }
+.profile-medal-slot:not(.is-filled) i { font-size:.62rem; }
+.profile-medal-slot.is-filled:hover, .profile-medal-slot.is-selected { transform:scale(1.08); box-shadow:0 0 0 2px var(--accent); }
+.profile-medal-slot.is-dragging { opacity:.35; }
+.profile-medal-slot.is-drag-over { box-shadow:0 0 0 2px var(--accent); background:rgba(var(--accent-rgb),.06) !important; }
+.profile-medals-hint { margin-top:.45rem; font-size:.67rem; color:var(--text-muted); }

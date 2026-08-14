@@ -610,6 +610,7 @@ let externalSourceCache = {};
                     const raw = localStorage.getItem('vakdab_stickers');
                     if (raw) {
                         const parsed = Object.assign(getDefaultStickers(), JSON.parse(raw));
+                        if (!parsed.colors || typeof parsed.colors !== 'object') parsed.colors = {};
                         // Міграція старого формату (nickBadge/medals зберігали номер варіанта напряму)
                         if (typeof parsed.nickBadge === 'number') parsed.nickBadge = 'v:' + parsed.nickBadge;
                         if (Array.isArray(parsed.medals)) parsed.medals = parsed.medals.map(m => typeof m === 'number' ? ('v:' + m) : m);
@@ -642,7 +643,7 @@ let externalSourceCache = {};
         };
 
         function getDefaultStickers() {
-            return { singles: [], sets: [], nickBadge: null, medals: [] };
+            return { singles: [], sets: [], nickBadge: null, medals: [], colors: {} };
         }
 
         // ====================================================================
@@ -5601,7 +5602,7 @@ let externalSourceCache = {};
                 ${s.nickBadge !== null ? `<span class="settings-sticker-mini">${renderStickerFaceByKey(s, s.nickBadge)}</span>` : `<span class="settings-sticker-summary-empty">Не встановлено</span>`}
               </div>
               <div class="settings-sticker-summary-row">
-                <span class="settings-sticker-summary-label">Медалі профілю (${s.medals.length}/50)</span>
+                <span class="settings-sticker-summary-label">Наліпки профілю (${s.medals.length}/28)</span>
                 <div class="settings-sticker-medals-mini">${s.medals.length ? s.medals.map(k => `<span class="settings-sticker-mini">${renderStickerFaceByKey(s, k)}</span>`).join('') : `<span class="settings-sticker-summary-empty">Немає</span>`}</div>
               </div>
               <button class="settings-media-btn" id="settingsOpenStickersBtn" style="margin-top:0.9rem;width:100%;justify-content:center;">
@@ -6416,6 +6417,12 @@ function renderProfilePage() {
             const bannerClass = (isGifBanner ? 'profile-banner is-gif' : 'profile-banner') + bannerEffectClass;
             const avatarClass = isGifAvatar ? 'profile-avatar is-gif' : 'profile-avatar';
             const stickerData = Storage.getStickers();
+            const PROFILE_STICKER_SLOTS = 28;
+            const profileStickerKeys = (stickerData.medals || []).slice(0, PROFILE_STICKER_SLOTS);
+            const profileStickerSlots = Array.from({ length: PROFILE_STICKER_SLOTS }, (_, index) => {
+                const key = profileStickerKeys[index];
+                return `<button type="button" class="profile-medal-slot${key ? ' is-filled' : ''}" data-medal-index="${index}" draggable="${key ? 'true' : 'false'}" aria-label="${key ? 'Наліпка ' + (index + 1) : 'Порожній слот ' + (index + 1)}">${key ? renderStickerFaceByKey(stickerData, key) : '<i class="fas fa-plus"></i>'}</button>`;
+            }).join('');
             container.innerHTML = `
             <div class="profile-wrapper">
               <div class="${bannerClass}">
@@ -6455,13 +6462,14 @@ function renderProfilePage() {
                     <div class="label">Досягнень</div>
                   </div>
                 </div>
-                ${stickerData.medals.length ? `
                 <div class="profile-medals-section">
-                  <div class="profile-medals-count">${stickerData.medals.length} ${getMedalWordForm(stickerData.medals.length)}</div>
-                  <div class="profile-medals-row">
-                    ${stickerData.medals.map(k => `<span class="profile-medal" title="Медаль">${renderStickerFaceByKey(stickerData, k)}</span>`).join('')}
+                  <div class="profile-medals-heading">
+                    <div class="profile-medals-count">Наліпки профілю · ${profileStickerKeys.length}/${PROFILE_STICKER_SLOTS}</div>
+                    <span class="profile-medals-locked" title="Фон слотів заблокований"><i class="fas fa-lock"></i> фон заблоковано</span>
                   </div>
-                </div>` : ''}
+                  <div class="profile-medals-row profile-sticker-slots" id="profileStickerSlots">${profileStickerSlots}</div>
+                  <div class="profile-medals-hint">Натисніть дві наліпки або перетягніть, щоб поміняти місцями</div>
+                </div>
               </div>
             </div>
             <div class="profile-tabs${tabsStyleClass}" id="profileTabs">
@@ -6499,6 +6507,51 @@ function renderProfilePage() {
                     document.getElementById('profilePanel-' + target).classList.add('active');
                 });
             });
+            const profileSlots = document.querySelectorAll('.profile-medal-slot');
+            let selectedMedalIndex = null;
+            let draggedMedalIndex = null;
+            const moveProfileMedal = (from, to) => {
+                if (from === to || from === null || to === null) return;
+                const current = Storage.getStickers();
+                const keys = (current.medals || []).slice(0, PROFILE_STICKER_SLOTS);
+                if (!keys[from]) return;
+                while (keys.length < PROFILE_STICKER_SLOTS) keys.push(null);
+                [keys[from], keys[to]] = [keys[to], keys[from]];
+                current.medals = keys.filter(Boolean).slice(0, PROFILE_STICKER_SLOTS);
+                Storage.setStickers(current);
+                renderProfilePage();
+            };
+            profileSlots.forEach(slot => {
+                slot.addEventListener('click', () => {
+                    const index = Number(slot.dataset.medalIndex);
+                    if (selectedMedalIndex === null) {
+                        if (slot.classList.contains('is-filled')) {
+                            selectedMedalIndex = index;
+                            slot.classList.add('is-selected');
+                        }
+                        return;
+                    }
+                    moveProfileMedal(selectedMedalIndex, index);
+                    selectedMedalIndex = null;
+                });
+                slot.addEventListener('dragstart', e => {
+                    draggedMedalIndex = Number(slot.dataset.medalIndex);
+                    e.dataTransfer.effectAllowed = 'move';
+                    slot.classList.add('is-dragging');
+                });
+                slot.addEventListener('dragend', () => {
+                    draggedMedalIndex = null;
+                    slot.classList.remove('is-dragging');
+                });
+                slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('is-drag-over'); });
+                slot.addEventListener('dragleave', () => slot.classList.remove('is-drag-over'));
+                slot.addEventListener('drop', e => {
+                    e.preventDefault();
+                    slot.classList.remove('is-drag-over');
+                    moveProfileMedal(draggedMedalIndex, Number(slot.dataset.medalIndex));
+                });
+            });
+
             // Guest mode: ховаємо sync кнопку
             if (typeof isGuestMode !== 'undefined' && isGuestMode) {
                 const syncBtn = document.getElementById('profileSyncBtn');
@@ -9846,13 +9899,14 @@ function renderProfilePage() {
             if (key.startsWith('v:')) return { variant: parseInt(key.slice(2), 10) };
             return null;
         }
-        function renderStickerVisual(s) {
-            if (s && s.image) return `<img src="${s.image}" alt="" style="width:100%;height:100%;object-fit:contain;border-radius:8px;background:transparent;">`;
-            return stickerFaceSvg(s ? s.variant : 0);
+        function renderStickerVisual(s, color) {
+            if (s && s.image) return `<img src="${escapeHtml(s.image)}" alt="" style="width:100%;height:100%;object-fit:contain;border-radius:8px;background:transparent;">`;
+            const safeColor = color || s?.color || 'var(--text)';
+            return `<span class="sticker-svg-visual" style="color:${escapeHtml(safeColor)};display:block;width:100%;height:100%;">${stickerFaceSvg(s ? s.variant : 0)}</span>`;
         }
         function renderStickerFaceByKey(d, key) {
             const s = resolveStickerByKey(d, key);
-            return s ? renderStickerVisual(s) : '';
+            return s ? renderStickerVisual(s, d.colors?.[key]) : '';
         }
 
         let _everyoneStickersCache = null;
@@ -9864,11 +9918,18 @@ function renderProfilePage() {
                 const snap = await getDocs(q);
                 let sets = [];
                 let singles = [];
+                const users = [];
                 snap.forEach(doc => {
                     const d = doc.data();
                     if (d.stickers) {
                         if (Array.isArray(d.stickers.sets)) sets.push(...d.stickers.sets);
                         if (Array.isArray(d.stickers.singles)) singles.push(...d.stickers.singles);
+                        users.push({
+                            id: doc.id,
+                            nickname: d.profile?.nickname || 'Користувач',
+                            avatar: d.profile?.avatar || '',
+                            stickers: Object.assign(getDefaultStickers(), d.stickers)
+                        });
                     }
                 });
                 // Фільтруємо дублікати за ID
@@ -9880,11 +9941,11 @@ function renderProfilePage() {
                 const singleIds = new Set();
                 singles.forEach(s => { if (s.id && !singleIds.has(s.id)) { singleIds.add(s.id); uniqueSingles.push(s); } });
 
-                _everyoneStickersCache = { sets: uniqueSets, singles: uniqueSingles };
+                _everyoneStickersCache = { sets: uniqueSets, singles: uniqueSingles, users };
                 return _everyoneStickersCache;
             } catch (e) {
                 console.error('[Stickers] Global fetch failed:', e);
-                return { sets: [], singles: [] };
+                return { sets: [], singles: [], users: [] };
             }
         }
 
@@ -9924,7 +9985,7 @@ function renderProfilePage() {
                 `;
             }
 
-            const FILTERS = ['Всі', 'Набори', 'Одиночні', 'Улюблені'];
+            const FILTERS = ['Всі', 'Набори', 'Одиночні', 'Улюблені', 'Користувачі'];
 
             function matchesSearch(title) {
                 if (!ui.search.trim()) return true;
@@ -9934,8 +9995,9 @@ function renderProfilePage() {
             function render() {
                 const d = data();
                 const owned = getOwnedStickerVariants(d);
-                const showSets = ui.activeFilter === 'Всі' || ui.activeFilter === 'Набори' || (ui.activeFilter === 'Улюблені');
-                const showSingles = ui.activeFilter === 'Всі' || ui.activeFilter === 'Одиночні' || (ui.activeFilter === 'Улюблені');
+                const showUsers = ui.activeFilter === 'Користувачі';
+                const showSets = !showUsers && (ui.activeFilter === 'Всі' || ui.activeFilter === 'Набори' || (ui.activeFilter === 'Улюблені'));
+                const showSingles = !showUsers && (ui.activeFilter === 'Всі' || ui.activeFilter === 'Одиночні' || (ui.activeFilter === 'Улюблені'));
 
                 let visibleSets = (ui.activeFilter === 'Одиночні') ? [] : d.sets.filter(st => matchesSearch(st.title));
                 if (ui.activeFilter === 'Улюблені') visibleSets = visibleSets.filter(st => st.favorite);
@@ -9962,8 +10024,20 @@ function renderProfilePage() {
                     }
                 }
 
-                const nothingAtAll = d.singles.length === 0 && d.sets.length === 0;
-                const nothingVisible = visibleSets.length === 0 && visibleSingles.length === 0;
+                const everyoneUsers = (_everyoneStickersCache?.users || []).filter(u => matchesSearch(u.nickname));
+                const usersSection = showUsers ? (everyoneUsers.length ? everyoneUsers.map(u => {
+                    const us = u.stickers || getDefaultStickers();
+                    const userSingles = us.singles || [];
+                    const userSets = us.sets || [];
+                    const userStickers = userSingles.length ? userSingles : (userSets.flatMap(st => (st.variants || []).map(v => ({ variant: v }))).slice(0, 28));
+                    return `<article class="sticker-user-card">
+                        <div class="sticker-user-card__head"><div class="sticker-user-avatar">${u.avatar ? `<img src="${escapeHtml(u.avatar)}" alt="">` : `<span>${escapeHtml(u.nickname.charAt(0).toUpperCase())}</span>`}</div><div><strong>${escapeHtml(u.nickname)}</strong><small>${userStickers.length} наліпок</small></div></div>
+                        <div class="sticker-user-card__grid">${userStickers.slice(0, 28).map(st => `<div class="sticker-user-card__item">${renderStickerVisual(st, us.colors?.[stickerKeyFor(st)])}</div>`).join('') || '<span class="sticker-empty-note">Наліпок ще немає</span>'}</div>
+                    </article>`;
+                }).join('') : '<div class="sticker-empty-note">Інших користувачів із наліпками поки немає.</div>') : '';
+                if (showUsers && !_everyoneStickersCache) fetchEveryoneStickers().then(() => render());
+                const nothingAtAll = !showUsers && d.singles.length === 0 && d.sets.length === 0;
+                const nothingVisible = !showUsers && visibleSets.length === 0 && visibleSingles.length === 0;
 
                 container.innerHTML = `
                     <div class="stickers-page" style="max-width:480px;margin:0 auto;color:var(--text);font-family:inherit;">
@@ -9998,6 +10072,8 @@ function renderProfilePage() {
                             <span style="font-size:0.88rem;font-weight:700;">Додати наліпку</span>
                             <span style="font-size:0.75rem;color:var(--text-muted);">Одну наліпку або цілий набір</span>
                         </button>
+
+                        ${showUsers ? `<section class="stickers-users-section"><div class="stickers-section-heading"><h2>Усі наліпки користувачів</h2><span>${everyoneUsers.length}</span></div>${usersSection}</section>` : ''}
 
                         ${nothingAtAll ? `
                             <div style="text-align:center;padding:2.5rem 1rem;color:var(--text-muted);">
@@ -10173,6 +10249,7 @@ function renderProfilePage() {
                                 <div style="width:56px;height:56px;background:var(--tag-bg);border-radius:14px;padding:${s.image ? '0' : '0.6rem'};flex-shrink:0;overflow:hidden;">${renderStickerVisual(s)}</div>
                                 <div style="font-size:1rem;font-weight:800;">${s.image ? 'Власна наліпка' : ('Наліпка #' + (s.variant + 1))}</div>
                             </div>
+                            ${!s.image ? `<label class="sticker-color-control">Колір наліпки <input id="stickerColorInput" type="color" value="${escapeHtml(d.colors?.[sKey] || '#111111')}" title="Змінити колір наліпки"><span>Фон наліпки заблокований</span></label>` : '<div class="sticker-color-note">Для завантаженого зображення колір не змінюється.</div>'}
                             <div style="display:flex;flex-direction:column;gap:0.5rem;">
                                 <button class="sticker-action-btn" data-act="favorite" data-single-id="${s.id}">${sIconRow(s.favorite ? 'fa-star' : 'fa-star', s.favorite ? 'Прибрати з улюблених' : 'Додати в улюблені')}</button>
                                 <button class="sticker-action-btn" data-act="nick" data-single-id="${s.id}">${sIconRow('fa-id-badge', isNick ? 'Прибрати біля ніку' : 'Встановити біля ніку')}</button>
@@ -10323,6 +10400,18 @@ function renderProfilePage() {
                     });
                 });
 
+                document.getElementById('stickerColorInput')?.addEventListener('change', e => {
+                    const target = ui.actionsTarget;
+                    const cur = data();
+                    const sticker = target && cur.singles.find(x => x.id === target.id);
+                    if (sticker) {
+                        if (!cur.colors) cur.colors = {};
+                        cur.colors[stickerKeyFor(sticker)] = e.target.value;
+                        saveData(cur);
+                        render();
+                    }
+                });
+
                 document.querySelectorAll('.sticker-action-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
                         const act = btn.dataset.act;
@@ -10343,7 +10432,7 @@ function renderProfilePage() {
                                 if (cur.medals.includes(sKey)) {
                                     cur.medals = cur.medals.filter(k => k !== sKey);
                                 } else {
-                                    if (cur.medals.length >= 50) { showToast('Максимум 50 медалей — спочатку приберіть одну'); return; }
+                                    if (cur.medals.length >= 28) { showToast('Максимум 28 наліпок у профілі — спочатку приберіть одну'); return; }
                                     cur.medals.push(sKey);
                                 }
                             }
