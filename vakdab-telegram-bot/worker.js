@@ -691,11 +691,23 @@ function getState(chatId) {
       anime: null,
       animeUrl: null,
       chosenDub: null,
-      chosenSeason: null
+      chosenSeason: null,
+      // Чи є поточне повідомлення з деталями фото-повідомленням (для editMessageCaption/editMessageText)
+      detailsIsPhoto: false
     };
     userStates.set(chatId, state);
   }
   return state;
+}
+
+// --- Проксіювання медіа через Cloudflare Worker (додає правильний Referer, обходить SSRF-блоки) ---
+function proxiedMediaUrl(fileUrl) {
+  if (!fileUrl) return '';
+  return `${PROXY_URL}?url=${encodeURIComponent(fileUrl)}&force_ua=desktop`;
+}
+
+function isHlsUrl(fileUrl) {
+  return /\.m3u8(\?|$)/i.test(String(fileUrl || ''));
 }
 
 // --- Додатковий парсинг для сезонів/озвучок/серій ---
@@ -841,7 +853,7 @@ async function showVoiceoverSelection(chatId, messageId, env) {
   const state = getState(chatId);
   const anime = state.anime;
   if (!anime) {
-    await replaceMessage(chatId, messageId, 'Помилка: аніме не знайдено.', false, { reply_markup: mainKeyboard() }, env);
+    await replaceMessage(chatId, messageId, 'Помилка: аніме не знайдено.', state.detailsIsPhoto, { reply_markup: mainKeyboard() }, env);
     return;
   }
   if (!anime.seasons) {
@@ -850,14 +862,14 @@ async function showVoiceoverSelection(chatId, messageId, env) {
       anime.seasons = full.seasons;
       state.anime = anime;
     } catch (e) {
-      await replaceMessage(chatId, messageId, 'Не вдалося завантажити список озвучок. Спробуйте пізніше.', false, { reply_markup: mainKeyboard() }, env);
+      await replaceMessage(chatId, messageId, 'Не вдалося завантажити список озвучок. Спробуйте пізніше.', state.detailsIsPhoto, { reply_markup: mainKeyboard() }, env);
       return;
     }
   }
 
   const dubs = getUniqueDubs(anime);
   if (dubs.length === 0) {
-    await replaceMessage(chatId, messageId, 'Немає доступних озвучок.', false, { reply_markup: mainKeyboard() }, env);
+    await replaceMessage(chatId, messageId, 'Немає доступних озвучок.', state.detailsIsPhoto, { reply_markup: mainKeyboard() }, env);
     return;
   }
 
@@ -865,7 +877,7 @@ async function showVoiceoverSelection(chatId, messageId, env) {
     inline_keyboard: dubs.map(dub => [{ text: dub, callback_data: `vo:${dub}` }])
   };
   keyboard.inline_keyboard.push([{ text: 'Назад', callback_data: 'back_to_details' }]);
-  await replaceMessage(chatId, messageId, `Оберіть озвучку для «${anime.title}»:`, false, { reply_markup: keyboard }, env);
+  await replaceMessage(chatId, messageId, `Оберіть озвучку для «${anime.title}»:`, state.detailsIsPhoto, { reply_markup: keyboard }, env);
   state.screen = 'waiting_for_voiceover';
 }
 
@@ -874,19 +886,19 @@ async function showSeasonSelection(chatId, messageId, env) {
   const anime = state.anime;
   const dub = state.chosenDub;
   if (!anime || !dub) {
-    await replaceMessage(chatId, messageId, 'Помилка: дані відсутні.', false, { reply_markup: mainKeyboard() }, env);
+    await replaceMessage(chatId, messageId, 'Помилка: дані відсутні.', state.detailsIsPhoto, { reply_markup: mainKeyboard() }, env);
     return;
   }
   const seasons = getSeasons(anime);
   if (seasons.length === 0) {
-    await replaceMessage(chatId, messageId, 'Немає доступних сезонів.', false, { reply_markup: mainKeyboard() }, env);
+    await replaceMessage(chatId, messageId, 'Немає доступних сезонів.', state.detailsIsPhoto, { reply_markup: mainKeyboard() }, env);
     return;
   }
   const keyboard = {
     inline_keyboard: seasons.map(season => [{ text: `Сезон ${season}`, callback_data: `season:${season}` }])
   };
   keyboard.inline_keyboard.push([{ text: 'Назад', callback_data: 'back_to_voiceover' }]);
-  await replaceMessage(chatId, messageId, `Обрано озвучку: ${dub}. Оберіть сезон:`, false, { reply_markup: keyboard }, env);
+  await replaceMessage(chatId, messageId, `Обрано озвучку: ${dub}. Оберіть сезон:`, state.detailsIsPhoto, { reply_markup: keyboard }, env);
   state.screen = 'waiting_for_season';
 }
 
@@ -896,12 +908,12 @@ async function showEpisodeSelection(chatId, messageId, env) {
   const dub = state.chosenDub;
   const season = state.chosenSeason;
   if (!anime || !dub || !season) {
-    await replaceMessage(chatId, messageId, 'Помилка: дані відсутні.', false, { reply_markup: mainKeyboard() }, env);
+    await replaceMessage(chatId, messageId, 'Помилка: дані відсутні.', state.detailsIsPhoto, { reply_markup: mainKeyboard() }, env);
     return;
   }
   const episodes = getEpisodes(anime, season, dub);
   if (episodes.length === 0) {
-    await replaceMessage(chatId, messageId, 'Немає доступних серій.', false, { reply_markup: mainKeyboard() }, env);
+    await replaceMessage(chatId, messageId, 'Немає доступних серій.', state.detailsIsPhoto, { reply_markup: mainKeyboard() }, env);
     return;
   }
   const rows = [];
@@ -913,7 +925,7 @@ async function showEpisodeSelection(chatId, messageId, env) {
     rows.push(row);
   }
   rows.push([{ text: 'Назад', callback_data: 'back_to_season' }]);
-  await replaceMessage(chatId, messageId, `Обрано: ${dub}, сезон ${season}. Виберіть серію:`, false, { reply_markup: { inline_keyboard: rows } }, env);
+  await replaceMessage(chatId, messageId, `Обрано: ${dub}, сезон ${season}. Виберіть серію:`, state.detailsIsPhoto, { reply_markup: { inline_keyboard: rows } }, env);
   state.screen = 'waiting_for_episode';
 }
 
@@ -925,27 +937,53 @@ async function sendVideoEpisode(chatId, messageId, episode, env) {
   const fileUrl = episode.file;
   const epNum = episode.episode;
   if (!fileUrl) {
-    await replaceMessage(chatId, messageId, 'Помилка: відеофайл не знайдено.', false, { reply_markup: mainKeyboard() }, env);
+    await replaceMessage(chatId, messageId, 'Помилка: відеофайл не знайдено.', state.detailsIsPhoto, { reply_markup: mainKeyboard() }, env);
     return;
   }
 
-  const isMp4 = /\.mp4(\?|$)/i.test(fileUrl);
   const caption = `${anime.title}\nОзвучка: ${dub}\nСезон: ${season}\nСерія: ${epNum}`;
+
+  // Telegram не вміє відтворювати HLS (.m3u8) як звичайне відео —
+  // це потоковий плейлист, а не єдиний файл. У такому разі даємо посилання на сайт.
+  if (isHlsUrl(fileUrl)) {
+    const watchUrl = vakdabWatchUrl(extractAnimeId(state.animeUrl));
+    const keyboard = {
+      inline_keyboard: [
+        ...(watchUrl ? [[{ text: 'Дивитись на сайті', url: watchUrl }]] : []),
+        [{ text: 'Головна', callback_data: 'home' }]
+      ]
+    };
+    await replaceMessage(
+      chatId,
+      messageId,
+      `${caption}\n\nЦе відео у потоковому форматі (HLS), Telegram не може показати його як звичайний відеофайл. Скористайтесь переглядом на сайті.`,
+      state.detailsIsPhoto,
+      { reply_markup: keyboard },
+      env
+    );
+    return;
+  }
+
+  // Джерела (ashdi.vip, vidmoly.com тощо) блокують запити без правильного Referer,
+  // тому віддаємо Telegram проксійований URL через наш Worker, а не прямий лінк.
+  const isMp4 = /\.mp4(\?|$)/i.test(fileUrl);
+  const proxiedUrl = proxiedMediaUrl(fileUrl);
 
   try {
     if (isMp4) {
-      await sendVideo(chatId, fileUrl, caption, { reply_markup: mainKeyboard() }, env);
+      await sendVideo(chatId, proxiedUrl, caption, { reply_markup: mainKeyboard() }, env);
     } else {
-      await sendDocument(chatId, fileUrl, caption, { reply_markup: mainKeyboard() }, env);
+      await sendDocument(chatId, proxiedUrl, caption, { reply_markup: mainKeyboard() }, env);
     }
     // Скидаємо стан
     state.screen = 'home';
     state.anime = null;
     state.chosenDub = null;
     state.chosenSeason = null;
+    state.detailsIsPhoto = false;
   } catch (error) {
     console.error('[sendVideoEpisode] failed:', safeError(error));
-    await replaceMessage(chatId, messageId, 'Не вдалося надіслати відео. Спробуйте скористатися кнопкою «Дивитись на сайті».', false, { reply_markup: mainKeyboard() }, env);
+    await replaceMessage(chatId, messageId, 'Не вдалося надіслати відео. Спробуйте скористатися кнопкою «Дивитись на сайті».', state.detailsIsPhoto, { reply_markup: mainKeyboard() }, env);
   }
 }
 
@@ -976,7 +1014,7 @@ async function handleCallbackQuery(callback, env) {
     // --- НОВІ ОБРОБНИКИ ДЛЯ ПЕРЕГЛЯДУ В ТЕЛЕГРАМІ ---
     if (data === 'watch_telegram') {
       if (!state.anime) {
-        await replaceMessage(chatId, messageId, 'Помилка: дані аніме відсутні. Поверніться до списку та виберіть аніме знову.', false, { reply_markup: mainKeyboard() }, env);
+        await replaceMessage(chatId, messageId, 'Помилка: дані аніме відсутні. Поверніться до списку та виберіть аніме знову.', state.detailsIsPhoto, { reply_markup: mainKeyboard() }, env);
         return;
       }
       await showVoiceoverSelection(chatId, messageId, env);
@@ -1002,7 +1040,7 @@ async function handleCallbackQuery(callback, env) {
       const episodes = getEpisodes(state.anime, state.chosenSeason, state.chosenDub);
       const ep = episodes.find(e => e.episode === episodeNum);
       if (!ep) {
-        await replaceMessage(chatId, messageId, 'Серію не знайдено.', false, { reply_markup: mainKeyboard() }, env);
+        await replaceMessage(chatId, messageId, 'Серію не знайдено.', state.detailsIsPhoto, { reply_markup: mainKeyboard() }, env);
         return;
       }
       await sendVideoEpisode(chatId, messageId, ep, env);
@@ -1213,14 +1251,22 @@ async function renderDetails(chatId, messageId, url, env) {
     }
 
     await deleteMessage(chatId, messageId, env);
+
+    // Важливо: запам'ятовуємо, чи нове повідомлення — фото чи текст,
+    // щоб подальші editMessageText/editMessageCaption у виборі озвучки/сезону/серії
+    // застосовувались до правильного типу повідомлення.
+    let isPhotoMessage = false;
     if (details.image && /^https:\/\//i.test(details.image)) {
       const photoResult = await sendPhoto(chatId, details.image, text, { reply_markup: keyboard }, env);
-      if (!photoResult?.ok) {
+      if (photoResult?.ok) {
+        isPhotoMessage = true;
+      } else {
         await sendMessage(chatId, text, { reply_markup: keyboard }, env);
       }
     } else {
       await sendMessage(chatId, text, { reply_markup: keyboard }, env);
     }
+    state.detailsIsPhoto = isPhotoMessage;
   } catch (error) {
     console.error('[details] failed:', safeError(error));
     await updateOrSend(chatId, messageId, 'Не вдалося завантажити деталі аніме. Спробуйте ще раз.', false, {
