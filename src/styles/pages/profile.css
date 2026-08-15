@@ -1163,43 +1163,181 @@
     }
 }
 
-/* Profile sticker board: 28 transparent touch-draggable slots. */
-.profile-medals-heading { display:flex; align-items:center; justify-content:space-between; gap:.6rem; }
-.profile-sticker-slots { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.65rem; max-width:340px; }
+/* ===================================================================
+   Profile sticker board — modern redesign.
+   28 slots, drag/tap-to-swap, transparent empty state, glass-card filled state.
+   =================================================================== */
+.profile-medals-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .6rem;
+    margin-bottom: .7rem;
+}
+.profile-medals-count {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: rgba(var(--accent-rgb), 0.06);
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+
+.profile-sticker-slots {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .55rem;
+    max-width: 360px;
+}
+
 .profile-medal-slot {
-    position:relative; isolation:isolate; display:flex; width:100%; height:64px; min-height:64px; min-width:0;
-    align-items:center; justify-content:center; overflow:hidden; padding:.22rem;
-    border:1px dashed var(--border); border-radius:.7rem; background:transparent; color:var(--text-muted);
-    cursor:pointer; touch-action:none; user-select:none; -webkit-user-select:none;
-    transition:transform .18s ease, opacity .18s ease, box-shadow .18s ease, border-color .18s ease;
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: .3rem;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-sm);
+    color: var(--text-muted);
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: transform .2s cubic-bezier(.2,.8,.3,1.2),
+                box-shadow .2s ease,
+                border-color .2s ease,
+                background .2s ease,
+                opacity .2s ease;
 }
-.profile-medal-slot > * { position:relative; z-index:1; width:100%; height:100%; }
-.profile-medal-slot:not(.is-filled) { opacity:.48; }
-.profile-medal-slot:not(.is-filled) i { font-size:.62rem; }
-.profile-medal-slot.is-filled { border-style:solid; border-color:color-mix(in srgb,var(--sticker-color,var(--accent)) 48%,var(--border)); }
+.profile-medal-slot > * {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+}
+
+/* empty state — subtle dotted well, no harsh dashed border */
+.profile-medal-slot:not(.is-filled) {
+    border-style: dashed;
+    border-color: var(--border);
+    background: rgba(var(--accent-rgb), 0.025);
+    opacity: .55;
+}
+.profile-medal-slot:not(.is-filled) i {
+    font-size: .68rem;
+    opacity: .7;
+    transition: opacity .2s ease, transform .2s ease;
+}
+.profile-medal-slot:not(.is-filled):hover {
+    opacity: .9;
+    border-color: var(--border-hover);
+    background: rgba(var(--accent-rgb), 0.05);
+}
+.profile-medal-slot:not(.is-filled):hover i {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+/* filled state — soft glass card with accent-tinted ring */
+.profile-medal-slot.is-filled {
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--sticker-color, var(--accent)) 40%, var(--border));
+    background: linear-gradient(160deg, rgba(var(--accent-rgb), 0.05), transparent 60%), var(--surface);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 6px 16px -8px color-mix(in srgb, var(--sticker-color, var(--accent)) 35%, transparent);
+}
 .profile-medal-slot.is-filled::before {
-    content:''; position:absolute; z-index:0; inset:8%; border-radius:40%; pointer-events:none;
-    background:var(--sticker-color,var(--accent)); opacity:.52; filter:blur(18px) saturate(1.35); transform:scale(1.2);
+    content: '';
+    position: absolute;
+    z-index: 0;
+    inset: 6%;
+    border-radius: 42%;
+    pointer-events: none;
+    background: var(--sticker-color, var(--accent));
+    opacity: .38;
+    filter: blur(16px) saturate(1.4);
+    transform: scale(1.15);
+    transition: opacity .25s ease, transform .25s ease;
 }
-.profile-medal-slot > img, .profile-medal-slot > .sticker-svg-visual { display:block; width:100% !important; height:100% !important; max-width:100%; max-height:100%; object-fit:contain; }
-.profile-medal-slot > .sticker-svg-visual svg { display:block; width:100%; height:100%; }
-.profile-medal-slot.is-filled:hover, .profile-medal-slot.is-selected, .profile-medal-slot.is-drag-over { border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 65%,transparent); transform:scale(1.04); }
-.profile-medal-slot.is-dragging, .profile-medal-slot.is-touch-dragging { opacity:.35; transform:scale(.94); }
-.profile-medals-hint { margin-top:.45rem; color:var(--text-muted); font-size:.67rem; }
+
+.profile-medal-slot > img,
+.profile-medal-slot > .sticker-svg-visual {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.15));
+    transition: filter .2s ease;
+}
+.profile-medal-slot > .sticker-svg-visual svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* interactions */
+.profile-medal-slot.is-filled:hover {
+    transform: translateY(-3px) scale(1.03);
+    border-color: var(--sticker-color, var(--accent));
+    box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--sticker-color, var(--accent)) 55%, transparent);
+}
+.profile-medal-slot.is-filled:hover::before {
+    opacity: .55;
+    transform: scale(1.3);
+}
+.profile-medal-slot.is-selected,
+.profile-medal-slot.is-drag-over {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--accent) 60%, transparent), 0 10px 22px -10px color-mix(in srgb, var(--accent) 45%, transparent);
+    transform: translateY(-2px) scale(1.05);
+}
+.profile-medal-slot.is-dragging,
+.profile-medal-slot.is-touch-dragging {
+    opacity: .3;
+    transform: scale(.92) rotate(-2deg);
+    box-shadow: none;
+}
+.profile-medal-slot:active {
+    transform: scale(.96);
+}
+
+.profile-medals-hint {
+    margin-top: .6rem;
+    color: var(--text-muted);
+    font-size: .68rem;
+    letter-spacing: .2px;
+}
 
 /* Dedicated blur layer: stays behind the sticker art and above the transparent slot. */
 .profile-medal-glow {
-    position:absolute !important;
-    z-index:0 !important;
-    inset:10% !important;
-    width:auto !important;
-    height:auto !important;
-    border-radius:42%;
-    background:var(--sticker-color,var(--accent));
-    opacity:.62;
-    filter:blur(20px) saturate(1.4);
-    transform:scale(1.22);
-    pointer-events:none;
+    position: absolute !important;
+    z-index: 0 !important;
+    inset: 8% !important;
+    width: auto !important;
+    height: auto !important;
+    border-radius: 44%;
+    background: var(--sticker-color, var(--accent));
+    opacity: .45;
+    filter: blur(18px) saturate(1.4);
+    transform: scale(1.18);
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
 }
 .profile-medal-slot > .sticker-svg-visual,
-.profile-medal-slot > img { position:relative; z-index:1; }
+.profile-medal-slot > img {
+    position: relative;
+    z-index: 1;
+}
