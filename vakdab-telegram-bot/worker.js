@@ -130,6 +130,12 @@ async function handleMessage(message, env) {
 
   const state = getState(chatId);
 
+  // Якщо користувач у стані вибору озвучки/сезону/серії – нагадуємо використовувати кнопки
+  if (state.screen === 'waiting_for_voiceover' || state.screen === 'waiting_for_season' || state.screen === 'waiting_for_episode') {
+    await sendMessage(chatId, 'Будь ласка, скористайтеся кнопками для вибору.', { reply_markup: backHomeKeyboard() }, env);
+    return;
+  }
+
   if (state.screen === 'waiting_for_makima') {
     await handleMakimaMessage(chatId, memoryKey, text, firstName, env);
     return;
@@ -667,6 +673,291 @@ function mergeProfile(oldProfile, extracted) {
   return merged;
 }
 
+// ============================================================
+//  ОСНОВНІ ФУНКЦІЇ БОТА (каталог, пошук, деталі)
+// ============================================================
+
+function getState(chatId) {
+  let state = userStates.get(chatId);
+  if (!state) {
+    state = {
+      screen: 'home',
+      searchQuery: '',
+      searchPage: 1,
+      popularResults: [],
+      searchResults: [],
+      previous: null,
+      // Нові поля для вибору в телеграмі
+      anime: null,
+      animeUrl: null,
+      chosenDub: null,
+      chosenSeason: null
+    };
+    userStates.set(chatId, state);
+  }
+  return state;
+}
+
+// --- Додатковий парсинг для сезонів/озвучок/серій ---
+async function fetchAnimeFullDetails(animeUrl) {
+  const html = await fetchSource(animeUrl);
+  const iframeUrls = extractIframeUrls(html);
+  if (!iframeUrls.length) return { seasons: {} };
+
+  const allSources = [];
+  for (const url of iframeUrls) {
+    try {
+      const playerHtml = await fetchSource(url);
+      const sources = extractSourcesFromText(playerHtml, 'Плеєр');
+      allSources.push(...sources);
+    } catch (e) {
+      console.warn('Не вдалося завантажити плеєр:', url, e.message);
+    }
+  }
+
+  const seasons = {};
+  for (const s of allSources) {
+    const season = s.season || '1';
+    const dub = s.dub || 'UA';
+    if (!seasons[season]) seasons[season] = {};
+    if (!seasons[season][dub]) seasons[season][dub] = [];
+    seasons[season][dub].push({ episode: s.episode, file: s.file });
+  }
+  for (const s in seasons) {
+    for (const d in seasons[s]) {
+      seasons[s][d].sort((a, b) => parseInt(a.episode) - parseInt(b.episode));
+    }
+  }
+  return { seasons };
+}
+
+function extractIframeUrls(html) {
+  const urls = [];
+  const regex = /<iframe[^>]+(?:src|data-src)=["']([^"']*(?:ashdi|vidmoly|player)[^"']*)["']/gi;
+  let match;
+  while ((match = regex.exec(html)) !== null) {
+    let url = match[1];
+    if (url.startsWith('//')) url = 'https:' + url;
+    if (!url.startsWith('http')) url = ANIMEUA_BASE + url;
+    if (!urls.includes(url)) urls.push(url);
+  }
+  return urls;
+}
+
+function extractSourcesFromText(text, provider) {
+  const sources = [];
+  let jsonMatch = null;
+  let m = text.match(/Playerjs\s*\(\s*\{[\s\S]*?file\s*:\s*'(\[[\s\S]*?\])'\s*[,\n]/);
+  if (m) jsonMatch = m[1];
+  if (!jsonMatch) {
+    m = text.match(/file\s*:\s*['"](\[[\s\S]+?\])['"]/i);
+    if (m) jsonMatch = m[1];
+  }
+  if (!jsonMatch) {
+    m = text.match(/playlist\s*:\s*(\[[\s\S]+?\])/i);
+    if (m) jsonMatch = m[1];
+  }
+  if (jsonMatch) {
+    try {
+      let raw = jsonMatch.trim();
+      if ((raw.startsWith("'") && raw.endsWith("'")) || (raw.startsWith('"') && raw.endsWith('"'))) raw = raw.slice(1, -1);
+      if (raw.startsWith('{') && raw.endsWith('}')) raw = `[${raw}]`;
+      const arr = JSON.parse(raw);
+      const walk = (items, dub, season) => {
+        dub = dub || '';
+        season = season || '1';
+        for (const item of items) {
+          if (item.folder || item.playlist) {
+            let nd = dub, ns = season;
+            const ft = item.title || '';
+            const sm = ft.match(/[Сс]езон\s*(\d+)/);
+            if (sm) { ns = sm[1]; nd = ft.replace(/[Сс]езон\s*\d+/g, '').replace(/\//g, '').trim() || dub; }
+            else if (ft) nd = ft;
+            walk(item.folder || item.playlist, nd, ns);
+          } else if (item.file) {
+            const epT = item.title || 'Серія';
+            let fd = dub || provider || 'UA', fs = season;
+            const esm = epT.match(/[Сс]езон\s*(\d+)/);
+            if (esm) fs = esm[1];
+            const epm = epT.match(/(\d+)\s*[Сс]ері[яіяа]|[Сс]ері[яіяа]\s*(\d+)|[Еe]п\.?\s*(\d+)/);
+            sources.push({
+              label: epT,
+              file: item.file,
+              provider: provider,
+              dub: fd.trim(),
+              season: fs,
+              episode: epm ? (epm[1] || epm[2] || epm[3]) : '1'
+            });
+          }
+        }
+      };
+      if (Array.isArray(arr)) walk(arr);
+      else if (arr.file) sources.push({ label: arr.title || 'Озвучка', file: arr.file, provider: provider, dub: provider || 'UA', season: '1', episode: '1' });
+    } catch (e) {
+      console.warn('JSON parse error in extractSourcesFromText:', e);
+    }
+  }
+  if (sources.length === 0) {
+    const urlMatches = [...text.matchAll(/https?:\/\/[^\s'"<>]+\.(?:m3u8|mp4)(?:\?[^\s'"<>]*)?/gi)];
+    urlMatches.forEach((match, idx) => {
+      const file = match[0].replace(/\\\//g, '/');
+      if (!sources.some(s => s.file === file)) {
+        sources.push({ label: `Потік ${idx+1}`, file, provider, dub: provider || 'UA', season: '1', episode: String(idx+1) });
+      }
+    });
+  }
+  const seen = new Set();
+  return sources.filter(s => {
+    const key = `${s.season}_${s.dub}_${s.episode}_${s.file}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// --- Функції для вибору озвучки/сезону/серії ---
+function getUniqueDubs(anime) {
+  if (!anime || !anime.seasons) return [];
+  const dubsSet = new Set();
+  for (const season in anime.seasons) {
+    for (const dub in anime.seasons[season]) {
+      dubsSet.add(dub);
+    }
+  }
+  return Array.from(dubsSet).sort();
+}
+
+function getSeasons(anime) {
+  if (!anime || !anime.seasons) return [];
+  return Object.keys(anime.seasons).sort((a, b) => parseInt(a) - parseInt(b));
+}
+
+function getEpisodes(anime, season, dub) {
+  if (!anime || !anime.seasons || !anime.seasons[season] || !anime.seasons[season][dub]) return [];
+  return anime.seasons[season][dub];
+}
+
+async function showVoiceoverSelection(chatId, messageId, env) {
+  const state = getState(chatId);
+  const anime = state.anime;
+  if (!anime) {
+    await replaceMessage(chatId, messageId, 'Помилка: аніме не знайдено.', false, { reply_markup: mainKeyboard() }, env);
+    return;
+  }
+  if (!anime.seasons) {
+    try {
+      const full = await fetchAnimeFullDetails(state.animeUrl);
+      anime.seasons = full.seasons;
+      state.anime = anime;
+    } catch (e) {
+      await replaceMessage(chatId, messageId, 'Не вдалося завантажити список озвучок. Спробуйте пізніше.', false, { reply_markup: mainKeyboard() }, env);
+      return;
+    }
+  }
+
+  const dubs = getUniqueDubs(anime);
+  if (dubs.length === 0) {
+    await replaceMessage(chatId, messageId, 'Немає доступних озвучок.', false, { reply_markup: mainKeyboard() }, env);
+    return;
+  }
+
+  const keyboard = {
+    inline_keyboard: dubs.map(dub => [{ text: dub, callback_data: `vo:${dub}` }])
+  };
+  keyboard.inline_keyboard.push([{ text: 'Назад', callback_data: 'back_to_details' }]);
+  await replaceMessage(chatId, messageId, `Оберіть озвучку для «${anime.title}»:`, false, { reply_markup: keyboard }, env);
+  state.screen = 'waiting_for_voiceover';
+}
+
+async function showSeasonSelection(chatId, messageId, env) {
+  const state = getState(chatId);
+  const anime = state.anime;
+  const dub = state.chosenDub;
+  if (!anime || !dub) {
+    await replaceMessage(chatId, messageId, 'Помилка: дані відсутні.', false, { reply_markup: mainKeyboard() }, env);
+    return;
+  }
+  const seasons = getSeasons(anime);
+  if (seasons.length === 0) {
+    await replaceMessage(chatId, messageId, 'Немає доступних сезонів.', false, { reply_markup: mainKeyboard() }, env);
+    return;
+  }
+  const keyboard = {
+    inline_keyboard: seasons.map(season => [{ text: `Сезон ${season}`, callback_data: `season:${season}` }])
+  };
+  keyboard.inline_keyboard.push([{ text: 'Назад', callback_data: 'back_to_voiceover' }]);
+  await replaceMessage(chatId, messageId, `Обрано озвучку: ${dub}. Оберіть сезон:`, false, { reply_markup: keyboard }, env);
+  state.screen = 'waiting_for_season';
+}
+
+async function showEpisodeSelection(chatId, messageId, env) {
+  const state = getState(chatId);
+  const anime = state.anime;
+  const dub = state.chosenDub;
+  const season = state.chosenSeason;
+  if (!anime || !dub || !season) {
+    await replaceMessage(chatId, messageId, 'Помилка: дані відсутні.', false, { reply_markup: mainKeyboard() }, env);
+    return;
+  }
+  const episodes = getEpisodes(anime, season, dub);
+  if (episodes.length === 0) {
+    await replaceMessage(chatId, messageId, 'Немає доступних серій.', false, { reply_markup: mainKeyboard() }, env);
+    return;
+  }
+  const rows = [];
+  for (let i = 0; i < episodes.length; i += 5) {
+    const row = episodes.slice(i, i + 5).map(ep => ({
+      text: `Серія ${ep.episode}`,
+      callback_data: `ep:${ep.episode}`
+    }));
+    rows.push(row);
+  }
+  rows.push([{ text: 'Назад', callback_data: 'back_to_season' }]);
+  await replaceMessage(chatId, messageId, `Обрано: ${dub}, сезон ${season}. Виберіть серію:`, false, { reply_markup: { inline_keyboard: rows } }, env);
+  state.screen = 'waiting_for_episode';
+}
+
+async function sendVideoEpisode(chatId, messageId, episode, env) {
+  const state = getState(chatId);
+  const anime = state.anime;
+  const dub = state.chosenDub;
+  const season = state.chosenSeason;
+  const fileUrl = episode.file;
+  const epNum = episode.episode;
+  if (!fileUrl) {
+    await replaceMessage(chatId, messageId, 'Помилка: відеофайл не знайдено.', false, { reply_markup: mainKeyboard() }, env);
+    return;
+  }
+
+  const isMp4 = /\.mp4(\?|$)/i.test(fileUrl);
+  const caption = `${anime.title}\nОзвучка: ${dub}\nСезон: ${season}\nСерія: ${epNum}`;
+
+  try {
+    if (isMp4) {
+      await sendVideo(chatId, fileUrl, caption, { reply_markup: mainKeyboard() }, env);
+    } else {
+      await sendDocument(chatId, fileUrl, caption, { reply_markup: mainKeyboard() }, env);
+    }
+    // Скидаємо стан
+    state.screen = 'home';
+    state.anime = null;
+    state.chosenDub = null;
+    state.chosenSeason = null;
+  } catch (error) {
+    console.error('[sendVideoEpisode] failed:', safeError(error));
+    await replaceMessage(chatId, messageId, 'Не вдалося надіслати відео. Спробуйте скористатися кнопкою «Дивитись на сайті».', false, { reply_markup: mainKeyboard() }, env);
+  }
+}
+
+async function sendVideo(chatId, videoUrl, caption, extra, env) {
+  return telegram('sendVideo', { chat_id: chatId, video: videoUrl, caption, parse_mode: 'HTML', ...extra }, env);
+}
+
+async function sendDocument(chatId, documentUrl, caption, extra, env) {
+  return telegram('sendDocument', { chat_id: chatId, document: documentUrl, caption, parse_mode: 'HTML', ...extra }, env);
+}
+
+// --- Основний обробник callback-запитів ---
 async function handleCallbackQuery(callback, env) {
   const callbackId = callback.id;
   const message = callback.message;
@@ -682,6 +973,57 @@ async function handleCallbackQuery(callback, env) {
   const state = getState(chatId);
 
   try {
+    // --- НОВІ ОБРОБНИКИ ДЛЯ ПЕРЕГЛЯДУ В ТЕЛЕГРАМІ ---
+    if (data === 'watch_telegram') {
+      if (!state.anime) {
+        await replaceMessage(chatId, messageId, 'Помилка: дані аніме відсутні. Поверніться до списку та виберіть аніме знову.', false, { reply_markup: mainKeyboard() }, env);
+        return;
+      }
+      await showVoiceoverSelection(chatId, messageId, env);
+      return;
+    }
+
+    if (data.startsWith('vo:')) {
+      const dub = data.slice(3);
+      state.chosenDub = dub;
+      await showSeasonSelection(chatId, messageId, env);
+      return;
+    }
+
+    if (data.startsWith('season:')) {
+      const season = data.slice(7);
+      state.chosenSeason = season;
+      await showEpisodeSelection(chatId, messageId, env);
+      return;
+    }
+
+    if (data.startsWith('ep:')) {
+      const episodeNum = data.slice(3);
+      const episodes = getEpisodes(state.anime, state.chosenSeason, state.chosenDub);
+      const ep = episodes.find(e => e.episode === episodeNum);
+      if (!ep) {
+        await replaceMessage(chatId, messageId, 'Серію не знайдено.', false, { reply_markup: mainKeyboard() }, env);
+        return;
+      }
+      await sendVideoEpisode(chatId, messageId, ep, env);
+      return;
+    }
+
+    if (data === 'back_to_details') {
+      state.screen = 'home';
+      await renderDetails(chatId, messageId, state.animeUrl, env);
+      return;
+    }
+    if (data === 'back_to_voiceover') {
+      await showVoiceoverSelection(chatId, messageId, env);
+      return;
+    }
+    if (data === 'back_to_season') {
+      await showSeasonSelection(chatId, messageId, env);
+      return;
+    }
+
+    // --- ІСНУЮЧІ ОБРОБНИКИ ---
     if (data === 'home') {
       state.screen = 'home';
       state.previous = null;
@@ -768,15 +1110,7 @@ async function handleCallbackQuery(callback, env) {
   }
 }
 
-function getState(chatId) {
-  let state = userStates.get(chatId);
-  if (!state) {
-    state = { screen: 'home', searchQuery: '', searchPage: 1, popularResults: [], searchResults: [], previous: null };
-    userStates.set(chatId, state);
-  }
-  return state;
-}
-
+// --- Рендеринг популярних, пошуку, випадкових, деталей ---
 async function renderPopular(chatId, page, messageId, env) {
   const state = getState(chatId);
   const all = await fetchPopularAnime();
@@ -847,22 +1181,35 @@ async function renderDetails(chatId, messageId, url, env) {
     const watchUrl = vakdabWatchUrl(extractAnimeId(details.url));
     const state = getState(chatId);
 
+    // Зберігаємо базову інформацію в стані
+    state.anime = details;
+    state.animeUrl = url;
+
     const buttons = [];
     if (state.previous?.kind === 'random') {
       buttons.push({ text: 'Випадкове', callback_data: 'random' });
     }
     buttons.push({ text: 'Головна', callback_data: 'home' });
 
+    // Формуємо клавіатуру з двома кнопками перегляду
     let keyboard;
-    if (watchUrl) {
+    const watchSiteBtn = watchUrl ? { text: 'Дивитись на сайті', url: watchUrl } : null;
+    const watchTelegramBtn = { text: 'Дивитись в телеграмі', callback_data: 'watch_telegram' };
+
+    if (watchSiteBtn) {
       keyboard = {
         inline_keyboard: [
-          [{ text: 'Дивитись на VakDab', url: watchUrl }],
+          [watchSiteBtn, watchTelegramBtn],
           buttons
         ]
       };
     } else {
-      keyboard = { inline_keyboard: [buttons] };
+      keyboard = {
+        inline_keyboard: [
+          [watchTelegramBtn],
+          buttons
+        ]
+      };
     }
 
     await deleteMessage(chatId, messageId, env);
@@ -882,6 +1229,7 @@ async function renderDetails(chatId, messageId, url, env) {
   }
 }
 
+// --- Клавіатури ---
 function mainKeyboard() {
   return { inline_keyboard: [
     [{ text: 'Популярні', callback_data: 'popular:1' }],
@@ -909,6 +1257,7 @@ function listKeyboard(items, page, kind, total) {
   return { inline_keyboard: keyboard };
 }
 
+// --- Функції для роботи з джерелами даних ---
 async function fetchPopularAnime() {
   if (popularCache && Date.now() - popularCacheAt < CACHE_TTL_MS) return popularCache;
   const html = await fetchSource(`${ANIMEUA_BASE}/top.html`);
@@ -1089,6 +1438,7 @@ function parsePage(value, prefix) {
   return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
+// --- Допоміжні функції для оновлення/відправки повідомлень ---
 async function updateOrSend(chatId, messageId, text, isPhoto, extra, env) {
   if (messageId) {
     const result = await replaceMessage(chatId, messageId, text, isPhoto, extra, env);
@@ -1119,6 +1469,7 @@ async function answerCallback(callbackQueryId, text, env) {
   return telegram('answerCallbackQuery', { callback_query_id: callbackQueryId, text }, env);
 }
 
+// --- Основний виклик Telegram API ---
 async function telegram(method, params, env) {
   if (!env.TELEGRAM_BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not configured');
   const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, {
