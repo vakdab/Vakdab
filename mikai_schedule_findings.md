@@ -20,3 +20,10 @@
 Він повертає JSON у формі `{ ok: true, result: { monday: [...], tuesday: [...], wednesday: [...], thursday: [...], friday: [...], saturday: [...], sunday: [...] } }`. Елемент розкладу містить `anime.id`, `anime.slug`, `anime.details.names.name`, `anime.details.names.nameNative`, `anime.details.names.nameEnglish`, `anime.media.posterUid`, `episode` та `airing` у форматі `YYYY-MM-DD HH:mm`.
 
 Для конкретного прикладу `GET https://api.mikai.me/v1/anime/7382` повертає `nextEpisode`, зокрема `episode` і `airing`. Але для сторінки розкладу потрібен загальний endpoint `/v1/schedule`.
+
+
+## Production-перевірка
+
+GitHub Pages для репозиторію працює за адресою `https://vakdab.github.io/Vakdab/`, а не в корені `https://vakdab.github.io/`. На production-сторінці реально завантажуються `src/js/app.js?v=mikai-schedule-v1` та `src/js/app-legacy.js?v=mikai-schedule-v1`.
+
+Прямий запит `fetch('https://api.mikai.me/v1/schedule', { mode: 'cors', credentials: 'omit' })` із production-контексту повертає HTTP 200 і JSON. Отже, проблема не в доступності Mikai API або CORS; потрібно перевірити runtime-логіку сторінки та конкретну помилку під час `loadScheduleWeek()`.
