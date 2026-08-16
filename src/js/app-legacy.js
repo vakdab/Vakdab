@@ -5632,12 +5632,19 @@ let externalSourceCache = {};
             const avatarSrc = profile.avatar || '';
             const avatarVideoSrc = profile.avatarVideo || '';
             return `
+            <div class="appearance-intro">
+              <div class="appearance-intro-icon"><i class="fas fa-palette"></i></div>
+              <div><h3>Налаштуйте свій профіль</h3><p>Змініть банер, аватар, кольори та ефекти. Усі зміни зберігаються автоматично.</p></div>
+            </div>
+            <div class="appearance-section-card">
             <div class="settings-section-title">Опис профілю</div>
             <div class="settings-field">
               <textarea id="settingsBioInput" maxlength="160" rows="3">${escapeHtml(profile.bio || '')}</textarea>
               <span class="settings-field-hint">До 160 символів. Зміни зберігаються автоматично.</span>
             </div>
 
+            <div class="appearance-media-grid">
+            <div class="appearance-media-block">
             <div class="settings-section-title">Банер</div>
             <div class="settings-media-card">
               <div class="settings-media-preview--banner" id="settingsBannerPreview">
@@ -5649,7 +5656,8 @@ let externalSourceCache = {};
               </div>
             </div>
             <div class="settings-hint-text">JPG, PNG, WebP, GIF, MP4, WebM, MOV · відео до 50 МБ</div>
-
+            </div>
+            <div class="appearance-media-block">
             <div class="settings-section-title">Аватар</div>
             <div class="settings-media-card settings-media-card--avatar">
               <div class="settings-media-preview--avatar" id="settingsAvatarPreview">${avatarVideoSrc ? profileMediaMarkup(avatarVideoSrc, '', 'video avatar') : (avatarSrc ? profileMediaMarkup(avatarSrc, '', 'avatar') : '<i class="fas fa-user"></i>')}</div>
@@ -5659,12 +5667,18 @@ let externalSourceCache = {};
               </div>
             </div>
             <div class="settings-hint-text">JPG, PNG, WebP, GIF, MP4, WebM, MOV · відео до 50 МБ</div>
+            </div>
+            </div>
+            </div>
 
+            <div class="appearance-section-card appearance-preview-card">
             <button class="settings-preview-toggle-btn" id="settingsPreviewToggleBtn">
               <i class="fas fa-eye${settingsState.previewOpen ? '-slash' : ''}"></i> ${settingsState.previewOpen ? "Сховати прев'ю" : "Прев'ю"}
             </button>
             <div class="settings-preview-panel" id="settingsPreviewPanel" style="display:${settingsState.previewOpen ? 'block' : 'none'};"></div>
+            </div>
 
+            <div class="appearance-section-card">
             <div class="settings-section-title">Наліпки профілю</div>
             ${buildStickerSummaryHtml()}
 
@@ -5686,6 +5700,7 @@ let externalSourceCache = {};
 
             <div class="settings-section-title">Стиль табів</div>
             ${buildOptionGridHtml('tabStyle', TAB_STYLE_OPTIONS, profile.tabStyle)}
+            </div>
           `;
         }
 
@@ -6212,6 +6227,7 @@ let externalSourceCache = {};
 
             function layoutFrame() {
                 const stageRect = stage.getBoundingClientRect();
+                const zoomRatio = minScale > 0 ? scale / minScale : 1;
                 if (mode === 'avatar') {
                     const size = Math.min(stageRect.width, stageRect.height) * 0.72;
                     frameW = size; frameH = size;
@@ -6226,6 +6242,11 @@ let externalSourceCache = {};
                 frameEl.style.left = frameX + 'px';
                 frameEl.style.top = frameY + 'px';
                 frameEl.classList.toggle('circle', mode === 'avatar');
+
+                if (natW && natH && minScale > 0) {
+                    minScale = Math.max(frameW / natW, frameH / natH);
+                    scale = minScale * Math.max(1, zoomRatio);
+                }
 
                 if (mode === 'banner') {
                     const bands = [
@@ -6385,7 +6406,12 @@ let externalSourceCache = {};
                 }
             });
 
-            window.addEventListener('resize', layoutFrame);
+            window.addEventListener('resize', () => {
+                layoutFrame();
+                if (natW && natH) {
+                    centerImage();
+                }
+            });
         }
 
         function compressImage(file, maxW, maxH, quality, callback) {

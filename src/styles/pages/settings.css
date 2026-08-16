@@ -172,6 +172,50 @@
             color: var(--text);
         }
 
+        /* Оновлена оболонка вкладки «Вигляд» */
+        .appearance-intro {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 1rem 1.1rem;
+            margin: 0.2rem 0 1rem;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            background: linear-gradient(135deg, rgba(var(--accent-rgb),0.14), var(--tag-bg));
+            box-shadow: var(--shadow-sm);
+        }
+        .appearance-intro-icon {
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            border-radius: 14px;
+            background: var(--accent);
+            color: var(--accent-text);
+            flex-shrink: 0;
+            font-size: 1rem;
+        }
+        .appearance-intro h3 { margin: 0; font-size: 0.98rem; color: var(--text); }
+        .appearance-intro p { margin: 0.2rem 0 0; color: var(--text-muted); font-size: 0.78rem; line-height: 1.45; }
+        .appearance-section-card {
+            padding: 1rem;
+            margin: 0 0 1rem;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: var(--surface);
+            box-shadow: var(--shadow-sm);
+        }
+        .appearance-section-card .settings-section-title:first-child { margin-top: 0; }
+        .appearance-media-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(180px, 0.8fr); gap: 1rem; }
+        .appearance-media-block { min-width: 0; }
+        .appearance-media-block .settings-section-title { margin-top: 0.2rem; }
+        .appearance-preview-card { padding: 0.75rem; }
+        .appearance-preview-card .settings-preview-toggle-btn { margin: 0; }
+        @media (max-width: 680px) {
+            .appearance-media-grid { grid-template-columns: 1fr; gap: 0.2rem; }
+            .appearance-section-card { padding: 0.8rem; border-radius: 16px; }
+        }
+
         /* Завантаження банера/аватара — сучасні медіа-картки */
         .settings-media-card {
             position: relative;
@@ -185,7 +229,9 @@
         .settings-media-card:hover { border-color: var(--border-hover); }
         .settings-media-preview--banner {
             width: 100%;
-            height: 120px;
+            aspect-ratio: 16 / 6;
+            min-height: 120px;
+            height: auto;
             background: var(--tag-bg);
             position: relative;
             overflow: hidden;
@@ -244,7 +290,7 @@
             justify-content: center;
             color: var(--text-muted);
         }
-        .settings-media-preview--avatar img { width: 100%; height: 100%; object-fit: contain; background: transparent; }
+        .settings-media-preview--avatar img { width: 100%; height: 100%; object-fit: cover; background: transparent; }
         .settings-media-card--avatar .settings-media-actions {
             position: static;
             flex: 1;

@@ -31,7 +31,7 @@
         .imgedit-save:disabled { opacity: .5; cursor: default; }
 
         .imgedit-stage {
-            flex: 1; position: relative;
+            flex: 1 1 auto; min-height: 0; position: relative;
             display: flex; align-items: center; justify-content: center;
             overflow: hidden;
             touch-action: none;
@@ -39,18 +39,24 @@
         .imgedit-img {
             position: absolute;
             top: 0; left: 0;
+            max-width: none !important;
+            max-height: none !important;
+            width: auto;
+            height: auto;
             transform-origin: 0 0;
             user-select: none; -webkit-user-drag: none;
             will-change: transform;
         }
         .imgedit-frame {
             position: absolute;
+            z-index: 3;
             pointer-events: none;
             box-shadow: 0 0 0 9999px rgba(0,0,0,0.62);
             border: 1px solid rgba(255,255,255,0.85);
         }
         .imgedit-frame.circle { border-radius: 50%; }
 
+        #imgeditGuides { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
         .imgedit-grid-line {
             position: absolute; pointer-events: none;
             background: rgba(255,255,255,0.55);
@@ -65,7 +71,7 @@
         }
 
         .imgedit-bottombar {
-            flex-shrink: 0;
+            flex: 0 0 auto;
             padding: 0.9rem 1.2rem max(1.3rem, env(safe-area-inset-bottom));
             display: flex; flex-direction: column; align-items: center; gap: 0.7rem;
         }
@@ -1148,7 +1154,13 @@
 #profilePageContainer .auth-card .remember input {
     flex: 0 0 auto;
 }
-@media (max-width: 480px) {
+        @media (max-width: 480px) {
+            .imgedit-topbar { padding-left: 0.7rem; padding-right: 0.7rem; }
+            .imgedit-bottombar { padding-left: 0.75rem; padding-right: 0.75rem; }
+            .imgedit-caption { max-width: 340px; }
+        }
+
+        @media (max-height: 650px) {
     #profilePageContainer .auth-card {
         border-radius: 16px;
         margin-top: .75rem;
