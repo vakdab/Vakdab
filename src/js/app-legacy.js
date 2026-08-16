@@ -10212,23 +10212,40 @@ function renderProfilePage() {
             if (_everyoneStickersCache) return _everyoneStickersCache;
             try {
                 const { collection, query, limit, getDocs } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js');
-                const q = query(collection(db, 'users'), limit(60));
+                const q = query(collection(db, 'users'), limit(500));
                 const snap = await getDocs(q);
                 let sets = [];
                 let singles = [];
                 const users = [];
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    if (d.stickers) {
-                        if (Array.isArray(d.stickers.sets)) sets.push(...d.stickers.sets);
-                        if (Array.isArray(d.stickers.singles)) singles.push(...d.stickers.singles);
-                        users.push({
-                            id: doc.id,
-                            nickname: d.profile?.nickname || 'Користувач',
-                            avatar: d.profile?.avatar || '',
-                            stickers: Object.assign(getDefaultStickers(), d.stickers)
-                        });
-                    }
+                snap.forEach(docSnap => {
+                    const d = docSnap.data();
+                    if (!d.stickers) return;
+                    const ownerId = docSnap.id;
+                    const ownerNickname = d.profile?.nickname || 'Користувач';
+                    const ownerAvatar = d.profile?.avatar || '';
+                    const source = Object.assign(getDefaultStickers(), d.stickers);
+                    const sourceSingles = Array.isArray(source.singles) ? source.singles : [];
+                    const sourceColors = source.colors || {};
+                    sourceSingles.forEach(single => singles.push({
+                        ...single,
+                        _public: true,
+                        _ownerId: ownerId,
+                        _ownerNickname: ownerNickname,
+                        _ownerAvatar: ownerAvatar,
+                        _sourceColor: sourceColors[stickerKeyFor(single)] || ''
+                    }));
+                    (Array.isArray(source.sets) ? source.sets : []).forEach(set => sets.push({
+                        ...set,
+                        variants: Array.isArray(set.variants) ? set.variants : [],
+                        images: Array.isArray(set.images) ? set.images : [],
+                        _public: true,
+                        _ownerId: ownerId,
+                        _ownerNickname: ownerNickname,
+                        _ownerAvatar: ownerAvatar,
+                        _sourceSingles: sourceSingles,
+                        _sourceColors: sourceColors
+                    }));
+                    users.push({ id: ownerId, nickname: ownerNickname, avatar: ownerAvatar, stickers: source });
                 });
                 // Фільтруємо дублікати за ID
                 const uniqueSets = [];
@@ -10253,7 +10270,7 @@ function renderProfilePage() {
 
             if (!window.stickersUI) {
                 window.stickersUI = {
-                    activeFilter: 'Всі',
+                    activeFilter: 'Усі',
                     view: 'grid',
                     search: '',
                     step: null,           // null | 'choose' | 'single' | 'pack' | 'actions' | 'setView'
@@ -10283,19 +10300,28 @@ function renderProfilePage() {
                 `;
             }
 
-            const FILTERS = ['Всі', 'Набори', 'Одиночні', 'Улюблені', 'Користувачі'];
+            const FILTERS = ['Усі', 'Набори', 'Одиночні', 'Улюблені', 'Користувачі'];
 
-            function matchesSearch(title) {
-                if (!ui.search.trim()) return true;
-                return title.toLowerCase().includes(ui.search.trim().toLowerCase());
-            }
+                function matchesSearch(title) {
+                    if (!ui.search.trim()) return true;
+                    return title.toLowerCase().includes(ui.search.trim().toLowerCase());
+                }
 
-            function render() {
+                function setStickerItems(st, localData) {
+                    const sourceSingles = [...(localData.singles || []), ...(st._sourceSingles || [])];
+                    const byId = id => sourceSingles.find(s => s.id === id);
+                    return [
+                        ...(st.variants || []).map(v => ({ variant: v, color: st._sourceColors?.['v:' + v] || '' })),
+                        ...(st.images || []).map(id => byId(id)).filter(Boolean)
+                    ];
+                }
+
+                function render() {
                 const d = data();
                 const owned = getOwnedStickerVariants(d);
                 const showUsers = ui.activeFilter === 'Користувачі';
-                const showSets = !showUsers && (ui.activeFilter === 'Всі' || ui.activeFilter === 'Набори' || (ui.activeFilter === 'Улюблені'));
-                const showSingles = !showUsers && (ui.activeFilter === 'Всі' || ui.activeFilter === 'Одиночні' || (ui.activeFilter === 'Улюблені'));
+                const showSets = !showUsers && (ui.activeFilter === 'Усі' || ui.activeFilter === 'Набори' || (ui.activeFilter === 'Улюблені'));
+                const showSingles = !showUsers && (ui.activeFilter === 'Усі' || ui.activeFilter === 'Одиночні' || (ui.activeFilter === 'Улюблені'));
 
                 let visibleSets = (ui.activeFilter === 'Одиночні') ? [] : d.sets.filter(st => matchesSearch(st.title));
                 if (ui.activeFilter === 'Улюблені') visibleSets = visibleSets.filter(st => st.favorite);
@@ -10303,7 +10329,7 @@ function renderProfilePage() {
                 let visibleSingles = (ui.activeFilter === 'Набори') ? [] : d.singles.filter(s => matchesSearch('наліпка ' + (s.variant + 1)));
                 if (ui.activeFilter === 'Улюблені') visibleSingles = visibleSingles.filter(s => s.favorite);
 
-                if (ui.activeFilter === 'Всі') {
+                if (ui.activeFilter === 'Усі') {
                     const everyone = _everyoneStickersCache || { sets: [], singles: [] };
                     const mySetIds = new Set(d.sets.map(s => s.id));
                     everyone.sets.forEach(s => {
@@ -10392,14 +10418,14 @@ function renderProfilePage() {
                                             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.7rem;">
                                                 <div>
                                                     <div style="font-size:0.92rem;font-weight:800;">${escapeHtml(st.title)}</div>
-                                                    <div style="font-size:0.75rem;color:var(--text-muted);">${st.variants.length} наліпок</div>
+                                                    <div style="font-size:0.75rem;color:var(--text-muted);">${setStickerItems(st, d).length} наліпок${st._public ? ` · ${escapeHtml(st._ownerNickname || 'Користувач')}` : ''}</div>
                                                 </div>
-                                                <button class="sticker-set-actions" data-set-id="${st.id}" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--tag-bg);color:var(--text);cursor:pointer;">
-                                                    <i class="fas ${st.favorite ? 'fa-star' : 'fa-ellipsis-vertical'}"></i>
+                                                <button class="sticker-set-actions${st._public ? ' sticker-public-set-add' : ''}" data-set-id="${st.id}" ${st._public ? `data-public-owner="${escapeHtml(st._ownerId || '')}"` : ''} style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--tag-bg);color:var(--text);cursor:pointer;">
+                                                    <i class="fas ${st._public ? 'fa-plus' : (st.favorite ? 'fa-star' : 'fa-ellipsis-vertical')}"></i>
                                                 </button>
                                             </div>
                                             <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:0.4rem;">
-                                                ${[...(st.variants || []).map(v => ({variant: v})), ...(st.images || []).map(id => d.singles.find(s => s.id === id))].filter(Boolean).slice(0, 6).map(s => `<div style="aspect-ratio:1;border-radius:10px;background:${s.image ? 'transparent' : 'var(--tag-bg)'};border:${s.image ? 'none' : '1px solid var(--border)'};padding:${s.image ? '0' : '0.35rem'};overflow:hidden;">${renderStickerVisual(s)}</div>`).join('')}
+                                                ${setStickerItems(st, d).slice(0, 6).map(s => `<div style="aspect-ratio:1;border-radius:10px;background:${s.image ? 'transparent' : 'var(--tag-bg)'};border:${s.image ? 'none' : '1px solid var(--border)'};padding:${s.image ? '0' : '0.35rem'};overflow:hidden;">${renderStickerVisual(s, s.color)}</div>`).join('')}
                                             </div>
                                         </div>
                                     `).join('')}
@@ -10412,8 +10438,8 @@ function renderProfilePage() {
                                     <span style="font-size:0.72rem;color:var(--text-muted);background:var(--tag-bg);border-radius:999px;padding:0.15rem 0.6rem;">${visibleSingles.length}</span>
                                 </div>
                                 <div style="display:grid;grid-template-columns:${ui.view === 'grid' ? 'repeat(4,1fr)' : '1fr'};gap:0.6rem;margin-bottom:1.5rem;">
-                                    ${visibleSingles.map(s => { const sKey = stickerKeyFor(s); const sLabel = s.image ? 'Власна наліпка' : ('Наліпка #' + (s.variant + 1)); return ui.view === 'grid' ? `
-                                        <button class="sticker-single-tile" data-single-id="${s.id}" style="aspect-ratio:1;border-radius:14px;border:${s.image ? 'none' : '1px solid var(--border)'};background:${s.image ? 'transparent' : 'var(--tag-bg)'};padding:${s.image ? '0' : '0.6rem'};position:relative;cursor:pointer;transition:all var(--transition);overflow:hidden;">
+                                                                            ${visibleSingles.map(s => { const sKey = stickerKeyFor(s); const sLabel = s.image ? 'Власна наліпка' : ('Наліпка #' + (s.variant + 1)); return ui.view === 'grid' ? `
+                                        <button class="sticker-single-tile${s._public ? ' sticker-public-single-add' : ''}" data-single-id="${s.id}" ${s._public ? `data-public-owner="${escapeHtml(s._ownerId || '')}"` : ''} style="aspect-ratio:1;border-radius:14px;border:${s.image ? 'none' : '1px solid var(--border)'};background:${s.image ? 'transparent' : 'var(--tag-bg)'};padding:${s.image ? '0' : '0.6rem'};position:relative;cursor:pointer;transition:all var(--transition);overflow:hidden;">
                                             ${renderStickerVisual(s)}
                                             ${s.favorite ? `<i class="fas fa-star" style="position:absolute;top:6px;right:6px;font-size:0.65rem;color:#fff;text-shadow:0 0 3px rgba(0,0,0,0.6);"></i>` : ''}
                                             ${d.nickBadge === sKey ? `<i class="fas fa-id-badge" style="position:absolute;bottom:6px;left:6px;font-size:0.65rem;color:#fff;text-shadow:0 0 3px rgba(0,0,0,0.6);"></i>` : ''}
@@ -10597,6 +10623,59 @@ function renderProfilePage() {
                 render();
             }
 
+            function makeLocalStickerId(prefix = 'sng_') {
+                return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+            }
+
+            function importPublicSingle(remoteId) {
+                const remote = _everyoneStickersCache?.singles?.find(s => s.id === remoteId);
+                if (!remote) return;
+                const cur = data();
+                if (remote.variant !== undefined && cur.singles.some(s => s.variant === remote.variant)) {
+                    showToast('Ця наліпка вже є у вашій колекції');
+                    return;
+                }
+                const copy = { ...remote, id: makeLocalStickerId(), _public: undefined, _ownerId: undefined, _ownerNickname: undefined, _ownerAvatar: undefined, _sourceColor: undefined, favorite: false, addedAt: Date.now() };
+                delete copy._public; delete copy._ownerId; delete copy._ownerNickname; delete copy._ownerAvatar; delete copy._sourceColor;
+                cur.singles.unshift(copy);
+                saveData(cur);
+                showToast('Наліпку додано до вашої колекції');
+                render();
+            }
+
+            function importPublicSet(remoteId) {
+                const remote = _everyoneStickersCache?.sets?.find(s => s.id === remoteId);
+                if (!remote) return;
+                const cur = data();
+                const already = cur.sets.some(s => s.sourceSetId === remote.id && s.sourceOwnerId === remote._ownerId);
+                if (already) {
+                    showToast('Цей набір вже є у вашій колекції');
+                    return;
+                }
+                const sourceSingles = remote._sourceSingles || [];
+                const imageIdMap = {};
+                sourceSingles.filter(s => (remote.images || []).includes(s.id)).forEach(source => {
+                    if (!source.image) return;
+                    const copy = { ...source, id: makeLocalStickerId(), favorite: false, addedAt: Date.now() };
+                    delete copy._public; delete copy._ownerId; delete copy._ownerNickname; delete copy._ownerAvatar; delete copy._sourceColor;
+                    cur.singles.unshift(copy);
+                    imageIdMap[source.id] = copy.id;
+                });
+                cur.sets.unshift({
+                    id: makeLocalStickerId('set_'),
+                    title: remote.title || 'Набір наліпок',
+                    variants: [...(remote.variants || [])],
+                    images: (remote.images || []).map(id => imageIdMap[id]).filter(Boolean),
+                    favorite: false,
+                    addedAt: Date.now(),
+                    sourceSetId: remote.id,
+                    sourceOwnerId: remote._ownerId || ''
+                });
+                saveData(cur);
+                showToast('Набір додано до вашої колекції');
+                render();
+            }
+
             function bindEvents(d, owned) {
                 document.getElementById('stickersBackBtn')?.addEventListener('click', () => {
                     if (history.length > 1) history.back(); else Router.goTo('profile');
@@ -10688,14 +10767,23 @@ function renderProfilePage() {
                     closeOverlay();
                 });
 
-                document.querySelectorAll('.sticker-single-tile').forEach(el => {
+                document.querySelectorAll('.sticker-public-single-add').forEach(el => {
+                    el.addEventListener('click', () => importPublicSingle(el.dataset.singleId));
+                });
+                document.querySelectorAll('.sticker-public-set-add').forEach(el => {
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        importPublicSet(el.dataset.setId);
+                    });
+                });
+                document.querySelectorAll('.sticker-single-tile:not(.sticker-public-single-add)').forEach(el => {
                     el.addEventListener('click', () => {
                         ui.step = 'actions';
                         ui.actionsTarget = { type: 'single', id: el.dataset.singleId };
                         render();
                     });
                 });
-                document.querySelectorAll('.sticker-set-actions').forEach(el => {
+                document.querySelectorAll('.sticker-set-actions:not(.sticker-public-set-add)').forEach(el => {
                     el.addEventListener('click', (e) => {
                         e.stopPropagation();
                         ui.step = 'actions';

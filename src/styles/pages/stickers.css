@@ -58,3 +58,28 @@
 .sticker-user-card__grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:.35rem; }
 .sticker-user-card__item { aspect-ratio:1; min-width:0; padding:.18rem; border-radius:.55rem; background:transparent; }
 .sticker-user-card__item > * { width:100%; height:100%; }
+
+/* Публічний каталог: елементи інших користувачів можна імпортувати одним натисканням. */
+.sticker-public-single-add,
+.sticker-public-set-add { position: relative; }
+.sticker-public-single-add::after,
+.sticker-public-set-add::after {
+    content: '\f067';
+    position: absolute;
+    right: 5px;
+    bottom: 5px;
+    width: 18px;
+    height: 18px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-text);
+    font: 900 9px/1 'Font Awesome 6 Free';
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+.sticker-public-set-add::after { right: -2px; bottom: -2px; }
+.sticker-public-single-add:hover,
+.sticker-public-set-add:hover { border-color: var(--accent) !important; transform: translateY(-2px); }
+.sticker-public-single-add:active,
+.sticker-public-set-add:active { transform: scale(.96); }
