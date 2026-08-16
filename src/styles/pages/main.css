@@ -773,5 +773,36 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     min-height: 2.8rem;
     padding: .7rem 1.35rem;
     border-radius: 999px;
-    font-weight: 700;
+    font-weight: 800 !important;
+    color: #0b0b0b !important;
+    background: #ffffff !important;
+    border-color: #0b0b0b !important;
+    -webkit-text-fill-color: #0b0b0b !important;
+}
+.home-catalog-heading h2,
+.home-catalog-count {
+    font-weight: 800 !important;
+}
+.back-to-top {
+    bottom: calc(96px + env(safe-area-inset-bottom)) !important;
+    right: 1rem;
+    z-index: 1100 !important;
+}
+@media (min-width: 480px) and (max-width: 899px) {
+    .back-to-top {
+        bottom: calc(96px + env(safe-area-inset-bottom)) !important;
+        right: 1.5rem;
+    }
+}
+@media (min-width: 900px) {
+    .back-to-top {
+        bottom: 2rem !important;
+        right: 2rem;
+    }
+}
+.dark-mode .home-catalog-more {
+    color: #ffffff !important;
+    background: #0b0b0b !important;
+    border-color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }
