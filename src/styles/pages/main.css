@@ -650,30 +650,94 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
 }
 
 
-/* Active catalog controls must keep readable text in every theme/browser state. */
+/* Theme-aware active controls: light mode = white/black, dark mode = black/white. */
 .home-catalog-tab.active,
 .home-catalog-tab.active:hover,
-.home-catalog-tab.active:focus-visible {
-    background: #3a1738 !important;
-    border-color: #cf6bb9 !important;
-    color: #f08bd3 !important;
-    -webkit-text-fill-color: #f08bd3 !important;
-}
-.home-catalog-tab.active span,
-.home-catalog-tab.active i { color: #f08bd3 !important; }
+.home-catalog-tab.active:focus-visible,
 .home-catalog-preset.active,
 .home-catalog-preset.active:hover,
 .home-catalog-preset.active:focus-visible {
-    background: #3a1738 !important;
-    border-color: #cf6bb9 !important;
-    color: #f08bd3 !important;
-    -webkit-text-fill-color: #f08bd3 !important;
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: var(--accent-text) !important;
+    -webkit-text-fill-color: var(--accent-text) !important;
 }
+.home-catalog-tab.active span,
+.home-catalog-tab.active i,
+.home-catalog-preset.active span,
+.home-catalog-preset.active i { color: var(--accent-text) !important; }
 .home-catalog-view.active,
 .home-catalog-view.active:hover,
 .home-catalog-view.active:focus-visible {
-    background: #3a1738 !important;
-    color: #f08bd3 !important;
-    -webkit-text-fill-color: #f08bd3 !important;
+    background: var(--accent) !important;
+    color: var(--accent-text) !important;
+    -webkit-text-fill-color: var(--accent-text) !important;
 }
-.home-catalog-view.active i { color: #f08bd3 !important; }
+.home-catalog-view.active i { color: var(--accent-text) !important; }
+
+.home-catalog-filter-btn,
+.home-catalog-schedule-btn {
+    color: var(--text) !important;
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    -webkit-text-fill-color: var(--text) !important;
+}
+.home-catalog-filter-btn:hover,
+.home-catalog-filter-btn:focus-visible,
+.home-catalog-schedule-btn:hover,
+.home-catalog-schedule-btn:focus-visible {
+    color: var(--accent) !important;
+    border-color: var(--accent) !important;
+    -webkit-text-fill-color: var(--accent) !important;
+}
+.home-catalog-filter-btn i,
+.home-catalog-schedule-btn i { color: currentColor !important; }
+
+
+.home-catalog-controls { grid-template-columns: minmax(0, 1fr) auto auto auto; }
+.home-catalog-schedule-btn { min-height: 2.55rem; }
+@media (max-width: 479px) {
+    .home-catalog-controls { grid-template-columns: minmax(0, 1fr) auto auto; }
+    .home-catalog-schedule-btn { grid-column: 1 / -1; min-height: 2.7rem; }
+}
+
+
+/* Explicit monochrome theme mapping requested for catalog controls. */
+.home-catalog-tab.active,
+.home-catalog-tab.active:hover,
+.home-catalog-tab.active:focus-visible,
+.home-catalog-preset.active,
+.home-catalog-preset.active:hover,
+.home-catalog-preset.active:focus-visible,
+.home-catalog-view.active,
+.home-catalog-view.active:hover,
+.home-catalog-view.active:focus-visible {
+    background: #ffffff !important;
+    border-color: #0b0b0b !important;
+    color: #0b0b0b !important;
+    -webkit-text-fill-color: #0b0b0b !important;
+}
+.home-catalog-tab.active span,
+.home-catalog-tab.active i,
+.home-catalog-preset.active span,
+.home-catalog-preset.active i,
+.home-catalog-view.active i { color: #0b0b0b !important; }
+.dark-mode .home-catalog-tab.active,
+.dark-mode .home-catalog-tab.active:hover,
+.dark-mode .home-catalog-tab.active:focus-visible,
+.dark-mode .home-catalog-preset.active,
+.dark-mode .home-catalog-preset.active:hover,
+.dark-mode .home-catalog-preset.active:focus-visible,
+.dark-mode .home-catalog-view.active,
+.dark-mode .home-catalog-view.active:hover,
+.dark-mode .home-catalog-view.active:focus-visible {
+    background: #0b0b0b !important;
+    border-color: #ffffff !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+.dark-mode .home-catalog-tab.active span,
+.dark-mode .home-catalog-tab.active i,
+.dark-mode .home-catalog-preset.active span,
+.dark-mode .home-catalog-preset.active i,
+.dark-mode .home-catalog-view.active i { color: #ffffff !important; }
