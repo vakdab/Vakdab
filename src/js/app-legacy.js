@@ -4740,6 +4740,7 @@ let externalSourceCache = {};
         // ====================================================================
         const genreList = Object.entries(GENRE_MAP).map(([name, slug]) => ({ name, slug }));
         let homeSectionsRequestId = 0;
+        let homeCatalogRequestId = 0;
 
         // Homepage artwork comes from Hikka. Preload only lightweight
         // metadata for the first visible cards; posters are never replaced.
@@ -4946,20 +4947,24 @@ let externalSourceCache = {};
         async function reloadHomeCatalog() {
             const grid = document.getElementById('homeCatalogGrid');
             if (!grid || homeCatalogLoading) return;
+            const requestId = ++homeCatalogRequestId;
             updateHomeCatalogModeLabels();
             homeCatalogLoading = true;
             homeCatalogPage = 1;
             grid.innerHTML = '<div class="loader home-catalog-loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження...</div>';
             try {
-                homeCatalogItems = await fetchHomeCatalogPage(1);
+                const nextItems = await fetchHomeCatalogPage(1);
+                if (requestId !== homeCatalogRequestId) return;
+                homeCatalogItems = nextItems;
                 renderHomeCatalogGrid();
                 const button = document.getElementById('homeCatalogMoreBtn');
                 if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-plus"></i> Продовжити'; }
             } catch (error) {
+                if (requestId !== homeCatalogRequestId) return;
                 grid.innerHTML = `<div class="home-catalog-empty">Не вдалося завантажити каталог. Спробуйте ще раз.</div>`;
                 showToast('Помилка завантаження каталогу');
             } finally {
-                homeCatalogLoading = false;
+                if (requestId === homeCatalogRequestId) homeCatalogLoading = false;
             }
         }
 
