@@ -6985,13 +6985,12 @@ function renderProfilePage() {
         }
 
         function renderAchievementsPanel(achievements, totalWatchTime) {
-            const hours = Math.floor(totalWatchTime / 3600);
-            const minutes = Math.floor((totalWatchTime % 3600) / 60);
+            const totalMinutes = Math.max(0, Math.floor(Number(totalWatchTime || 0) / 60));
             let html = `
             <div class="profile-watch-card">
               <div class="profile-wt-label">Загальний час перегляду аніме</div>
-              <div class="profile-wt-value">${hours}<span class="profile-wt-unit">год</span> ${minutes}<span class="profile-wt-unit">хв</span></div>
-              <div class="profile-wt-sub">≈ ${Math.round(totalWatchTime/3600*10)/10} годин · ${Storage.getHistory().length} серій</div>
+              <div class="profile-wt-value">${totalMinutes}<span class="profile-wt-unit">хв</span></div>
+              <div class="profile-wt-sub">${Storage.getHistory().length} серій переглянуто</div>
             </div>
             <div class="profile-panel-header">
               <span class="profile-panel-title">Досягнення</span>

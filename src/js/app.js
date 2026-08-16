@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=animeon-fallback-v1';
+import './app-legacy.js?v=20260816-profile-minutes';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';
