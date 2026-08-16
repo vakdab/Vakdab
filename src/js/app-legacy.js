@@ -7636,6 +7636,7 @@ function renderProfilePage() {
         //  ПЛЕЄР
         // ====================================================================
         let playerPageAnime = null;
+        let playerPageTmdbInfo = null;
         let playerPagePlayer = null;
         let _playerLoadController = null; // AbortController для поточного завантаження плеєра
         let playerPageCurrentSeason = '1';
@@ -7710,6 +7711,7 @@ function renderProfilePage() {
             if (playerPagePlayer) { playerPagePlayer.destroy();
                 playerPagePlayer = null; }
             playerPageAnime = null;
+            playerPageTmdbInfo = null;
             playerPageActiveEpisodeFile = null;
             playerPageCurrentEpisodeNum = '1';
             playerPagePlaybackRequest += 1;
@@ -7837,6 +7839,10 @@ function renderProfilePage() {
                         const tmdbInfo = await fetchTmdbForAnime(anime);
                         if (_thisSignal.aborted || playerPageCurrentAnimeUrl !== url) return;
                         if (!tmdbInfo) { await loadAndRenderJikanExtras(anime, null, null); return; }
+                        playerPageTmdbInfo = tmdbInfo;
+                        const currentSeasonNum = String(playerPageCurrentSeason || '1');
+                        const currentSeasonPoster = await fetchTmdbSeasonPoster(tmdbInfo, currentSeasonNum);
+                        if (_thisSignal.aborted || playerPageCurrentAnimeUrl !== url) return;
                         const details = await fetchTmdbFullDetails(tmdbInfo);
                         if (_thisSignal.aborted || playerPageCurrentAnimeUrl !== url) return;
                         if (!details) { await loadAndRenderJikanExtras(anime, tmdbInfo, null); return; }
@@ -7844,7 +7850,7 @@ function renderProfilePage() {
                         // Artwork always remains from Hikka. TMDB is metadata-only.
                         const isMovie = tmdbInfo.mediaType === 'movie' || playerAnimeIsMovie(anime);
                         const hikkaPoster = posterUrl || ANIME_CARD_PLACEHOLDER;
-                        const tmdbPoster = normalizePosterUrl(tmdbImgUrl(details.poster_path, 'w780'), hikkaPoster);
+                        const tmdbPoster = normalizePosterUrl(tmdbImgUrl(currentSeasonPoster || details.poster_path, 'w780'), hikkaPoster);
                         const title = details.name || anime.title;
                         const originalTitle = details.original_name || anime.originalTitle || anime.title;
                         const year = (details.release_date || details.first_air_date || '').slice(0, 4) || anime.year || '—';
@@ -8121,6 +8127,7 @@ function renderProfilePage() {
                     row.querySelectorAll('.season-num').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     buildEpisodeViews();
+                    refreshPlayerSeasonPoster(season);
                     updateFilterChip();
                     updatePlayFabLabel();
                     buildBottomSheetData();
@@ -8323,7 +8330,7 @@ function renderProfilePage() {
                 .sort((a, b) => b._tmdbScore - a._tmdbScore);
             const best = ranked[0];
             if (best && best._tmdbScore >= 45) {
-                const info = { id: best.id, mediaType: best.media_type, poster: best.poster_path, backdrop: best.backdrop_path, seasonsCache: {} };
+                const info = { id: best.id, mediaType: best.media_type, poster: best.poster_path, backdrop: best.backdrop_path, seasonsCache: {}, seasonPosters: {} };
                 tmdbAnimeCache[cacheKey] = info;
                 return info;
             }
@@ -8341,6 +8348,37 @@ function renderProfilePage() {
                 tmdbInfo.seasonsCache[seasonNum] = data.episodes || [];
                 return tmdbInfo.seasonsCache[seasonNum];
             } catch (e) { tmdbInfo.seasonsCache[seasonNum] = null; return null; }
+        }
+        async function fetchTmdbSeasonPoster(tmdbInfo, seasonNum) {
+            if (!tmdbInfo || tmdbInfo.mediaType !== 'tv' || !tmdbInfo.id) return null;
+            tmdbInfo.seasonPosters ||= {};
+            if (tmdbInfo.seasonPosters[seasonNum] !== undefined) return tmdbInfo.seasonPosters[seasonNum];
+            try {
+                const res = await fetch(`${TMDB_BASE}/tv/${tmdbInfo.id}/season/${seasonNum}?api_key=${TMDB_API_KEY}&language=uk-UA`);
+                if (!res.ok) { tmdbInfo.seasonPosters[seasonNum] = null; return null; }
+                const data = await res.json();
+                const poster = data.poster_path || null;
+                tmdbInfo.seasonPosters[seasonNum] = poster;
+                return poster;
+            } catch (e) {
+                tmdbInfo.seasonPosters[seasonNum] = null;
+                return null;
+            }
+        }
+        async function refreshPlayerSeasonPoster(seasonNum) {
+            const tmdbInfo = playerPageTmdbInfo;
+            if (!tmdbInfo || tmdbInfo.mediaType !== 'tv') return;
+            const requestedSeason = String(seasonNum || '1');
+            const seasonPoster = await fetchTmdbSeasonPoster(tmdbInfo, requestedSeason);
+            if (String(playerPageCurrentSeason || '1') !== requestedSeason || !playerPageIsOpen) return;
+            const fallback = tmdbInfo.poster ? tmdbImgUrl(tmdbInfo.poster, 'w780') : ANIME_CARD_PLACEHOLDER;
+            const poster = normalizePosterUrl(tmdbImgUrl(seasonPoster, 'w780'), fallback);
+            const posterEl = document.getElementById('playerPosterImg');
+            const heroPoster = document.getElementById('playerHeroPoster');
+            const blur = document.getElementById('playerBlurBg');
+            if (posterEl) posterEl.src = poster;
+            if (heroPoster) heroPoster.src = poster;
+            if (blur) blur.style.backgroundImage = `url(${poster})`;
         }
 
         // ====================================================================
@@ -9340,6 +9378,7 @@ function renderProfilePage() {
             const dubs = Object.keys(playerPageAnime?.seasons?.[season] || {}).sort();
             playerPageCurrentDub = dubs[0] || '';
             buildEpisodeViews();
+            refreshPlayerSeasonPoster(season);
             updateFilterChip();
             buildBottomSheetData();
             showToast(`Сезон ${season}`);
