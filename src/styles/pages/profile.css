@@ -1451,3 +1451,9 @@
         margin-right: auto;
     }
 }
+
+.profile-history-item:focus-visible,
+.profile-bookmark-card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}

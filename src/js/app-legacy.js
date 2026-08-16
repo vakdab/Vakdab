@@ -87,11 +87,12 @@ let externalSourceCache = {};
                         }
                     } else {
                         this._welcomeShown = false;
-                        // ТІЛЬКИ якщо ми на сторінці профілю показуємо форму входу
+                        // Не затираємо відновлений гостьовий режим формою входу після null-user callback.
                         if (Router.currentRoute === 'profile') {
                             const profContainer = document.getElementById('profilePageContainer');
                             if (profContainer && profContainer.classList.contains('active')) {
-                                renderAuthPage();
+                                if (this.isGuest()) renderProfilePage();
+                                else renderAuthPage();
                             }
                         }
                     }
@@ -544,9 +545,9 @@ let externalSourceCache = {};
             getProfile() {
                 try {
                     const raw = localStorage.getItem('vakdab_profile');
-                    if (raw) return JSON.parse(raw);
-                } catch {}
-                return null;
+                    const parsed = raw ? JSON.parse(raw) : null;
+                    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+                } catch { return null; }
             },
             _setProfile(data) { localStorage.setItem('vakdab_profile', JSON.stringify(data)); },
             setProfile(data) {
@@ -557,7 +558,8 @@ let externalSourceCache = {};
             getHistory() {
                 try {
                     const raw = localStorage.getItem('vakdab_history');
-                    return raw ? JSON.parse(raw) : [];
+                    const parsed = raw ? JSON.parse(raw) : [];
+                    return Array.isArray(parsed) ? parsed.filter(item => item && typeof item === 'object' && !Array.isArray(item)) : [];
                 } catch { return []; }
             },
             _setHistory(h) { localStorage.setItem('vakdab_history', JSON.stringify(h)); },
@@ -569,7 +571,8 @@ let externalSourceCache = {};
             getBookmarks() {
                 try {
                     const raw = localStorage.getItem('vakdab_bookmarks');
-                    return raw ? JSON.parse(raw) : [];
+                    const parsed = raw ? JSON.parse(raw) : [];
+                    return Array.isArray(parsed) ? parsed.filter(item => item && typeof item === 'object' && !Array.isArray(item)) : [];
                 } catch { return []; }
             },
             _setBookmarks(b) { localStorage.setItem('vakdab_bookmarks', JSON.stringify(b)); },
@@ -581,7 +584,8 @@ let externalSourceCache = {};
             getLikes() {
                 try {
                     const raw = localStorage.getItem('vakdab_likes');
-                    return raw ? JSON.parse(raw) : {};
+                    const parsed = raw ? JSON.parse(raw) : {};
+                    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
                 } catch { return {}; }
             },
             _setLikes(l) { localStorage.setItem('vakdab_likes', JSON.stringify(l)); },
@@ -593,7 +597,8 @@ let externalSourceCache = {};
             getWatchTime() {
                 try {
                     const raw = localStorage.getItem('vakdab_watchTime');
-                    return raw ? parseInt(raw, 10) : 0;
+                    const parsed = raw === null ? 0 : Number(raw);
+                    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
                 } catch { return 0; }
             },
             _setWatchTime(t) { localStorage.setItem('vakdab_watchTime', String(t)); },
@@ -608,16 +613,20 @@ let externalSourceCache = {};
             getStickers() {
                 try {
                     const raw = localStorage.getItem('vakdab_stickers');
-                    if (raw) {
-                        const parsed = Object.assign(getDefaultStickers(), JSON.parse(raw));
-                        if (!parsed.colors || typeof parsed.colors !== 'object') parsed.colors = {};
-                        // Міграція старого формату (nickBadge/medals зберігали номер варіанта напряму)
-                        if (typeof parsed.nickBadge === 'number') parsed.nickBadge = 'v:' + parsed.nickBadge;
-                        if (Array.isArray(parsed.medals)) parsed.medals = parsed.medals.map(m => typeof m === 'number' ? ('v:' + m) : m);
-                        return parsed;
-                    }
-                } catch {}
-                return getDefaultStickers();
+                    const source = raw ? JSON.parse(raw) : null;
+                    const parsed = source && typeof source === 'object' && !Array.isArray(source)
+                        ? Object.assign(getDefaultStickers(), source)
+                        : getDefaultStickers();
+                    parsed.singles = Array.isArray(parsed.singles) ? parsed.singles.filter(Boolean) : [];
+                    parsed.sets = Array.isArray(parsed.sets) ? parsed.sets.filter(Boolean) : [];
+                    parsed.medals = Array.isArray(parsed.medals) ? parsed.medals.filter(m => typeof m === 'string' || typeof m === 'number').slice(0, 28) : [];
+                    parsed.colors = parsed.colors && typeof parsed.colors === 'object' && !Array.isArray(parsed.colors) ? parsed.colors : {};
+                    // Міграція старого формату (nickBadge/medals зберігали номер варіанта напряму)
+                    if (typeof parsed.nickBadge === 'number') parsed.nickBadge = 'v:' + parsed.nickBadge;
+                    if (parsed.nickBadge !== null && typeof parsed.nickBadge !== 'string') parsed.nickBadge = null;
+                    parsed.medals = parsed.medals.map(m => typeof m === 'number' ? ('v:' + m) : String(m));
+                    return parsed;
+                } catch { return getDefaultStickers(); }
             },
             _setStickers(s) { localStorage.setItem('vakdab_stickers', JSON.stringify(s)); },
             getStickersTS() { try { return Number(localStorage.getItem('vakdab_stickers_ts')) || 0; } catch { return 0; } },
@@ -6098,8 +6107,13 @@ let externalSourceCache = {};
             const p = Storage.getProfile();
             const def = getDefaultProfile();
             if (!p) { Storage.setProfile(def); return def; }
-            // Мердж дефолтів для полів, яких не було у старіших збережених профілях
-            return { ...def, ...p };
+            // Мердж дефолтів і нормалізація старих/пошкоджених profile fields.
+            const merged = { ...def, ...p };
+            ['nickname', 'avatar', 'avatarVideo', 'banner', 'bannerVideo', 'bio', 'realName', 'birthdate', 'effect', 'atmosphere', 'avatarDecoration', 'themeVariant', 'tabStyle', 'bannerEffect'].forEach(key => {
+                if (typeof merged[key] !== 'string') merged[key] = def[key];
+            });
+            merged.nickname = merged.nickname.trim() || def.nickname;
+            return merged;
         }
 
         function saveProfile(data) {
@@ -6567,6 +6581,9 @@ function renderProfilePage() {
             const tabsStyleClass = (profile.tabStyle && profile.tabStyle !== 'underline' && profile.tabStyle !== 'none') ? ` profile-tabs--${profile.tabStyle}` : '';
             const bannerClass = (isGifBanner ? 'profile-banner is-gif' : 'profile-banner') + bannerEffectClass;
             const avatarClass = isGifAvatar ? 'profile-avatar is-gif' : 'profile-avatar';
+            const profileNickname = escapeHtml(profile.nickname);
+            const profileHandle = escapeHtml('@' + profile.nickname.toLowerCase().replace(/\s/g, '_'));
+            const profileBioText = escapeHtml(profile.bio);
             const stickerData = Storage.getStickers();
             const PROFILE_STICKER_SLOTS = 28;
             const profileStickerKeys = (stickerData.medals || []).slice(0, PROFILE_STICKER_SLOTS);
@@ -6587,18 +6604,18 @@ function renderProfilePage() {
                 <div class="profile-avatar-wrap${decorationClass}">
                   <div class="${avatarClass}">
                     ${profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, 'profile-avatar-media', 'video avatar') : (profile.avatar ? `<img class="profile-avatar-media" src="${escapeHtml(profile.avatar)}" alt="avatar" onerror="this.style.display='none'; this.parentElement.querySelector('.avatar-placeholder').style.display='flex'">` : '')}
-                    <span class="avatar-placeholder" style="display:none;">${profile.nickname.charAt(0).toUpperCase()}</span>
+                    <span class="avatar-placeholder" style="display:none;">${escapeHtml(profile.nickname.charAt(0).toUpperCase())}</span>
                   </div>
                 </div>
                 <div class="profile-nick-row">
-                  <span class="profile-nick" id="profileNickText">${profile.nickname}</span>
+                  <span class="profile-nick" id="profileNickText">${profileNickname}</span>
                   ${stickerData.nickBadge !== null ? `<span class="profile-nick-badge" title="Наліпка профілю">${renderStickerFaceByKey(stickerData, stickerData.nickBadge)}</span>` : ''}
                 </div>
                 <div class="profile-meta">
-                  <span>@${profile.nickname.toLowerCase().replace(/\s/g,'_')}</span>
+                  <span>${profileHandle}</span>
                 </div>
                 <div class="profile-bio-row">
-                  <div class="profile-bio" id="profileBioText">${profile.bio}</div>
+                  <div class="profile-bio" id="profileBioText">${profileBioText}</div>
                 </div>
                 <div class="profile-stats">
                   <div class="profile-stat-pill">
@@ -6649,6 +6666,29 @@ function renderProfilePage() {
               </div>
             </div>
           `;
+            document.querySelectorAll('#profilePageContainer .profile-avatar-media').forEach(media => {
+                media.addEventListener('error', () => {
+                    media.style.display = 'none';
+                    const placeholder = media.parentElement?.querySelector('.avatar-placeholder');
+                    if (placeholder) placeholder.style.display = 'flex';
+                });
+            });
+            document.querySelectorAll('#profilePageContainer .profile-banner-media').forEach(media => {
+                media.addEventListener('error', () => { media.style.display = 'none'; });
+            });
+            document.querySelectorAll('[data-profile-url]').forEach(card => {
+                const openCard = () => {
+                    const url = card.dataset.profileUrl;
+                    if (url) openPlayerPage(url);
+                };
+                card.addEventListener('click', openCard);
+                card.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openCard();
+                    }
+                });
+            });
             document.querySelectorAll('.profile-tab').forEach(tab => {
                 tab.addEventListener('click', function() {
                     const target = this.dataset.tab;
@@ -6983,19 +7023,19 @@ function renderProfilePage() {
                 let epLabel = `Серія ${ep}`;
                 if (season) epLabel = `Сезон ${season}, ${epLabel}`;
                 html += `
-              <div class="profile-history-item" onclick="openPlayerPage('${item.url || ''}')">
+              <div class="profile-history-item" data-profile-url="${escapeHtml(item.url || '')}" role="button" tabindex="0">
                 <div class="profile-thumb">
-                  ${poster ? `<img src="${poster}" alt="${title}" onerror="this.style.display='none'">` : ''}
+                  ${poster ? `<img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" onerror="this.style.display='none'">` : ''}
                   <span class="profile-thumb-placeholder" style="${poster?'display:none;':''}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15 10l4.55-2.28A1 1 0 0 1 21 8.62v6.76a1 1 0 0 1-1.45.9L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"/></svg>
                   </span>
                 </div>
                 <div class="profile-h-info">
-                  <div class="profile-h-title">${title}</div>
+                  <div class="profile-h-title">${escapeHtml(title)}</div>
                   <div class="profile-h-sub">
-                    <span>${epLabel}</span>
+                    <span>${escapeHtml(epLabel)}</span>
                     <span class="dot"></span>
-                    <span>${time}</span>
+                    <span>${escapeHtml(time)}</span>
                   </div>
                 </div>
                 <div class="profile-h-progress">
@@ -7030,16 +7070,16 @@ function renderProfilePage() {
             const title = rawTitle.length > 38 ? rawTitle.substring(0, 38) + '…' : rawTitle;
                 const sub = item.episodes || '';
                 html += `
-              <div class="profile-bookmark-card" onclick="openPlayerPage('${item.url || ''}')">
+              <div class="profile-bookmark-card" data-profile-url="${escapeHtml(item.url || '')}" role="button" tabindex="0">
                 <div class="profile-bm-thumb">
-                  ${poster ? `<img src="${poster}" alt="${title}" onerror="this.style.display='none'">` : ''}
+                  ${poster ? `<img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" onerror="this.style.display='none'">` : ''}
                   <span class="profile-bm-thumb-ph" style="${poster?'display:none;':''}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15 10l4.55-2.28A1 1 0 0 1 21 8.62v6.76a1 1 0 0 1-1.45.9L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"/></svg>
                   </span>
                 </div>
                 <div class="profile-bm-info">
-                  <div class="profile-bm-title">${title}</div>
-                  <div class="profile-bm-sub">${sub || 'Збережено'}</div>
+                  <div class="profile-bm-title">${escapeHtml(title)}</div>
+                  <div class="profile-bm-sub">${escapeHtml(sub || 'Збережено')}</div>
                 </div>
               </div>
             `;
@@ -7049,6 +7089,7 @@ function renderProfilePage() {
         }
 
         function renderAchievementsPanel(achievements, totalWatchTime) {
+            const safeAchievements = Array.isArray(achievements) ? achievements : [];
             const totalMinutes = Math.max(0, Math.floor(Number(totalWatchTime || 0) / 60));
             let html = `
             <div class="profile-watch-card">
@@ -7058,13 +7099,14 @@ function renderProfilePage() {
             </div>
             <div class="profile-panel-header">
               <span class="profile-panel-title">Досягнення</span>
-              <span class="profile-panel-count">${achievements.filter(a=>a.unlocked).length} / ${achievements.length}</span>
+              <span class="profile-panel-count">${safeAchievements.filter(a=>a && a.unlocked).length} / ${safeAchievements.length}</span>
             </div>
             <div class="profile-achievement-list">
           `;
-            achievements.forEach(a => {
-                const unlocked = a.unlocked;
-                const progress = a.progress || 0;
+            safeAchievements.forEach(a => {
+                if (!a) return;
+                const unlocked = Boolean(a.unlocked);
+                const progress = Math.max(0, Math.min(Number(a.progress) || 0, 100));
                 html += `
               <div class="profile-achievement ${unlocked?'':'locked'}">
                 <div class="profile-ach-icon">${a.icon}</div>
@@ -8001,6 +8043,9 @@ function renderProfilePage() {
         let playerPageCurrentEpisodeNum = '1';
         let playerPageHistoryUpdated = false;
         let playerPageWatchStartTime = 0;
+        let playerPageAccumulatedWatchSeconds = 0;
+        let playerPageLastVideoTime = null;
+        let playerPageIsPlaying = false;
         let playerPageIsOpen = false;
         let playerPagePreviousBodyOverflow = '';
         let playerPagePreviousActiveElement = null;
@@ -8084,6 +8129,9 @@ function renderProfilePage() {
             playerPageCurrentAnimeUrl = url;
             playerPageHistoryUpdated = false;
             playerPageWatchStartTime = 0;
+            playerPageAccumulatedWatchSeconds = 0;
+            playerPageLastVideoTime = null;
+            playerPageIsPlaying = false;
             document.getElementById('playerVideoContainer').classList.add('active');
             const posterTargets = [document.getElementById('playerPosterImg'), document.getElementById('playerHeroPoster')];
             posterTargets.forEach(img => { if (img) { img.src = CATALOG_POSTER_FALLBACK; img.alt = ''; } });
@@ -9462,18 +9510,49 @@ function renderProfilePage() {
             playerPagePlayer = new LampaPlayer(videoDiv, { poster: playerPageAnime?.images?.jpg?.large_image_url });
             playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || '', `Серія ${epNum}`);
             playerPageHistoryUpdated = false;
-            playerPageWatchStartTime = Date.now();
+            playerPageWatchStartTime = 0;
+            playerPageAccumulatedWatchSeconds = 0;
+            playerPageLastVideoTime = null;
+            playerPageIsPlaying = false;
             const video = playerPagePlayer.videoRef;
             if (video) {
                 const hideFrame = () => hidePlayerFramePoster();
+                const syncPlaybackClock = () => {
+                    if (!playerPageIsPlaying) return;
+                    const currentTime = Number(video.currentTime);
+                    if (!Number.isFinite(currentTime)) return;
+                    if (playerPageLastVideoTime !== null) {
+                        const delta = currentTime - playerPageLastVideoTime;
+                        // Ignore seeks/jumps; only count normal media progression.
+                        if (delta >= 0 && delta <= 5) playerPageAccumulatedWatchSeconds += delta;
+                    }
+                    playerPageLastVideoTime = currentTime;
+                };
+                const onPlaying = () => {
+                    playerPageIsPlaying = true;
+                    playerPageLastVideoTime = Number(video.currentTime) || 0;
+                };
+                const onPause = () => {
+                    syncPlaybackClock();
+                    playerPageIsPlaying = false;
+                    playerPageLastVideoTime = Number(video.currentTime) || 0;
+                };
+                const onSeeking = () => { playerPageLastVideoTime = null; };
+                const onSeeked = () => { playerPageLastVideoTime = Number(video.currentTime) || 0; };
                 video.addEventListener('playing', hideFrame, { once: true });
+                video.addEventListener('playing', onPlaying);
+                video.addEventListener('pause', onPause);
+                video.addEventListener('waiting', onPause);
+                video.addEventListener('seeking', onSeeking);
+                video.addEventListener('seeked', onSeeked);
                 const onTimeUpdate = () => {
+                    syncPlaybackClock();
                     if (playerPageHistoryUpdated) return;
                     if (!playerPageAnime) return;
                     const duration = video.duration;
                     if (!duration || duration === Infinity) return;
                     const progress = (video.currentTime / duration) * 100;
-                    const watchSecondsSoFar = Math.floor((Date.now() - playerPageWatchStartTime) / 1000);
+                    const watchSecondsSoFar = Math.floor(playerPageAccumulatedWatchSeconds);
                     // Зберігаємо в історію через 2 хвилини перегляду
                     if (watchSecondsSoFar >= 120) {
                         playerPageHistoryUpdated = true;
