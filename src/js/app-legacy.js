@@ -7503,8 +7503,7 @@ function renderProfilePage() {
             const resp = await fetch(getProxyUrl(apiUrl), {
                 mode: 'cors',
                 credentials: 'omit',
-                cache: 'no-cache',
-                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+                cache: 'no-cache'
             });
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
             const data = await resp.json();
