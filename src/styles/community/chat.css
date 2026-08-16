@@ -246,6 +246,9 @@
             animation: floatIn 0.4s ease both;
         }
         .rg-podium-crown { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        .rg-podium-badge { width: 34px; height: 54px; object-fit: contain; display: block; filter: drop-shadow(0 5px 8px rgba(0,0,0,.18)); transition: transform .25s ease, filter .25s ease; }
+        .rg-podium-item.p1 .rg-podium-badge { width: 48px; height: 70px; }
+        .rg-podium-item:hover .rg-podium-badge { transform: translateY(-3px) rotate(3deg); filter: drop-shadow(0 8px 12px rgba(var(--accent-rgb), .3)); }
         .rg-podium-crown svg { width: 100%; height: 100%; }
         .rg-podium-item.p1 .rg-podium-crown { width: 32px; height: 32px; }
         .rg-podium-item.p1 .rg-podium-crown svg { width: 100%; height: 100%; }
@@ -284,6 +287,14 @@
         .rg-podium-item.p1 .rg-podium-bar { height: 52px; background: rgba(var(--accent-rgb), 0.08); }
         .rg-podium-item.p2 .rg-podium-bar { height: 38px; }
         .rg-podium-item.p3 .rg-podium-bar { height: 28px; }
+        @media (max-width: 520px) {
+            .rg-podium { gap: 0.25rem; padding-left: .35rem; padding-right: .35rem; }
+            .rg-podium-badge { width: 28px; height: 44px; }
+            .rg-podium-item.p1 .rg-podium-badge { width: 38px; height: 58px; }
+            .rg-podium-name { max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        }
+
+        .rg-xp-rules { margin: 0.7rem 1rem 0; padding: 9px 12px; border-radius: 10px; background: rgba(var(--accent-rgb), .07); color: var(--text-muted); font-size: 10px; line-height: 1.45; text-align: center; }
 
         /* Leaderboard list */
         .rg-lb-list { padding: 0.4rem 1rem 0.5rem; display: flex; flex-direction: column; gap: 7px; }

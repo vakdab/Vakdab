@@ -2755,16 +2755,28 @@ let externalSourceCache = {};
             try { localStorage.setItem('vakdab_daily_xp_total', String(next)); } catch {}
             return next;
         }
+        const XP_RULES = Object.freeze({ episode: 25, minute: 1, bookmark: 15, achievement: 75 });
+        function calculateBaseXP({ episodes = 0, watchSeconds = 0, bookmarks = 0, posts = 0, ratings = 0 } = {}) {
+            const safeEpisodes = Math.max(0, Math.floor(Number(episodes) || 0));
+            const watchMinutes = Math.max(0, Math.floor((Number(watchSeconds) || 0) / 60));
+            const safeBookmarks = Math.max(0, Math.floor(Number(bookmarks) || 0));
+            const safePosts = Math.max(0, Math.floor(Number(posts) || 0));
+            const safeRatings = Math.max(0, Math.floor(Number(ratings) || 0));
+            const baseXP = safeEpisodes * XP_RULES.episode + watchMinutes * XP_RULES.minute + safeBookmarks * XP_RULES.bookmark;
+            let totalXP = baseXP;
+            for (let pass = 0; pass < ACHIEVEMENTS.length + 2; pass++) {
+                const achStats = { episodes: safeEpisodes, watchMinutes, bookmarks: safeBookmarks, xp: totalXP, level: getLevel(totalXP), posts: safePosts, ratings: safeRatings };
+                const earnedCount = ACHIEVEMENTS.filter(a => achStats[a.field] >= a.need).length;
+                const nextXP = baseXP + earnedCount * XP_RULES.achievement;
+                if (nextXP === totalXP) break;
+                totalXP = nextXP;
+            }
+            return totalXP;
+        }
         function calcTotalXP() {
-            const history   = Storage.getHistory()   || [];
+            const history = Storage.getHistory() || [];
             const bookmarks = Storage.getBookmarks() || [];
-            const watchSec  = Storage.getWatchTime() || 0;
-            const watchHours = watchSec / 3600;
-            const episodes  = history.length;
-            const achStats  = { episodes, watchTime: watchSec, bookmarks: bookmarks.length };
-            const earnedCount = ACHIEVEMENTS.filter(a => achStats[a.field] >= a.need).length;
-            const baseXP = Math.floor(episodes * 30 + watchHours * 15 + bookmarks.length * 10 + earnedCount * 100);
-            return baseXP + _getDailyXPBonus();
+            return calculateBaseXP({ episodes: history.length, watchSeconds: Storage.getWatchTime() || 0, bookmarks: bookmarks.length, posts: DailyStats.getTotalPosts(), ratings: DailyStats.getTotalRatings() }) + _getDailyXPBonus();
         }
         function getLevel(xp) {
             return Math.floor(Math.sqrt(xp / 50)) + 1;
@@ -3007,16 +3019,16 @@ let externalSourceCache = {};
             { id: 'ep500', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name: '500 серій', req: '500 сер.', need: 500, field: 'episodes' },
             { id: 'ep1000', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name: 'Легенда серій', req: '1000 сер.', need: 1000, field: 'episodes' },
             { id: 'ep2000', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name: 'Аніме-безсмертний', req: '2000 сер.', need: 2000, field: 'episodes' },
-            { id: 'h1', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: 'Перша година', req: '1 год', need: 3600, field: 'watchTime' },
-            { id: 'h5', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '5 годин', req: '5 год', need: 18000, field: 'watchTime' },
-            { id: 'h10', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '10 годин', req: '10 год', need: 36000, field: 'watchTime' },
-            { id: 'h24', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: 'Цілодобово', req: '24 год', need: 86400, field: 'watchTime' },
-            { id: 'h50', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '50 годин', req: '50 год', need: 180000, field: 'watchTime' },
-            { id: 'h100', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '100 годин', req: '100 год', need: 360000, field: 'watchTime' },
-            { id: 'h200', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '200 годин', req: '200 год', need: 720000, field: 'watchTime' },
-            { id: 'h500', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '500 годин', req: '500 год', need: 1800000, field: 'watchTime' },
-            { id: 'h1000', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '1000 годин', req: '1000 год', need: 3600000, field: 'watchTime' },
-            { id: 'h2000', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: 'Володар часу', req: '2000 год', need: 7200000, field: 'watchTime' },
+            { id: 'h1', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: 'Перша хвилина', req: '1 хв', need: 1, field: 'watchMinutes' },
+            { id: 'h5', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '5 хвилин', req: '5 хв', need: 5, field: 'watchMinutes' },
+            { id: 'h10', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '10 хвилин', req: '10 хв', need: 10, field: 'watchMinutes' },
+            { id: 'h24', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '24 хвилини', req: '24 хв', need: 24, field: 'watchMinutes' },
+            { id: 'h50', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '50 хвилин', req: '50 хв', need: 50, field: 'watchMinutes' },
+            { id: 'h100', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '100 хвилин', req: '100 хв', need: 100, field: 'watchMinutes' },
+            { id: 'h200', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '200 хвилин', req: '200 хв', need: 200, field: 'watchMinutes' },
+            { id: 'h500', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '500 хвилин', req: '500 хв', need: 500, field: 'watchMinutes' },
+            { id: 'h1000', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '1000 хвилин', req: '1000 хв', need: 1000, field: 'watchMinutes' },
+            { id: 'h2000', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: 'Володар часу', req: '2000 хв', need: 2000, field: 'watchMinutes' },
             { id: 'bm1', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', name: 'Перша закладка', req: '1 зак.', need: 1, field: 'bookmarks' },
             { id: 'bm5', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', name: '5 закладок', req: '5 зак.', need: 5, field: 'bookmarks' },
             { id: 'bm10', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', name: '10 закладок', req: '10 зак.', need: 10, field: 'bookmarks' },
@@ -3047,12 +3059,12 @@ let externalSourceCache = {};
             { id: 'like100', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', name: 'Оракул рейтингів', req: '100 оцін.', need: 100, field: 'ratings' },
         ]
 
-        function getUserRankInfo(episodes, watchHours) {
-            if (watchHours >= 200) return { label: 'Легенда аніме',  color: 'var(--accent)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 16h14"/></svg>' };
-            if (watchHours >= 100) return { label: 'Майстер',        color: 'var(--text)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>' };
-            if (watchHours >= 50)  return { label: 'Ветеран',        color: 'var(--text-secondary)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>' };
-            if (watchHours >= 20)  return { label: 'Досвідчений',    color: 'var(--text-secondary)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7L12 3 4 7m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 0v10M4 7v10l8 4"/></svg>' };
-            if (watchHours >= 5)   return { label: 'Початківець',    color: 'var(--text-muted)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' };
+        function getUserRankInfo(episodes, watchMinutes) {
+            if (watchMinutes >= 2000) return { label: 'Легенда аніме',  color: 'var(--accent)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 16h14"/></svg>' };
+            if (watchMinutes >= 1000) return { label: 'Майстер',        color: 'var(--text)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>' };
+            if (watchMinutes >= 500)  return { label: 'Ветеран',        color: 'var(--text-secondary)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>' };
+            if (watchMinutes >= 200)  return { label: 'Досвідчений',    color: 'var(--text-secondary)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7L12 3 4 7m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 0v10M4 7v10l8 4"/></svg>' };
+            if (watchMinutes >= 60)   return { label: 'Початківець',    color: 'var(--text-muted)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' };
             return                        { label: 'Новачок',        color: 'var(--text-muted)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' };
         }
 
@@ -3081,7 +3093,7 @@ let externalSourceCache = {};
                     <div class="rg-sort-tabs" id="rgSortTabs">
                         <button class="rg-sort-tab active" data-sort="xp">За XP</button>
                         <button class="rg-sort-tab" data-sort="episodes">За серіями</button>
-                        <button class="rg-sort-tab" data-sort="hours">За годинами</button>
+                        <button class="rg-sort-tab" data-sort="minutes">За хвилинами</button>
                         <button class="rg-sort-tab" data-sort="bookmarks">За закладками</button>
                     </div>
                     <div id="rgLeaderboard">
@@ -3147,12 +3159,12 @@ let externalSourceCache = {};
             const history    = Storage.getHistory()   || [];
             const bookmarks  = Storage.getBookmarks() || [];
             const watchSec   = Storage.getWatchTime() || 0;
-            const watchHours = Math.round(watchSec / 3600 * 10) / 10;
+            const watchMinutes = Math.floor(watchSec / 60);
             const episodes   = history.length;
-            const rankInfo   = getUserRankInfo(episodes, watchHours);
+            const rankInfo   = getUserRankInfo(episodes, watchMinutes);
             const totalXP    = calcTotalXP();
             const xpLvl      = getLevel(totalXP);
-            const achStats   = { episodes, watchTime: watchSec, bookmarks: bookmarks.length, xp: totalXP, level: xpLvl, posts: DailyStats.getTotalPosts(), ratings: DailyStats.getTotalRatings() };
+            const achStats   = { episodes, watchMinutes, bookmarks: bookmarks.length, xp: totalXP, level: xpLvl, posts: DailyStats.getTotalPosts(), ratings: DailyStats.getTotalRatings() };
             const earnedIds  = new Set(ACHIEVEMENTS.filter(a => achStats[a.field] >= a.need).map(a => a.id));
             const xpProg     = getXPProgress(totalXP);
 
@@ -3180,9 +3192,10 @@ let externalSourceCache = {};
                     </div>
                     <div class="rg-stats-grid">
                         <div class="rg-stat-cell"><div class="rg-stat-val">${episodes}</div><div class="rg-stat-label">Серій</div></div>
-                        <div class="rg-stat-cell"><div class="rg-stat-val">${watchHours}</div><div class="rg-stat-label">Годин</div></div>
+                        <div class="rg-stat-cell"><div class="rg-stat-val">${watchMinutes}</div><div class="rg-stat-label">Хвилин</div></div>
                         <div class="rg-stat-cell"><div class="rg-stat-val">${earnedIds.size}</div><div class="rg-stat-label">Досягнень</div></div>
                     </div>
+                    <div class="rg-xp-rules">XP: 25 за серію · 1 за хвилину · 15 за закладку · 75 за досягнення</div>
                 </div>`;
 
             achEl.innerHTML = `
@@ -3203,10 +3216,11 @@ let externalSourceCache = {};
         let _lbSortKey = 'xp';
         let _lbUsersCache = [];
 
+        const TOP_BADGES = Object.freeze({ p1: 'src/assets/rating/top-1.png', p2: 'src/assets/rating/top-2.png', p3: 'src/assets/rating/top-3.png' });
         const LB_SORT_CONFIG = {
             xp:        { unit: 'XP',    getVal: u => u.xp },
             episodes:  { unit: 'сер.',  getVal: u => u.episodes },
-            hours:     { unit: 'год.',  getVal: u => u.hours },
+            minutes:   { unit: 'хв',    getVal: u => u.minutes },
             bookmarks: { unit: 'зак.',  getVal: u => u.bookmarks }
         };
 
@@ -3287,10 +3301,10 @@ let externalSourceCache = {};
                             name: data.profile?.nickname || data.profile?.name || 'Аніматор',
                             avatar: data.profile?.avatar || '',
                             episodes: Array.isArray(data.history) ? data.history.length : 0,
-                            hours: Math.round((data.watchTime || 0) / 3600 * 10) / 10,
+                            minutes: Math.floor((data.watchTime || 0) / 60),
                             bookmarks: Array.isArray(data.bookmarks) ? data.bookmarks.length : 0,
-                            xp: data.xp || 0,
-                            level: data.level || getLevel(data.xp || 0)
+                            xp: calculateBaseXP({ episodes: Array.isArray(data.history) ? data.history.length : 0, watchSeconds: data.watchTime || 0, bookmarks: Array.isArray(data.bookmarks) ? data.bookmarks.length : 0 }),
+                            level: getLevel(calculateBaseXP({ episodes: Array.isArray(data.history) ? data.history.length : 0, watchSeconds: data.watchTime || 0, bookmarks: Array.isArray(data.bookmarks) ? data.bookmarks.length : 0 }))
                         });
                     });
                     return arr;
@@ -3337,6 +3351,7 @@ let externalSourceCache = {};
                     const av = u.avatar ? `<img src="${u.avatar}" alt=""${gifCls}>` : `<span>${u.name[0].toUpperCase()}</span>`;
                     html += `<div class="rg-podium-item ${cls[i]}" style="animation-delay:${i*0.08}s">
                         <div class="rg-podium-crown">${crowns[i]}</div>
+                        <img class="rg-podium-badge" src="${TOP_BADGES[cls[i]]}" alt="Топ ${cls[i] === 'p1' ? '1' : cls[i] === 'p2' ? '2' : '3'}" loading="lazy">
                         <div class="rg-podium-avatar">${av}</div>
                         <div class="rg-podium-name">${u.name}</div>
                         <div class="rg-podium-score">${cfg.getVal(u)} ${cfg.unit}</div>
@@ -3351,7 +3366,7 @@ let externalSourceCache = {};
                 const isMe = u.uid === myUid;
                 const gifCls = isGifUrl(u.avatar) ? ' class="is-gif"' : '';
                 const av   = u.avatar ? `<img src="${u.avatar}" alt=""${gifCls}>` : `<span>${u.name[0].toUpperCase()}</span>`;
-                const ri   = getUserRankInfo(u.episodes, u.hours);
+                const ri   = getUserRankInfo(u.episodes, u.minutes);
                 html += `<div class="rg-lb-item ${isMe ? 'is-me' : ''}" style="animation-delay:${Math.min(i*0.02, 0.4)}s">
                     <div class="rg-lb-num">${i + 4}</div>
                     <div class="rg-lb-avatar">${av}</div>
@@ -3428,7 +3443,7 @@ let externalSourceCache = {};
             const episodes  = history.length;
             const totalXP   = calcTotalXP();
             const xpLvl     = getLevel(totalXP);
-            const achStats  = { episodes, watchTime: watchSec, bookmarks: bookmarks.length, xp: totalXP, level: xpLvl, posts: DailyStats.getTotalPosts(), ratings: DailyStats.getTotalRatings() };
+            const achStats  = { episodes, watchMinutes: Math.floor(watchSec / 60), bookmarks: bookmarks.length, xp: totalXP, level: xpLvl, posts: DailyStats.getTotalPosts(), ratings: DailyStats.getTotalRatings() };
             return ACHIEVEMENTS.filter(a => achStats[a.field] >= a.need);
         }
 
@@ -6099,15 +6114,13 @@ let externalSourceCache = {};
             const uniqueAnime = new Set(history.map(h => h.animeId || h.title));
             const totalEpisodes = history.length;
             const totalWatchTime = Storage.getWatchTime() || history.reduce((sum, h) => sum + (h.duration || 0), 0);
-            const hours = Math.floor(totalWatchTime / 3600);
-            const minutes = Math.floor((totalWatchTime % 3600) / 60);
+            const minutes = Math.floor(totalWatchTime / 60);
             const achievements = getAchievements(history, bookmarks, uniqueAnime.size, totalEpisodes, totalWatchTime);
             return {
                 viewed: totalEpisodes,
                 bookmarks: bookmarks.length,
                 achievements: achievements.filter(a => a.unlocked).length,
                 totalAchievements: achievements.length,
-                watchHours: hours,
                 watchMinutes: minutes,
                 totalWatchTime: totalWatchTime,
                 uniqueAnime: uniqueAnime.size,
@@ -6131,7 +6144,7 @@ let externalSourceCache = {};
             const lvl = getLevel(xp);
             const stats = {
                 episodes: totalEpisodes,
-                watchTime: totalWatchTime,
+                watchMinutes: Math.floor((Number(totalWatchTime) || 0) / 60),
                 bookmarks: bookmarks.length,
                 xp: xp,
                 level: lvl,
