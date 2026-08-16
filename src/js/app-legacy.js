@@ -899,9 +899,9 @@ let externalSourceCache = {};
         async function fetchHikkaByGenre(genreSlug, page) { return fetchHikkaByCategory(genreSlug, page); }
 
         // Hikka є єдиним джерелом каталогу та інформації. Mikai використовується
-        // як вбудований плеєр за посиланням з Hikka external[type=watch].
+        // як proxy-джерело озвучок, сезонів і ASHDI no-ad embed-посилань.
         async function fetchAnimeLite(animeUrl) {
-            const match = String(animeUrl || '').match(/\/anime\/([^/?#]+)/i);
+            const match = String(animeUrl || '').match(/\/anime\/([^\/?#]+)/i);
             const slug = match?.[1] || String(animeUrl || '').split('/').filter(Boolean).pop();
             if (!slug) throw new Error('Не знайдено Hikka slug');
             const res = await hikkaRequest(`${HIKKA_API}/anime/${encodeURIComponent(slug)}`);
@@ -919,8 +919,119 @@ let externalSourceCache = {};
             return mikai?.url || '';
         }
 
+        function resolveMikaiNuxtPayload(payload) {
+            const memo = new Map();
+            const resolving = new Set();
+            const resolveRef = (index) => {
+                if (!Number.isInteger(index) || index < 0 || index >= payload.length) return index;
+                if (memo.has(index)) return memo.get(index);
+                if (resolving.has(index)) return null;
+                resolving.add(index);
+                const raw = payload[index];
+                let value;
+                if (typeof raw === 'number') value = raw;
+                else if (Array.isArray(raw)) {
+                    const tag = typeof raw[0] === 'string' ? raw[0] : '';
+                    if (['ShallowReactive', 'Reactive', 'Set', 'Date', 'URL'].includes(tag) && raw.length > 1) {
+                        value = resolveRef(raw[1]);
+                    } else {
+                        value = raw.map(item => typeof item === 'number' ? resolveRef(item) : item);
+                    }
+                } else if (raw && typeof raw === 'object') {
+                    value = {};
+                    Object.entries(raw).forEach(([key, item]) => {
+                        value[key] = typeof item === 'number' ? resolveRef(item) : item;
+                    });
+                } else value = raw;
+                resolving.delete(index);
+                memo.set(index, value);
+                return value;
+            };
+            return payload.map((_, index) => resolveRef(index));
+        }
+
+        function addNoAdsQuery(url) {
+            if (!url) return '';
+            return `${url}${url.includes('?') ? '&' : '?'}nopl`;
+        }
+
+        async function fetchMikaiHtml(mikaiUrl) {
+            const proxyUrl = getProxyUrl(mikaiUrl, 'desktop');
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 25000);
+            try {
+                const res = await fetch(proxyUrl, {
+                    mode: 'cors',
+                    credentials: 'omit',
+                    cache: 'no-cache',
+                    signal: controller.signal,
+                    headers: { Accept: 'text/html,application/xhtml+xml' }
+                });
+                if (!res.ok) throw new Error(`Mikai proxy: HTTP ${res.status}`);
+                return await res.text();
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        function parseMikaiSeasonsFromHtml(html) {
+            const match = String(html || '').match(/<script[^>]+id=["']__NUXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+            if (!match) throw new Error('Mikai Nuxt payload не знайдено');
+            let payload;
+            try { payload = JSON.parse(match[1]); } catch { throw new Error('Mikai Nuxt payload пошкоджений'); }
+            const resolved = resolveMikaiNuxtPayload(payload);
+            const playerGroups = [];
+            resolved.forEach(value => {
+                if (Array.isArray(value?.players)) playerGroups.push(...value.players);
+            });
+            const dubs = new Map();
+            playerGroups.forEach(group => {
+                if (!group || group.isSubs || !Array.isArray(group.providers)) return;
+                const teamName = String(group.team?.name || 'Озвучка').trim();
+                group.providers.filter(provider => String(provider?.name || '').toUpperCase() === 'ASHDI').forEach(provider => {
+                    const episodes = dubs.get(teamName) || new Map();
+                    (provider.episodes || []).forEach(ep => {
+                        const number = String(ep?.number ?? '').trim();
+                        const playLink = String(ep?.playLink || '').trim();
+                        if (!number || !playLink) return;
+                        const previous = episodes.get(number);
+                        if (!previous || String(ep?.createdAt || '') > String(previous.createdAt || '')) {
+                            episodes.set(number, {
+                                title: `Серія ${number}`,
+                                season: '1',
+                                episode: number,
+                                file: addNoAdsQuery(playLink),
+                                dub: teamName,
+                                provider: 'ASHDI',
+                                createdAt: ep?.createdAt || ''
+                            });
+                        }
+                    });
+                    dubs.set(teamName, episodes);
+                });
+            });
+            const dubObject = {};
+            [...dubs.entries()].sort(([a], [b]) => a.localeCompare(b, 'uk')).forEach(([team, episodes]) => {
+                const list = [...episodes.values()].sort((a, b) => Number(a.episode) - Number(b.episode));
+                if (list.length) dubObject[team] = list;
+            });
+            return Object.keys(dubObject).length ? { '1': dubObject } : {};
+        }
+
+        async function loadMikaiSeasons(mikaiUrl) {
+            if (!mikaiUrl) return {};
+            const html = await fetchMikaiHtml(mikaiUrl);
+            return parseMikaiSeasonsFromHtml(html);
+        }
+
+        function pickPreferredDub(seasonData = {}) {
+            const dubs = Object.keys(seasonData || {});
+            return dubs.find(dub => /робота голосом/i.test(dub)) ||
+                dubs.slice().sort((a, b) => (seasonData[b]?.length || 0) - (seasonData[a]?.length || 0))[0] || '';
+        }
+
         async function loadHikkaDetail(animeUrl) {
-            const match = String(animeUrl || '').match(/\/anime\/([^/?#]+)/i);
+            const match = String(animeUrl || '').match(/\/anime\/([^\/?#]+)/i);
             const slug = match?.[1] || String(animeUrl || '').split('/').filter(Boolean).pop();
             if (!slug) throw new Error('Не знайдено Hikka slug');
             const res = await hikkaRequest(`${HIKKA_API}/anime/${encodeURIComponent(slug)}`);
@@ -929,19 +1040,10 @@ let externalSourceCache = {};
             const item = hikkaItem(d);
             const total = Number(d.episodes_total || d.episodes_released || 0);
             const mikaiUrl = getMikaiUrl(d);
-            const episodes = {};
-            if (mikaiUrl && total > 0) {
-                episodes['1'] = { Mikai: [] };
-                for (let i = 1; i <= total; i++) {
-                    episodes['1'].Mikai.push({
-                        title: `Серія ${i}`,
-                        season: '1',
-                        episode: String(i),
-                        file: mikaiUrl,
-                        dub: 'Mikai',
-                        provider: 'Mikai'
-                    });
-                }
+            let seasons = {};
+            if (mikaiUrl) {
+                try { seasons = await loadMikaiSeasons(mikaiUrl); }
+                catch (error) { console.warn('[Mikai] Не вдалося завантажити ASHDI:', error); }
             }
             return {
                 ...item,
@@ -953,9 +1055,9 @@ let externalSourceCache = {};
                 rating: d.score || d.native_score || null,
                 runtimeMinutes: d.duration || 0,
                 totalEpisodes: total,
-                seasons: episodes,
+                seasons,
                 mikaiUrl,
-                from: 'hikka+mikai',
+                from: 'hikka+mikai+ashdi',
                 externalIds: { mal_id: d.mal_id }
             };
         }
@@ -1008,20 +1110,16 @@ let externalSourceCache = {};
                 return;
             }
 
-            showToast(`Шукаю на ${providerName}...`);
+            showToast(`Шукаю озвучки ${providerName}...`);
             try {
                 let seasons = externalSourceCache[providerName];
                 if (!seasons) {
-                    seasons = {};
+                    seasons = await loadMikaiSeasons(playerPageAnime?.mikaiUrl || getMikaiUrl(playerPageAnime));
                     externalSourceCache[providerName] = seasons;
                 }
-                const hikkaPoster = playerPageAnime.images?.jpg?.large_image_url || '';
                 playerPageAnime.seasons = seasons;
-                if (hikkaPoster) {
-                    playerPageAnime.images = { jpg: { large_image_url: hikkaPoster, image_url: hikkaPoster } };
-                }
                 refreshAfterSourceSwitch();
-                showToast(`Джерело: ${providerName}`);
+                showToast(`${providerName}: ASHDI без реклами`);
             } catch (e) {
                 console.warn('[switchProviderSource]', providerName, e);
                 showToast(`${providerName}: ${e.message || 'недоступно'}`);
@@ -1034,8 +1132,7 @@ let externalSourceCache = {};
         function refreshAfterSourceSwitch() {
             const seasons = Object.keys(playerPageAnime.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
             playerPageCurrentSeason = seasons[0] || '1';
-            const dubs = Object.keys((playerPageAnime.seasons[playerPageCurrentSeason]) || {}).sort();
-            playerPageCurrentDub = dubs[0] || '';
+            playerPageCurrentDub = pickPreferredDub(playerPageAnime.seasons[playerPageCurrentSeason]);
             buildSeasonRow(seasons);
             buildEpisodeViews();
             updateFilterChip();
@@ -7496,10 +7593,10 @@ function renderProfilePage() {
                 // Якщо плеєр вже закрили поки завантажувалось — не оновлювати DOM
                 if (_thisSignal.aborted || modal.style.display === 'none') return;
                 playerPageAnime = anime;
-                playerPageAnimeuaSeasons = anime.seasons || {};
+                playerPageAnimeuaSeasons = {};
                 externalSourceCache = {};
-                playerPageSources = ['Основне'];
-                playerPageCurrentSource = 'Основне';
+                playerPageSources = anime.mikaiUrl ? ['Mikai / ASHDI'] : ['Основне'];
+                playerPageCurrentSource = playerPageSources[0];
                 const posterUrl = normalizePosterUrl(anime.images?.jpg?.large_image_url);
                 document.getElementById('playerPosterImg').src = posterUrl;
                 const heroPoster = document.getElementById('playerHeroPoster');
@@ -7536,8 +7633,7 @@ function renderProfilePage() {
                 loadAnimeRatingAggregate(url);
                 const seasons = Object.keys(anime.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
                 playerPageCurrentSeason = seasons[0] || '1';
-                const dubs = Object.keys((anime.seasons[playerPageCurrentSeason]) || {}).sort();
-                playerPageCurrentDub = dubs[0] || '';
+                playerPageCurrentDub = pickPreferredDub(anime.seasons[playerPageCurrentSeason]);
                 playerPageCurrentQuality = '720p';
                 buildSeasonRow(seasons);
                 buildEpisodeViews();
@@ -8916,7 +9012,7 @@ function renderProfilePage() {
                                 function buildBottomSheetData() {
             const sourceList = document.getElementById('bsSourceList');
             if (sourceList) {
-                const sources = ['Основне'];
+                const sources = playerPageSources.length ? playerPageSources : ['Основне'];
                 sourceList.innerHTML = sources.map(s => {
                     const active = s === playerPageCurrentSource ? ' active' : '';
                     return `<div class="source-item${active}" onclick="switchProviderSource('${s}')">${s}</div>`;
