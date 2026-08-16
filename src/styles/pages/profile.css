@@ -246,12 +246,16 @@
         }
 
         .profile-medals-section {
-            margin-top: 12px;
+            margin-top: 9px;
+            max-width: 340px;
         }
         .profile-medals-count {
-            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: .25rem;
+            font-size: 0.68rem;
             color: var(--text-muted);
-            margin-bottom: 6px;
+            margin-bottom: 5px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -1201,8 +1205,9 @@
 .profile-sticker-slots {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: .55rem;
-    max-width: 360px;
+    gap: .38rem;
+    width: min(100%, 320px);
+    max-width: 320px;
 }
 
 .profile-medal-slot {
@@ -1215,8 +1220,8 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    padding: .3rem;
-    border-radius: 16px;
+    padding: .2rem;
+    border-radius: 12px;
     border: 1px solid var(--border);
     background: var(--surface);
     backdrop-filter: blur(16px);
@@ -1266,19 +1271,19 @@
 .profile-medal-slot.is-filled {
     border-style: solid;
     border-color: color-mix(in srgb, var(--sticker-color, var(--accent)) 40%, var(--border));
-    background: linear-gradient(160deg, rgba(var(--accent-rgb), 0.05), transparent 60%), var(--surface);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 6px 16px -8px color-mix(in srgb, var(--sticker-color, var(--accent)) 35%, transparent);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--sticker-color, var(--accent)) 12%, transparent), transparent 72%), color-mix(in srgb, var(--sticker-color, var(--accent)) 9%, var(--surface));
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 7px 18px -9px color-mix(in srgb, var(--sticker-color, var(--accent)) 58%, transparent);
 }
 .profile-medal-slot.is-filled::before {
     content: '';
     position: absolute;
     z-index: 0;
-    inset: 6%;
+    inset: 4%;
     border-radius: 42%;
     pointer-events: none;
     background: var(--sticker-color, var(--accent));
-    opacity: .38;
-    filter: blur(16px) saturate(1.4);
+    opacity: .56;
+    filter: blur(20px) saturate(1.55);
     transform: scale(1.15);
     transition: opacity .25s ease, transform .25s ease;
 }
@@ -1337,13 +1342,13 @@
 .profile-medal-glow {
     position: absolute !important;
     z-index: 0 !important;
-    inset: 8% !important;
+    inset: 4% !important;
     width: auto !important;
     height: auto !important;
     border-radius: 44%;
     background: var(--sticker-color, var(--accent));
-    opacity: .45;
-    filter: blur(18px) saturate(1.4);
+    opacity: .62;
+    filter: blur(22px) saturate(1.6);
     transform: scale(1.18);
     pointer-events: none;
     transition: opacity .25s ease, transform .25s ease;
