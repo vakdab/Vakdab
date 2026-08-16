@@ -648,3 +648,32 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     .home-catalog-sort i { right: .55rem; }
     .home-catalog-grid.is-list { grid-template-columns: 1fr; }
 }
+
+
+/* Active catalog controls must keep readable text in every theme/browser state. */
+.home-catalog-tab.active,
+.home-catalog-tab.active:hover,
+.home-catalog-tab.active:focus-visible {
+    background: #3a1738 !important;
+    border-color: #cf6bb9 !important;
+    color: #f08bd3 !important;
+    -webkit-text-fill-color: #f08bd3 !important;
+}
+.home-catalog-tab.active span,
+.home-catalog-tab.active i { color: #f08bd3 !important; }
+.home-catalog-preset.active,
+.home-catalog-preset.active:hover,
+.home-catalog-preset.active:focus-visible {
+    background: #3a1738 !important;
+    border-color: #cf6bb9 !important;
+    color: #f08bd3 !important;
+    -webkit-text-fill-color: #f08bd3 !important;
+}
+.home-catalog-view.active,
+.home-catalog-view.active:hover,
+.home-catalog-view.active:focus-visible {
+    background: #3a1738 !important;
+    color: #f08bd3 !important;
+    -webkit-text-fill-color: #f08bd3 !important;
+}
+.home-catalog-view.active i { color: #f08bd3 !important; }

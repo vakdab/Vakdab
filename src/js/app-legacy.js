@@ -4640,6 +4640,7 @@ let externalSourceCache = {};
         let homeCatalogPage = 1;
         let homeCatalogItems = [];
         let homeCatalogLoading = false;
+        let homeCatalogTotal = 0;
         let homeCatalogMode = 'anime';
         let homeCatalogQuery = '';
         let homeCatalogSort = 'score';
@@ -4658,7 +4659,7 @@ let externalSourceCache = {};
         ];
 
         function homeCatalogRequestBody() {
-            const body = { only_translated: true };
+            const body = {};
             if (homeCatalogQuery) body.query = homeCatalogQuery;
             if (homeCatalogSort === 'score') body.sort = ['score:desc', 'scored_by:desc'];
             if (homeCatalogSort === 'newest') body.sort = ['start_date:desc'];
@@ -4679,7 +4680,21 @@ let externalSourceCache = {};
         }
 
         async function fetchHomeCatalogPage(page) {
-            return hikkaCatalog(homeCatalogMode, page, homeCatalogRequestBody());
+            const endpoint = homeCatalogMode === 'manga' ? 'manga' : homeCatalogMode === 'novel' ? 'novel' : 'anime';
+            const apiUrl = `${HIKKA_API}/${endpoint}?page=${Math.max(1, page)}&size=24`;
+            const response = await hikkaRequest(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(homeCatalogRequestBody()) });
+            if (!response.ok) throw new Error(`Hikka API: HTTP ${response.status}`);
+            const data = await response.json();
+            homeCatalogTotal = Number(data.pagination?.total || data.total || data.count || 0);
+            return (data.list || []).map(item => hikkaItem(item, endpoint));
+        }
+
+        function formatHomeCatalogNumber(value) {
+            return new Intl.NumberFormat('uk-UA').format(Number(value) || 0).replace(/\u00a0/g, ' ');
+        }
+
+        function homeCatalogCountText(visibleCount) {
+            return `Знайдено ${formatHomeCatalogNumber(homeCatalogTotal || visibleCount)} результатів`;
         }
 
         function homeCatalogCardHtml(a) {
@@ -4720,7 +4735,7 @@ let externalSourceCache = {};
             return `<section class="home-catalog-section" id="homeCatalogSection">
                 <div class="home-catalog-heading">
                     <div><span class="home-catalog-kicker">HIKKA</span><h2>Каталог ${escapeHtml(activeMode.label.toLowerCase())}</h2></div>
-                    <span class="home-catalog-count" id="homeCatalogCount">${visibleItems.length} результатів</span>
+                    <span class="home-catalog-count" id="homeCatalogCount">${homeCatalogCountText(visibleItems.length)}</span>
                 </div>
                 <nav class="home-catalog-tabs" id="homeCatalogTabs" aria-label="Тип каталогу">
                     ${HOME_CATALOG_MODES.map(mode => `<button class="home-catalog-tab${mode.key === homeCatalogMode ? ' active' : ''}" type="button" data-catalog-mode="${mode.key}"><i class="fas ${mode.icon}"></i><span>${mode.label}</span></button>`).join('')}
@@ -4734,7 +4749,7 @@ let externalSourceCache = {};
                     <button class="home-catalog-filter-btn" id="homeCatalogFilterBtn" type="button"><i class="fas fa-filter"></i><span>Фільтри</span></button>
                 </div>
                 <div class="home-catalog-presets" id="homeCatalogPresets">${HOME_CATALOG_PRESETS.map(preset => `<button type="button" class="home-catalog-preset${preset.key === homeCatalogPreset ? ' active' : ''}" data-catalog-preset="${preset.key}">${preset.label}</button>`).join('')}</div>
-                <div class="home-catalog-results-label">Знайдено <strong id="homeCatalogResultNumber">${visibleItems.length}</strong> результатів</div>
+                <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
                 <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Показати ще</button>
             </section>`;
@@ -4749,8 +4764,10 @@ let externalSourceCache = {};
             grid.classList.toggle('is-list', homeCatalogView === 'list');
             grid.innerHTML = visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Нічого не знайдено за цими параметрами.</div>';
             bindHomeCatalogCards(grid);
-            if (count) count.textContent = `${visibleItems.length} результатів`;
-            if (number) number.textContent = String(visibleItems.length);
+            if (count) count.textContent = homeCatalogCountText(visibleItems.length);
+            const label = document.getElementById('homeCatalogResultsLabel');
+            if (label) label.textContent = homeCatalogCountText(visibleItems.length);
+            if (number) number.textContent = formatHomeCatalogNumber(homeCatalogTotal || visibleItems.length);
         }
 
         function bindHomeCatalogMenu(root) {
@@ -4853,7 +4870,7 @@ let externalSourceCache = {};
 
             try {
                 const [catalogItems, scheduleItems] = await Promise.all([
-                    fetchHikkaMain(1).catch(error => { console.error('Помилка завантаження каталогу:', error); return []; }),
+                    fetchHomeCatalogPage(1).catch(error => { console.error('Помилка завантаження каталогу:', error); homeCatalogTotal = 0; return []; }),
                     fetchScheduleByOffset(0).catch(error => { console.error('Помилка завантаження розкладу:', error); return []; })
                 ]);
                 if (requestId !== homeSectionsRequestId) return;
