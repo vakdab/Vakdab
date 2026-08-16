@@ -4873,32 +4873,21 @@ let externalSourceCache = {};
             homeCatalogLoading = false;
 
             try {
-                const [catalogItems, scheduleItems] = await Promise.all([
-                    fetchHomeCatalogPage(1).catch(error => { console.error('Помилка завантаження каталогу:', error); homeCatalogTotal = 0; return []; }),
-                    fetchScheduleByOffset(0).catch(error => { console.error('Помилка завантаження розкладу:', error); return []; })
-                ]);
+                const catalogItems = await fetchHomeCatalogPage(1).catch(error => {
+                    console.error('Помилка завантаження каталогу:', error);
+                    homeCatalogTotal = 0;
+                    return [];
+                });
                 if (requestId !== homeSectionsRequestId) return;
                 homeCatalogItems = catalogItems.filter(item => item?.url);
                 let html = buildHistoryCarouselSectionHtml();
-                html += buildScheduleWidgetHtml(scheduleItems);
                 html += buildHomeCatalogSectionHtml(homeCatalogItems);
                 container.innerHTML = html;
                 bindHomeCatalogCards(container);
                 bindHomeCatalogMenu(container);
                 document.getElementById('homeCatalogMoreBtn')?.addEventListener('click', loadHomeCatalogMore);
 
-                const homeScheduleDayTabs = document.getElementById('homeScheduleDayTabs');
-                if (homeScheduleDayTabs) {
-                    homeScheduleDayTabs.querySelectorAll('.schedule-day-tab').forEach(tab => {
-                        tab.addEventListener('click', () => {
-                            const offset = parseInt(tab.dataset.offset, 10);
-                            homeScheduleDayTabs.querySelectorAll('.schedule-day-tab').forEach(t => t.classList.remove('active'));
-                            tab.classList.add('active');
-                            loadHomeScheduleDayContent(offset);
-                        });
-                    });
-                }
-                wireHomeScheduleItemClicks(document.getElementById('homeScheduleDayContent'));
+
             } catch (err) {
                 console.error('Помилка завантаження головної сторінки:', err);
                 container.innerHTML = `<div class="loader"><i class="fas fa-exclamation-triangle"></i> Помилка: ${escapeHtml(err.message || 'невідома помилка')}<br><button class="btn-outline" style="margin-top:1rem;" onclick="loadAndDisplayGenreSections()">Спробувати знову</button></div>`;
@@ -5020,27 +5009,6 @@ let externalSourceCache = {};
             return buildAnimeCarouselSectionHtml('history-watched', 'Ви дивилися', items, 'wide');
         }
 
-        function renderHomeScheduleDayItemsHtml(list) {
-            if (!list || !list.length) {
-                return `<div class="home-schedule-widget__empty">На цей день виходів не заплановано</div>`;
-            }
-            return list.map(item => {
-                const a = item.anime || {};
-                const poster = a.image?.preview ? `https://animeon.club/api/uploads/images/${a.image.preview}` : '';
-                const title = a.titleUa || a.titleEn || 'Без назви';
-                return `
-                <div class="schedule-item" data-title="${title.replace(/"/g, '&quot;')}" data-title-en="${(a.titleEn || '').replace(/"/g, '&quot;')}" data-slug="${(a.slug || '').replace(/"/g, '&quot;')}">
-                    <div class="schedule-item__poster">
-                        ${poster ? `<img src="${poster}" alt="${title}" loading="lazy" onerror="this.style.opacity=0">` : ''}
-                    </div>
-                    <div class="schedule-item__info">
-                        <div class="schedule-item__title">${title}</div>
-                        <div class="schedule-item__ep">${item.episode ? item.episode + ' серія' : ''}</div>
-                    </div>
-                    <i class="fas fa-chevron-right schedule-item__arrow"></i>
-                </div>`;
-            }).join('');
-        }
 
         async function openScheduleItemInPlayer(title, el) {
             if (!title) return;
@@ -5067,58 +5035,6 @@ let externalSourceCache = {};
             } finally {
                 if (el) el.classList.remove('schedule-item--loading');
             }
-        }
-
-        function wireHomeScheduleItemClicks(container) {
-            if (!container) return;
-            container.querySelectorAll('.schedule-item').forEach(el => {
-                el.addEventListener('click', () => {
-                    const title = el.dataset.title;
-                    openScheduleItemInPlayer(title, el);
-                });
-            });
-        }
-
-        async function loadHomeScheduleDayContent(offset) {
-            const content = document.getElementById('homeScheduleDayContent');
-            if (!content) return;
-            content.innerHTML = '<div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження...</div>';
-            try {
-                const list = await fetchScheduleByOffset(offset);
-                content.innerHTML = renderHomeScheduleDayItemsHtml(list);
-                wireHomeScheduleItemClicks(content);
-            } catch (err) {
-                content.innerHTML = `<div class="loader"><i class="fas fa-exclamation-triangle"></i> Помилка завантаження: ${err.message}<br><button class="btn-outline" style="margin-top:1rem;" onclick="loadHomeScheduleDayContent(${offset})">Спробувати знову</button></div>`;
-            }
-        }
-        window.loadHomeScheduleDayContent = loadHomeScheduleDayContent;
-
-        function buildScheduleWidgetHtml(scheduleItems) {
-            const todayLabel = formatScheduleDisplayDate(scheduleDateForOffset(0));
-            let tabsHtml = '';
-            for (let i = 0; i < 7; i++) {
-                const d = scheduleDateForOffset(i);
-                const label = i === 0 ? 'Сьогодні' : WEEKDAY_SHORT_UA[d.getDay()];
-                tabsHtml += `<button class="schedule-day-tab${i === 0 ? ' active' : ''}" data-offset="${i}">
-                    <span class="schedule-day-tab__label">${label}</span>
-                    <span class="schedule-day-tab__date">${formatScheduleDisplayDate(d)}</span>
-                </button>`;
-            }
-            const itemsHtml = renderHomeScheduleDayItemsHtml(scheduleItems);
-
-            return `
-                <div class="home-schedule-widget" id="homeScheduleWidget">
-                    <div class="home-schedule-widget__header">
-                        <div class="home-schedule-widget__title">
-                            <span class="home-schedule-widget__icon-badge"><i class="fas fa-calendar-alt"></i></span>
-                            Розклад виходу
-                            <span class="home-schedule-widget__date">Сьогодні, ${todayLabel}</span>
-                        </div>
-                    </div>
-                    <div class="home-schedule-widget__day-tabs" id="homeScheduleDayTabs">${tabsHtml}</div>
-                    <div class="home-schedule-widget__day-content" id="homeScheduleDayContent">${itemsHtml}</div>
-                </div>
-            `;
         }
 
         // ====================================================================
@@ -9458,6 +9374,8 @@ function renderProfilePage() {
                     Router.goTo('filter');
                 } else if (action === 'stickers') {
                     Router.goTo('stickers');
+                } else if (action === 'schedule') {
+                    Router.goTo('schedule');
                 }
             });
         });
