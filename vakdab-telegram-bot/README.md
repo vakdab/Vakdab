@@ -18,9 +18,10 @@ GitHub repository: `vakdab/Vakdab`
 
 Root directory залишити порожнім — потрібні і сайт у корені репозиторію, і `vakdab-telegram-bot/worker.js`.
 
-Deploy command:
+Deploy command (виконувати з каталогу `vakdab-telegram-bot`):
 
 ```bash
+cd vakdab-telegram-bot
 npx wrangler deploy
 ```
 
@@ -31,19 +32,22 @@ name = "vakdab"
 main = "worker.js"
 
 [assets]
-directory = "."
+directory = ".."
 binding = "ASSETS"
 ```
 
 Тому Worker не віддає Telegram-код замість сайту: GET-запити передаються у `ASSETS`, а тільки POST на `/telegram-webhook` обробляється ботом.
 
-## Дані AnimeUA
+## Джерела даних VakDab
 
-- Пошук: `https://animeua.club/index.php?do=search&subaction=search&story={query}&page={page}`
-- Популярні: `https://animeua.club/top.html`
-- Каталог: `https://animeua.club/page/{page}/`
-- Випадкове: `https://animeua.club/index.php?do=rand`
-- Proxy: `https://monoanime.animegran8.workers.dev?url={encoded_url}&force_ua=desktop`
+Telegram-бот використовує ті самі джерела, що й сайт:
+
+- **Hikka API** (`https://api.hikka.io`) — пошук, популярні аніме, каталог, назви, жанри, статус, рік, опис і кількість епізодів.
+- **Mikai API** (`https://api.mikai.me/v1/schedule`) — розклад виходу та посилання на джерело перегляду, якщо воно доступне в Hikka.
+- **VakDab** (`https://vakdab.github.io/Vakdab`) — кнопка «Дивитись на VakDab» відкриває плеєр через `#anime/{hikka-slug}`.
+- **Proxy** (`https://monoanime.animegran8.workers.dev`) — залишається доступним для сумісності з іншими запитами Worker.
+
+Сайт підтримує deeplink як для numeric Hikka ID, так і для стабільного Hikka slug.
 
 ## Cloudflare secrets
 
@@ -72,9 +76,10 @@ https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo
 
 Після цього сайт відкривається як раніше, а Telegram надсилає updates на `/telegram-webhook`.
 
-## Gemini / Makima
+## Groq / Makima
 
-Telegram-команда `/makima <запит>` або `/ask <запит>` передає запит у Gemini.
-У Cloudflare Worker потрібно додати secret `GEMINI_API_KEY`; ключ не зберігається в GitHub. Опційно можна задати змінну `GEMINI_MODEL`, за замовчуванням використовується `gemini-2.5-flash`.
+Telegram-команда `/makima <запит>` або `/ask <запит>` передає запит у Groq.
+
+У Cloudflare Worker потрібно додати secret `GROQ_API_KEY`; ключ не зберігається в GitHub. Опційно можна задати змінну `GROQ_MODEL`, за замовчуванням використовується `llama-3.3-70b-versatile`.
 
 Команду можна додати через Cloudflare Dashboard → Worker `vakdab` → Settings → Variables and Secrets → Add secret.

@@ -2564,7 +2564,7 @@ let externalSourceCache = {};
                     // Deep-link для Telegram: #anime/<Hikka ID>.
                     // Використовуємо той самий openPlayerPage(), що й звичайні картки.
                     this.showMain();
-                    const animeIdMatch = route.match(/^anime\/(\d+)$/);
+                    const animeIdMatch = route.match(/^anime\/([A-Za-z0-9][A-Za-z0-9-]{1,180})$/);
                     if (animeIdMatch) {
                         const animeUrl = `${HIKKA_API}/anime/${animeIdMatch[1]}`;
                         setTimeout(() => openPlayerPage(animeUrl, { fromDeepLink: true }), 150);

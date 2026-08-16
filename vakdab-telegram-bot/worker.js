@@ -1,5 +1,7 @@
 const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const HIKKA_API = 'https://api.hikka.io';
+const MIKAI_API_BASE = 'https://api.mikai.me/v1';
+const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
@@ -28,6 +30,7 @@ export default {
         if (url.pathname === '/set_webhook') {
           return await setWebhook(request, env, url);
         }
+        if (env.ASSETS) return env.ASSETS.fetch(request);
         return textResponse('VakDab Telegram Worker is running.');
       }
 
@@ -653,6 +656,13 @@ async function handleCallbackQuery(callback, env) {
       return;
     }
 
+    if (data === 'schedule') {
+      state.screen = 'schedule';
+      await replaceMessage(chatId, messageId, 'Завантажую розклад Mikai...', false, {}, env);
+      await renderSchedule(chatId, messageId, env);
+      return;
+    }
+
     if (data === 'random') {
       state.screen = 'random';
       state.previous = { kind: 'random' };
@@ -769,6 +779,42 @@ async function renderSearch(chatId, page, env, messageId = null) {
   }
 }
 
+async function renderSchedule(chatId, messageId, env) {
+  try {
+    const schedule = await fetchMikaiSchedule();
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const labels = { monday: 'Понеділок', tuesday: 'Вівторок', wednesday: 'Середа', thursday: 'Четвер', friday: 'Пʼятниця', saturday: 'Субота', sunday: 'Неділя' };
+    const lines = [];
+    for (const day of days) {
+      const items = Array.isArray(schedule?.[day]) ? schedule[day] : [];
+      if (!items.length) continue;
+      lines.push(`<b>${labels[day]}</b>`);
+      for (const item of items.slice(0, 12)) {
+        const anime = item?.anime || {};
+        const title = anime?.details?.names?.name || anime?.details?.names?.nameEnglish || anime?.slug || 'Без назви';
+        const episode = item?.episode ? ` · серія ${item.episode}` : '';
+        const time = item?.airing ? ` · ${String(item.airing).slice(11, 16)}` : '';
+        lines.push(`• ${escapeHtml(title)}${escapeHtml(episode)}${escapeHtml(time)}`);
+      }
+      lines.push('');
+    }
+    const text = lines.join('\n').trim() || 'На найближчі дні розкладу немає.';
+    const safeText = text.length > 3500 ? `${text.slice(0, 3490)}…` : text;
+    await updateOrSend(chatId, messageId, `Розклад виходу з Mikai:\n\n${safeText}`, false, { reply_markup: backHomeKeyboard() }, env);
+  } catch (error) {
+    console.error('[schedule] failed:', safeError(error));
+    await updateOrSend(chatId, messageId, 'Не вдалося завантажити розклад Mikai. Спробуйте ще раз.', false, { reply_markup: mainKeyboard() }, env);
+  }
+}
+
+async function fetchMikaiSchedule() {
+  const response = await fetch(`${MIKAI_API_BASE}/schedule`, { headers: { accept: 'application/json' } });
+  if (!response.ok) throw new Error(`MIKAI_HTTP_${response.status}`);
+  const payload = await response.json();
+  if (payload?.ok === false) throw new Error(payload.error?.message || 'MIKAI_API_ERROR');
+  return payload?.result || payload;
+}
+
 async function renderRandom(chatId, messageId, env) {
   try {
     const pool = await fetchRandomPool();
@@ -790,16 +836,20 @@ async function renderDetails(chatId, messageId, url, env) {
     const state = getState(chatId);
 
     const buttons = [];
+    const mikaiUrl = findMikaiWatchUrl(details);
     if (state.previous?.kind === 'random') {
       buttons.push({ text: 'Випадкове', callback_data: 'random' });
     }
     buttons.push({ text: 'Головна', callback_data: 'home' });
 
     let keyboard;
-    if (watchUrl) {
+    if (watchUrl || mikaiUrl) {
+      const watchButtons = [];
+      if (watchUrl) watchButtons.push({ text: 'Дивитись на VakDab', url: watchUrl });
+      if (mikaiUrl) watchButtons.push({ text: 'Джерело Mikai', url: mikaiUrl });
       keyboard = {
         inline_keyboard: [
-          [{ text: 'Дивитись на VakDab', url: watchUrl }],
+          watchButtons,
           buttons
         ]
       };
@@ -829,6 +879,7 @@ function mainKeyboard() {
     [{ text: 'Популярні', callback_data: 'popular:1' }],
     [{ text: 'Випадкове', callback_data: 'random' }],
     [{ text: 'Пошук', callback_data: 'search:prompt' }],
+    [{ text: 'Розклад', callback_data: 'schedule' }],
     [{ text: 'Запитати Макіму', callback_data: 'makima:prompt' }]
   ] };
 }
@@ -857,11 +908,17 @@ async function hikkaCatalog(page = 1, body = {}) {
   });
   if (!response.ok) throw new Error(`HIKKA_HTTP_${response.status}`);
   const data = await response.json();
-  return (data.list || []).map(item => ({
+  const items = (data.list || []).map(item => ({
+    ...item,
     title: item.title_ua || item.title_en || item.title_ja || 'Без назви',
-    url: `${HIKKA_API}/anime/${item.slug}`, image: item.image || '',
-    score: item.score, year: item.year, episodes: item.episodes_released
+    slug: item.slug || '',
+    id: item.id || item.hikka_id || item.mal_id || '',
+    url: `${HIKKA_API}/anime/${encodeURIComponent(item.slug || item.id || '')}`, image: item.image || '',
+    score: item.score, year: item.year, episodes: item.episodes_released,
+    genres: normalizeHikkaGenres(item.genres)
   }));
+  items.total = Number(data.total || data.count || data.pagination?.total || 0) || (items.length === PAGE_SIZE ? page * PAGE_SIZE + 1 : items.length);
+  return items;
 }
 
 async function fetchPopularAnime() {
@@ -881,7 +938,7 @@ async function fetchRandomPool() {
 
 async function searchAnime(query, page) {
   const items = await hikkaCatalog(page, { query: normalizeQuery(query), only_translated: true });
-  return { items, total: items.length };
+  return { items, total: items.total || items.length };
 }
 
 async function fetchAnimeDetails(url) {
@@ -889,8 +946,13 @@ async function fetchAnimeDetails(url) {
   const response = await fetch(safeUrl, { headers: { accept: 'application/json' } });
   if (!response.ok) throw new Error(`HIKKA_HTTP_${response.status}`);
   const item = await response.json();
-  return { ...item, title: item.title_ua || item.title_en || item.title_ja, url: safeUrl,
-    image: item.image, synopsis: item.synopsis_ua || item.synopsis_en || '', genres: item.genres || [] };
+  return { ...item, title: item.title_ua || item.title_en || item.title_ja || 'Без назви', url: safeUrl,
+    image: item.image, synopsis: item.synopsis_ua || item.synopsis_en || '',
+    genres: normalizeHikkaGenres(item.genres),
+    year: item.year || '',
+    episodes: item.episodes_released || item.episodes_total || '',
+    episodesTotal: item.episodes_total || '',
+    status: item.status || '' };
 }
 
 async function fetchSource(targetUrl) {
@@ -953,8 +1015,8 @@ function extractAnimeId(animeUrl) {
   try {
     const parsed = new URL(animeUrl);
     const newsId = parsed.searchParams.get('newsid');
-    if (/^\d+$/.test(newsId || '')) return newsId;
-    const match = parsed.pathname.match(/\/(\d+)(?:-|\.html(?:$|\/))/i);
+    if (newsId && /^[A-Za-z0-9][A-Za-z0-9-]{1,180}$/.test(newsId)) return newsId;
+    const match = parsed.pathname.match(/\/anime\/([^/?#]+)/i);
     return match?.[1] || '';
   } catch {
     return '';
@@ -962,15 +1024,42 @@ function extractAnimeId(animeUrl) {
 }
 
 function vakdabWatchUrl(animeId) {
-  return /^\d+$/.test(String(animeId || ''))
-    ? `https://vakdab.github.io/Vakdab/#anime/${animeId}`
+  const value = String(animeId || '').trim();
+  return /^[A-Za-z0-9][A-Za-z0-9-]{1,180}$/.test(value)
+    ? `${SITE_BASE_URL}/#anime/${encodeURIComponent(value)}`
     : '';
+}
+
+function normalizeHikkaGenres(genres) {
+  return [...new Set((Array.isArray(genres) ? genres : []).map(item => {
+    if (typeof item === 'string') return item.trim();
+    return String(item?.name_ua || item?.name_en || item?.name || '').trim();
+  }).filter(Boolean))];
+}
+
+function findMikaiWatchUrl(details = {}) {
+  const candidates = [
+    ...(Array.isArray(details.external) ? details.external : []),
+    ...(Array.isArray(details.watch) ? details.watch : [])
+  ];
+  return candidates.map(item => typeof item === 'string' ? item : item?.url).find(url => /^https?:\/\/(?:www\.)?mikai\.me\/anime\//i.test(String(url || ''))) || '';
+}
+
+function statusLabelUa(status) {
+  const map = { ongoing: 'Онґоїнг', released: 'Вийшло', finished: 'Завершено', completed: 'Завершено', anons: 'Анонс' };
+  return map[String(status || '').toLowerCase()] || String(status || '');
 }
 
 function detailsText(details) {
   let text = `<b>${escapeHtml(details.title)}</b>`;
   if (details.year) text += `\nРік: ${escapeHtml(details.year)}`;
-  if (details.episodes) text += `\nЕпізоди: ${escapeHtml(details.episodes)}`;
+  if (details.episodes) {
+    const episodeText = details.episodesTotal && String(details.episodesTotal) !== String(details.episodes)
+      ? `${details.episodes} / ${details.episodesTotal}`
+      : details.episodes;
+    text += `\nЕпізоди: ${escapeHtml(episodeText)}`;
+  }
+  if (details.status) text += `\nСтатус: ${escapeHtml(statusLabelUa(details.status))}`;
   if (details.genres.length) text += `\nЖанри: ${escapeHtml(details.genres.join(', '))}`;
   if (details.synopsis) {
     const synopsis = details.synopsis.slice(0, 900);
