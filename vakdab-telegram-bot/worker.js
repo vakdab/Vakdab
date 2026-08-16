@@ -957,7 +957,7 @@ async function searchAnime(query, page) {
 }
 
 async function fetchAnimeDetails(url) {
-  const safeUrl = validateHikkaUrl(url);
+  const safeUrl = validateAnimeUrl(url);
   const response = await fetch(safeUrl, { headers: { accept: 'application/json' } });
   if (!response.ok) throw new Error(`HIKKA_HTTP_${response.status}`);
   const item = await response.json();
