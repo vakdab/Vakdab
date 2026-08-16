@@ -7122,6 +7122,64 @@ function renderProfilePage() {
             e.target.value = '';
         });
 
+        async function removeStickerBackground(blob, tolerance = 46) {
+            const url = URL.createObjectURL(blob);
+            try {
+                const image = await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = url;
+                });
+                const maxSide = 900;
+                const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+                canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const pixels = imageData.data;
+                const w = canvas.width;
+                const h = canvas.height;
+                const sample = (x, y) => {
+                    const i = (y * w + x) * 4;
+                    return [pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]];
+                };
+                const corners = [sample(0, 0), sample(w - 1, 0), sample(0, h - 1), sample(w - 1, h - 1)];
+                if (corners.some(c => c[3] < 20)) return blob;
+                const average = corners.reduce((a, c) => [a[0] + c[0], a[1] + c[1], a[2] + c[2]], [0, 0, 0]).map(v => v / corners.length);
+                const cornerSpread = Math.max(...corners.map(c => Math.hypot(c[0] - average[0], c[1] - average[1], c[2] - average[2])));
+                if (cornerSpread > tolerance * 1.5) return blob;
+                const distance = (i) => Math.hypot(pixels[i] - average[0], pixels[i + 1] - average[1], pixels[i + 2] - average[2]);
+                const visited = new Uint8Array(w * h);
+                const queue = [];
+                const enqueue = (x, y) => {
+                    if (x < 0 || y < 0 || x >= w || y >= h) return;
+                    const pos = y * w + x;
+                    if (visited[pos]) return;
+                    visited[pos] = 1;
+                    queue.push(pos);
+                };
+                for (let x = 0; x < w; x++) { enqueue(x, 0); enqueue(x, h - 1); }
+                for (let y = 1; y < h - 1; y++) { enqueue(0, y); enqueue(w - 1, y); }
+                for (let cursor = 0; cursor < queue.length; cursor++) {
+                    const pos = queue[cursor];
+                    const i = pos * 4;
+                    if (distance(i) > tolerance || pixels[i + 3] < 20) continue;
+                    const edge = Math.max(0, Math.min(1, (tolerance - distance(i)) / 18));
+                    pixels[i + 3] = Math.round(pixels[i + 3] * edge);
+                    const x = pos % w;
+                    const y = Math.floor(pos / w);
+                    enqueue(x - 1, y); enqueue(x + 1, y); enqueue(x, y - 1); enqueue(x, y + 1);
+                }
+                ctx.putImageData(imageData, 0, 0);
+                return await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            } finally {
+                URL.revokeObjectURL(url);
+            }
+        }
+
         document.getElementById('stickerFileInput').addEventListener('change', async function(e) {
             const file = e.target.files[0];
             e.target.value = '';
@@ -7129,10 +7187,11 @@ function renderProfilePage() {
             const maxSize = 8 * 1024 * 1024;
             if (file.size > maxSize) { showToast('Файл занадто великий (максимум 8 МБ)'); return; }
             openImageEditor(file, 'avatar', async (blob) => {
-                showToast('Завантаження наліпки...');
+                showToast('Видаляю фон наліпки...');
                 try {
-                    const isPngFile = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
-                    const imageUrl = await uploadBlobToCloudinary(blob, isPngFile ? 'sticker.png' : 'sticker.jpg');
+                    const processedBlob = await removeStickerBackground(blob);
+                    showToast('Завантаження наліпки...');
+                    const imageUrl = await uploadBlobToCloudinary(processedBlob, 'sticker.png');
                     const cur = Storage.getStickers();
                     const stickerId = 'sng_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
                     const stickerKey = 'img:' + stickerId;
