@@ -741,3 +741,37 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
 .dark-mode .home-catalog-preset.active span,
 .dark-mode .home-catalog-preset.active i,
 .dark-mode .home-catalog-view.active i { color: #ffffff !important; }
+
+/* Catalog quick actions: schedule and filters stay together beside the sort controls. */
+.home-catalog-quick-actions {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    min-width: max-content;
+}
+.home-catalog-quick-actions .home-catalog-filter-btn {
+    min-height: 2.55rem;
+}
+@media (max-width: 479px) {
+    .home-catalog-controls {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .home-catalog-quick-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+    }
+    .home-catalog-quick-actions .home-catalog-filter-btn {
+        width: 2.9rem;
+        min-height: 2.7rem;
+        padding: 0;
+    }
+    .home-catalog-quick-actions .home-catalog-filter-btn span {
+        display: none;
+    }
+}
+.home-catalog-more {
+    min-height: 2.8rem;
+    padding: .7rem 1.35rem;
+    border-radius: 999px;
+    font-weight: 700;
+}

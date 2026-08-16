@@ -4746,13 +4746,15 @@ let externalSourceCache = {};
                 <div class="home-catalog-controls">
                     <label class="home-catalog-sort"><select id="homeCatalogSort" aria-label="Сортування"><option value="score"${homeCatalogSort === 'score' ? ' selected' : ''}>За оцінкою</option><option value="newest"${homeCatalogSort === 'newest' ? ' selected' : ''}>Новіші</option><option value="title"${homeCatalogSort === 'title' ? ' selected' : ''}>За назвою</option></select><i class="fas fa-arrow-up-wide-short"></i></label>
                     <div class="home-catalog-view-toggle" role="group" aria-label="Вигляд каталогу"><button type="button" class="home-catalog-view${homeCatalogView === 'grid' ? ' active' : ''}" data-catalog-view="grid" aria-label="Сітка"><i class="fas fa-grip"></i></button><button type="button" class="home-catalog-view${homeCatalogView === 'list' ? ' active' : ''}" data-catalog-view="list" aria-label="Список"><i class="fas fa-list"></i></button></div>
-                    <button class="home-catalog-filter-btn home-catalog-schedule-btn" id="homeCatalogScheduleBtn" type="button"><i class="fas fa-calendar-days"></i><span>Розклад виходу</span></button>
-                    <button class="home-catalog-filter-btn" id="homeCatalogFilterBtn" type="button"><i class="fas fa-filter"></i><span>Фільтри</span></button>
+                    <div class="home-catalog-quick-actions" role="group" aria-label="Швидкі дії каталогу">
+                        <button class="home-catalog-filter-btn home-catalog-schedule-btn" id="homeCatalogScheduleBtn" type="button"><i class="fas fa-calendar-days"></i><span>Розклад виходу</span></button>
+                        <button class="home-catalog-filter-btn" id="homeCatalogFilterBtn" type="button"><i class="fas fa-filter"></i><span>Фільтри</span></button>
+                    </div>
                 </div>
                 <div class="home-catalog-presets" id="homeCatalogPresets">${HOME_CATALOG_PRESETS.map(preset => `<button type="button" class="home-catalog-preset${preset.key === homeCatalogPreset ? ' active' : ''}" data-catalog-preset="${preset.key}">${preset.label}</button>`).join('')}</div>
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
-                <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Показати ще</button>
+                <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>
             </section>`;
         }
 
@@ -4829,7 +4831,7 @@ let externalSourceCache = {};
                 homeCatalogItems = await fetchHomeCatalogPage(1);
                 renderHomeCatalogGrid();
                 const button = document.getElementById('homeCatalogMoreBtn');
-                if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-plus"></i> Показати ще'; }
+                if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-plus"></i> Продовжити'; }
             } catch (error) {
                 grid.innerHTML = `<div class="home-catalog-empty">Не вдалося завантажити каталог. Спробуйте ще раз.</div>`;
                 showToast('Помилка завантаження каталогу');
@@ -4853,7 +4855,7 @@ let externalSourceCache = {};
                 homeCatalogPage = nextPage;
                 renderHomeCatalogGrid();
                 if (!nextItems.length || nextItems.length < 24) button.remove();
-                else { button.disabled = false; button.innerHTML = '<i class="fas fa-plus"></i> Показати ще'; }
+                else { button.disabled = false; button.innerHTML = '<i class="fas fa-plus"></i> Продовжити'; }
             } catch (error) {
                 button.disabled = false;
                 button.innerHTML = '<i class="fas fa-rotate-right"></i> Спробувати ще';
@@ -7459,7 +7461,7 @@ function renderProfilePage() {
                             .url); });
                 });
                 pagination.innerHTML = !filterResultsState.exhausted ?
-                    `<button class="btn-outline" onclick="applyFilters(false)">Показати ще <i class="fas fa-chevron-down"></i></button>` :
+                    `<button class="btn-outline" onclick="applyFilters(false)">Продовжити <i class="fas fa-chevron-down"></i></button>` :
                     '';
             } catch (err) {
                 content.innerHTML =
