@@ -7528,6 +7528,7 @@ function renderProfilePage() {
         let playerPageCurrentDub = '';
         let playerPageCurrentQuality = '720p';
         let playerPageActiveEpisodeFile = null;
+        let playerPagePlaybackRequest = 0;
         let playerPageCurrentAnimeUrl = null;
         let playerPageCurrentSource = 'Основне';
         let playerPageCurrentView = 'grid';
@@ -7536,6 +7537,9 @@ function renderProfilePage() {
         let playerPageCurrentEpisodeNum = '1';
         let playerPageHistoryUpdated = false;
         let playerPageWatchStartTime = 0;
+        let playerPageIsOpen = false;
+        let playerPagePreviousBodyOverflow = '';
+        let playerPagePreviousActiveElement = null;
         let playerRatingSourceIsTmdb = false; // TMDB рейтинг має пріоритет над локальним рейтингом глядачів
         let playerJikanData = null;
         let playerCharacterItems = [];
@@ -7570,6 +7574,17 @@ function renderProfilePage() {
         async function openPlayerPage(url, options = {}) {
             const modal = document.getElementById('playerPageModal');
             if (!modal) return;
+            if (!playerPageIsOpen) {
+                playerPagePreviousBodyOverflow = document.body.style.overflow || '';
+                playerPagePreviousActiveElement = document.activeElement;
+            }
+            playerPageIsOpen = true;
+            modal.classList.add('is-open');
+            modal.setAttribute('aria-hidden', 'false');
+            modal.setAttribute('aria-busy', 'true');
+            document.documentElement.classList.add('player-page-open');
+            document.body.classList.add('player-page-open');
+            document.getElementById('bottomNav')?.classList.add('hidden-nav');
             // Скасувати попереднє завантаження якщо є
             if (_playerLoadController) {
                 _playerLoadController.abort();
@@ -7581,6 +7596,9 @@ function renderProfilePage() {
             if (playerPagePlayer) { playerPagePlayer.destroy();
                 playerPagePlayer = null; }
             playerPageAnime = null;
+            playerPageActiveEpisodeFile = null;
+            playerPageCurrentEpisodeNum = '1';
+            playerPagePlaybackRequest += 1;
             playerJikanData = null;
             playerCharacterItems = [];
             playerCharacterExpanded = false;
@@ -7629,6 +7647,7 @@ function renderProfilePage() {
             modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
             modal.querySelector('.modal-content').scrollTop = 0;
+            modal.focus({ preventScroll: true });
             try {
                 const anime = await loadHikkaDetail(url);
                 // Якщо плеєр вже закрили поки завантажувалось — не оновлювати DOM
@@ -7675,6 +7694,7 @@ function renderProfilePage() {
                 const seasons = Object.keys(anime.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
                 playerPageCurrentSeason = seasons[0] || '1';
                 playerPageCurrentDub = pickPreferredDub(anime.seasons[playerPageCurrentSeason]);
+                playerPageCurrentEpisodeNum = '1';
                 playerPageCurrentQuality = '720p';
                 buildSeasonRow(seasons);
                 buildEpisodeViews();
@@ -7686,6 +7706,7 @@ function renderProfilePage() {
                     console.warn('No episodes found for anime:', anime.url, anime._diagnostics);
                 }
                 buildBottomSheetData();
+                modal.setAttribute('aria-busy', 'false');
                 if (window.lucide) lucide.createIcons();
 
                 // ============================================================
@@ -7784,6 +7805,7 @@ function renderProfilePage() {
                     userMsg = 'Помилка завантаження. Спробуйте пізніше.';
                     document.getElementById('playerSynopsis').textContent = userMsg;
                 }
+                modal.setAttribute('aria-busy', 'false');
 
                 const diagForErr = err._diagnostics || {
                     url, ua: navigator.userAgent, device: detectDeviceInfo(navigator.userAgent),
@@ -7948,10 +7970,8 @@ function renderProfilePage() {
         }
 
         function closeWatchPage() {
-            // Return to the details section without changing the page.
+            // Вбудований плеєр живе на одному screen; при закритті лише очищаємо відео.
             document.getElementById('page-info')?.classList.add('active');
-            const infoSection = document.querySelector('#playerPageModal #playerControls');
-            if (infoSection) infoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
             if (playerPagePlayer) {
                 if (playerPagePlayer._timeUpdateListener && playerPagePlayer.videoRef) {
                     playerPagePlayer.videoRef.removeEventListener('timeupdate', playerPagePlayer._timeUpdateListener);
@@ -8839,6 +8859,8 @@ function renderProfilePage() {
 
         async function playEpisode(file, epNum) {
             if (!file) { showToast('Немає файлу для відтворення'); return; }
+            if (!playerPageIsOpen) return;
+            const playbackRequest = ++playerPagePlaybackRequest;
             playerPageCurrentEpisodeNum = epNum || '1';
             renderAllEpisodeViews(getCurrentEpisodes(), null, null);
             const videoContainer = document.getElementById('playerVideoContainer');
@@ -8855,15 +8877,20 @@ function renderProfilePage() {
                 try {
                     finalUrl = await resolveAshdiPlaybackUrl(file);
                 } catch (error) {
+                    if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
                     console.warn('[ASHDI playback]', error);
+                    videoContainer.classList.remove('active');
+                    videoDiv.innerHTML = '<div class="player-video-error"><i class="fas fa-triangle-exclamation"></i><span>Відео цієї серії недоступне.</span></div>';
                     showToast(`ASHDI: ${error.message || 'відео недоступне'}`);
                     return;
                 }
             }
+            if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
             playerPageActiveEpisodeFile = finalUrl;
 
             if (playerPagePlayer) { playerPagePlayer.destroy();
                 playerPagePlayer = null; }
+            if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
             playerPagePlayer = new LampaPlayer(videoDiv, { poster: playerPageAnime?.images?.jpg?.large_image_url });
             playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || '', `Серія ${epNum}`);
             playerPageHistoryUpdated = false;
@@ -8930,7 +8957,12 @@ function renderProfilePage() {
 
         function closePlayerPage() {
             const modal = document.getElementById('playerPageModal');
-            if (!modal) return;
+            if (!modal || (!playerPageIsOpen && !modal.classList.contains('is-open'))) return;
+            playerPageIsOpen = false;
+            playerPagePlaybackRequest += 1;
+            modal.setAttribute('aria-busy', 'false');
+            modal.setAttribute('aria-hidden', 'true');
+            modal.classList.remove('is-open');
             // Скасувати активне завантаження — щоб catch не показував помилку
             if (_playerLoadController) {
                 _playerLoadController.abort();
@@ -8941,8 +8973,15 @@ function renderProfilePage() {
             }
             closeWatchPage();
             modal.style.display = 'none';
-            document.body.style.overflow = '';
+            document.documentElement.classList.remove('player-page-open');
+            document.body.classList.remove('player-page-open');
+            document.getElementById('bottomNav')?.classList.remove('hidden-nav');
+            document.body.style.overflow = playerPagePreviousBodyOverflow;
             document.getElementById('episodePanel').classList.remove('visible');
+            if (playerPagePreviousActiveElement && document.contains(playerPagePreviousActiveElement)) {
+                playerPagePreviousActiveElement.focus({ preventScroll: true });
+            }
+            playerPagePreviousActiveElement = null;
             if (Router.currentRoute === 'profile') renderProfilePage();
         }
 
@@ -9066,17 +9105,30 @@ function renderProfilePage() {
         // ====================================================================
         let bottomSheetMode = 'full';
 
-                                function buildBottomSheetData() {
+        function buildBottomSheetData() {
+            const bindItems = (root, selector, callback) => {
+                root?.querySelectorAll(selector).forEach(item => {
+                    const activate = () => callback(item.dataset.value);
+                    item.addEventListener('click', activate);
+                    item.addEventListener('keydown', event => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            activate();
+                        }
+                    });
+                });
+            };
+
             const sourceList = document.getElementById('bsSourceList');
             if (sourceList) {
                 const sources = playerPageSources.length ? playerPageSources : ['Основне'];
                 sourceList.innerHTML = sources.map(s => {
                     const active = s === playerPageCurrentSource ? ' active' : '';
-                    return `<div class="source-item${active}" onclick="switchProviderSource('${s}')">${s}</div>`;
+                    return `<div class="source-item${active}" data-value="${escapeHtml(String(s))}" role="button" tabindex="0">${escapeHtml(String(s))}</div>`;
                 }).join('');
+                bindItems(sourceList, '[data-value]', value => switchProviderSource(value));
             }
 
-            // Озвучки
             const dubList = document.getElementById('bsDubList');
             if (dubList && playerPageAnime?.seasons) {
                 const seasons = Object.keys(playerPageAnime.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
@@ -9084,27 +9136,28 @@ function renderProfilePage() {
                 const dubs = Object.keys(playerPageAnime.seasons[currentSeason] || {}).sort();
                 dubList.innerHTML = dubs.map(d => {
                     const active = d === playerPageCurrentDub ? ' active' : '';
-                    return `<div class="source-item${active}" onclick="selectDubFromSheet('${d}')">${d}</div>`;
+                    return `<div class="source-item${active}" data-value="${escapeHtml(String(d))}" role="button" tabindex="0">${escapeHtml(String(d))}</div>`;
                 }).join('');
+                bindItems(dubList, '[data-value]', value => selectDubFromSheet(value));
             }
 
-            // Сезони
             const seasonList = document.getElementById('bsSeasonList');
             if (seasonList && playerPageAnime?.seasons) {
                 const seasons = Object.keys(playerPageAnime.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
                 seasonList.innerHTML = seasons.map(s => {
                     const active = s === playerPageCurrentSeason ? ' active' : '';
-                    return `<div class="source-item${active}" onclick="selectSeasonFromSheet('${s}')">Сезон ${s}</div>`;
+                    return `<div class="source-item${active}" data-value="${escapeHtml(String(s))}" role="button" tabindex="0">Сезон ${escapeHtml(String(s))}</div>`;
                 }).join('');
+                bindItems(seasonList, '[data-value]', value => selectSeasonFromSheet(value));
             }
 
-            // Якість
             const qualityRow = document.getElementById('bsQualityRow');
             if (qualityRow) {
                 qualityRow.innerHTML = QUALITY_OPTIONS.map(q => {
                     const active = q === playerPageCurrentQuality ? ' active' : '';
-                    return `<div class="quality-item${active}" onclick="selectQualityFromSheet('${q}')">${q}</div>`;
+                    return `<div class="quality-item${active}" data-value="${escapeHtml(String(q))}" role="button" tabindex="0">${escapeHtml(String(q))}</div>`;
                 }).join('');
+                bindItems(qualityRow, '[data-value]', value => selectQualityFromSheet(value));
             }
         }
 
@@ -9451,6 +9504,9 @@ function renderProfilePage() {
             }
         }
 
+        document.getElementById('playerPageModal')?.addEventListener('click', e => {
+            if (e.target === e.currentTarget) closePlayerPage();
+        });
         document.getElementById('playerShareBtn').addEventListener('click', shareAnime);
         document.getElementById('watchBackBtn')?.addEventListener('click', closeWatchPage);
         document.getElementById('watchSourcePill')?.addEventListener('click', () => openBottomSheet('source'));
@@ -9472,8 +9528,11 @@ function renderProfilePage() {
             const isInput = tag === 'input' || tag === 'textarea' || tag === 'select' || document.activeElement
                 ?.isContentEditable;
             if (e.key === 'Escape') {
-                closePlayerPage();
-                                if (document.getElementById('bottomSheetOverlay').classList.contains('open')) closeBottomSheet();
+                const sheet = document.getElementById('bottomSheetOverlay');
+                if (sheet?.classList.contains('open')) { closeBottomSheet(); return; }
+                const menu = document.getElementById('menuPopoverOverlay');
+                if (menu?.classList.contains('visible')) { closeMenuPopover(); return; }
+                if (playerPageIsOpen) closePlayerPage();
                 return;
             }
             if (isInput) return;
@@ -9673,9 +9732,9 @@ function renderProfilePage() {
             // Ховати nav коли відкритий плеєр
             const playerModal = document.getElementById('playerPageModal');
             const _origOpenPlayer = window.openPlayerPage;
-            window.openPlayerPage = function(url) {
+            window.openPlayerPage = function(url, options = {}) {
                 if (nav) nav.classList.add('hidden-nav');
-                return _origOpenPlayer(url);
+                return _origOpenPlayer(url, options);
             };
             const _origClosePlayer = window.closePlayerPage;
             window.closePlayerPage = function() {

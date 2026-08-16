@@ -10,27 +10,53 @@
    both themes — matching typical video-player conventions. */
 
 #playerPageModal {
-    position: fixed;
+    position: fixed !important;
     inset: 0;
-    z-index: 1000;
+    z-index: 10000 !important;
     display: none;
-    align-items: flex-start;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: stretch;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
     padding: 0;
-    background: color-mix(in srgb, var(--bg) 76%, transparent);
-    color: var(--text);
-    backdrop-filter: blur(6px);
-    animation: vdPlayerFade .18s ease;
-}
-#playerPageModal .modal-content {
-    width: min(100%, 1120px);
-    height: 100%;
-    overflow-y: auto;
+    overflow: hidden;
     background: var(--bg);
     color: var(--text);
+    animation: vdPlayerFade .18s ease;
+}
+#playerPageModal.is-open { display: flex; }
+#playerPageModal .modal-content {
+    position: relative;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 100%;
+    margin: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--bg);
+    color: var(--text);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
     animation: vdPlayerRise .28s cubic-bezier(.16,1,.3,1);
+}
+html.player-page-open,
+body.player-page-open { overflow: hidden !important; }
+body.player-page-open > .app-container > *:not(#playerPageModal) {
+    display: none !important;
+}
+body.player-page-open > .bottom-nav,
+body.player-page-open > .back-to-top,
+body.player-page-open > .toast,
+body.player-page-open > .bottom-sheet-overlay {
+    display: none !important;
 }
 #playerPageModal .modal-content::-webkit-scrollbar { width: 8px; }
 #playerPageModal .modal-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
@@ -482,6 +508,19 @@
 #playerPageModal .player-episode-title { display: none; }
 #playerPageModal .player-episode-progress { position: absolute; right: 0; bottom: 0; left: 0; height: 3px; background: var(--accent); }
 #playerPageModal .player-empty-episodes { color: var(--text-muted); font-size: 12px; padding: 4px 2px; }
+#playerPageModal .player-video-error {
+    display: flex;
+    min-height: 180px;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 24px;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+}
+#playerPageModal .player-video-error i { color: var(--accent); font-size: 20px; }
 
 /* ============== Cast and synopsis ============== */
 #playerPageModal .modal-content section:not(.player-section) { padding: 18px 20px 4px; border-top: 1px solid var(--border); }
@@ -509,11 +548,14 @@
 
 @media (min-width: 760px) {
     #playerPageModal .modal-content {
-        height: min(94vh, 1100px);
-        margin: 3vh auto;
-        border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-lg);
+        width: 100%;
+        max-width: none;
+        height: 100vh;
+        height: 100dvh;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
     }
     #playerPageModal .content-top,
     #playerPageModal .ratings-row,
@@ -526,7 +568,7 @@
 
 /* ===== Мобільна адаптація плеєра ===== */
 @media (max-width: 620px) {
-    #playerPageModal .modal-content { height: 100vh; margin: 0; border-radius: 0; border: none; }
+    #playerPageModal .modal-content { width: 100%; height: 100vh; height: 100dvh; margin: 0; border-radius: 0; border: none; }
 
     #playerPageModal .player-video-container { aspect-ratio: 16 / 9; min-height: 180px; border-radius: 0; border-left: none; border-right: none; }
 
