@@ -1,5 +1,5 @@
 const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
-const ANIMEUA_BASE = 'https://animeua.club';
+const HIKKA_API = 'https://api.hikka.io';
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
@@ -771,15 +771,13 @@ async function renderSearch(chatId, page, env, messageId = null) {
 
 async function renderRandom(chatId, messageId, env) {
   try {
-    const randomPage = await fetchSource(`${ANIMEUA_BASE}/index.php?do=rand`);
-    const randomUrl = absoluteAnimeUrl(firstMatch(randomPage, /<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i) || firstMatch(randomPage, /property=["']og:url["'][^>]*content=["']([^"']+)["']/i));
-    if (!randomUrl) throw new Error('RANDOM_INVALID');
-    await renderDetails(chatId, messageId, randomUrl, env);
+    const pool = await fetchRandomPool();
+    const item = pool[Math.floor(Math.random() * pool.length)];
+    if (!item?.url) throw new Error('RANDOM_EMPTY');
+    await renderDetails(chatId, messageId, item.url, env);
   } catch (error) {
     console.error('[random] failed:', safeError(error));
-    await updateOrSend(chatId, messageId, 'Не вдалося отримати випадкове аніме. Спробуйте ще раз.', false, {
-      reply_markup: mainKeyboard()
-    }, env);
+    await updateOrSend(chatId, messageId, 'Не вдалося отримати випадкове аніме. Спробуйте ще раз.', false, { reply_markup: mainKeyboard() }, env);
   }
 }
 
@@ -853,41 +851,46 @@ function listKeyboard(items, page, kind, total) {
   return { inline_keyboard: keyboard };
 }
 
+async function hikkaCatalog(page = 1, body = {}) {
+  const response = await fetch(`${HIKKA_API}/anime?page=${Math.max(1, page)}&size=${PAGE_SIZE}`, {
+    method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify(body)
+  });
+  if (!response.ok) throw new Error(`HIKKA_HTTP_${response.status}`);
+  const data = await response.json();
+  return (data.list || []).map(item => ({
+    title: item.title_ua || item.title_en || item.title_ja || 'Без назви',
+    url: `${HIKKA_API}/anime/${item.slug}`, image: item.image || '',
+    score: item.score, year: item.year, episodes: item.episodes_released
+  }));
+}
+
 async function fetchPopularAnime() {
   if (popularCache && Date.now() - popularCacheAt < CACHE_TTL_MS) return popularCache;
-  const html = await fetchSource(`${ANIMEUA_BASE}/top.html`);
-  const items = parseCards(html);
-  if (!items.length) throw new Error('POPULAR_EMPTY');
-  popularCache = dedupe(items);
+  popularCache = await hikkaCatalog(1, { only_translated: true, sort: ['score:desc', 'scored_by:desc'] });
   popularCacheAt = Date.now();
   return popularCache;
 }
 
-async function fetchCatalogPage(page) {
-  const html = await fetchSource(`${ANIMEUA_BASE}/page/${page}/`);
-  return parseCards(html);
-}
+async function fetchCatalogPage(page) { return hikkaCatalog(page, { only_translated: true }); }
 
 async function fetchRandomPool() {
   const popular = await fetchPopularAnime();
   if (popular.length) return popular;
-  if (catalogCache && Date.now() - catalogCacheAt < CACHE_TTL_MS) return catalogCache;
-  catalogCache = dedupe(await fetchCatalogPage(1));
-  catalogCacheAt = Date.now();
-  return catalogCache;
+  return fetchCatalogPage(1);
 }
 
 async function searchAnime(query, page) {
-  const url = `${ANIMEUA_BASE}/index.php?do=search&subaction=search&story=${encodeURIComponent(normalizeQuery(query))}&page=${page}`;
-  const html = await fetchSource(url);
-  const items = dedupe(parseCards(html));
-  return { items: paginate(items, 1), total: items.length || (items.length ? items.length : 0) };
+  const items = await hikkaCatalog(page, { query: normalizeQuery(query), only_translated: true });
+  return { items, total: items.length };
 }
 
 async function fetchAnimeDetails(url) {
-  const safeUrl = validateAnimeUrl(url);
-  const html = await fetchSource(safeUrl);
-  return parseDetails(html, safeUrl);
+  const safeUrl = validateHikkaUrl(url);
+  const response = await fetch(safeUrl, { headers: { accept: 'application/json' } });
+  if (!response.ok) throw new Error(`HIKKA_HTTP_${response.status}`);
+  const item = await response.json();
+  return { ...item, title: item.title_ua || item.title_en || item.title_ja, url: safeUrl,
+    image: item.image, synopsis: item.synopsis_ua || item.synopsis_en || '', genres: item.genres || [] };
 }
 
 async function fetchSource(targetUrl) {
@@ -1005,18 +1008,17 @@ function firstMatch(value, pattern) {
 
 function absoluteUrl(value) {
   if (!value) return '';
-  try { return new URL(value, ANIMEUA_BASE).href; } catch { return ''; }
+  try { return new URL(value, HIKKA_API).href; } catch { return ''; }
 }
 
 function absoluteAnimeUrl(value) {
   const url = absoluteUrl(value);
-  return /^https:\/\/animeua\.club\//i.test(url) && !/^https:\/\/animeua\.club\/?$/i.test(url) ? url : '';
+  return /^https:\/\/api\.hikka\.io\/anime\//i.test(url) ? url : '';
 }
 
 function validateAnimeUrl(value) {
   const url = absoluteAnimeUrl(value);
-  if (!url) throw new Error('INVALID_ANIME_URL');
-  return url;
+  return /^https:\/\/api\.hikka\.io\/anime\//i.test(url) ? url : '';
 }
 
 function escapeHtml(value = '') {
