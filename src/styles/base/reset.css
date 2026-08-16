@@ -30,6 +30,24 @@ img, video { max-width: 100%; }
             --accent-light: rgba(255, 255, 255, 0.15);
             --accent-glow: rgba(255, 255, 255, 0.35);
         }
+        .theme-variant-lavender {
+            --accent: #8d5bd1;
+            --accent-rgb: 141, 91, 209;
+            --accent-hover: #a975e6;
+            --accent-text: #ffffff;
+            --accent-gradient: linear-gradient(135deg, #8d5bd1, #b278e8);
+            --accent-light: rgba(141, 91, 209, 0.15);
+            --accent-glow: rgba(141, 91, 209, 0.35);
+        }
+        .theme-variant-ocean {
+            --accent: #277fa8;
+            --accent-rgb: 39, 127, 168;
+            --accent-hover: #379bc8;
+            --accent-text: #ffffff;
+            --accent-gradient: linear-gradient(135deg, #277fa8, #47b7d3);
+            --accent-light: rgba(39, 127, 168, 0.15);
+            --accent-glow: rgba(39, 127, 168, 0.35);
+        }
 
         * {
             box-sizing: border-box;

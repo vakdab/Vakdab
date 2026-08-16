@@ -675,10 +675,12 @@ let externalSourceCache = {};
 
         // Колір теми (Налаштування → Зовнішній вигляд) — монохромні варіанти акценту
         function applyThemeVariant(profile) {
-            document.body.classList.remove('theme-variant-graphite', 'theme-variant-white');
+            document.body.classList.remove('theme-variant-graphite', 'theme-variant-white', 'theme-variant-lavender', 'theme-variant-ocean');
             const v = profile?.themeVariant;
             if (v === 'graphite') document.body.classList.add('theme-variant-graphite');
             else if (v === 'white') document.body.classList.add('theme-variant-white');
+            else if (v === 'lavender') document.body.classList.add('theme-variant-lavender');
+            else if (v === 'ocean') document.body.classList.add('theme-variant-ocean');
         }
 
         // Генерує накладні частинки для "Ефектів профілю" (дощ / сніг / іскри)
@@ -688,7 +690,9 @@ let externalSourceCache = {};
                 cls = 'drop';
             if (type === 'snow') { n = 16;
                 cls = 'flake'; } else if (type === 'sparks') { n = 14;
-                cls = 'spark'; }
+                cls = 'spark'; } else if (type === 'hearts') { n = 12;
+                cls = 'heart'; } else if (type === 'bubbles') { n = 12;
+                cls = 'bubble'; }
             let items = '';
             for (let i = 0; i < n; i++) {
                 const left = rand(0, 100).toFixed(1);
@@ -5328,24 +5332,32 @@ let externalSourceCache = {};
             { id: 'none', label: 'Немає', icon: 'fa-ban' },
             { id: 'rain', label: 'Дощ', icon: 'fa-cloud-rain' },
             { id: 'snow', label: 'Сніг', icon: 'fa-snowflake' },
-            { id: 'sparks', label: 'Іскри', icon: 'fa-star' }
+            { id: 'sparks', label: 'Іскри', icon: 'fa-star' },
+            { id: 'hearts', label: 'Серця', icon: 'fa-heart' },
+            { id: 'bubbles', label: 'Бульбашки', icon: 'fa-circle' }
         ];
         const PROFILE_ATMOSPHERES = [
-            { id: 'none', label: 'Без атмосфери', icon: 'fa-circle' },
+            { id: 'none', label: 'Немає', icon: 'fa-ban' },
             { id: 'night', label: 'Ніч', icon: 'fa-moon' },
             { id: 'light', label: 'Світло', icon: 'fa-lightbulb' },
-            { id: 'fog', label: 'Туман', icon: 'fa-smog' }
+            { id: 'fog', label: 'Туман', icon: 'fa-smog' },
+            { id: 'aurora', label: 'Північне сяйво', icon: 'fa-wand-magic-sparkles' },
+            { id: 'sunset', label: 'Захід сонця', icon: 'fa-sun' }
         ];
         const AVATAR_DECORATIONS = [
             { id: 'none', label: 'Немає', icon: 'fa-ban' },
             { id: 'glow', label: 'Сяйво', icon: 'fa-certificate' },
             { id: 'double', label: 'Подвійне кільце', icon: 'fa-circle-notch' },
-            { id: 'dashed', label: 'Пунктир', icon: 'fa-dot-circle' }
+            { id: 'dashed', label: 'Пунктир', icon: 'fa-dot-circle' },
+            { id: 'halo', label: 'Гало', icon: 'fa-sun' },
+            { id: 'diamond', label: 'Діамант', icon: 'fa-gem' }
         ];
         const TAB_STYLE_OPTIONS = [
+            { id: 'none', label: 'Немає', icon: 'fa-ban' },
             { id: 'underline', label: 'Підкреслення', icon: 'fa-minus' },
             { id: 'pills', label: 'Пігулки', icon: 'fa-capsules' },
-            { id: 'neon', label: 'Неон', icon: 'fa-bolt' }
+            { id: 'neon', label: 'Неон', icon: 'fa-bolt' },
+            { id: 'glass', label: 'Скло', icon: 'fa-gem' }
         ];
         const BANNER_EFFECTS = [
             { id: 'none', label: 'Оригінал', icon: 'fa-image' },
@@ -5359,9 +5371,12 @@ let externalSourceCache = {};
             { id: 'fog', label: 'Дим', icon: 'fa-smog' }
         ];
         const THEME_VARIANTS = [
+            { id: 'none', label: 'Немає', color: 'transparent' },
             { id: 'default', label: 'Чорний', color: '#0b0b0b' },
             { id: 'graphite', label: 'Графіт', color: '#4a4a4a' },
-            { id: 'white', label: 'Білий', color: '#ffffff' }
+            { id: 'white', label: 'Білий', color: '#ffffff' },
+            { id: 'lavender', label: 'Лавандовий', color: '#8d5bd1' },
+            { id: 'ocean', label: 'Океан', color: '#277fa8' }
         ];
 
         function buildOptionGridHtml(groupName, options, current) {
@@ -5390,14 +5405,32 @@ let externalSourceCache = {};
             if (!panel) return;
             const bannerEffectClass = (profile.bannerEffect && profile.bannerEffect !== 'none') ? ` banner-effect-${profile.bannerEffect}` : '';
             const decorationClass = (profile.avatarDecoration && profile.avatarDecoration !== 'none') ? ` avatar-decoration-${profile.avatarDecoration}` : '';
+            const stickerData = Storage.getStickers();
+            const nickBadge = stickerData.nickBadge ? `<span class="settings-preview-nick-badge">${renderStickerFaceByKey(stickerData, stickerData.nickBadge)}</span>` : '';
+            const stickerKeys = (stickerData.medals || []).slice(0, 28);
+            const stickerSlots = Array.from({ length: 28 }, (_, index) => {
+                const key = stickerKeys[index];
+                return `<div class="settings-preview-sticker-slot${key ? ' is-filled' : ''}" style="--sticker-color:${escapeHtml(key ? (stickerData.colors?.[key] || 'var(--accent)') : 'transparent')}">${key ? renderStickerFaceByKey(stickerData, key) : '<i class="fas fa-plus"></i>'}</div>`;
+            }).join('');
+            const avatarMarkup = profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, '', 'video avatar') : (profile.avatar ? profileMediaMarkup(profile.avatar, '', 'avatar') : `<span class="settings-preview-avatar-fallback">${escapeHtml((profile.nickname || 'К').charAt(0).toUpperCase())}</span>`);
             panel.innerHTML = `
-              <div class="profile-banner${bannerEffectClass}">
-                ${profile.bannerVideo ? profileMediaMarkup(profile.bannerVideo, 'preview-banner-img', 'video banner') : (profile.banner ? profileMediaMarkup(profile.banner, 'preview-banner-img', 'banner') : '')}
-                ${profile.atmosphere && profile.atmosphere !== 'none' ? `<div class="atmosphere-${profile.atmosphere}"></div>` : ''}
-                ${profile.effect && profile.effect !== 'none' ? buildEffectOverlayHtml(profile.effect) : ''}
-              </div>
-              <div class="settings-preview-avatar-wrap${decorationClass}">
-                ${profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, '', 'video avatar') : (profile.avatar ? profileMediaMarkup(profile.avatar, '', 'avatar') : '')}
+              <div class="settings-preview-profile">
+                <div class="profile-banner settings-preview-banner${bannerEffectClass}">
+                  ${profile.bannerVideo ? profileMediaMarkup(profile.bannerVideo, 'preview-banner-img', 'video banner') : (profile.banner ? profileMediaMarkup(profile.banner, 'preview-banner-img', 'banner') : '')}
+                  ${profile.atmosphere && profile.atmosphere !== 'none' ? `<div class="atmosphere-${profile.atmosphere}"></div>` : ''}
+                  ${profile.effect && profile.effect !== 'none' ? buildEffectOverlayHtml(profile.effect) : ''}
+                  <div class="profile-banner-overlay"></div>
+                </div>
+                <div class="settings-preview-info">
+                  <div class="settings-preview-avatar-wrap${decorationClass}"><div class="profile-avatar">${avatarMarkup}</div></div>
+                  <div class="settings-preview-nick-row"><strong>${escapeHtml(profile.nickname || 'Користувач')}</strong>${nickBadge}</div>
+                  <div class="settings-preview-handle">@${escapeHtml((profile.nickname || 'user').toLowerCase().replace(/\s/g, '_'))}</div>
+                  <div class="settings-preview-bio">${escapeHtml(profile.bio || 'Опис профілю не додано')}</div>
+                  <button type="button" class="settings-preview-bio-btn"><i class="fas fa-align-left"></i> Опис профілю</button>
+                  <div class="settings-preview-sticker-title"><span>Наліпки профілю</span><strong>${stickerKeys.length}/28</strong></div>
+                  <div class="settings-preview-sticker-grid">${stickerSlots}</div>
+                  <div class="settings-preview-tabs profile-tabs profile-tabs--${profile.tabStyle || 'underline'}"><span class="profile-tab active">Профіль</span><span class="profile-tab">Статистика</span><span class="profile-tab">Досягнення</span></div>
+                </div>
               </div>
             `;
         }
@@ -6454,7 +6487,7 @@ function renderProfilePage() {
             const isGifAvatar = isGifUrl(activeAvatar);
             const bannerEffectClass = (profile.bannerEffect && profile.bannerEffect !== 'none') ? ` banner-effect-${profile.bannerEffect}` : '';
             const decorationClass = (profile.avatarDecoration && profile.avatarDecoration !== 'none') ? ` avatar-decoration-${profile.avatarDecoration}` : '';
-            const tabsStyleClass = (profile.tabStyle && profile.tabStyle !== 'underline') ? ` profile-tabs--${profile.tabStyle}` : '';
+            const tabsStyleClass = (profile.tabStyle && profile.tabStyle !== 'underline' && profile.tabStyle !== 'none') ? ` profile-tabs--${profile.tabStyle}` : '';
             const bannerClass = (isGifBanner ? 'profile-banner is-gif' : 'profile-banner') + bannerEffectClass;
             const avatarClass = isGifAvatar ? 'profile-avatar is-gif' : 'profile-avatar';
             const stickerData = Storage.getStickers();
