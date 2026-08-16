@@ -7720,6 +7720,7 @@ function renderProfilePage() {
         // ====================================================================
         let playerPageAnime = null;
         let playerPageTmdbInfo = null;
+        let playerPageTmdbEpisodeMap = {};
         let playerPagePlayer = null;
         let _playerLoadController = null; // AbortController для поточного завантаження плеєра
         let playerPageCurrentSeason = '1';
@@ -7795,6 +7796,7 @@ function renderProfilePage() {
                 playerPagePlayer = null; }
             playerPageAnime = null;
             playerPageTmdbInfo = null;
+            playerPageTmdbEpisodeMap = {};
             playerPageActiveEpisodeFile = null;
             playerPageCurrentEpisodeNum = '1';
             playerPagePlaybackRequest += 1;
@@ -7934,15 +7936,16 @@ function renderProfilePage() {
                         const isMovie = tmdbInfo.mediaType === 'movie' || playerAnimeIsMovie(anime);
                         const hikkaPoster = posterUrl || ANIME_CARD_PLACEHOLDER;
                         const tmdbPoster = normalizePosterUrl(tmdbImgUrl(currentSeasonPoster || details.poster_path, 'w780'), hikkaPoster);
-                        const title = details.name || anime.title;
-                        const originalTitle = details.original_name || anime.originalTitle || anime.title;
-                        const year = (details.release_date || details.first_air_date || '').slice(0, 4) || anime.year || '—';
-                        // Кількість епізодів належить Hikka: TDMB не може її замінювати.
+                        // Hikka є джерелом істини для назви, сезону, року, статусу, жанрів і серій.
+                        // TMDB використовується лише для постера, логотипа та рейтингу.
+                        const title = anime.title || details.name || details.original_name || 'Без назви';
+                        const originalTitle = anime.originalTitle || details.original_name || title;
+                        const year = anime.year || (details.release_date || details.first_air_date || '').slice(0, 4) || '—';
                         const numEpisodes = totalEpisodes || anime.totalEpisodes || 0;
-                        const runtime = formatMovieRuntime(details.runtime) || formatMovieRuntime(anime.runtimeMinutes);
-                        const statusLabel = isMovie ? 'Фільм' : (TMDB_STATUS_LABELS[details.status] || (totalEpisodes > 0 ? 'Онгоїнг' : 'Завершено'));
-                        // Жанри належать Hikka. TMDB використовується лише для додаткових метаданих.
-                        const overview = details.overview || anime.synopsis || '';
+                        const runtime = formatMovieRuntime(anime.runtimeMinutes) || formatMovieRuntime(details.runtime);
+                        const hikkaStatus = statusLabelUa(anime.status);
+                        const statusLabel = isMovie ? 'Фільм' : (hikkaStatus || (numEpisodes > 0 ? 'Онгоїнг' : 'Завершено'));
+                        const overview = anime.synopsis || details.overview || '';
                         const ageRating = tmdbAgeRating(details);
                         const logoUrl = tmdbBestLogo(details);
 
@@ -9128,7 +9131,9 @@ function renderProfilePage() {
                 if (!seasonEpisodes) return;
                 const epMap = {};
                 seasonEpisodes.forEach(e => { epMap[e.episode_number] = e; });
+                playerPageTmdbEpisodeMap = epMap;
                 renderAllEpisodeViews(episodes, epMap, tmdbInfo);
+                setPlayerFramePoster(tmdbImgUrl(epMap[Number(playerPageCurrentEpisodeNum)]?.still_path, 'w1280'));
             } catch (e) { console.warn('TMDB enrich failed', e); }
         }
 
@@ -9136,6 +9141,17 @@ function renderProfilePage() {
             return anime?.type === 'movie' || (anime?.genres || []).some(g => /повнометраж|фільм|movie/i.test(g));
         }
 
+        function setPlayerFramePoster(frameUrl = '') {
+            const frame = document.getElementById('playerFramePoster');
+            if (!frame) return;
+            const url = frameUrl || tmdbImgUrl(playerPageTmdbInfo?.backdrop_path, 'w1280') || document.getElementById('playerPosterImg')?.src || '';
+            if (url) { frame.src = url; frame.classList.remove('is-hidden'); }
+            else frame.classList.add('is-hidden');
+        }
+        function hidePlayerFramePoster() {
+            const frame = document.getElementById('playerFramePoster');
+            if (frame) frame.classList.add('is-hidden');
+        }
         function formatMovieRuntime(minutes) {
             const n = Number(minutes);
             if (!Number.isFinite(n) || n <= 0) return '';
@@ -9157,7 +9173,7 @@ function renderProfilePage() {
             const videoTitleEl = document.getElementById('playerTopbarTitle');
             if (videoTitleEl) videoTitleEl.textContent = playerPageAnime?.title || '';
             videoDiv.innerHTML = '';
-
+            setPlayerFramePoster(tmdbImgUrl(playerPageTmdbEpisodeMap[Number(epNum)]?.still_path, 'w1280'));
             let finalUrl = file;
             if (/ashdi\.vip\/vod\//i.test(file)) {
                 showToast('Підключення ASHDI через проксі...');
@@ -9184,6 +9200,8 @@ function renderProfilePage() {
             playerPageWatchStartTime = Date.now();
             const video = playerPagePlayer.videoRef;
             if (video) {
+                const hideFrame = () => hidePlayerFramePoster();
+                video.addEventListener('playing', hideFrame, { once: true });
                 const onTimeUpdate = () => {
                     if (playerPageHistoryUpdated) return;
                     if (!playerPageAnime) return;
