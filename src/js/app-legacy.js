@@ -9634,7 +9634,7 @@ function renderProfilePage() {
             }
         });
 
-        document.getElementById('searchCircleBtn').addEventListener('click', () => {
+        document.getElementById('searchCircleBtn')?.addEventListener('click', () => {
             Router.goTo('search');
             setTimeout(() => {
                 const inp = document.getElementById('searchPageInput');
