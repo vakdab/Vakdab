@@ -859,11 +859,33 @@ let externalSourceCache = {};
             }
             return result;
         }
+        function normalizeSynopsisText(value) {
+            return String(value || '')
+                .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+                .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+                .replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1')
+                .replace(/<[^>]+>/g, '')
+                .replace(/\\r?\\n/g, '\n')
+                .replace(/\r\n?/g, '\n')
+                .replace(/[ \t]+\n/g, '\n')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+        }
         function hikkaType(item={}) {
             return item.media_type==='movie' ? 'movie' : (item.media_type==='ova'||item.media_type==='ona' ? 'ova' : 'tv');
         }
         function animeTypeLabel(type = 'tv') {
             return type === 'movie' ? 'Фільм' : type === 'ova' ? 'OVA' : 'Серіал';
+        }
+        function extractExternalAnimeIds(item = {}) {
+            const external = Array.isArray(item.external) ? item.external : [];
+            const fromUrl = (pattern) => {
+                const hit = external.map(x => String(x?.url || '')).map(url => url.match(pattern)).find(Boolean);
+                return hit ? Number(hit[1]) : null;
+            };
+            const malId = Number(item.mal_id || item.malId || fromUrl(/myanimelist\.net\/anime\/(\d+)/i) || 0) || null;
+            const anilistId = Number(item.anilist_id || item.anilistId || fromUrl(/anilist\.co\/anime\/(\d+)/i) || 0) || null;
+            return { ...(malId ? { mal_id: malId } : {}), ...(anilistId ? { anilist_id: anilistId } : {}) };
         }
         function hikkaItem(item={}) {
             const title=item.title_ua || item.title_en || item.title_ja || 'Без назви';
@@ -871,7 +893,7 @@ let externalSourceCache = {};
                 originalTitle:item.title_en || item.title_ja || '', url:`${HIKKA_API}/anime/${item.slug}`,
                 images:{jpg:{large_image_url:item.image || CATALOG_POSTER_FALLBACK, image_url:item.image || CATALOG_POSTER_FALLBACK}},
                 genres:normalizeGenreList(item.genres), type:hikkaType(item), typeLabel:hikkaType(item)==='movie'?'Фільм':'Серіал',
-                synopsis:item.synopsis_ua || item.synopsis_en || '', from:'hikka' };
+                synopsis:normalizeSynopsisText(item.synopsis_ua || item.synopsis_en || ''), from:'hikka' };
         }
         function hikkaRequest(url, options = {}) {
             return fetch(`${HIKKA_CORS_PROXY}${encodeURIComponent(url)}`, {
@@ -909,7 +931,7 @@ let externalSourceCache = {};
             const d = await res.json();
             return {
                 episodes: Number(d.episodes_total || d.episodes_released || 0) || null,
-                synopsis: d.synopsis_ua || d.synopsis_en || ''
+                synopsis: normalizeSynopsisText(d.synopsis_ua || d.synopsis_en || '')
             };
         }
 
@@ -1087,7 +1109,7 @@ let externalSourceCache = {};
                 title: d.title_ua || d.title_en || item.title,
                 originalTitle: d.title_en || d.title_ja || '',
                 year: d.year || '',
-                synopsis: d.synopsis_ua || d.synopsis_en || '',
+                synopsis: normalizeSynopsisText(d.synopsis_ua || d.synopsis_en || ''),
                 score: d.score || d.native_score || null,
                 rating: d.score || d.native_score || null,
                 runtimeMinutes: d.duration || 0,
@@ -1097,7 +1119,7 @@ let externalSourceCache = {};
                 subtitleLogos,
                 mikaiUrl,
                 from: 'hikka+mikai+ashdi',
-                externalIds: { mal_id: d.mal_id }
+                externalIds: extractExternalAnimeIds(d)
             };
         }
 
@@ -7638,6 +7660,11 @@ function renderProfilePage() {
             const _resetLogoImg = document.getElementById('playerTitleLogo');
             if (_resetLogoImg) { _resetLogoImg.style.display = 'none'; _resetLogoImg.src = ''; }
             document.getElementById('castSection').style.display = 'none';
+            document.getElementById('castList').innerHTML = '';
+            const resetCastTitle = document.querySelector('#castSection .section-title');
+            if (resetCastTitle) resetCastTitle.textContent = 'Актори';
+            document.getElementById('mainCharactersList').innerHTML = '';
+            document.getElementById('mainCharactersMoreBtn').hidden = true;
             const _resetRelatedSection = document.getElementById('relatedSeasonsSection');
             if (_resetRelatedSection) _resetRelatedSection.style.display = 'none';
             playerRatingSourceIsTmdb = false;
@@ -8051,7 +8078,10 @@ function renderProfilePage() {
                 const clean = cleanTitleForTmdb(value);
                 if (!clean) return;
                 variants.push(clean);
-                variants.push(clean.replace(/\b(?:сезон|season|частина|part|cour|tv|серіал)\s*\d+\b/gi, '').replace(/\s+/g, ' ').trim());
+                variants.push(clean
+                    .replace(/\b(?:сезон|season|частина|part|cour|tv|серіал)\s*\d+\b/gi, '')
+                    .replace(/\b\d+\s*(?:сезон|season|частина|part|cour)\b/gi, '')
+                    .replace(/\s+/g, ' ').trim());
                 variants.push(clean.split(/\s+[/:|]\s+/)[0].trim());
             });
             return [...new Set(variants.filter(v => v.length >= 2))].slice(0, 6);
@@ -8084,11 +8114,14 @@ function renderProfilePage() {
             return ['ja', 'ko', 'zh'].includes(language) || countries.some(c => ['JP', 'KR', 'CN'].includes(c));
         }
 
-        function tmdbCandidateScore(hit, query) {
+        function tmdbCandidateScore(hit, query, anime = null) {
             const q = tmdbNormalizeTitle(query);
+            const candidateNames = [hit?.title, hit?.name, hit?.original_name].filter(Boolean).map(tmdbNormalizeTitle);
+            const originalQuery = tmdbNormalizeTitle(anime?.originalTitle || '');
             const title = tmdbNormalizeTitle(hit.title || hit.name || hit.original_name || '');
             if (!q || !title) return -1000;
             let score = 0;
+            if (candidateNames.includes(originalQuery) && originalQuery) score += 35;
             if (title === q) score += 140;
             else if (title.includes(q) || q.includes(title)) score += 45;
             const qTokens = new Set(q.split(' ').filter(Boolean));
@@ -8146,11 +8179,11 @@ function renderProfilePage() {
             if (candidates.length) {
                 const unique = [...new Map(candidates.map(r => [`${r.media_type}:${r.id}`, r])).values()];
                 const preferredType = anime.type === 'movie' ? 'movie' : 'tv';
-                const matching = unique
+                    const matching = unique
                     .filter(item => item.media_type === preferredType && tmdbIsLikelyAnime(item))
-                    .sort((a, b) => tmdbCandidateScore(b, b._query) - tmdbCandidateScore(a, a._query));
+                    .sort((a, b) => tmdbCandidateScore(b, b._query, anime) - tmdbCandidateScore(a, a._query, anime));
                 const hit = matching[0];
-                if (hit && tmdbCandidateScore(hit, hit._query) >= 45) {
+                if (hit && tmdbCandidateScore(hit, hit._query, anime) >= 45) {
                     const frame = await fetchTmdbCardFrame(hit.id, hit.media_type, hit.backdrop_path);
                     const info = {
                         poster: tmdbImgUrl(hit.poster_path, 'w500'),
@@ -8188,10 +8221,16 @@ function renderProfilePage() {
                     } catch (e) { console.warn('TMDB search failed', { query: q, language, error: e }); }
                 }
             }
-            const ranked = [...new Map(allCandidates.map(r => [`${r.media_type}:${r.id}`, r])).values()]
-                .sort((a, b) => tmdbCandidateScore(b, b._query) - tmdbCandidateScore(a, a._query));
+            const ranked = [...allCandidates.reduce((map, candidate) => {
+                const key = `${candidate.media_type}:${candidate.id}`;
+                const score = tmdbCandidateScore(candidate, candidate._query, anime);
+                const previous = map.get(key);
+                if (!previous || score > previous._tmdbScore) map.set(key, { ...candidate, _tmdbScore: score });
+                return map;
+            }, new Map()).values()]
+                .sort((a, b) => b._tmdbScore - a._tmdbScore);
             const best = ranked[0];
-            if (best && tmdbCandidateScore(best, best._query) >= 45) {
+            if (best && best._tmdbScore >= 45) {
                 const info = { id: best.id, mediaType: best.media_type, poster: best.poster_path, backdrop: best.backdrop_path, seasonsCache: {} };
                 tmdbAnimeCache[cacheKey] = info;
                 return info;
@@ -8221,7 +8260,8 @@ function renderProfilePage() {
             if (tmdbInfo.fullDetails !== undefined) return tmdbInfo.fullDetails;
             try {
                 const mediaPath = tmdbInfo.mediaType === 'movie' ? 'movie' : 'tv';
-                const res = await fetch(`${TMDB_BASE}/${mediaPath}/${tmdbInfo.id}?api_key=${TMDB_API_KEY}&language=uk-UA&append_to_response=credits,images,content_ratings&include_image_language=uk,en,ja,null`);
+                const append = tmdbInfo.mediaType === 'movie' ? 'credits,images,release_dates' : 'credits,images,content_ratings';
+                const res = await fetch(`${TMDB_BASE}/${mediaPath}/${tmdbInfo.id}?api_key=${TMDB_API_KEY}&language=uk-UA&append_to_response=${append}&include_image_language=uk,en,ja,null`);
                 if (!res.ok) { tmdbInfo.fullDetails = null; return null; }
                 const data = await res.json();
                 // Якщо опис або жанри порожні українською — донасичуємо з англійської версії
@@ -8249,10 +8289,14 @@ function renderProfilePage() {
         }
 
         function tmdbAgeRating(details) {
-            const results = (details && details.content_ratings && details.content_ratings.results) || [];
-            const pick = results.find(r => r.iso_3166_1 === 'UA') || results.find(r => r.iso_3166_1 === 'US') ||
-                results.find(r => r.iso_3166_1 === 'JP') || results[0];
-            return (pick && pick.rating) ? pick.rating : null;
+            const ratings = (details?.content_ratings?.results || []).map(r => ({ country: r.iso_3166_1, value: r.rating }));
+            const releaseRatings = (details?.release_dates?.results || []).flatMap(country =>
+                (country.release_dates || []).map(r => ({ country: country.iso_3166_1, value: r.certification }))
+            ).filter(r => r.value);
+            const results = [...ratings, ...releaseRatings];
+            const pick = results.find(r => r.country === 'UA') || results.find(r => r.country === 'US') ||
+                results.find(r => r.country === 'JP') || results[0];
+            return pick?.value || null;
         }
 
         // Кадр (backdrop) з TMDB для фону сторінки аніме — беремо найкращий за мовою/якістю,
@@ -8312,6 +8356,15 @@ function renderProfilePage() {
             return data || null;
         }
 
+        async function withTimeout(promise, ms, label = 'Запит перевищив час очікування') {
+            let timer;
+            const timeout = new Promise((_, reject) => {
+                timer = setTimeout(() => reject(new Error(label)), ms);
+            });
+            try { return await Promise.race([promise, timeout]); }
+            finally { clearTimeout(timer); }
+        }
+
         async function resolveJikanByTitle(query) {
             const result = await fetchJikan(`/anime?q=${encodeURIComponent(query)}&limit=5&sfw=true`);
             const target = normalizeJikanTitle(query);
@@ -8354,7 +8407,7 @@ function renderProfilePage() {
             id title { romaji english native } format status season seasonYear episodes duration averageScore genres siteUrl
             studios(isMain: true) { nodes { name } }
             nextAiringEpisode { airingAt episode }
-            characters(sort: ROLE, perPage: 10) { edges { role node { name { full native } image { large } } voiceActors(language: JAPANESE) { name { full } } } } }
+            characters(sort: ROLE, perPage: 10) { edges { role node { name { full native } image { large } } voiceActors(language: JAPANESE) { name { full } image { large } } } } }
         } }`;
 
         async function fetchAnilist(query, variables) {
@@ -8383,7 +8436,7 @@ function renderProfilePage() {
             const characters = (media.characters?.edges || []).map(e => ({
                 character: { name: e.node?.name?.full, name_kanji: e.node?.name?.native, images: { webp: { image_url: e.node?.image?.large } } },
                 role: e.role === 'MAIN' ? 'Головна роль' : 'Другорядна роль',
-                voice_actors: e.voiceActors?.length ? [{ language: 'Japanese', person: { name: e.voiceActors[0].name.full } }] : []
+                voice_actors: e.voiceActors?.length ? [{ language: 'Japanese', person: { name: e.voiceActors[0].name.full, images: { webp: { image_url: e.voiceActors[0].image?.large } } } }] : []
             }));
             const seasonMap = { WINTER: 'winter', SPRING: 'spring', SUMMER: 'summer', FALL: 'fall' };
             return {
@@ -8417,32 +8470,46 @@ function renderProfilePage() {
             return adaptAnilistMedia(best.m);
         }
 
+        function hasCharacterData(data) {
+            return Array.isArray(data?.characters) && data.characters.some(x => x?.character?.name);
+        }
+
         async function resolveJikanAnime(anime) {
             const stableMalId = Number(anime?.externalIds?.mal_id);
             const stableAnilistId = Number(anime?.externalIds?.anilist_id);
+            let jikanFallback = null;
             // Priority 1: MAL ID. Priority 2: AniList ID. Priority 3/4 handled by title fallback below.
             if (stableMalId) {
-                try { const byId = await resolveJikanById(stableMalId); if (byId) return byId; }
-                catch (e) { console.warn('Jikan ID lookup failed, trying other sources:', e); }
+                try {
+                    const byId = await withTimeout(resolveJikanById(stableMalId), 5000, 'Jikan ID запит перевищив час очікування');
+                    if (byId && hasCharacterData(byId)) return byId;
+                    if (byId) jikanFallback = byId;
+                } catch (e) { console.warn('Jikan ID lookup failed, trying other sources:', e); }
             }
             if (stableAnilistId) {
                 try {
                     const query = `query ($id: Int) { Media(id: $id, type: ANIME) {
                         id title { romaji english native } format status season seasonYear episodes duration averageScore genres siteUrl
                         studios(isMain: true) { nodes { name } } nextAiringEpisode { airingAt episode }
-                        characters(sort: ROLE, perPage: 10) { edges { role node { name { full native } image { large } } voiceActors(language: JAPANESE) { name { full } } } } } }`;
-                    const res = await fetchAnilist(query, { id: stableAnilistId });
+                        characters(sort: ROLE, perPage: 10) { edges { role node { name { full native } image { large } } voiceActors(language: JAPANESE) { name { full } image { large } } } } } }`;
+                    const res = await withTimeout(fetchAnilist(query, { id: stableAnilistId }), 8000, 'AniList ID запит перевищив час очікування');
                     if (res?.data?.Media) return adaptAnilistMedia(res.data.Media);
                 } catch (e) { console.warn('AniList ID lookup failed, trying title fallback:', e); }
             }
             const query = anime?.originalTitle || anime?.title;
-            if (!query) return null;
-            // Priority 4: title fallback — try Jikan first, then AniList (independent live datasets).
-            try { const byTitle = await resolveJikanByTitle(query); if (byTitle) return byTitle; }
-            catch (e) { console.warn('Jikan title search unavailable, falling back to AniList:', e); }
-            try { const anilistMatch = await resolveAnilistByTitle(query); if (anilistMatch) return anilistMatch; }
-            catch (e) { console.warn('AniList title search also unavailable:', e); }
-            return null;
+            if (!query) return jikanFallback;
+            // AniList is the preferred title fallback because it usually returns characters and
+            // voice actors faster and more consistently than Jikan's rate-limited search endpoint.
+            try {
+                const anilistMatch = await withTimeout(resolveAnilistByTitle(query), 8000, 'AniList пошук перевищив час очікування');
+                if (anilistMatch) return anilistMatch;
+            } catch (e) { console.warn('AniList title search unavailable:', e); }
+            try {
+                const byTitle = await withTimeout(resolveJikanByTitle(query), 5000, 'Jikan пошук перевищив час очікування');
+                if (byTitle && hasCharacterData(byTitle)) return byTitle;
+                if (byTitle && !jikanFallback) jikanFallback = byTitle;
+            } catch (e) { console.warn('Jikan title search unavailable:', e); }
+            return jikanFallback;
         }
 
         function jikanImage(item) {
@@ -8540,9 +8607,14 @@ function renderProfilePage() {
             playerCharacterItems = (data?.characters || []).filter(x => x?.character?.name).map(x => ({
                 name: x.character.name, original: x.character.name_kanji, role: x.role,
                 image: jikanImage(x.character), voice: x.voice_actors?.find(v => v.language === 'Japanese')?.person?.name || ''
-            })).sort((a, b) => (a.role === 'Main' ? 0 : 1) - (b.role === 'Main' ? 0 : 1));
+            })).sort((a, b) => ((a.role === 'Main' || a.role === 'Головна роль') ? 0 : 1) - ((b.role === 'Main' || b.role === 'Головна роль') ? 0 : 1));
             const items = playerCharacterExpanded ? playerCharacterItems : playerCharacterItems.slice(0, 8);
-            if (!items.length) { setSectionState('mainCharactersSection', false); return; }
+            if (!items.length) {
+                list.innerHTML = '';
+                if (more) more.hidden = true;
+                setSectionState('mainCharactersSection', false);
+                return;
+            }
             setSectionState('mainCharactersSection', true);
             list.innerHTML = items.map(c => `<article class="cast-card character-card"><div class="cast-avatar" style="${c.image ? `background-image:url('${escapeHtml(c.image)}')` : ''}"></div><div class="cast-name">${escapeHtml(c.name)}</div>${c.original ? `<div class="character-original">${escapeHtml(c.original)}</div>` : ''}<div class="cast-role">${escapeHtml([c.role, c.voice ? `Сейю: ${c.voice}` : ''].filter(Boolean).join(' · '))}</div></article>`).join('');
             if (more) { more.hidden = playerCharacterItems.length <= 8; more.textContent = playerCharacterExpanded ? '←' : '→'; }
@@ -8677,8 +8749,10 @@ function renderProfilePage() {
             const list = document.getElementById('castList');
             if (!section || !list) return;
             const cast = ((details && details.credits && details.credits.cast) || []).slice(0, 8);
-            if (!cast.length) { section.style.display = 'none'; return; }
+            if (!cast.length) { list.innerHTML = ''; section.style.display = 'none'; return; }
             section.style.display = '';
+            const castTitle = section.querySelector('.section-title');
+            if (castTitle) castTitle.textContent = 'Актори';
             list.innerHTML = cast.map(c => {
                 const avatar = c.profile_path ? tmdbImgUrl(c.profile_path, 'w185') : '';
                 const avatarStyle = avatar ? `background-image:url(${avatar});background-size:cover;background-position:center;` : '';
