@@ -688,6 +688,18 @@ async function handleCallbackQuery(callback, env) {
       return;
     }
 
+    if (data.startsWith('anime:')) {
+      const slug = data.slice('anime:'.length).trim();
+      if (!/^[A-Za-z0-9][A-Za-z0-9-]{1,180}$/.test(slug)) {
+        await replaceMessage(chatId, messageId, 'Некоректне посилання на аніме. Спробуйте виконати пошук ще раз.', false, { reply_markup: mainKeyboard() }, env);
+        return;
+      }
+      state.previous = null;
+      await replaceMessage(chatId, messageId, 'Завантажую деталі...', false, {}, env);
+      await renderDetails(chatId, messageId, `${HIKKA_API}/anime/${slug}`, env);
+      return;
+    }
+
     if (data.startsWith('item:')) {
       const [, kind, pageText, indexText] = data.split(':');
       const page = Number(pageText);
@@ -889,10 +901,13 @@ function backHomeKeyboard() {
 }
 
 function listKeyboard(items, page, kind, total) {
-  const keyboard = items.map((item, index) => [{
-    text: truncate(item.title, 60),
-    callback_data: `item:${kind}:${page}:${index}`
-  }]);
+  const keyboard = items.map((item, index) => {
+    const slug = item.slug || extractAnimeId(item.url);
+    const callbackData = slug && `anime:${slug}`.length <= 64
+      ? { text: truncate(item.title, 60), callback_data: `anime:${slug}` }
+      : { text: truncate(item.title, 60), url: vakdabWatchUrl(slug) || SITE_BASE_URL };
+    return [callbackData];
+  });
   const maxPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const nav = [];
   if (page > 1) nav.push({ text: 'Назад', callback_data: `${kind}:${page - 1}` });
