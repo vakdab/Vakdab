@@ -1371,6 +1371,7 @@
 }
 
 .profile-sticker-slots {
+    display: grid;
     width: 100%;
     max-width: none;
     grid-template-columns: repeat(4, minmax(0, 1fr));
