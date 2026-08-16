@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=20260816-profile-audit-v5';
+import './app-legacy.js?v=20260816-profile-perf-v2';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';

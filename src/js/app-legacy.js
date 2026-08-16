@@ -133,15 +133,8 @@ let externalSourceCache = {};
                 this._loadingData = true;
                 // Timeout 5с — не висіти вічно якщо Firestore недоступний
                 const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Firestore timeout')), 5000));
-                // ВАЖЛИВО: спочатку зберігаємо гостеві дані (щоб перенести в новий акаунт)
-                const guestData = {
-                    profile: Storage.getProfile(),
-                    history: Storage.getHistory(),
-                    bookmarks: Storage.getBookmarks(),
-                    likes: Storage.getLikes(),
-                    watchTime: Storage.getWatchTime(),
-                    stickers: Storage.getStickers()
-                };
+                // Для існуючого акаунта не читаємо великі localStorage history/sticker packs наперед.
+                // Guest snapshot потрібен лише у гілці створення нового user document нижче.
                 // Завантажуємо з Firestore. НЕ очищаємо localStorage спереду —
                 // якщо завантаження впаде, локальні дані залишаться.
                 try {
@@ -181,12 +174,21 @@ let externalSourceCache = {};
                         const remoteStickersTS = data.stickersUpdatedAt || 0;
                         const localStickersTS = Storage.getStickersTS();
                         if (localStickersTS > remoteStickersTS) {
-                            Storage._debounceSync();
+                            Storage._debounceSync('stickers');
                         } else if (data.stickers) {
                             Storage._setStickers(Object.assign(getDefaultStickers(), data.stickers));
                         }
                     } else {
-                        // Новий юзер — переносимо ГОСТЕВІ дані (не чужі!)
+                        // Новий юзер — переносимо ГОСТЕВІ дані (не чужі!). Читаємо їх лише тут,
+                        // бо для існуючого акаунта це була б зайва важка JSON-операція.
+                        const guestData = {
+                            profile: Storage.getProfile(),
+                            history: Storage.getHistory(),
+                            bookmarks: Storage.getBookmarks(),
+                            likes: Storage.getLikes(),
+                            watchTime: Storage.getWatchTime(),
+                            stickers: Storage.getStickers()
+                        };
                         if (guestData.profile && guestData.profile.nickname && guestData.profile.nickname !== 'Користувач') {
                             Storage._setProfile(guestData.profile);
                         } else if (this._user && this._user.displayName) {
@@ -267,11 +269,10 @@ let externalSourceCache = {};
                 }
                 try {
                     const cred = await signInWithEmailAndPassword(auth, email, password);
+                    // onAuthStateChanged() є єдиним власником завантаження профілю.
+                    // Не викликаємо _loadUserData та renderProfilePage вдруге після email login.
                     this._user = cred.user;
-                    await this._loadUserData(cred.user.uid);
-                    this._notifyListeners();
                     showToast('Успішний вхід');
-                    if (Router.currentRoute === 'profile') renderProfilePage();
                     return { success: true };
                 } catch (e) {
                     console.warn('Login error:', e);
@@ -425,17 +426,20 @@ let externalSourceCache = {};
                 }
             },
 
-            async syncUserData() {
+            async syncUserData(options = {}) {
                 if (!firebaseInitialized || !db || !this._user) return { ok: false, error: 'no-auth' };
                 if (!this.isAuthenticated()) return { ok: false, error: 'not-authenticated' };
                 const uid = this._user.uid;
                 const docRef = doc(db, 'users', uid);
-                const profile = Storage.getProfile();
-                const history = Storage.getHistory();
-                const bookmarks = Storage.getBookmarks();
-                const likes = Storage.getLikes();
-                const watchTime = Storage.getWatchTime() || 0;
-                const stickers = Storage.getStickers();
+                const scope = options.scope || 'all';
+                const scopeSet = new Set(String(scope).split(',').filter(Boolean));
+                const hasScope = key => scope === 'all' || scopeSet.has(key);
+                const profile = hasScope('profile') ? Storage.getProfile() : null;
+                const history = hasScope('history') ? Storage.getHistory() : [];
+                const bookmarks = hasScope('bookmarks') ? Storage.getBookmarks() : [];
+                const likes = hasScope('likes') ? Storage.getLikes() : {};
+                const watchTime = hasScope('watchTime') ? (Storage.getWatchTime() || 0) : 0;
+                const stickers = hasScope('stickers') ? Storage.getStickers() : null;
                 // Clean profile - strip base64, keep Cloudinary URLs
                 const cleanProfile = JSON.parse(JSON.stringify(profile || {}));
                 if (cleanProfile.avatar && cleanProfile.avatar.startsWith('data:')) {
@@ -453,6 +457,32 @@ let externalSourceCache = {};
                     if (b.poster && b.poster.startsWith('data:')) return { ...b, poster: '' };
                     return b;
                 });
+                // Для звичайних змін не відправляємо весь users-документ. Це особливо важливо
+                // для великих sticker packs і довгої history на мобільних пристроях.
+                if (scope !== 'all') {
+                    const partialPayload = { updatedAt: serverTimestamp() };
+                    if (hasScope('profile')) partialPayload.profile = cleanProfile;
+                    if (hasScope('history')) partialPayload.history = trimHistory;
+                    if (hasScope('bookmarks')) partialPayload.bookmarks = cleanBookmarks;
+                    if (hasScope('likes')) partialPayload.likes = likes;
+                    if (hasScope('watchTime')) partialPayload.watchTime = watchTime;
+                    if (hasScope('stickers')) {
+                        partialPayload.stickers = stickers;
+                        partialPayload.stickersUpdatedAt = Storage.getStickersTS();
+                    }
+                    if (hasScope('history') || hasScope('bookmarks') || hasScope('watchTime')) {
+                        const partialXp = calcTotalXP();
+                        partialPayload.xp = partialXp;
+                        partialPayload.level = getLevel(partialXp);
+                    }
+                    try {
+                        await setDoc(docRef, partialPayload, { merge: true });
+                        return { ok: true, scope };
+                    } catch (e) {
+                        console.error('[Firestore] Partial sync FAILED:', scope, e.code, e.message);
+                        return { ok: false, error: e.message };
+                    }
+                }
                 /* console.log removed */
                 /* console.log removed */
                 // Спроба 1: повні дані
@@ -521,21 +551,42 @@ let externalSourceCache = {};
         // ====================================================================
         const Storage = {
             _syncTimer: null,
-            _debounceSync() {
+            _pendingSyncScope: null,
+            _mergeSyncScope(scope) {
+                const next = scope || 'all';
+                if (!this._pendingSyncScope || next === 'all') {
+                    this._pendingSyncScope = next;
+                    return;
+                }
+                if (this._pendingSyncScope === 'all') return;
+                const scopes = new Set(this._pendingSyncScope.split(',').filter(Boolean));
+                next.split(',').filter(Boolean).forEach(item => scopes.add(item));
+                this._pendingSyncScope = Array.from(scopes).join(',');
+            },
+            _debounceSync(scope = 'all') {
+                this._mergeSyncScope(scope);
                 if (this._syncTimer) clearTimeout(this._syncTimer);
                 this._syncTimer = setTimeout(() => {
-                    if (Auth.isAuthenticated()) Auth.syncUserData().then(r => {
+                    const pendingScope = this._pendingSyncScope || 'all';
+                    this._pendingSyncScope = null;
+                    this._syncTimer = null;
+                    if (Auth.isAuthenticated()) Auth.syncUserData({ scope: pendingScope }).then(r => {
                         if (r && r.ok) { /* synced */ }
                         else if (r) console.warn('[Storage] Sync failed:', r.error);
                     });
                 }, 1500);
             },
-            _flushSync() {
+            _flushSync(scope = null) {
+                if (scope) this._mergeSyncScope(scope);
                 if (this._syncTimer) {
                     clearTimeout(this._syncTimer);
                     this._syncTimer = null;
                 }
-                if (Auth.isAuthenticated()) Auth.syncUserData();
+                const pendingScope = this._pendingSyncScope;
+                this._pendingSyncScope = null;
+                // beforeunload/visibilitychange must flush only real pending changes;
+                // otherwise every app switch causes a full Firestore write.
+                if (pendingScope && Auth.isAuthenticated()) Auth.syncUserData({ scope: pendingScope });
             },
             getTheme() { try { return localStorage.getItem('mono_anime_theme') || 'light'; } catch { return 'light'; } },
             setTheme(t) { localStorage.setItem('mono_anime_theme', t); },
@@ -552,33 +603,65 @@ let externalSourceCache = {};
             _setProfile(data) { localStorage.setItem('vakdab_profile', JSON.stringify(data)); },
             setProfile(data) {
                 this._setProfile(data);
-                this._debounceSync();
+                this._debounceSync('profile');
             },
 
+            _historyRaw: null,
+            _historyCache: null,
             getHistory() {
                 try {
                     const raw = localStorage.getItem('vakdab_history');
+                    if (raw === this._historyRaw && this._historyCache) return this._historyCache;
                     const parsed = raw ? JSON.parse(raw) : [];
-                    return Array.isArray(parsed) ? parsed.filter(item => item && typeof item === 'object' && !Array.isArray(item)) : [];
-                } catch { return []; }
+                    const safe = Array.isArray(parsed) ? parsed.filter(item => item && typeof item === 'object' && !Array.isArray(item)) : [];
+                    if (safe.length > 200) {
+                        const capped = safe.slice(0, 200);
+                        const serialized = JSON.stringify(capped);
+                        localStorage.setItem('vakdab_history', serialized);
+                        this._historyRaw = serialized;
+                        this._historyCache = capped;
+                        return capped;
+                    }
+                    this._historyRaw = raw;
+                    this._historyCache = safe;
+                    return safe;
+                } catch { this._historyRaw = null; this._historyCache = []; return this._historyCache; }
             },
-            _setHistory(h) { localStorage.setItem('vakdab_history', JSON.stringify(h)); },
+            _setHistory(h) {
+                const safe = Array.isArray(h) ? h.slice(0, 200) : [];
+                const serialized = JSON.stringify(safe);
+                localStorage.setItem('vakdab_history', serialized);
+                this._historyRaw = serialized;
+                this._historyCache = safe;
+            },
             setHistory(h) {
                 this._setHistory(h);
-                this._debounceSync();
+                this._debounceSync('history');
             },
 
+            _bookmarksRaw: null,
+            _bookmarksCache: null,
             getBookmarks() {
                 try {
                     const raw = localStorage.getItem('vakdab_bookmarks');
+                    if (raw === this._bookmarksRaw && this._bookmarksCache) return this._bookmarksCache;
                     const parsed = raw ? JSON.parse(raw) : [];
-                    return Array.isArray(parsed) ? parsed.filter(item => item && typeof item === 'object' && !Array.isArray(item)) : [];
-                } catch { return []; }
+                    const safe = Array.isArray(parsed) ? parsed.filter(item => item && typeof item === 'object' && !Array.isArray(item)) : [];
+                    this._bookmarksRaw = raw;
+                    this._bookmarksCache = safe;
+                    return safe;
+                } catch { this._bookmarksRaw = null; this._bookmarksCache = []; return this._bookmarksCache; }
             },
-            _setBookmarks(b) { localStorage.setItem('vakdab_bookmarks', JSON.stringify(b)); },
+            _setBookmarks(b) {
+                const safe = Array.isArray(b) ? b : [];
+                const serialized = JSON.stringify(safe);
+                localStorage.setItem('vakdab_bookmarks', serialized);
+                this._bookmarksRaw = serialized;
+                this._bookmarksCache = safe;
+            },
             setBookmarks(b) {
                 this._setBookmarks(b);
-                this._debounceSync();
+                this._debounceSync('bookmarks');
             },
 
             getLikes() {
@@ -591,7 +674,7 @@ let externalSourceCache = {};
             _setLikes(l) { localStorage.setItem('vakdab_likes', JSON.stringify(l)); },
             setLikes(l) {
                 this._setLikes(l);
-                this._debounceSync();
+                this._debounceSync('likes');
             },
 
             getWatchTime() {
@@ -606,13 +689,16 @@ let externalSourceCache = {};
                 const current = this.getWatchTime();
                 const total = current + seconds;
                 this._setWatchTime(total);
-                this._debounceSync();
+                this._debounceSync('watchTime');
                 return total;
             },
 
+            _stickersRaw: null,
+            _stickersCache: null,
             getStickers() {
                 try {
                     const raw = localStorage.getItem('vakdab_stickers');
+                    if (raw === this._stickersRaw && this._stickersCache) return this._stickersCache;
                     const source = raw ? JSON.parse(raw) : null;
                     const parsed = source && typeof source === 'object' && !Array.isArray(source)
                         ? Object.assign(getDefaultStickers(), source)
@@ -625,18 +711,24 @@ let externalSourceCache = {};
                     if (typeof parsed.nickBadge === 'number') parsed.nickBadge = 'v:' + parsed.nickBadge;
                     if (parsed.nickBadge !== null && typeof parsed.nickBadge !== 'string') parsed.nickBadge = null;
                     parsed.medals = parsed.medals.map(m => typeof m === 'number' ? ('v:' + m) : String(m));
+                    this._stickersRaw = raw;
+                    this._stickersCache = parsed;
                     return parsed;
-                } catch { return getDefaultStickers(); }
+                } catch { this._stickersRaw = null; this._stickersCache = getDefaultStickers(); return this._stickersCache; }
             },
-            _setStickers(s) { localStorage.setItem('vakdab_stickers', JSON.stringify(s)); },
+            _setStickers(s) {
+                const serialized = JSON.stringify(s);
+                localStorage.setItem('vakdab_stickers', serialized);
+                this._stickersRaw = serialized;
+                this._stickersCache = s;
+            },
             getStickersTS() { try { return Number(localStorage.getItem('vakdab_stickers_ts')) || 0; } catch { return 0; } },
             setStickers(s) {
                 this._setStickers(s);
                 try { localStorage.setItem('vakdab_stickers_ts', String(Date.now())); } catch {}
-                // Наліпки — рідкісна, свідома дія користувача (не як watchTime, що летить щосекунди).
-                // Синкаємо одразу, а не через 1.5с дебаунс, щоб швидкий reload не встиг
-                // застати застарілі дані у Firestore і перезаписати щойно додану наліпку.
-                this._flushSync();
+                // Наліпки — свідома дія користувача, але синк іде окремим scoped debounce,
+                // щоб не блокувати мобільний UI великим sticker pack у момент кліку.
+                this._debounceSync('stickers');
             },
 
             clear() {
@@ -644,6 +736,12 @@ let externalSourceCache = {};
                 localStorage.removeItem('vakdab_history');
                 localStorage.removeItem('vakdab_bookmarks');
                 localStorage.removeItem('vakdab_likes');
+                this._historyRaw = null;
+                this._historyCache = null;
+                this._bookmarksRaw = null;
+                this._bookmarksCache = null;
+                this._stickersRaw = null;
+                this._stickersCache = null;
                 localStorage.removeItem('vakdab_watchTime');
                 localStorage.removeItem('vakdab_stickers');
                 localStorage.removeItem('vakdab_category');
@@ -6138,6 +6236,7 @@ let externalSourceCache = {};
                 uniqueAnime: uniqueAnime.size,
                 achievementsList: achievements,
                 history: history.slice(0, 50),
+                historyCount: history.length,
                 bookmarksList: bookmarks
             };
         }
@@ -6590,7 +6689,7 @@ function renderProfilePage() {
             const profileStickerSlots = Array.from({ length: PROFILE_STICKER_SLOTS }, (_, index) => {
                 const key = profileStickerKeys[index];
                 const slotColor = key ? (stickerData.colors?.[key] || 'var(--accent)') : 'transparent';
-                return `<button type="button" class="profile-medal-slot${key ? ' is-filled' : ''}" data-medal-index="${index}" draggable="${key ? 'true' : 'false'}" aria-label="${key ? 'Наліпка ' + (index + 1) : 'Порожній слот ' + (index + 1)}" style="--sticker-color:${escapeHtml(slotColor)}">${key ? '<span class="profile-medal-glow" aria-hidden="true">' + renderStickerFaceByKey(stickerData, key) + '</span>' + renderStickerFaceByKey(stickerData, key) : '<i class="fas fa-plus"></i>'}</button>`;
+                return `<button type="button" class="profile-medal-slot${key ? ' is-filled' : ''}" data-medal-index="${index}" draggable="${key ? 'true' : 'false'}" aria-label="${key ? 'Наліпка ' + (index + 1) : 'Порожній слот ' + (index + 1)}" style="--sticker-color:${escapeHtml(slotColor)}">${key ? renderStickerFaceByKey(stickerData, key) : '<i class="fas fa-plus"></i>'}</button>`;
             }).join('');
             container.innerHTML = `
             <div class="profile-wrapper">
@@ -6662,7 +6761,7 @@ function renderProfilePage() {
                 ${renderBookmarksPanel(stats.bookmarksList)}
               </div>
               <div class="profile-panel" id="profilePanel-achievements">
-                ${renderAchievementsPanel(stats.achievementsList, stats.totalWatchTime)}
+                ${renderAchievementsPanel(stats.achievementsList, stats.totalWatchTime, stats.historyCount)}
               </div>
             </div>
           `;
@@ -7025,7 +7124,7 @@ function renderProfilePage() {
                 html += `
               <div class="profile-history-item" data-profile-url="${escapeHtml(item.url || '')}" role="button" tabindex="0">
                 <div class="profile-thumb">
-                  ${poster ? `<img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" onerror="this.style.display='none'">` : ''}
+                  ${poster ? `<img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" onerror="this.style.display='none'">` : ''}
                   <span class="profile-thumb-placeholder" style="${poster?'display:none;':''}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15 10l4.55-2.28A1 1 0 0 1 21 8.62v6.76a1 1 0 0 1-1.45.9L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"/></svg>
                   </span>
@@ -7072,7 +7171,7 @@ function renderProfilePage() {
                 html += `
               <div class="profile-bookmark-card" data-profile-url="${escapeHtml(item.url || '')}" role="button" tabindex="0">
                 <div class="profile-bm-thumb">
-                  ${poster ? `<img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" onerror="this.style.display='none'">` : ''}
+                  ${poster ? `<img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" onerror="this.style.display='none'">` : ''}
                   <span class="profile-bm-thumb-ph" style="${poster?'display:none;':''}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15 10l4.55-2.28A1 1 0 0 1 21 8.62v6.76a1 1 0 0 1-1.45.9L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"/></svg>
                   </span>
@@ -7088,14 +7187,14 @@ function renderProfilePage() {
             return html;
         }
 
-        function renderAchievementsPanel(achievements, totalWatchTime) {
+        function renderAchievementsPanel(achievements, totalWatchTime, historyCount) {
             const safeAchievements = Array.isArray(achievements) ? achievements : [];
             const totalMinutes = Math.max(0, Math.floor(Number(totalWatchTime || 0) / 60));
             let html = `
             <div class="profile-watch-card">
               <div class="profile-wt-label">Загальний час перегляду аніме</div>
               <div class="profile-wt-value">${totalMinutes}<span class="profile-wt-unit">хв</span></div>
-              <div class="profile-wt-sub">${Storage.getHistory().length} серій переглянуто</div>
+              <div class="profile-wt-sub">${Number(historyCount) || 0} серій переглянуто</div>
             </div>
             <div class="profile-panel-header">
               <span class="profile-panel-title">Досягнення</span>
@@ -10488,7 +10587,7 @@ function renderProfilePage() {
             return null;
         }
         function renderStickerVisual(s, color) {
-            if (s && s.image) return `<img src="${escapeHtml(s.image)}" alt="" style="width:100%;height:100%;object-fit:contain;border-radius:8px;background:transparent;">`;
+            if (s && s.image) return `<img src="${escapeHtml(s.image)}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:contain;border-radius:8px;background:transparent;">`;
             const safeColor = color || s?.color || 'var(--text)';
             return `<span class="sticker-svg-visual" style="color:${escapeHtml(safeColor)};display:block;width:100%;height:100%;">${stickerFaceSvg(s ? s.variant : 0)}</span>`;
         }
