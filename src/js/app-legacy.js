@@ -1,5 +1,5 @@
-import { FIREBASE_CONFIG, initializeApp, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, setPersistence, browserLocalPersistence, signInAnonymously, sendPasswordResetEmail, deleteUser, getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, orderBy, limit, onSnapshot } from './config/firebase.js';
-import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_API, MIKAI_BASE, GENRE_MAP } from './config/constants.js';
+import { FIREBASE_CONFIG, initializeApp, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, setPersistence, browserLocalPersistence, signInAnonymously, sendPasswordResetEmail, deleteUser, getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot } from './config/firebase.js';
+import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_CORS_PROXY, MIKAI_BASE, GENRE_MAP } from './config/constants.js';
 import { safeQuery, safeQueryAll } from './utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from './utils/image.js';
 import './utils/string.js';
@@ -840,15 +840,15 @@ let externalSourceCache = {};
         }
 
         // Hikka API adapter. Старі назви функцій збережені для сумісності UI.
-        const ANIMEUA_POSTER_FALLBACK = './android-chrome-512x512.png';
+        const CATALOG_POSTER_FALLBACK = './android-chrome-512x512.png';
         function normalizeAnimeUrl(href = '') {
             const value = String(href || '').trim();
             if (!value) return '';
             try { return new URL(value, HIKKA_API).href; } catch { return ''; }
         }
-        function normalizePosterUrl(src = '', fallback = ANIMEUA_POSTER_FALLBACK) {
+        function normalizePosterUrl(src = '', fallback = CATALOG_POSTER_FALLBACK) {
             const value = String(src || '').trim();
-            return /^https?:\\/\\//i.test(value) ? value : fallback;
+            return /^https?:\/\//i.test(value) ? value : fallback;
         }
         function normalizeGenreList(values) {
             const result=[]; const seen=new Set();
@@ -862,76 +862,120 @@ let externalSourceCache = {};
         function hikkaType(item={}) {
             return item.media_type==='movie' ? 'movie' : (item.media_type==='ova'||item.media_type==='ona' ? 'ova' : 'tv');
         }
+        function animeTypeLabel(type = 'tv') {
+            return type === 'movie' ? 'Фільм' : type === 'ova' ? 'OVA' : 'Серіал';
+        }
         function hikkaItem(item={}) {
             const title=item.title_ua || item.title_en || item.title_ja || 'Без назви';
             return { ...item, mal_id:item.mal_id || item.slug?.hashCode?.() || Date.now(), title,
                 originalTitle:item.title_en || item.title_ja || '', url:`${HIKKA_API}/anime/${item.slug}`,
-                images:{jpg:{large_image_url:item.image || ANIMEUA_POSTER_FALLBACK, image_url:item.image || ANIMEUA_POSTER_FALLBACK}},
+                images:{jpg:{large_image_url:item.image || CATALOG_POSTER_FALLBACK, image_url:item.image || CATALOG_POSTER_FALLBACK}},
                 genres:normalizeGenreList(item.genres), type:hikkaType(item), typeLabel:hikkaType(item)==='movie'?'Фільм':'Серіал',
                 synopsis:item.synopsis_ua || item.synopsis_en || '', from:'hikka' };
         }
+        function hikkaRequest(url, options = {}) {
+            return fetch(`${HIKKA_CORS_PROXY}${encodeURIComponent(url)}`, {
+                ...options,
+                headers: { Accept: 'application/json', ...(options.headers || {}) }
+            });
+        }
+
         async function hikkaCatalog(type='anime', page=1, body={}) {
             const endpoint=type==='manga'?'manga':type==='novel'?'novel':'anime';
-            const res=await fetch(`${HIKKA_API}/${endpoint}?page=${Math.max(1,page)}&size=24`, {method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body)});
+            const apiUrl = `${HIKKA_API}/${endpoint}?page=${Math.max(1,page)}&size=24`;
+            const res=await hikkaRequest(apiUrl, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
             if(!res.ok) throw new Error(`Hikka API: HTTP ${res.status}`);
             const data=await res.json(); return (data.list || []).map(hikkaItem);
         }
-        async function fetchAnimeuaMain(page) { return hikkaCatalog('anime', page, {only_translated:true, sort:['score:desc','scored_by:desc']}); }
-        async function searchAnimeua(query, page) { return hikkaCatalog('anime', page, {query:String(query||'').trim(), only_translated:true}); }
-        async function fetchAnimeuaByCategory(categorySlug, page) { return hikkaCatalog('anime', page, {genres:[categorySlug], only_translated:true}); }
-        async function fetchAnimeuaTop100() { return hikkaCatalog('anime', 1, {sort:['score:desc','scored_by:desc'], only_translated:true}); }
-        async function fetchAnimeuaByGenre(genreSlug, page) { return fetchAnimeuaByCategory(genreSlug, page); }
+        async function fetchHikkaMain(page) { return hikkaCatalog('anime', page, {only_translated:true, sort:['score:desc','scored_by:desc']}); }
+        async function searchHikka(query, page) { return hikkaCatalog('anime', page, {query:String(query||'').trim(), only_translated:true}); }
+        async function fetchHikkaByCategory(categorySlug, page) {
+            const body = String(categorySlug).startsWith('format:')
+                ? { media_type: [String(categorySlug).slice(7)], only_translated: true }
+                : { genres: [categorySlug], only_translated: true };
+            return hikkaCatalog('anime', page, body);
+        }
+        async function fetchHikkaTop100() { return hikkaCatalog('anime', 1, {sort:['score:desc','scored_by:desc'], only_translated:true}); }
+        async function fetchHikkaByGenre(genreSlug, page) { return fetchHikkaByCategory(genreSlug, page); }
 
-        // Легкий запит для картки «Популярні» — лише кількість серій та повний опис,
-        // без завантаження плеєр-джерел (на відміну від loadAnimeuaDetail).
+        // Hikka є єдиним джерелом каталогу та інформації. Mikai використовується
+        // як вбудований плеєр за посиланням з Hikka external[type=watch].
         async function fetchAnimeLite(animeUrl) {
-            const doc = await fetchUA(animeUrl);
-            let episodes = null;
-            const labelEl = safeQuery('.page__subcol-side .poster__label, .pmovie__poster .poster__label', doc);
-            if (labelEl) {
-                const m = (labelEl.textContent || '').match(/(\d+)/);
-                if (m) episodes = parseInt(m[1], 10);
-            }
-            let synopsis = '';
-            for (const sel of ['.full-text', '.pmovie__description', '.anime__description']) {
-                const el = safeQuery(sel, doc);
-                if (el?.textContent.trim()) { synopsis = el.textContent.trim(); break; }
-            }
-            return { episodes, synopsis };
+            const match = String(animeUrl || '').match(/\/anime\/([^/?#]+)/i);
+            const slug = match?.[1] || String(animeUrl || '').split('/').filter(Boolean).pop();
+            if (!slug) throw new Error('Не знайдено Hikka slug');
+            const res = await hikkaRequest(`${HIKKA_API}/anime/${encodeURIComponent(slug)}`);
+            if (!res.ok) throw new Error(`Hikka API: HTTP ${res.status}`);
+            const d = await res.json();
+            return {
+                episodes: Number(d.episodes_total || d.episodes_released || 0) || null,
+                synopsis: d.synopsis_ua || d.synopsis_en || ''
+            };
         }
 
-        async function loadAnimeuaDetail(animeUrl) {
-            const match=String(animeUrl||'').match(/\/anime\/([^/?#]+)/i);
-            const slug=match?.[1] || String(animeUrl||'').split('/').filter(Boolean).pop();
-            if(!slug) throw new Error('Не знайдено Hikka slug');
-            const res=await fetch(`${HIKKA_API}/anime/${encodeURIComponent(slug)}`, {headers:{Accept:'application/json'}});
-            if(!res.ok) throw new Error(`Hikka API: HTTP ${res.status}`);
-            const d=await res.json();
-            const item=hikkaItem(d);
-            const total=Number(d.episodes_total || d.episodes_released || 0);
-            // Mikai is the playback source. The page URL is retained as a provider hint;
-            // episode streams are resolved by the Mikai/Nuxt player when available.
-            const episodes={};
-            if(total>0){ episodes['1']={}; for(let i=1;i<=total;i++) episodes['1'].Основне = [...(episodes['1'].Основне||[]), {title:`Серія ${i}`, season:'1', episode:String(i), file:`${MIKAI_BASE}/anime/${slug}`, dub:'Основне', provider:'Mikai'}]; }
-            return {...item, title:d.title_ua||d.title_en||item.title, originalTitle:d.title_en||d.title_ja||'', year:d.year||'', synopsis:d.synopsis_ua||d.synopsis_en||'', score:d.score||d.native_score||null, rating:d.score||d.native_score||null, runtimeMinutes:d.duration||0, totalEpisodes:total, seasons:episodes, from:'hikka+mikai', externalIds:{mal_id:d.mal_id}};
+        function getMikaiUrl(hikkaAnime = {}) {
+            const external = Array.isArray(hikkaAnime.external) ? hikkaAnime.external : [];
+            const mikai = external.find(item => item?.type === 'watch' && /^https?:\/\/(?:www\.)?mikai\.me\/anime\//i.test(item.url || ''));
+            return mikai?.url || '';
+        }
+
+        async function loadHikkaDetail(animeUrl) {
+            const match = String(animeUrl || '').match(/\/anime\/([^/?#]+)/i);
+            const slug = match?.[1] || String(animeUrl || '').split('/').filter(Boolean).pop();
+            if (!slug) throw new Error('Не знайдено Hikka slug');
+            const res = await hikkaRequest(`${HIKKA_API}/anime/${encodeURIComponent(slug)}`);
+            if (!res.ok) throw new Error(`Hikka API: HTTP ${res.status}`);
+            const d = await res.json();
+            const item = hikkaItem(d);
+            const total = Number(d.episodes_total || d.episodes_released || 0);
+            const mikaiUrl = getMikaiUrl(d);
+            const episodes = {};
+            if (mikaiUrl && total > 0) {
+                episodes['1'] = { Mikai: [] };
+                for (let i = 1; i <= total; i++) {
+                    episodes['1'].Mikai.push({
+                        title: `Серія ${i}`,
+                        season: '1',
+                        episode: String(i),
+                        file: mikaiUrl,
+                        dub: 'Mikai',
+                        provider: 'Mikai'
+                    });
+                }
+            }
+            return {
+                ...item,
+                title: d.title_ua || d.title_en || item.title,
+                originalTitle: d.title_en || d.title_ja || '',
+                year: d.year || '',
+                synopsis: d.synopsis_ua || d.synopsis_en || '',
+                score: d.score || d.native_score || null,
+                rating: d.score || d.native_score || null,
+                runtimeMinutes: d.duration || 0,
+                totalEpisodes: total,
+                seasons: episodes,
+                mikaiUrl,
+                from: 'hikka+mikai',
+                externalIds: { mal_id: d.mal_id }
+            };
         }
 
         // Об'єднує дані аніме з Hikka постерами та озвучками від інших джерел
-        function unifyAnimeDataWithExternalDubs(animeUAData, externalSeasons, providerName) {
-            if (!animeUAData) return externalSeasons;
+        function unifyAnimeDataWithExternalDubs(hikkaData, externalSeasons, providerName) {
+            if (!hikkaData) return externalSeasons;
 
             // Зберігаємо постер та інформацію з Hikka
             const unifiedData = {
-                ...animeUAData,
+                ...hikkaData,
                 seasons: externalSeasons || {}
             };
 
             // Переконуємось що постер завжди з Hikka
-            if (animeUAData.images?.jpg?.large_image_url) {
+            if (hikkaData.images?.jpg?.large_image_url) {
                 unifiedData.images = {
                     jpg: {
-                        large_image_url: animeUAData.images.jpg.large_image_url,
-                        image_url: animeUAData.images.jpg.large_image_url
+                        large_image_url: hikkaData.images.jpg.large_image_url,
+                        image_url: hikkaData.images.jpg.large_image_url
                     }
                 };
             }
@@ -971,10 +1015,10 @@ let externalSourceCache = {};
                     seasons = {};
                     externalSourceCache[providerName] = seasons;
                 }
-                const animeUAPoster = playerPageAnime.images?.jpg?.large_image_url || '';
+                const hikkaPoster = playerPageAnime.images?.jpg?.large_image_url || '';
                 playerPageAnime.seasons = seasons;
-                if (animeUAPoster) {
-                    playerPageAnime.images = { jpg: { large_image_url: animeUAPoster, image_url: animeUAPoster } };
+                if (hikkaPoster) {
+                    playerPageAnime.images = { jpg: { large_image_url: hikkaPoster, image_url: hikkaPoster } };
                 }
                 refreshAfterSourceSwitch();
                 showToast(`Джерело: ${providerName}`);
@@ -1797,8 +1841,8 @@ let externalSourceCache = {};
 
             // Паралельно завантажуємо обидва джерела — не чекаємо одне на одне
             const [topResult, mainResult] = await Promise.allSettled([
-                fetchAnimeuaTop100(),
-                fetchAnimeuaMain(1)
+                fetchHikkaTop100(),
+                fetchHikkaMain(1)
             ]);
 
             const topAnime = topResult.status === 'fulfilled' ? (topResult.value || []) : [];
@@ -1851,7 +1895,7 @@ let externalSourceCache = {};
             // Timeout 6с щоб не зависати якщо сайт відповідає повільно
             const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
             try {
-                const detail = await Promise.race([loadAnimeuaDetail(item.url), timeoutPromise]);
+                const detail = await Promise.race([loadHikkaDetail(item.url), timeoutPromise]);
                 item.genres = detail.genres || [];
                 item.totalEpisodes = detail.totalEpisodes || 0;
                 item.synopsis = detail.synopsis || '';
@@ -3255,7 +3299,7 @@ let externalSourceCache = {};
                             animeSearchTimer = setTimeout(async () => {
                                 resultsBox.innerHTML = `<div style="display:flex;justify-content:center;padding:10px;"><svg style="width:16px;height:16px;animation:spin 1s linear infinite;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" opacity=".2"/><path d="M12 3a9 9 0 0 1 9 9"/></svg></div>`;
                                 try {
-                                    const list = await searchAnimeua(q, 1);
+                                    const list = await searchHikka(q, 1);
                                     if (!list || !list.length) {
                                         resultsBox.innerHTML = `<p style="font-size:11.5px;color:var(--text-muted);text-align:center;padding:6px 0;">Нічого не знайдено</p>`;
                                         return;
@@ -3271,7 +3315,7 @@ let externalSourceCache = {};
                                             resultsBox.innerHTML = `<div style="display:flex;justify-content:center;padding:10px;"><svg style="width:16px;height:16px;animation:spin 1s linear infinite;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" opacity=".2"/><path d="M12 3a9 9 0 0 1 9 9"/></svg></div>`;
                                             let synopsis = '', poster = item.images?.jpg?.large_image_url || '';
                                             try {
-                                                const detail = await loadAnimeuaDetail(item.url);
+                                                const detail = await loadHikkaDetail(item.url);
                                                 synopsis = (detail.synopsis || '').trim();
                                                 poster = detail.images?.jpg?.large_image_url || poster;
                                             } catch (e) { console.warn('Не вдалося завантажити опис аніме:', e.message); }
@@ -4102,10 +4146,10 @@ let externalSourceCache = {};
             currentCategory = '';
 
         async function fetchContent() {
-            if (currentTab === 'top100') { return await fetchAnimeuaTop100(); }
-            if (currentSearchQuery) { return await searchAnimeua(currentSearchQuery, currentPage); }
-            if (currentCategory) { return await fetchAnimeuaByCategory(currentCategory, currentPage); }
-            return await fetchAnimeuaMain(currentPage);
+            if (currentTab === 'top100') { return await fetchHikkaTop100(); }
+            if (currentSearchQuery) { return await searchHikka(currentSearchQuery, currentPage); }
+            if (currentCategory) { return await fetchHikkaByCategory(currentCategory, currentPage); }
+            return await fetchHikkaMain(currentPage);
         }
 
         function showSkeleton() {
@@ -4402,7 +4446,7 @@ let externalSourceCache = {};
         }
 
         function openRandomAnime() {
-            fetchAnimeuaTop100().then(list => list[0] && openPlayerPage(list[0].url)).catch(() => showToast('Не вдалося завантажити каталог'));
+            fetchHikkaTop100().then(list => list[0] && openPlayerPage(list[0].url)).catch(() => showToast('Не вдалося завантажити каталог'));
             showToast('Випадкове аніме');
         }
 
@@ -4441,7 +4485,7 @@ let externalSourceCache = {};
             try {
                 const genrePromises = genreList.map(async (genre) => {
                     try {
-                        const items = await fetchAnimeuaByCategory(genre.slug, 1);
+                        const items = await fetchHikkaByCategory(genre.slug, 1);
                         const slice = items.slice(0, 80);
                         return { genre, items: slice };
                     } catch (e) {
@@ -4450,7 +4494,7 @@ let externalSourceCache = {};
                     }
                 });
 
-                const newestPromise = fetchAnimeuaMain(1).catch(e => {
+                const newestPromise = fetchHikkaMain(1).catch(e => {
                     console.error('Помилка завантаження нових аніме:', e);
                     return [];
                 });
@@ -4460,7 +4504,7 @@ let externalSourceCache = {};
                     return [];
                 });
 
-                const popularPromise = fetchAnimeuaTop100().catch(e => {
+                const popularPromise = fetchHikkaTop100().catch(e => {
                     console.error('Помилка завантаження популярних аніме:', e);
                     return [];
                 });
@@ -4482,7 +4526,7 @@ let externalSourceCache = {};
                 for (const { genre, items } of results) {
                     if (items.length === 0) continue;
                     const sectionId = 'genre-' + genre.slug;
-                    if (genre.slug === 'film') {
+                    if (genre.slug === 'format:movie') {
                         const filmWide = items.filter(a => a.type === 'movie').map(a => ({ ...a, typeLabel: 'Фільм' }));
                         html += buildAnimeCarouselSectionHtml(sectionId, genre.name, filmWide, 'wide');
                     } else {
@@ -4690,13 +4734,13 @@ let externalSourceCache = {};
             if (el && el.classList.contains('schedule-item--loading')) return; // вже вантажиться
             if (el) el.classList.add('schedule-item--loading');
             try {
-                let results = await searchAnimeua(title, 1);
-                if ((!results || !results.length) && englishTitle && englishTitle !== title) results = await searchAnimeua(englishTitle, 1);
+                let results = await searchHikka(title, 1);
+                if ((!results || !results.length) && englishTitle && englishTitle !== title) results = await searchHikka(englishTitle, 1);
                 if (results && results.length) {
                     openPlayerPage(results[0].url);
                 } else if (scheduleSlug) {
                     // AnimeOn і Hikka часто використовують той самий ID/slug — не втрачаємо тайтл через різницю назв.
-                    searchAnimeua(scheduleSlug || title, 1).then(found => found[0] && openPlayerPage(found[0].url));
+                    searchHikka(scheduleSlug || title, 1).then(found => found[0] && openPlayerPage(found[0].url));
                 } else {
                     showToast(`Не знайшли «${title}» — спробуйте пошук вручну`);
                     searchPageState.query = title;
@@ -4875,7 +4919,7 @@ let externalSourceCache = {};
             results.innerHTML = '<div class="loader" style="grid-column:1/-1;"><i class="fas fa-spinner fa-pulse"></i> Пошук...</div>';
             pagination.innerHTML = '';
             try {
-                const list = await searchAnimeua(query, searchPageState.page);
+                const list = await searchHikka(query, searchPageState.page);
                 searchPageState.list = list;
                 searchPageState.loading = false;
                 if (!list.length) {
@@ -6798,7 +6842,7 @@ function renderProfilePage() {
             if (!content) return;
             content.innerHTML = '<div class="loader" style="grid-column:1/-1;"><i class="fas fa-spinner fa-pulse"></i> Завантаження...</div>';
             try {
-                const list = await fetchAnimeuaByGenre(genrePageState.slug, genrePageState.page);
+                const list = await fetchHikkaByGenre(genrePageState.slug, genrePageState.page);
                 genrePageState.list = list;
                 if (!list.length) {
                     content.innerHTML =
@@ -7131,7 +7175,7 @@ function renderProfilePage() {
                     const maxPages = 6;
                     while (filterResultsState.page < maxPages && found < maxTotal) {
                         filterResultsState.page++;
-                        const pageItems = await fetchAnimeuaMain(filterResultsState.page);
+                        const pageItems = await fetchHikkaMain(filterResultsState.page);
                         if (!pageItems.length) break;
                         const matched = pageItems.filter(matches);
                         for (const m of matched) {
@@ -7144,7 +7188,7 @@ function renderProfilePage() {
                         let fetchedThisRound = 0;
                         while (fetchedThisRound < 2 && found < maxTotal) {
                             filterResultsState.genrePages[slug] = (filterResultsState.genrePages[slug] || 0) + 1;
-                            const pageItems = await fetchAnimeuaByGenre(slug, filterResultsState.genrePages[slug]);
+                            const pageItems = await fetchHikkaByGenre(slug, filterResultsState.genrePages[slug]);
                             fetchedThisRound++;
                             if (!pageItems.length) break;
                             const matched = pageItems.filter(matches);
@@ -7420,8 +7464,8 @@ function renderProfilePage() {
             playerPageWatchStartTime = 0;
             document.getElementById('playerVideoContainer').classList.add('active');
             const posterTargets = [document.getElementById('playerPosterImg'), document.getElementById('playerHeroPoster')];
-            posterTargets.forEach(img => { if (img) { img.src = ANIMEUA_POSTER_FALLBACK; img.alt = ''; } });
-            document.getElementById('playerBlurBg').style.backgroundImage = `url(${ANIMEUA_POSTER_FALLBACK})`;
+            posterTargets.forEach(img => { if (img) { img.src = CATALOG_POSTER_FALLBACK; img.alt = ''; } });
+            document.getElementById('playerBlurBg').style.backgroundImage = `url(${CATALOG_POSTER_FALLBACK})`;
             document.getElementById('playerPageVideo').innerHTML = '';
             document.getElementById('episodeViewGrid').innerHTML = '';
             document.getElementById('episodeViewCompact').innerHTML = '';
@@ -7448,7 +7492,7 @@ function renderProfilePage() {
             document.body.style.overflow = 'hidden';
             modal.querySelector('.modal-content').scrollTop = 0;
             try {
-                const anime = await loadAnimeuaDetail(url);
+                const anime = await loadHikkaDetail(url);
                 // Якщо плеєр вже закрили поки завантажувалось — не оновлювати DOM
                 if (_thisSignal.aborted || modal.style.display === 'none') return;
                 playerPageAnime = anime;
@@ -7509,7 +7553,7 @@ function renderProfilePage() {
 
                 // ============================================================
                 //  TMDB — заміна метаданих на офіційні (жанр/рік/опис/постер/
-                //  актори/лого/віковий рейтинг). Відео залишається з anime-ua.
+                //  актори/лого/віковий рейтинг). Відео залишається з Hikka/Mikai.
                 // ============================================================
                 (async () => {
                     try {
@@ -7522,8 +7566,8 @@ function renderProfilePage() {
 
                         // Artwork always remains from Hikka. TMDB is metadata-only.
                         const isMovie = tmdbInfo.mediaType === 'movie' || playerAnimeIsMovie(anime);
-                        const animeUaPoster = posterUrl || ANIME_CARD_PLACEHOLDER;
-                        const tmdbPoster = normalizePosterUrl(tmdbImgUrl(details.poster_path, 'w780'), animeUaPoster);
+                        const hikkaPoster = posterUrl || ANIME_CARD_PLACEHOLDER;
+                        const tmdbPoster = normalizePosterUrl(tmdbImgUrl(details.poster_path, 'w780'), hikkaPoster);
                         const title = details.name || anime.title;
                         const originalTitle = details.original_name || anime.originalTitle || anime.title;
                         const year = (details.release_date || details.first_air_date || '').slice(0, 4) || anime.year || '—';
@@ -8005,7 +8049,7 @@ function renderProfilePage() {
 
         // ====================================================================
         //  TMDB — ПОВНІ МЕТАДАНІ (жанр/рік/опис/постер/актори/лого/віковий рейтинг)
-        //  Відео завжди залишається з anime-ua/uaserials — TMDB тут лише дані для UI.
+        //  Відео завжди залишається з Hikka/Mikai/uaserials — TMDB тут лише дані для UI.
         // ====================================================================
         async function fetchTmdbFullDetails(tmdbInfo) {
             if (!tmdbInfo || !tmdbInfo.id) return null;
@@ -8353,7 +8397,7 @@ function renderProfilePage() {
                 const queries = [...new Set([title, titleEn].filter(Boolean))];
                 let results = [];
                 for (const query of queries) {
-                    results = await searchAnimeua(query, 1);
+                    results = await searchHikka(query, 1);
                     if (results?.length) break;
                 }
                 const normalizeTitle = value => String(value || '').toLocaleLowerCase('uk-UA')
@@ -8365,7 +8409,7 @@ function renderProfilePage() {
                     return names.some(name => wanted.includes(name) || wanted.some(q => q === name || q.includes(name) || name.includes(q)));
                 });
                 const match = exact || results?.[0];
-                if (match?.url && /^https?:\/\/.*animeua\.club/i.test(match.url)) openPlayerPage(match.url);
+                if (match?.url) openPlayerPage(match.url);
                 else showToast(`«${title}» ще не знайдено в каталозі VakDab`);
             } catch (e) { showToast('Не вдалося відкрити пов’язане аніме'); }
             finally { card.classList.remove('is-loading'); }
@@ -9191,7 +9235,7 @@ function renderProfilePage() {
             const cacheKey = base.toLowerCase();
             if (relatedSeasonsCache[cacheKey] !== undefined) return relatedSeasonsCache[cacheKey];
             try {
-                const results = await searchAnimeua(base, 1);
+                const results = await searchHikka(base, 1);
                 const baseNorm = base.toLowerCase();
                 const filtered = (results || []).filter(a => {
                     const otherBase = baseTitleForRelated(a.title).toLowerCase();
@@ -9234,7 +9278,7 @@ function renderProfilePage() {
                 const slug = GENRE_MAP[g];
                 if (!slug) continue;
                 try {
-                    const list = await fetchAnimeuaByGenre(slug, 1);
+                    const list = await fetchHikkaByGenre(slug, 1);
                     const filtered = (list || []).filter(a => a.url !== anime.url);
                     if (filtered.length) {
                         renderPosterCards(recEl, filtered, anime.url);
@@ -9247,7 +9291,7 @@ function renderProfilePage() {
             // Фолбек — якщо жоден жанр не дав результату, показуємо топ-100, щоб секція
             // не зникала непередбачувано в одних плеєрах і не з'являлась в інших.
             try {
-                const top = await fetchAnimeuaTop100();
+                const top = await fetchHikkaTop100();
                 renderPosterCards(recEl, top || [], anime.url);
             } catch (e) {
                 console.warn('Recommendations fallback (top100) error:', e);

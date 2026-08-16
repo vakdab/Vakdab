@@ -2,7 +2,7 @@
 export const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 export const CLOUDINARY_CLOUD_NAME = 'w1a1sqp0';
 export const CLOUDINARY_UPLOAD_PRESET = 'VakDab';
-export const ANIMEUA_BASE = 'https://api.hikka.io';
 export const HIKKA_API = 'https://api.hikka.io';
+export const HIKKA_CORS_PROXY = 'https://corsproxy.io/?url=';
 export const MIKAI_BASE = 'https://mikai.me';
-export const GENRE_MAP = { "Аніфільми":"film", "Бойові мистецтва":"boivie", "Бойовики":"boyovik", "Воєнні":"voenne", "Гарем":"garems", "Драми":"drama", "Детектив":"detektiv", "Демони":"demons", "Комедії":"komik", "Роботи":"meha", "Повсякденність":"posyardnevnist", "Пригоди":"adventures", "Психологічні":"psih", "Романтика":"romantik", "Надприродні":"weird", "Фантастика":"fantastika", "Фентезі":"fentezi", "Школа":"classes", "Еччі":"echhi" };
+export const GENRE_MAP = { "Аніфільми":"format:movie", "Бойові мистецтва":"martial-arts", "Бойовики":"action", "Воєнні":"military", "Гарем":"harem", "Драми":"drama", "Детектив":"mystery", "Комедії":"comedy", "Роботи":"mecha", "Повсякденність":"slice-of-life", "Пригоди":"adventure", "Психологічні":"psychological", "Романтика":"romance", "Надприродні":"supernatural", "Фантастика":"sci-fi", "Фентезі":"fantasy", "Школа":"school", "Еччі":"ecchi" };
