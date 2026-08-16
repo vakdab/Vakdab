@@ -563,3 +563,88 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     .home-catalog-card__title { font-size: .86rem; }
     .home-catalog-card__meta { font-size: .7rem; }
 }
+
+
+/* ===== Меню каталогу у стилі Hikka/VakDab ===== */
+.home-catalog-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .65rem;
+    margin-bottom: 1rem;
+}
+.home-catalog-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .55rem;
+    min-width: 0;
+    padding: .78rem .55rem;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface-2, var(--surface)) 88%, #000 12%);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font: inherit;
+    font-size: clamp(.72rem, 1.8vw, .95rem);
+    font-weight: 750;
+    transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition);
+}
+.home-catalog-tab i { color: currentColor; font-size: 1rem; }
+.home-catalog-tab:hover { transform: translateY(-2px); color: var(--text); }
+.home-catalog-tab.active {
+    border-color: color-mix(in srgb, var(--accent) 65%, var(--border));
+    background: color-mix(in srgb, var(--accent) 17%, var(--surface));
+    color: var(--accent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.home-catalog-search-row { margin-bottom: .85rem; }
+.home-catalog-search {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    min-height: 3.25rem;
+    padding: 0 1rem;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background: color-mix(in srgb, var(--surface) 92%, #000 8%);
+    color: var(--text-muted);
+}
+.home-catalog-search:focus-within { border-color: color-mix(in srgb, var(--accent) 70%, var(--border)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent); }
+.home-catalog-search i { color: var(--text-muted); font-size: .9rem; }
+.home-catalog-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; font-size: .9rem; }
+.home-catalog-search input::placeholder { color: var(--text-muted); opacity: .85; }
+.home-catalog-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: stretch; gap: .65rem; margin-bottom: .8rem; }
+.home-catalog-sort { position: relative; display: flex; align-items: center; min-width: 0; border: 1px solid var(--border); border-radius: 13px; background: color-mix(in srgb, var(--surface) 90%, #000 10%); }
+.home-catalog-sort select { width: 100%; min-width: 0; padding: .7rem 2.2rem .7rem .85rem; border: 0; outline: 0; appearance: none; background: transparent; color: var(--text); cursor: pointer; font: inherit; font-size: .78rem; }
+.home-catalog-sort i { position: absolute; right: .75rem; pointer-events: none; color: var(--text-muted); font-size: .78rem; }
+.home-catalog-view-toggle { display: flex; align-items: stretch; padding: .18rem; border: 1px solid var(--border); border-radius: 13px; background: color-mix(in srgb, var(--surface) 90%, #000 10%); }
+.home-catalog-view { display: grid; width: 2.55rem; min-height: 2.55rem; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--text-muted); cursor: pointer; font: inherit; }
+.home-catalog-view.active { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); color: var(--accent); }
+.home-catalog-filter-btn { display: flex; align-items: center; justify-content: center; gap: .45rem; padding: 0 .85rem; border: 1px solid var(--border); border-radius: 13px; background: color-mix(in srgb, var(--surface) 90%, #000 10%); color: var(--text); cursor: pointer; font: inherit; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.home-catalog-filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+.home-catalog-presets { display: flex; gap: .55rem; overflow-x: auto; padding: .1rem 0 .4rem; scrollbar-width: none; }
+.home-catalog-presets::-webkit-scrollbar { display: none; }
+.home-catalog-preset { flex: 0 0 auto; padding: .65rem .85rem; border: 1px solid var(--border); border-radius: 12px; background: transparent; color: var(--text-secondary); cursor: pointer; font: inherit; font-size: .72rem; font-weight: 700; white-space: nowrap; }
+.home-catalog-preset:hover { color: var(--text); border-color: var(--text-muted); }
+.home-catalog-preset.active { border-color: color-mix(in srgb, var(--accent) 58%, var(--border)); background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+.home-catalog-results-label { margin: .55rem 0 .8rem; color: var(--text-muted); font-size: .78rem; }
+.home-catalog-results-label strong { color: var(--text); font-size: .95rem; }
+.home-catalog-grid.is-list { grid-template-columns: 1fr 1fr; }
+.home-catalog-grid.is-list .home-catalog-card { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr); column-gap: .6rem; align-items: center; }
+.home-catalog-grid.is-list .home-catalog-card__poster { grid-row: 1 / span 2; aspect-ratio: 2 / 3; border-radius: 9px; }
+.home-catalog-grid.is-list .home-catalog-card__title { min-height: 0; margin: 0; align-self: end; }
+.home-catalog-grid.is-list .home-catalog-card__meta { align-self: start; }
+.home-catalog-loader { grid-column: 1 / -1; padding: 2rem; }
+@media (max-width: 479px) {
+    .home-catalog-tabs { gap: .42rem; }
+    .home-catalog-tab { flex-direction: column; gap: .28rem; padding: .65rem .25rem; border-radius: 11px; font-size: .66rem; }
+    .home-catalog-tab i { font-size: .9rem; }
+    .home-catalog-search { min-height: 3rem; border-radius: 12px; }
+    .home-catalog-controls { grid-template-columns: minmax(0, 1fr) auto auto; gap: .42rem; }
+    .home-catalog-filter-btn { width: 2.9rem; padding: 0; }
+    .home-catalog-filter-btn span { display: none; }
+    .home-catalog-view { width: 2.15rem; min-height: 2.35rem; }
+    .home-catalog-sort select { padding-left: .65rem; font-size: .68rem; }
+    .home-catalog-sort i { right: .55rem; }
+    .home-catalog-grid.is-list { grid-template-columns: 1fr; }
+}

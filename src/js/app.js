@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=home-catalog-v1';
+import './app-legacy.js?v=catalog-menu-v1';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';

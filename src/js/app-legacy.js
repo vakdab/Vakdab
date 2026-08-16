@@ -887,12 +887,14 @@ let externalSourceCache = {};
             const anilistId = Number(item.anilist_id || item.anilistId || fromUrl(/anilist\.co\/anime\/(\d+)/i) || 0) || null;
             return { ...(malId ? { mal_id: malId } : {}), ...(anilistId ? { anilist_id: anilistId } : {}) };
         }
-        function hikkaItem(item={}) {
-            const title=item.title_ua || item.title_en || item.title_ja || 'Без назви';
+        function hikkaItem(item={}, endpoint = 'anime') {
+            const title=item.title_ua || item.title_en || item.title_ja || item.name_ua || item.name_en || 'Без назви';
+            const contentType = endpoint === 'manga' ? 'manga' : endpoint === 'novel' ? 'novel' : hikkaType(item);
+            const contentTypeLabel = contentType === 'manga' ? 'Манґа' : contentType === 'novel' ? 'Ранобе' : contentType === 'movie' ? 'Фільм' : contentType === 'ova' ? 'OVA' : 'Серіал';
             return { ...item, mal_id:item.mal_id || item.slug?.hashCode?.() || Date.now(), title,
-                originalTitle:item.title_en || item.title_ja || '', url:`${HIKKA_API}/anime/${item.slug}`,
+                originalTitle:item.title_en || item.title_ja || item.name_en || '', url:`${HIKKA_API}/${endpoint}/${item.slug}`,
                 images:{jpg:{large_image_url:item.image || CATALOG_POSTER_FALLBACK, image_url:item.image || CATALOG_POSTER_FALLBACK}},
-                genres:normalizeGenreList(item.genres), type:hikkaType(item), typeLabel:hikkaType(item)==='movie'?'Фільм':'Серіал',
+                genres:normalizeGenreList(item.genres), type:contentType, typeLabel:contentTypeLabel,
                 synopsis:normalizeSynopsisText(item.synopsis_ua || item.synopsis_en || ''), from:'hikka' };
         }
         function hikkaRequest(url, options = {}) {
@@ -907,7 +909,7 @@ let externalSourceCache = {};
             const apiUrl = `${HIKKA_API}/${endpoint}?page=${Math.max(1,page)}&size=24`;
             const res=await hikkaRequest(apiUrl, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
             if(!res.ok) throw new Error(`Hikka API: HTTP ${res.status}`);
-            const data=await res.json(); return (data.list || []).map(hikkaItem);
+            const data=await res.json(); return (data.list || []).map(item => hikkaItem(item, endpoint));
         }
         async function fetchHikkaMain(page) { return hikkaCatalog('anime', page, {only_translated:true, sort:['score:desc','scored_by:desc']}); }
         async function searchHikka(query, page) { return hikkaCatalog('anime', page, {query:String(query||'').trim(), only_translated:true}); }
@@ -4638,6 +4640,47 @@ let externalSourceCache = {};
         let homeCatalogPage = 1;
         let homeCatalogItems = [];
         let homeCatalogLoading = false;
+        let homeCatalogMode = 'anime';
+        let homeCatalogQuery = '';
+        let homeCatalogSort = 'score';
+        let homeCatalogView = 'grid';
+        let homeCatalogPreset = 'all';
+
+        const HOME_CATALOG_MODES = [
+            { key: 'anime', label: 'Аніме', icon: 'fa-photo-film' },
+            { key: 'manga', label: 'Манґа', icon: 'fa-palette' },
+            { key: 'novel', label: 'Ранобе', icon: 'fa-book-open' }
+        ];
+        const HOME_CATALOG_PRESETS = [
+            { key: 'all', label: 'Усі' },
+            { key: 'finished', label: 'Нещодавно завершені' },
+            { key: 'ongoing', label: 'Онґоїнг' }
+        ];
+
+        function homeCatalogRequestBody() {
+            const body = { only_translated: true };
+            if (homeCatalogQuery) body.query = homeCatalogQuery;
+            if (homeCatalogSort === 'score') body.sort = ['score:desc', 'scored_by:desc'];
+            if (homeCatalogSort === 'newest') body.sort = ['start_date:desc'];
+            if (homeCatalogSort === 'title') body.sort = ['title_ua:asc'];
+            return body;
+        }
+
+        function getHomeCatalogVisibleItems() {
+            const items = [...homeCatalogItems];
+            const filtered = homeCatalogMode === 'anime' && homeCatalogPreset !== 'all'
+                ? items.filter(item => homeCatalogPreset === 'finished' ? ['finished', 'released', 'completed'].includes(item.status) : item.status === homeCatalogPreset)
+                : items;
+            return filtered.sort((a, b) => {
+                if (homeCatalogSort === 'title') return String(a.title || '').localeCompare(String(b.title || ''), 'uk');
+                if (homeCatalogSort === 'newest') return Number(b.year || 0) - Number(a.year || 0);
+                return (Number(b.score || b.native_score || 0) - Number(a.score || a.native_score || 0));
+            });
+        }
+
+        async function fetchHomeCatalogPage(page) {
+            return hikkaCatalog(homeCatalogMode, page, homeCatalogRequestBody());
+        }
 
         function homeCatalogCardHtml(a) {
             const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
@@ -4659,7 +4702,11 @@ let externalSourceCache = {};
         function bindHomeCatalogCards(root) {
             root?.querySelectorAll('.home-catalog-card:not([data-bound])').forEach(card => {
                 card.dataset.bound = '1';
-                const open = () => { if (card.dataset.url) openPlayerPage(card.dataset.url); };
+                const open = () => {
+                    if (!card.dataset.url) return;
+                    if (homeCatalogMode !== 'anime') { showToast('Плеєр доступний для аніме-контенту'); return; }
+                    openPlayerPage(card.dataset.url);
+                };
                 card.addEventListener('click', open);
                 card.addEventListener('keydown', event => {
                     if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
@@ -4668,49 +4715,129 @@ let externalSourceCache = {};
         }
 
         function buildHomeCatalogSectionHtml(items) {
-            if (!items?.length) return '<section class="home-catalog-section" id="homeCatalogSection"><div class="home-catalog-empty">Каталог тимчасово недоступний.</div></section>';
+            const activeMode = HOME_CATALOG_MODES.find(mode => mode.key === homeCatalogMode) || HOME_CATALOG_MODES[0];
+            const visibleItems = getHomeCatalogVisibleItems();
             return `<section class="home-catalog-section" id="homeCatalogSection">
                 <div class="home-catalog-heading">
-                    <div><span class="home-catalog-kicker">HIKKA</span><h2>Каталог аніме</h2></div>
-                    <span class="home-catalog-count" id="homeCatalogCount">${items.length} тайтлів</span>
+                    <div><span class="home-catalog-kicker">HIKKA</span><h2>Каталог ${escapeHtml(activeMode.label.toLowerCase())}</h2></div>
+                    <span class="home-catalog-count" id="homeCatalogCount">${visibleItems.length} результатів</span>
                 </div>
-                <div class="home-catalog-grid" id="homeCatalogGrid">${items.map(homeCatalogCardHtml).join('')}</div>
+                <nav class="home-catalog-tabs" id="homeCatalogTabs" aria-label="Тип каталогу">
+                    ${HOME_CATALOG_MODES.map(mode => `<button class="home-catalog-tab${mode.key === homeCatalogMode ? ' active' : ''}" type="button" data-catalog-mode="${mode.key}"><i class="fas ${mode.icon}"></i><span>${mode.label}</span></button>`).join('')}
+                </nav>
+                <div class="home-catalog-search-row">
+                    <label class="home-catalog-search"><i class="fas fa-search"></i><input id="homeCatalogSearch" type="search" value="${escapeHtml(homeCatalogQuery)}" placeholder="Введіть назву ${activeMode.label.toLowerCase()}..." autocomplete="off"></label>
+                </div>
+                <div class="home-catalog-controls">
+                    <label class="home-catalog-sort"><select id="homeCatalogSort" aria-label="Сортування"><option value="score"${homeCatalogSort === 'score' ? ' selected' : ''}>За оцінкою</option><option value="newest"${homeCatalogSort === 'newest' ? ' selected' : ''}>Новіші</option><option value="title"${homeCatalogSort === 'title' ? ' selected' : ''}>За назвою</option></select><i class="fas fa-arrow-up-wide-short"></i></label>
+                    <div class="home-catalog-view-toggle" role="group" aria-label="Вигляд каталогу"><button type="button" class="home-catalog-view${homeCatalogView === 'grid' ? ' active' : ''}" data-catalog-view="grid" aria-label="Сітка"><i class="fas fa-grip"></i></button><button type="button" class="home-catalog-view${homeCatalogView === 'list' ? ' active' : ''}" data-catalog-view="list" aria-label="Список"><i class="fas fa-list"></i></button></div>
+                    <button class="home-catalog-filter-btn" id="homeCatalogFilterBtn" type="button"><i class="fas fa-filter"></i><span>Фільтри</span></button>
+                </div>
+                <div class="home-catalog-presets" id="homeCatalogPresets">${HOME_CATALOG_PRESETS.map(preset => `<button type="button" class="home-catalog-preset${preset.key === homeCatalogPreset ? ' active' : ''}" data-catalog-preset="${preset.key}">${preset.label}</button>`).join('')}</div>
+                <div class="home-catalog-results-label">Знайдено <strong id="homeCatalogResultNumber">${visibleItems.length}</strong> результатів</div>
+                <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
                 <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Показати ще</button>
             </section>`;
+        }
+
+        function renderHomeCatalogGrid() {
+            const grid = document.getElementById('homeCatalogGrid');
+            const count = document.getElementById('homeCatalogCount');
+            const number = document.getElementById('homeCatalogResultNumber');
+            if (!grid) return;
+            const visibleItems = getHomeCatalogVisibleItems();
+            grid.classList.toggle('is-list', homeCatalogView === 'list');
+            grid.innerHTML = visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Нічого не знайдено за цими параметрами.</div>';
+            bindHomeCatalogCards(grid);
+            if (count) count.textContent = `${visibleItems.length} результатів`;
+            if (number) number.textContent = String(visibleItems.length);
+        }
+
+        function bindHomeCatalogMenu(root) {
+            const tabs = root.querySelectorAll('[data-catalog-mode]');
+            tabs.forEach(tab => tab.addEventListener('click', async () => {
+                if (tab.dataset.catalogMode === homeCatalogMode || homeCatalogLoading) return;
+                homeCatalogMode = tab.dataset.catalogMode;
+                homeCatalogQuery = '';
+                homeCatalogPreset = 'all';
+                await reloadHomeCatalog();
+            }));
+            root.querySelector('#homeCatalogSort')?.addEventListener('change', async event => {
+                homeCatalogSort = event.target.value;
+                await reloadHomeCatalog();
+            });
+            root.querySelectorAll('[data-catalog-view]').forEach(button => button.addEventListener('click', () => {
+                homeCatalogView = button.dataset.catalogView;
+                root.querySelectorAll('[data-catalog-view]').forEach(item => item.classList.toggle('active', item === button));
+                renderHomeCatalogGrid();
+            }));
+            root.querySelectorAll('[data-catalog-preset]').forEach(button => button.addEventListener('click', async () => {
+                homeCatalogPreset = button.dataset.catalogPreset;
+                root.querySelectorAll('[data-catalog-preset]').forEach(item => item.classList.toggle('active', item === button));
+                renderHomeCatalogGrid();
+            }));
+            let searchTimer = null;
+            root.querySelector('#homeCatalogSearch')?.addEventListener('input', event => {
+                clearTimeout(searchTimer);
+                homeCatalogQuery = event.target.value.trim();
+                searchTimer = setTimeout(() => reloadHomeCatalog(), 450);
+            });
+            root.querySelector('#homeCatalogFilterBtn')?.addEventListener('click', () => {
+                Router.goTo('genres');
+                showToast('Розширені фільтри відкрито');
+            });
+        }
+
+        function updateHomeCatalogModeLabels() {
+            const mode = HOME_CATALOG_MODES.find(item => item.key === homeCatalogMode) || HOME_CATALOG_MODES[0];
+            const title = document.querySelector('#homeCatalogSection h2');
+            const search = document.getElementById('homeCatalogSearch');
+            if (title) title.textContent = `Каталог ${mode.label.toLowerCase()}`;
+            if (search) search.placeholder = `Введіть назву ${mode.label.toLowerCase()}...`;
+            document.querySelectorAll('[data-catalog-mode]').forEach(tab => tab.classList.toggle('active', tab.dataset.catalogMode === homeCatalogMode));
+        }
+
+        async function reloadHomeCatalog() {
+            const grid = document.getElementById('homeCatalogGrid');
+            if (!grid || homeCatalogLoading) return;
+            updateHomeCatalogModeLabels();
+            homeCatalogLoading = true;
+            homeCatalogPage = 1;
+            grid.innerHTML = '<div class="loader home-catalog-loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження...</div>';
+            try {
+                homeCatalogItems = await fetchHomeCatalogPage(1);
+                renderHomeCatalogGrid();
+                const button = document.getElementById('homeCatalogMoreBtn');
+                if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-plus"></i> Показати ще'; }
+            } catch (error) {
+                grid.innerHTML = `<div class="home-catalog-empty">Не вдалося завантажити каталог. Спробуйте ще раз.</div>`;
+                showToast('Помилка завантаження каталогу');
+            } finally {
+                homeCatalogLoading = false;
+            }
         }
 
         async function loadHomeCatalogMore() {
             if (homeCatalogLoading) return;
             const button = document.getElementById('homeCatalogMoreBtn');
-            const grid = document.getElementById('homeCatalogGrid');
-            if (!button || !grid) return;
+            if (!button) return;
             homeCatalogLoading = true;
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Завантаження...';
             try {
                 const nextPage = homeCatalogPage + 1;
-                const nextItems = await fetchHikkaMain(nextPage);
+                const nextItems = await fetchHomeCatalogPage(nextPage);
                 const existing = new Set(homeCatalogItems.map(item => item.url));
-                const freshItems = nextItems.filter(item => item.url && !existing.has(item.url));
-                homeCatalogItems.push(...freshItems);
+                homeCatalogItems.push(...nextItems.filter(item => item.url && !existing.has(item.url)));
                 homeCatalogPage = nextPage;
-                grid.insertAdjacentHTML('beforeend', freshItems.map(homeCatalogCardHtml).join(''));
-                bindHomeCatalogCards(grid);
-                const count = document.getElementById('homeCatalogCount');
-                if (count) count.textContent = `${homeCatalogItems.length} тайтлів`;
-                if (!freshItems.length || nextItems.length < 24) {
-                    button.remove();
-                } else {
-                    button.disabled = false;
-                    button.innerHTML = '<i class="fas fa-plus"></i> Показати ще';
-                }
+                renderHomeCatalogGrid();
+                if (!nextItems.length || nextItems.length < 24) button.remove();
+                else { button.disabled = false; button.innerHTML = '<i class="fas fa-plus"></i> Показати ще'; }
             } catch (error) {
                 button.disabled = false;
                 button.innerHTML = '<i class="fas fa-rotate-right"></i> Спробувати ще';
                 showToast('Не вдалося завантажити наступну сторінку каталогу');
-            } finally {
-                homeCatalogLoading = false;
-            }
+            } finally { homeCatalogLoading = false; }
         }
         window.loadHomeCatalogMore = loadHomeCatalogMore;
 
@@ -4736,6 +4863,7 @@ let externalSourceCache = {};
                 html += buildHomeCatalogSectionHtml(homeCatalogItems);
                 container.innerHTML = html;
                 bindHomeCatalogCards(container);
+                bindHomeCatalogMenu(container);
                 document.getElementById('homeCatalogMoreBtn')?.addEventListener('click', loadHomeCatalogMore);
 
                 const homeScheduleDayTabs = document.getElementById('homeScheduleDayTabs');
@@ -4757,7 +4885,7 @@ let externalSourceCache = {};
         }
 
         function statusLabelUa(status) {
-            const map = { ongoing: 'Онгоінг', released: 'Вийшло', anons: 'Анонс' };
+            const map = { ongoing: 'Онгоінг', released: 'Вийшло', finished: 'Завершено', completed: 'Завершено', anons: 'Анонс' };
             if (!status) return '';
             return map[status] || (status.charAt(0).toUpperCase() + status.slice(1));
         }
