@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=20260816-profile-minutes';
+import './app-legacy.js?v=20260816-community-v2';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';

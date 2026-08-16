@@ -3069,7 +3069,7 @@ let externalSourceCache = {};
                     </button>
                     <button class="rg-main-tab" data-panel="community">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        Суспільне
+                        Спільнота
                     </button>
                 </div>
 
@@ -3432,7 +3432,60 @@ let externalSourceCache = {};
             return ACHIEVEMENTS.filter(a => achStats[a.field] >= a.need);
         }
 
+        let modernCommunityUnsub = null;
+        let modernCommunityPosts = [];
+        let modernCommunityFilter = 'all';
+        function modernCommunityDate(value) {
+            try {
+                const date = value?.toDate ? value.toDate() : new Date(value || 0);
+                if (!date || Number.isNaN(date.getTime())) return 'Щойно';
+                const diff = Math.max(0, Date.now() - date.getTime());
+                const mins = Math.floor(diff / 60000);
+                if (mins < 1) return 'Щойно';
+                if (mins < 60) return `${mins} хв тому`;
+                const hours = Math.floor(mins / 60);
+                if (hours < 24) return `${hours} год тому`;
+                return date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+            } catch (_) { return 'Щойно'; }
+        }
+        function modernCommunityAuthor(post) {
+            const name = post.authorName || 'Аніме ентузіаст';
+            const photo = post.authorPhoto || '';
+            return photo
+                ? `<img src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+                : `<span>${escapeHtml(name.slice(0, 1).toUpperCase())}</span>`;
+        }
+        function modernCommunityPostCard(post) {
+            const kind = post.communityCategory || (post.animeData ? 'recommend' : 'discussion');
+            const label = kind === 'recommend' ? 'Рекомендація' : kind === 'question' ? 'Питання' : 'Обговорення';
+            const anime = post.animeData?.title ? `<div class="modern-community-anime"><span class="modern-community-anime-icon">◈</span><div><b>${escapeHtml(post.animeData.title)}</b><small>Аніме в обговоренні</small></div></div>` : '';
+            const text = post.text ? `<p>${escapeHtml(post.text).replace(/\n/g, '<br>')}</p>` : '';
+            return `<article class="modern-community-post"><div class="modern-community-post-top"><div class="modern-community-avatar">${modernCommunityAuthor(post)}</div><div class="modern-community-author"><b>${escapeHtml(post.authorName || 'Аніме ентузіаст')}</b><span>${modernCommunityDate(post.createdAt)}</span></div><span class="modern-community-tag">${label}</span></div>${text}${anime}<div class="modern-community-post-actions"><button type="button" class="modern-community-action" data-community-action="like" data-post-id="${escapeHtml(post.id)}">♡ Подобається</button><button type="button" class="modern-community-action" data-community-action="reply" data-post-id="${escapeHtml(post.id)}">↩ Відповісти</button></div></article>`;
+        }
+        function renderModernCommunityFeed() {
+            const feed = document.getElementById('modernCommunityFeed');
+            if (!feed) return;
+            const posts = modernCommunityPosts.filter(post => modernCommunityFilter === 'all' || (post.communityCategory || (post.animeData ? 'recommend' : 'discussion')) === modernCommunityFilter);
+            feed.innerHTML = posts.length ? posts.map(modernCommunityPostCard).join('') : `<div class="modern-community-empty"><div class="modern-community-empty-icon">✦</div><h3>Тут буде твоя аніме-історія</h3><p>Створи перше обговорення, поділись рекомендацією або постав питання спільноті.</p></div>`;
+            feed.querySelectorAll('[data-community-action="reply"]').forEach(btn => btn.addEventListener('click', () => document.getElementById('modernCommunityComposer')?.focus()));
+            feed.querySelectorAll('[data-community-action="like"]').forEach(btn => btn.addEventListener('click', () => showToast(Auth.isAuthenticated() ? 'Реакції вже скоро будуть доступні' : 'Увійди, щоб реагувати на публікації')));
+        }
+        function initModernCommunity() {
+            const panel = document.getElementById('rgPanelCommunity');
+            if (!panel || panel.dataset.modernInit) return;
+            panel.dataset.modernInit = '1';
+            const user = Auth.isAuthenticated() ? Auth._user : null;
+            const profile = getProfile();
+            panel.innerHTML = `<section class="modern-community-page"><div class="modern-community-hero"><div><span class="modern-community-eyebrow">VAKDAB COMMUNITY</span><h1>Місце, де аніме оживає в розмовах</h1><p>Обговорюй серії, знаходь однодумців і ділись тайтлами, які не можна пропустити.</p></div><div class="modern-community-hero-art"><span>✦</span><span>◈</span><span>✧</span></div></div><div class="modern-community-topic-grid"><button type="button" class="modern-community-topic active" data-community-filter="all"><strong>Стрічка</strong><span>Усе найцікавіше</span></button><button type="button" class="modern-community-topic" data-community-filter="discussion"><strong>Обговорення</strong><span>Думки та питання</span></button><button type="button" class="modern-community-topic" data-community-filter="recommend"><strong>Рекомендації</strong><span>Що подивитися далі</span></button></div>${user ? `<form class="modern-community-composer" id="modernCommunityForm"><div class="modern-community-avatar">${profile.avatar ? `<img src="${escapeHtml(profile.avatar)}" alt="">` : `<span>${escapeHtml((profile.nickname || 'К').slice(0, 1).toUpperCase())}</span>`}</div><div class="modern-community-composer-main"><textarea id="modernCommunityComposer" maxlength="1000" rows="2" placeholder="Що зараз дивишся? Поділись думкою з аніме-спільнотою..."></textarea><div class="modern-community-composer-bottom"><select id="modernCommunityCategory" aria-label="Тип публікації"><option value="discussion">Обговорення</option><option value="recommend">Рекомендація</option><option value="question">Питання</option></select><button type="submit">Опублікувати</button></div></div></form>` : `<div class="modern-community-login"><div><b>Приєднуйся до розмови</b><span>Увійди, щоб створювати публікації та зберігати улюблені обговорення.</span></div><button type="button" id="modernCommunityLogin">Увійти</button></div>`}<div class="modern-community-section-heading"><div><span class="modern-community-eyebrow">ANIME FEED</span><h2>Останні розмови</h2></div><span class="modern-community-count" id="modernCommunityCount">0 публікацій</span></div><div id="modernCommunityFeed" class="modern-community-feed"><div class="modern-community-empty"><div class="modern-community-empty-icon">◌</div><p>Завантажую стрічку...</p></div></div></section>`;
+            panel.querySelectorAll('[data-community-filter]').forEach(btn => btn.addEventListener('click', () => { panel.querySelectorAll('[data-community-filter]').forEach(item => item.classList.remove('active')); btn.classList.add('active'); modernCommunityFilter = btn.dataset.communityFilter; renderModernCommunityFeed(); }));
+            document.getElementById('modernCommunityLogin')?.addEventListener('click', () => Router.goTo('profile'));
+            document.getElementById('modernCommunityForm')?.addEventListener('submit', async event => { event.preventDefault(); const textarea = document.getElementById('modernCommunityComposer'); const text = textarea?.value.trim(); if (!text || !firebaseInitialized || !db) return showToast('Спільнота тимчасово недоступна'); const button = event.currentTarget.querySelector('button[type="submit"]'); button.disabled = true; try { await addDoc(collection(db, 'community_posts'), { uid: user.uid, authorName: profile.nickname || user.displayName || 'Аніме ентузіаст', authorPhoto: profile.avatar || user.photoURL || '', text, type: 'text', communityCategory: document.getElementById('modernCommunityCategory')?.value || 'discussion', createdAt: serverTimestamp() }); textarea.value = ''; showToast('Публікацію додано'); } catch (error) { console.error('Modern community post failed:', error); showToast('Не вдалося опублікувати'); } finally { button.disabled = false; } });
+            if (modernCommunityUnsub) modernCommunityUnsub();
+            try { const q = query(collection(db, 'community_posts'), limit(60)); modernCommunityUnsub = onSnapshot(q, snapshot => { modernCommunityPosts = snapshot.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)); const count = document.getElementById('modernCommunityCount'); if (count) count.textContent = `${modernCommunityPosts.length} публікацій`; renderModernCommunityFeed(); }, () => { const feed = document.getElementById('modernCommunityFeed'); if (feed) feed.innerHTML = `<div class="modern-community-empty"><div class="modern-community-empty-icon">✦</div><h3>Спільнота тільки починається</h3><p>Поки тут тихо. Увійди та створи перше обговорення про своє улюблене аніме.</p></div>`; }); } catch (error) { console.warn('Modern community subscription failed:', error); renderModernCommunityFeed(); }
+        }
         function initCommunity() {
+            initModernCommunity();
+            return;
             const panel = document.getElementById('rgPanelCommunity');
             if (!panel || panel.dataset.init) return;
             panel.dataset.init = '1';
