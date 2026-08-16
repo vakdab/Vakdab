@@ -7122,7 +7122,7 @@ function renderProfilePage() {
             e.target.value = '';
         });
 
-        async function removeStickerBackground(blob, tolerance = 46) {
+        async function removeFlatStickerBackground(blob, tolerance = 46) {
             const url = URL.createObjectURL(blob);
             try {
                 const image = await new Promise((resolve, reject) => {
@@ -7177,6 +7177,29 @@ function renderProfilePage() {
                 return await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
             } finally {
                 URL.revokeObjectURL(url);
+            }
+        }
+
+        let stickerBackgroundRemoverPromise = null;
+        async function removeStickerBackground(blob) {
+            try {
+                if (!stickerBackgroundRemoverPromise) {
+                    stickerBackgroundRemoverPromise = import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm')
+                        .then(module => module.default || module.removeBackground || module);
+                }
+                const removeBackground = await stickerBackgroundRemoverPromise;
+                if (typeof removeBackground !== 'function') throw new Error('AI background remover недоступний');
+                const result = await removeBackground(blob, {
+                    model: 'isnet_fp16',
+                    device: 'cpu',
+                    output: { format: 'image/png', type: 'foreground' }
+                });
+                if (!(result instanceof Blob)) throw new Error('AI background remover повернув неправильний формат');
+                return result;
+            } catch (error) {
+                console.warn('AI background removal failed; using flat-color fallback:', error);
+                showToast('AI-видалення недоступне — використовую резервну обробку');
+                return removeFlatStickerBackground(blob);
             }
         }
 
