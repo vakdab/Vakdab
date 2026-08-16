@@ -414,6 +414,34 @@
 #playerPageModal .player-control-block:last-child { grid-column: 1 / -1; }
 #playerPageModal .player-dub-controls,
 #playerPageModal .player-season-select { display: flex; flex-wrap: wrap; gap: 6px; }
+#playerPageModal .player-dub-controls .format-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+#playerPageModal .player-dub-controls .dub-logo {
+    display: inline-flex;
+    width: 25px;
+    height: 25px;
+    flex: 0 0 25px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
+    border-radius: 50%;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 9px;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+}
+#playerPageModal .player-dub-controls .dub-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+#playerPageModal .player-dub-controls .dub-label { white-space: nowrap; }
 #playerPageModal .player-dub-controls .format-pill,
 #playerPageModal .player-season-select .season-num,
 #playerPageModal .player-episode-btn {

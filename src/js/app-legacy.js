@@ -974,6 +974,11 @@ let externalSourceCache = {};
             }
         }
 
+        function getMikaiTeamLogoUrl(team) {
+            const avatarUid = team?.avatarUid || team?.avatar?.uid || team?.avatar?.id || team?.teams?.[0]?.avatarUid || '';
+            return avatarUid ? `https://images.mikai.me/avatar/medium/${encodeURIComponent(avatarUid)}.webp` : '';
+        }
+
         function parseMikaiSeasonsFromHtml(html) {
             const match = String(html || '').match(/<script[^>]+id=["']__NUXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
             if (!match) throw new Error('Mikai Nuxt payload не знайдено');
@@ -985,9 +990,16 @@ let externalSourceCache = {};
                 if (Array.isArray(value?.players)) playerGroups.push(...value.players);
             });
             const dubs = new Map();
+            const dubLogos = {};
+            const subtitleLogos = {};
             playerGroups.forEach(group => {
-                if (!group || group.isSubs || !Array.isArray(group.providers)) return;
+                if (!group || !Array.isArray(group.providers)) return;
                 const teamName = String(group.team?.name || 'Озвучка').trim();
+                const logoUrl = getMikaiTeamLogoUrl(group.team);
+                if (logoUrl) {
+                    (group.isSubs ? subtitleLogos : dubLogos)[teamName] = logoUrl;
+                }
+                if (group.isSubs) return;
                 group.providers.filter(provider => String(provider?.name || '').toUpperCase() === 'ASHDI').forEach(provider => {
                     const episodes = dubs.get(teamName) || new Map();
                     (provider.episodes || []).forEach(ep => {
@@ -1002,6 +1014,7 @@ let externalSourceCache = {};
                                 episode: number,
                                 file: addNoAdsQuery(playLink),
                                 dub: teamName,
+                                teamLogo: logoUrl,
                                 provider: 'ASHDI',
                                 createdAt: ep?.createdAt || ''
                             });
@@ -1015,7 +1028,11 @@ let externalSourceCache = {};
                 const list = [...episodes.values()].sort((a, b) => Number(a.episode) - Number(b.episode));
                 if (list.length) dubObject[team] = list;
             });
-            return Object.keys(dubObject).length ? { '1': dubObject } : {};
+            return {
+                seasons: Object.keys(dubObject).length ? { '1': dubObject } : {},
+                dubLogos,
+                subtitleLogos
+            };
         }
 
         const ashdiPlaybackCache = new Map();
@@ -1033,7 +1050,7 @@ let externalSourceCache = {};
         }
 
         async function loadMikaiSeasons(mikaiUrl) {
-            if (!mikaiUrl) return {};
+            if (!mikaiUrl) return { seasons: {}, dubLogos: {}, subtitleLogos: {} };
             const html = await fetchMikaiHtml(mikaiUrl);
             return parseMikaiSeasonsFromHtml(html);
         }
@@ -1055,9 +1072,15 @@ let externalSourceCache = {};
             const total = Number(d.episodes_total || d.episodes_released || 0);
             const mikaiUrl = getMikaiUrl(d);
             let seasons = {};
+            let dubLogos = {};
+            let subtitleLogos = {};
             if (mikaiUrl) {
-                try { seasons = await loadMikaiSeasons(mikaiUrl); }
-                catch (error) { console.warn('[Mikai] Не вдалося завантажити ASHDI:', error); }
+                try {
+                    const mikaiData = await loadMikaiSeasons(mikaiUrl);
+                    seasons = mikaiData.seasons || {};
+                    dubLogos = mikaiData.dubLogos || {};
+                    subtitleLogos = mikaiData.subtitleLogos || {};
+                } catch (error) { console.warn('[Mikai] Не вдалося завантажити ASHDI:', error); }
             }
             return {
                 ...item,
@@ -1070,6 +1093,8 @@ let externalSourceCache = {};
                 runtimeMinutes: d.duration || 0,
                 totalEpisodes: total,
                 seasons,
+                dubLogos,
+                subtitleLogos,
                 mikaiUrl,
                 from: 'hikka+mikai+ashdi',
                 externalIds: { mal_id: d.mal_id }
@@ -1126,12 +1151,14 @@ let externalSourceCache = {};
 
             showToast(`Шукаю озвучки ${providerName}...`);
             try {
-                let seasons = externalSourceCache[providerName];
-                if (!seasons) {
-                    seasons = await loadMikaiSeasons(playerPageAnime?.mikaiUrl || getMikaiUrl(playerPageAnime));
-                    externalSourceCache[providerName] = seasons;
+                let mikaiData = externalSourceCache[providerName];
+                if (!mikaiData) {
+                    mikaiData = await loadMikaiSeasons(playerPageAnime?.mikaiUrl || getMikaiUrl(playerPageAnime));
+                    externalSourceCache[providerName] = mikaiData;
                 }
-                playerPageAnime.seasons = seasons;
+                playerPageAnime.seasons = mikaiData.seasons || {};
+                playerPageAnime.dubLogos = mikaiData.dubLogos || {};
+                playerPageAnime.subtitleLogos = mikaiData.subtitleLogos || {};
                 refreshAfterSourceSwitch();
                 showToast(`${providerName}: ASHDI без реклами`);
             } catch (e) {
@@ -7855,6 +7882,14 @@ function renderProfilePage() {
             if (watchSourceValue) watchSourceValue.textContent = `${playerPageCurrentSource || 'Джерело'} · ${playerPageCurrentQuality || ''}`;
         }
 
+        function renderDubLogo(dubName) {
+            const logoUrl = playerPageAnime?.dubLogos?.[dubName] ||
+                playerPageAnime?.seasons?.[playerPageCurrentSeason]?.[dubName]?.find(ep => ep?.teamLogo)?.teamLogo || '';
+            const fallback = escapeHtml(String(dubName || 'Оз').trim().slice(0, 2).toUpperCase());
+            if (!logoUrl) return `<span class="dub-logo dub-logo-fallback" aria-hidden="true">${fallback}</span>`;
+            return `<span class="dub-logo" aria-hidden="true"><img src="${escapeHtml(logoUrl)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'"><span class="dub-logo-fallback" style="display:none">${fallback}</span></span>`;
+        }
+
         function updateFilterChip() {
             const chip = document.getElementById('playerFilterChip');
             if (chip) chip.textContent = `Сезон ${playerPageCurrentSeason} · ${playerPageCurrentDub}`;
@@ -7863,7 +7898,7 @@ function renderProfilePage() {
             const dubs = Object.keys(playerPageAnime?.seasons?.[playerPageCurrentSeason] || {}).sort();
             let formatHtml = dubs.map(d => {
                 const active = d === playerPageCurrentDub ? ' active-format' : '';
-                return `<span class="format-pill${active}" data-dub="${d}" style="cursor:pointer;">${String(d).toUpperCase()}</span>`;
+                return `<span class="format-pill${active}" data-dub="${escapeHtml(d)}" aria-label="${escapeHtml(d)}" style="cursor:pointer;">${renderDubLogo(d)}<span class="dub-label">${escapeHtml(String(d).toUpperCase())}</span></span>`;
             }).join('');
             [document.getElementById('playerDubControls')].forEach(formatRow => {
                 if (!formatRow) return;
