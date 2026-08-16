@@ -937,10 +937,65 @@ let externalSourceCache = {};
             };
         }
 
-        function getMikaiUrl(hikkaAnime = {}) {
+        function getExternalWatchUrl(hikkaAnime = {}, hostPattern) {
             const external = Array.isArray(hikkaAnime.external) ? hikkaAnime.external : [];
-            const mikai = external.find(item => item?.type === 'watch' && /^https?:\/\/(?:www\.)?mikai\.me\/anime\//i.test(item.url || ''));
-            return mikai?.url || '';
+            return external.find(item => item?.type === 'watch' && hostPattern.test(item.url || ''))?.url || '';
+        }
+        function getMikaiUrl(hikkaAnime = {}) {
+            return getExternalWatchUrl(hikkaAnime, /^https?:\/\/(?:www\.)?mikai\.me\/anime\//i);
+        }
+        function getAnimeOnUrl(hikkaAnime = {}) {
+            return getExternalWatchUrl(hikkaAnime, /^https?:\/\/(?:www\.)?animeon\.club\/anime\//i);
+        }
+        function getAnimeOnId(animeOnUrl = '') {
+            const match = String(animeOnUrl).match(/\/anime\/(\d+)(?:[-/]|$)/i);
+            return match?.[1] || '';
+        }
+        async function fetchAnimeOnJson(url) {
+            const proxyUrl = getProxyUrl(url, 'desktop');
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 25000);
+            try {
+                const res = await fetch(proxyUrl, {
+                    mode: 'cors', credentials: 'omit', cache: 'no-cache', signal: controller.signal,
+                    headers: { Accept: 'application/json' }
+                });
+                if (!res.ok) throw new Error(`AnimeON API: HTTP ${res.status}`);
+                return await res.json();
+            } finally { clearTimeout(timer); }
+        }
+        async function loadAnimeOnSeasons(animeOnUrl) {
+            const animeId = getAnimeOnId(animeOnUrl);
+            if (!animeId) return { seasons: {}, dubLogos: {}, subtitleLogos: {} };
+            const data = await fetchAnimeOnJson(`https://animeon.club/api/player/${animeId}/translations`);
+            const translations = Array.isArray(data?.translations) ? data.translations : [];
+            const ranked = translations.slice().sort((a, b) => {
+                const an = String(a?.translation?.name || ''), bn = String(b?.translation?.name || '');
+                const preferred = name => /fanvox|hajime|робота голосом|одноголос/i.test(name) ? 1 : 0;
+                return preferred(bn) - preferred(an) ||
+                    Math.max(...(b?.player || []).map(x => Number(x?.episodesCount) || 0), 0) -
+                    Math.max(...(a?.player || []).map(x => Number(x?.episodesCount) || 0), 0);
+            });
+            const selected = ranked.find(x => (x?.player || []).some(p => Number(p?.episodesCount) > 0)) || ranked[0];
+            const translation = selected?.translation;
+            const player = (selected?.player || []).slice().sort((a, b) => (Number(b?.episodesCount) || 0) - (Number(a?.episodesCount) || 0))[0];
+            if (!translation || !player) return { seasons: {}, dubLogos: {}, subtitleLogos: {} };
+            const episodesData = await fetchAnimeOnJson(`https://animeon.club/api/player/${animeId}/episodes?take=100&skip=-1&playerId=${encodeURIComponent(player.id)}&translationId=${encodeURIComponent(translation.id)}&includeAlternative=true`);
+            const episodeRefs = Array.isArray(episodesData?.episodes) ? episodesData.episodes : [];
+            const loaded = await Promise.all(episodeRefs.map(async ref => {
+                try {
+                    const episode = await fetchAnimeOnJson(`https://animeon.club/api/player/${encodeURIComponent(ref.id)}/episode`);
+                    const file = String(episode?.videoUrl || '').trim();
+                    return file ? { episode: String(ref.episode), file, dub: translation.name, provider: 'AnimeON', label: translation.name } : null;
+                } catch { return null; }
+            }));
+            const list = loaded.filter(Boolean).sort((a, b) => Number(a.episode) - Number(b.episode));
+            const logo = translation.studios?.[0]?.avatar?.preview ? `https://animeon.club/api/uploads/images/${translation.studios[0].avatar.preview}` : '';
+            return {
+                seasons: list.length ? { '1': { [translation.name || 'AnimeON']: list } } : {},
+                dubLogos: logo ? { [translation.name || 'AnimeON']: logo } : {},
+                subtitleLogos: {}
+            };
         }
 
         function resolveMikaiNuxtPayload(payload) {
@@ -1108,6 +1163,7 @@ let externalSourceCache = {};
             const item = hikkaItem(d);
             const total = Number(d.episodes_total || d.episodes_released || 0);
             const mikaiUrl = getMikaiUrl(d);
+            const animeOnUrl = getAnimeOnUrl(d);
             let seasons = {};
             let dubLogos = {};
             let subtitleLogos = {};
@@ -1116,12 +1172,18 @@ let externalSourceCache = {};
                     const mikaiData = await loadMikaiSeasons(mikaiUrl);
                     seasons = mikaiData.seasons || {};
                     const sourceSeason = inferAnimeSeasonNumber(d, mikaiUrl, animeUrl);
-                    if (sourceSeason !== '1' && seasons['1']) {
-                        seasons = { [sourceSeason]: seasons['1'] };
-                    }
+                    if (sourceSeason !== '1' && seasons['1']) seasons = { [sourceSeason]: seasons['1'] };
                     dubLogos = mikaiData.dubLogos || {};
                     subtitleLogos = mikaiData.subtitleLogos || {};
                 } catch (error) { console.warn('[Mikai] Не вдалося завантажити ASHDI:', error); }
+            }
+            if (!Object.keys(seasons).length && animeOnUrl) {
+                try {
+                    const animeOnData = await loadAnimeOnSeasons(animeOnUrl);
+                    seasons = animeOnData.seasons || {};
+                    dubLogos = animeOnData.dubLogos || {};
+                    subtitleLogos = animeOnData.subtitleLogos || {};
+                } catch (error) { console.warn('[AnimeON] Не вдалося завантажити епізоди:', error); }
             }
             return {
                 ...item,
@@ -1137,7 +1199,8 @@ let externalSourceCache = {};
                 dubLogos,
                 subtitleLogos,
                 mikaiUrl,
-                from: 'hikka+mikai+ashdi',
+                animeOnUrl,
+                from: mikaiUrl ? 'hikka+mikai+ashdi' : animeOnUrl ? 'hikka+animeon+ashdi' : 'hikka',
                 externalIds: extractExternalAnimeIds(d)
             };
         }
@@ -1192,11 +1255,14 @@ let externalSourceCache = {};
 
             showToast(`Шукаю озвучки ${providerName}...`);
             try {
-                let mikaiData = externalSourceCache[providerName];
-                if (!mikaiData) {
-                    mikaiData = await loadMikaiSeasons(playerPageAnime?.mikaiUrl || getMikaiUrl(playerPageAnime));
-                    externalSourceCache[providerName] = mikaiData;
+                let sourceData = externalSourceCache[providerName];
+                if (!sourceData) {
+                    sourceData = playerPageAnime?.mikaiUrl
+                        ? await loadMikaiSeasons(playerPageAnime.mikaiUrl)
+                        : await loadAnimeOnSeasons(playerPageAnime?.animeOnUrl || getAnimeOnUrl(playerPageAnime));
+                    externalSourceCache[providerName] = sourceData;
                 }
+                const mikaiData = sourceData;
                 playerPageAnime.seasons = mikaiData.seasons || {};
                 playerPageAnime.dubLogos = mikaiData.dubLogos || {};
                 playerPageAnime.subtitleLogos = mikaiData.subtitleLogos || {};
@@ -7793,7 +7859,7 @@ function renderProfilePage() {
                 playerPageAnime = anime;
                 playerPageAnimeuaSeasons = {};
                 externalSourceCache = {};
-                playerPageSources = anime.mikaiUrl ? ['Mikai / ASHDI'] : ['Основне'];
+                playerPageSources = anime.mikaiUrl ? ['Mikai / ASHDI'] : anime.animeOnUrl ? ['AnimeON / ASHDI'] : ['Основне'];
                 playerPageCurrentSource = playerPageSources[0];
                 const posterUrl = normalizePosterUrl(anime.images?.jpg?.large_image_url);
                 document.getElementById('playerPosterImg').src = posterUrl;
