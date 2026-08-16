@@ -718,6 +718,14 @@ let externalSourceCache = {};
             clearTimeout(toast._timeout);
             toast._timeout = setTimeout(() => toast.classList.remove('show'), 2200);
         }
+        function showToastProgress(msg) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => toast.classList.remove('show'), 150000);
+        }
 
         // ====================================================================
         //  API ФУНКЦІЇ
@@ -7189,18 +7197,37 @@ function renderProfilePage() {
                 }
                 const removeBackground = await stickerBackgroundRemoverPromise;
                 if (typeof removeBackground !== 'function') throw new Error('AI background remover недоступний');
-                const result = await removeBackground(blob, {
+                const config = {
                     model: 'isnet_fp16',
                     device: 'cpu',
                     output: { format: 'image/png', type: 'foreground' }
-                });
-                if (!(result instanceof Blob)) throw new Error('AI background remover повернув неправильний формат');
+                };
+                const statusMessages = [
+                    'AI готує модель… це може зайняти до 1 хвилини',
+                    'AI аналізує об’єкт…',
+                    'AI вирізає фон…',
+                    'AI створює прозорий PNG…'
+                ];
+                let statusIndex = 0;
+                showToastProgress(statusMessages[statusIndex]);
+                const statusTimer = setInterval(() => {
+                    statusIndex = (statusIndex + 1) % statusMessages.length;
+                    showToastProgress(statusMessages[statusIndex]);
+                }, 3200);
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('AI-обробка перевищила 2 хвилини')), 120000));
+                let result;
+                try {
+                    result = await Promise.race([removeBackground(blob, config), timeout]);
+                } finally {
+                    clearInterval(statusTimer);
+                }
+                if (!(result instanceof Blob) || result.size < 100) throw new Error('AI не повернув прозорий PNG');
+                showToastProgress('AI фон видалено — зберігаю результат…');
                 return result;
             } catch (error) {
-                console.warn('AI background removal failed; using flat-color fallback:', error);
+                console.error('AI background removal failed:', error);
                 stickerBackgroundRemoverPromise = null;
-                showToast('AI-видалення недоступне — використовую резервну обробку');
-                return removeFlatStickerBackground(blob);
+                throw error;
             }
         }
 
@@ -7211,7 +7238,7 @@ function renderProfilePage() {
             const maxSize = 8 * 1024 * 1024;
             if (file.size > maxSize) { showToast('Файл занадто великий (максимум 8 МБ)'); return; }
             openImageEditor(file, 'avatar', async (blob) => {
-                showToast('Видаляю фон наліпки...');
+                showToastProgress('AI готує видалення фону…');
                 try {
                     const processedBlob = await removeStickerBackground(blob);
                     showToast('Завантаження наліпки...');
@@ -10929,7 +10956,7 @@ function renderProfilePage() {
                             const s = cur.singles.find(x => x.id === btn.dataset.singleId);
                             if (!s?.image) return;
                             btn.disabled = true;
-                            showToast('AI вирізає фон — перше оброблення може тривати довше...');
+                            showToastProgress('AI готує видалення фону…');
                             try {
                                 const response = await fetch(s.image, { mode: 'cors', cache: 'no-store' });
                                 if (!response.ok) throw new Error('Не вдалося завантажити зображення наліпки');
