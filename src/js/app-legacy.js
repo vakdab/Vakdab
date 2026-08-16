@@ -1073,12 +1073,25 @@ let externalSourceCache = {};
             return proxiedManifest;
         }
 
+        function inferAnimeSeasonNumber(data = {}, ...sources) {
+            const explicit = [data.season_number, data.seasonNumber, data.season?.number, data.season?.season_number]
+                .map(Number).find(n => Number.isInteger(n) && n > 0 && n < 100);
+            if (explicit) return String(explicit);
+            const text = [
+                data.title_ua, data.title_en, data.title_ja, data.name_ua, data.name_en,
+                data.slug, data.url, ...sources
+            ].filter(Boolean).join(' ');
+            const match = String(text).match(/(?:\bseason\s*|\bсезон\s*|\bсезона\s*|\bсезону\s*)(\d{1,2})/i) ||
+                String(text).match(/\b(\d{1,2})(?:st|nd|rd|th|-й|-я|-е)?\s*season\b/i) ||
+                String(text).match(/\bs(\d{1,2})(?:\b|[-_])/i);
+            const number = Number(match?.[1]);
+            return Number.isInteger(number) && number > 0 && number < 100 ? String(number) : '1';
+        }
         async function loadMikaiSeasons(mikaiUrl) {
             if (!mikaiUrl) return { seasons: {}, dubLogos: {}, subtitleLogos: {} };
             const html = await fetchMikaiHtml(mikaiUrl);
             return parseMikaiSeasonsFromHtml(html);
         }
-
         function pickPreferredDub(seasonData = {}) {
             const dubs = Object.keys(seasonData || {});
             return dubs.find(dub => /робота голосом/i.test(dub)) ||
@@ -1102,6 +1115,10 @@ let externalSourceCache = {};
                 try {
                     const mikaiData = await loadMikaiSeasons(mikaiUrl);
                     seasons = mikaiData.seasons || {};
+                    const sourceSeason = inferAnimeSeasonNumber(d, mikaiUrl, animeUrl);
+                    if (sourceSeason !== '1' && seasons['1']) {
+                        seasons = { [sourceSeason]: seasons['1'] };
+                    }
                     dubLogos = mikaiData.dubLogos || {};
                     subtitleLogos = mikaiData.subtitleLogos || {};
                 } catch (error) { console.warn('[Mikai] Не вдалося завантажити ASHDI:', error); }
