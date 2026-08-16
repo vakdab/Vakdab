@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=release-menu-v2';
+import './app-legacy.js?v=mikai-schedule-v1';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';

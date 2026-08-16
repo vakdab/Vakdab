@@ -7473,11 +7473,12 @@ function renderProfilePage() {
         window.renderFilterPage = renderFilterPage;
 
         // ====================================================================
-        //  РОЗКЛАД ВИХОДУ (дані з animeon.club, проксі через PROXY_URL)
+        //  РОЗКЛАД ВИХОДУ (дані з Mikai API)
         // ====================================================================
-        const ANIMEON_API_BASE = 'https://animeon.club/api';
-        const scheduleState = { dayOffset: 0, cache: {}, loadingOffset: null, weekLoading: false, weekTimer: null };
+        const MIKAI_API_BASE = 'https://api.mikai.me/v1';
+        const scheduleState = { dayOffset: 0, cache: {}, sourcePromise: null, loadingOffset: null, weekLoading: false, weekTimer: null };
         const WEEKDAY_SHORT_UA = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+        const MIKAI_SCHEDULE_DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
         function scheduleDateForOffset(offset) {
             const d = new Date();
@@ -7498,22 +7499,35 @@ function renderProfilePage() {
 
         async function fetchScheduleByOffset(offset) {
             if (scheduleState.cache[offset]) return scheduleState.cache[offset];
-            const dateStr = formatScheduleApiDate(scheduleDateForOffset(offset));
-            const apiUrl = `${ANIMEON_API_BASE}/schedule/by-date/${dateStr}`;
-            const resp = await fetch(getProxyUrl(apiUrl), {
-                mode: 'cors',
-                credentials: 'omit',
-                cache: 'no-cache'
-            });
-            if (!resp.ok) throw new Error('HTTP ' + resp.status);
-            const data = await resp.json();
+            if (!scheduleState.sourcePromise) {
+                scheduleState.sourcePromise = fetch(`${MIKAI_API_BASE}/schedule`, {
+                    mode: 'cors',
+                    credentials: 'omit',
+                    cache: 'no-cache'
+                }).then(async resp => {
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    const payload = await resp.json();
+                    if (payload?.ok === false) throw new Error(payload.error?.message || 'Mikai API error');
+                    return payload?.result || payload;
+                }).catch(error => {
+                    scheduleState.sourcePromise = null;
+                    throw error;
+                });
+            }
+            const schedule = await scheduleState.sourcePromise;
+            const key = MIKAI_SCHEDULE_DAY_KEYS[scheduleDateForOffset(offset).getDay()];
+            const data = Array.isArray(schedule?.[key]) ? schedule[key] : [];
             scheduleState.cache[offset] = data;
             return data;
         }
 
         function scheduleItemDate(item, offset) {
-            const raw = item?.nextEpisodeAt || item?.airDate || item?.releaseDate || item?.releasedAt || item?.dateTime || item?.datetime;
-            if (raw) { const d = new Date(raw); if (!Number.isNaN(d.getTime())) return d; }
+            const raw = item?.airing || item?.nextEpisodeAt || item?.airDate || item?.releaseDate || item?.releasedAt || item?.dateTime || item?.datetime;
+            if (raw) {
+                const normalized = String(raw).replace(' ', 'T');
+                const d = new Date(normalized);
+                if (!Number.isNaN(d.getTime())) return d;
+            }
             const time = item?.time || item?.airTime || item?.broadcast?.time || item?.anime?.broadcast?.time;
             if (time && /^\d{1,2}:\d{2}/.test(String(time))) {
                 const base = scheduleDateForOffset(offset);
@@ -7526,12 +7540,15 @@ function renderProfilePage() {
 
         function scheduleCard(item, offset) {
             const a = item?.anime || {};
-            const poster = a.image?.preview ? `https://animeon.club/api/uploads/images/${a.image.preview}` : (a.image?.url || a.images?.jpg?.image_url || '');
-            const title = a.titleUa || a.titleEn || a.title || 'Без назви';
+            const names = a.details?.names || {};
+            const posterUid = a.media?.posterUid || '';
+            const poster = posterUid ? `https://images.mikai.me/poster/small/${posterUid}.webp` : '';
+            const title = names.name || names.nameNative || names.nameEnglish || 'Без назви';
+            const titleEn = names.nameEnglish || names.nameNative || '';
             const date = scheduleItemDate(item, offset);
             const dateText = date ? new Intl.DateTimeFormat('uk-UA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(date) : 'Час невідомий';
             const countdown = date && date.getTime() > Date.now() ? `<span class="schedule-countdown" data-time="${date.toISOString()}">${countdownText(date)}</span>` : '';
-            return `<article class="schedule-item schedule-week-item" data-title="${escapeHtml(title)}" data-title-en="${escapeHtml(a.titleEn || '')}" data-slug="${escapeHtml(a.slug || '')}">
+            return `<article class="schedule-item schedule-week-item" data-title="${escapeHtml(title)}" data-title-en="${escapeHtml(titleEn)}" data-slug="${escapeHtml(a.slug || '')}">
                 <div class="schedule-item__poster"><img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.style.opacity=0"></div>
                 <div class="schedule-item__info"><div class="schedule-item__title">${escapeHtml(title)}</div><div class="schedule-item__ep">${item?.episode ? `Епізод ${escapeHtml(item.episode)}` : 'Наступний епізод'} · ${escapeHtml(dateText)}</div>${countdown}</div><i class="fas fa-chevron-right schedule-item__arrow"></i>
             </article>`;
