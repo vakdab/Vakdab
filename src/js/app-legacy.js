@@ -5599,11 +5599,11 @@ const PROFILE_STICKER_SLOTS = 8;
                 const key = stickerKeys[index];
                 return `<div class="settings-preview-sticker-slot${key ? ' is-filled' : ''}" style="--sticker-color:${escapeHtml(key ? (stickerData.colors?.[key] || 'var(--accent)') : 'transparent')}">${key ? renderStickerFaceByKey(stickerData, key) : '<i class="fas fa-plus"></i>'}</div>`;
             }).join('');
-            const avatarMarkup = profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, '', 'video avatar') : (profile.avatar ? profileMediaMarkup(profile.avatar, '', 'avatar') : `<span class="settings-preview-avatar-fallback">${escapeHtml((profile.nickname || 'К').charAt(0).toUpperCase())}</span>`);
+            const avatarMarkup = profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, '', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, '', 'avatar') : `<span class="settings-preview-avatar-fallback">${escapeHtml((profile.nickname || 'К').charAt(0).toUpperCase())}</span>`);
             panel.innerHTML = `
               <div class="settings-preview-profile">
                 <div class="profile-banner settings-preview-banner${bannerEffectClass}">
-                  ${profile.bannerVideo ? profileMediaMarkup(profile.bannerVideo, 'preview-banner-img', 'video banner') : (profile.banner ? profileMediaMarkup(profile.banner, 'preview-banner-img', 'banner') : '')}
+                  ${profile.bannerVideo ? profileMediaMarkup(profile.bannerVideo, 'preview-banner-img', 'video banner', profile.bannerVideoSettings) : (profile.banner ? profileMediaMarkup(profile.banner, 'preview-banner-img', 'banner') : '')}
                   ${profile.atmosphere && profile.atmosphere !== 'none' ? `<div class="atmosphere-${profile.atmosphere}"></div>` : ''}
                   ${profile.effect && profile.effect !== 'none' ? buildEffectOverlayHtml(profile.effect) : ''}
                   <div class="profile-banner-overlay"></div>
@@ -5837,7 +5837,7 @@ const PROFILE_STICKER_SLOTS = 8;
                 ${s.nickBadge !== null ? `<span class="settings-sticker-mini">${renderStickerFaceByKey(s, s.nickBadge)}</span>` : `<span class="settings-sticker-summary-empty">Не встановлено</span>`}
               </div>
               <div class="settings-sticker-summary-row">
-                <span class="settings-sticker-summary-label">Наліпки профілю (${s.medals.length}/28)</span>
+                <span class="settings-sticker-summary-label">Наліпки профілю (${s.medals.length}/${PROFILE_STICKER_SLOTS})</span>
                 <div class="settings-sticker-medals-mini">${s.medals.length ? s.medals.map(k => `<span class="settings-sticker-mini">${renderStickerFaceByKey(s, k)}</span>`).join('') : `<span class="settings-sticker-summary-empty">Немає</span>`}</div>
               </div>
               <button class="settings-media-btn" id="settingsOpenStickersBtn" style="margin-top:0.9rem;width:100%;justify-content:center;">
@@ -5868,9 +5868,10 @@ const PROFILE_STICKER_SLOTS = 8;
             <div class="settings-section-title">Банер</div>
             <div class="settings-media-card">
               <div class="settings-media-preview--banner" id="settingsBannerPreview">
-                ${bannerVideoSrc ? profileMediaMarkup(bannerVideoSrc, '', 'video banner') : (bannerSrc ? profileMediaMarkup(bannerSrc, '', 'banner') : '')}
+                ${bannerVideoSrc ? profileMediaMarkup(bannerVideoSrc, '', 'video banner', profile.bannerVideoSettings) : (bannerSrc ? profileMediaMarkup(bannerSrc, '', 'banner') : '')}
                 <div class="settings-media-actions">
                   <button class="settings-media-btn" id="settingsBannerUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
+                  ${bannerVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsBannerEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : ''}
                   ${(bannerSrc || bannerVideoSrc) ? `<button class="settings-media-delete" id="settingsBannerRemoveBtn" title="Видалити банер"><i class="fas fa-trash"></i></button>` : ''}
                 </div>
               </div>
@@ -5880,9 +5881,10 @@ const PROFILE_STICKER_SLOTS = 8;
             <div class="appearance-media-block">
             <div class="settings-section-title">Аватар</div>
             <div class="settings-media-card settings-media-card--avatar">
-              <div class="settings-media-preview--avatar" id="settingsAvatarPreview">${avatarVideoSrc ? profileMediaMarkup(avatarVideoSrc, '', 'video avatar') : (avatarSrc ? profileMediaMarkup(avatarSrc, '', 'avatar') : '<i class="fas fa-user"></i>')}</div>
+              <div class="settings-media-preview--avatar" id="settingsAvatarPreview">${avatarVideoSrc ? profileMediaMarkup(avatarVideoSrc, '', 'video avatar', profile.avatarVideoSettings) : (avatarSrc ? profileMediaMarkup(avatarSrc, '', 'avatar') : '<i class="fas fa-user"></i>')}</div>
               <div class="settings-media-actions">
                 <button class="settings-media-btn" id="settingsAvatarUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
+                ${avatarVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsAvatarEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : ''}
                 ${(avatarSrc || avatarVideoSrc) ? `<button class="settings-media-delete" id="settingsAvatarRemoveBtn" title="Видалити аватар"><i class="fas fa-trash"></i></button>` : ''}
               </div>
             </div>
@@ -6066,11 +6068,20 @@ const PROFILE_STICKER_SLOTS = 8;
             document.getElementById('settingsAvatarUploadBtn')?.addEventListener('click', () => {
                 document.getElementById('avatarFileInput').click();
             });
+            document.getElementById('settingsBannerEditVideoBtn')?.addEventListener('click', () => {
+                const p = getProfile();
+                editExistingProfileVideo(p.bannerVideo, 'banner');
+            });
+            document.getElementById('settingsAvatarEditVideoBtn')?.addEventListener('click', () => {
+                const p = getProfile();
+                editExistingProfileVideo(p.avatarVideo, 'avatar');
+            });
             document.getElementById('settingsBannerRemoveBtn')?.addEventListener('click', () => {
                 if (!confirm('Видалити банер?')) return;
                 const p = getProfile();
                 p.banner = '';
                 p.bannerVideo = '';
+                p.bannerVideoSettings = null;
                 saveProfile(p);
                 showToast('Банер видалено');
                 renderSettingsPage();
@@ -6081,6 +6092,7 @@ const PROFILE_STICKER_SLOTS = 8;
                 const p = getProfile();
                 p.avatar = '';
                 p.avatarVideo = '';
+                p.avatarVideoSettings = null;
                 saveProfile(p);
                 showToast('Аватарку видалено');
                 renderSettingsPage();
@@ -6368,13 +6380,29 @@ const PROFILE_STICKER_SLOTS = 8;
             return !!url && (/\/video\/upload\//i.test(url) || /\.(mp4|webm|mov|m4v|ogv)(?:[?#]|$)/i.test(url));
         }
 
-        function profileMediaMarkup(url, className, alt) {
+        function profileMediaTransformStyle(settings) {
+            if (!settings || typeof settings !== 'object') return '';
+            const numberInRange = (value, fallback, min, max) => {
+                const n = Number(value);
+                return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
+            };
+            const zoom = numberInRange(settings.zoom, 1, 1, 3);
+            const x = numberInRange(settings.x, 0, -100, 100);
+            const y = numberInRange(settings.y, 0, -100, 100);
+            const mirrorX = settings.mirrorX ? -1 : 1;
+            const mirrorY = settings.mirrorY ? -1 : 1;
+            return `transform:translate(${x}%, ${y}%) scale(${(zoom * mirrorX).toFixed(4)}, ${(zoom * mirrorY).toFixed(4)});transform-origin:center center;`;
+        }
+
+        function profileMediaMarkup(url, className, alt, settings) {
             if (!url) return '';
             const safeUrl = escapeHtml(url);
+            const style = escapeHtml(profileMediaTransformStyle(settings));
+            const styleAttr = style ? ` style="${style}"` : '';
             if (isVideoUrl(url)) {
-                return `<video class="${className}" src="${safeUrl}" autoplay muted loop playsinline preload="metadata" aria-label="${escapeHtml(alt || '')}"></video>`;
+                return `<video class="${className}" src="${safeUrl}"${styleAttr} autoplay muted loop playsinline preload="metadata" aria-label="${escapeHtml(alt || '')}"></video>`;
             }
-            return `<img class="${className}" src="${safeUrl}" alt="${escapeHtml(alt || '')}" loading="lazy">`;
+            return `<img class="${className}" src="${safeUrl}"${styleAttr} alt="${escapeHtml(alt || '')}" loading="lazy">`;
         }
 
         // Uploads an already-cropped Blob (from the image editor canvas) to Cloudinary.
@@ -6392,7 +6420,8 @@ const PROFILE_STICKER_SLOTS = 8;
         function openImageEditor(file, mode, onSaved) {
             // mode: 'avatar' (1:1 circle) or 'banner' (wide rect w/ device guide)
             const objectUrl = URL.createObjectURL(file);
-            const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
+            const isVideo = isVideoFile(file);
+            const isPng = !isVideo && (file.type === 'image/png' || String(file.name || '').toLowerCase().endsWith('.png'));
             const previousBodyOverflow = document.body.style.overflow;
             const overlay = document.createElement('div');
             overlay.className = 'imgedit-overlay';
@@ -6405,12 +6434,12 @@ const PROFILE_STICKER_SLOTS = 8;
                     <button class="imgedit-save" id="imgeditSave">Зберегти</button>
                 </div>
                 <div class="imgedit-stage" id="imgeditStage">
-                    <img class="imgedit-img" id="imgeditImg" src="${objectUrl}" alt="">
+                    ${isVideo ? `<video class="imgedit-img" id="imgeditImg" src="${objectUrl}" muted autoplay loop playsinline preload="metadata"></video>` : `<img class="imgedit-img" id="imgeditImg" src="${objectUrl}" alt="">`}
                     <div class="imgedit-frame" id="imgeditFrame"></div>
                     <div id="imgeditGuides"></div>
                 </div>
                 <div class="imgedit-bottombar">
-                    ${mode === 'banner' ? `<div class="imgedit-caption">Банер профілю виглядатиме по-різному залежно від пристрою. Найбільшим він буде на комп'ютері, менший — на телефоні. Тримайте важливе ближче до центру, щоб воно не обрізалось.</div>` : `<div class="imgedit-caption">Перемістіть і масштабуйте фото, щоб обрати область для аватарки.</div>`}
+                    ${mode === 'banner' ? `<div class="imgedit-caption">Банер профілю виглядатиме по-різному залежно від пристрою. Найбільшим він буде на комп'ютері, менший — на телефоні. Тримайте важливе ближче до центру, щоб воно не обрізалось.</div>` : `<div class="imgedit-caption">Перемістіть і масштабуйте ${isVideo ? 'відео' : 'фото'}, щоб обрати область для аватарки.</div>`}
                     <div class="imgedit-tools-row">
                         <button class="imgedit-tool-btn" id="imgeditCenterBtn" title="По центру">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
@@ -6432,7 +6461,7 @@ const PROFILE_STICKER_SLOTS = 8;
             requestAnimationFrame(() => overlay.classList.add('open'));
 
             const stage = overlay.querySelector('#imgeditStage');
-            const imgEl = overlay.querySelector('#imgeditImg');
+            const mediaEl = overlay.querySelector('#imgeditImg');
             const frameEl = overlay.querySelector('#imgeditFrame');
             const guidesEl = overlay.querySelector('#imgeditGuides');
             const zoomSlider = overlay.querySelector('#imgeditZoom');
@@ -6501,7 +6530,7 @@ const PROFILE_STICKER_SLOTS = 8;
             function applyTransform() {
                 const scaleX = mirrorX ? -1 : 1;
                 const scaleY = mirrorY ? -1 : 1;
-                imgEl.style.transform = `translate(${tx}px, ${ty}px) scale(${scale * scaleX}, ${scale * scaleY})`;
+                mediaEl.style.transform = `translate(${tx}px, ${ty}px) scale(${scale * scaleX}, ${scale * scaleY})`;
             }
 
             function centerImage() {
@@ -6512,18 +6541,22 @@ const PROFILE_STICKER_SLOTS = 8;
                 applyTransform();
             }
 
-            imgEl.onload = () => {
-                natW = imgEl.naturalWidth;
-                natH = imgEl.naturalHeight;
+            const handleMediaReady = () => {
+                natW = isVideo ? mediaEl.videoWidth : mediaEl.naturalWidth;
+                natH = isVideo ? mediaEl.videoHeight : mediaEl.naturalHeight;
                 layoutFrame();
                 baseScale = Math.max(frameW / natW, frameH / natH);
                 minScale = baseScale;
                 scale = baseScale;
-                imgEl.style.width = natW + 'px';
-                imgEl.style.height = natH + 'px';
+                mediaEl.style.width = natW + 'px';
+                mediaEl.style.height = natH + 'px';
                 zoomSlider.value = 100;
                 centerImage();
             };
+            if (isVideo) {
+                mediaEl.addEventListener('loadedmetadata', handleMediaReady, { once: true });
+                if (mediaEl.readyState >= 1) handleMediaReady();
+            } else mediaEl.onload = handleMediaReady;
 
             stage.addEventListener('pointerdown', (e) => {
                 if (e.target.closest('.imgedit-tool-btn') || e.target === zoomSlider) return;
@@ -6589,6 +6622,20 @@ const PROFILE_STICKER_SLOTS = 8;
                 saveBtn.disabled = true;
                 saveBtn.textContent = '...';
                 try {
+                    if (isVideo) {
+                        const centeredTx = frameX + (frameW - natW * scale) / 2;
+                        const centeredTy = frameY + (frameH - natH * scale) / 2;
+                        const zoom = _imgeditClamp(scale / Math.max(minScale, 0.0001), 1, 3);
+                        closeEditor();
+                        onSaved({
+                            zoom: Number(zoom.toFixed(4)),
+                            x: Number((((tx - centeredTx) / Math.max(frameW, 1)) * 100).toFixed(4)),
+                            y: Number((((ty - centeredTy) / Math.max(frameH, 1)) * 100).toFixed(4)),
+                            mirrorX: !!mirrorX,
+                            mirrorY: !!mirrorY
+                        });
+                        return;
+                    }
                     const outScale = mode === 'avatar' ? (480 / frameW) : (Math.max(1, 1200 / frameW));
                     const outW = Math.round(frameW * outScale);
                     const outH = Math.round(frameH * outScale);
@@ -6608,10 +6655,10 @@ const PROFILE_STICKER_SLOTS = 8;
                         const finalSh = mirrorY ? -sH : sH;
                         ctx.translate(mirrorX ? outW / 2 : 0, mirrorY ? outH / 2 : 0);
                         ctx.scale(mirrorX ? -1 : 1, mirrorY ? -1 : 1);
-                        ctx.drawImage(imgEl, sx, finalSy, sW, finalSh, mirrorX ? -outW / 2 : 0, mirrorY ? -outH / 2 : 0, outW, outH);
+                        ctx.drawImage(mediaEl, sx, finalSy, sW, finalSh, mirrorX ? -outW / 2 : 0, mirrorY ? -outH / 2 : 0, outW, outH);
                         ctx.restore();
                     } else {
-                        ctx.drawImage(imgEl, sx, sy, sW, sH, 0, 0, outW, outH);
+                        ctx.drawImage(mediaEl, sx, sy, sW, sH, 0, 0, outW, outH);
                     }
 
                     // PNG зберігаємо з прозорістю, решта — JPEG
@@ -6636,6 +6683,28 @@ const PROFILE_STICKER_SLOTS = 8;
                     centerImage();
                 }
             });
+        }
+
+        async function editExistingProfileVideo(url, mode) {
+            if (!url) return;
+            showToast('Підготовка редактора відео...');
+            try {
+                const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+                if (!response.ok) throw new Error('Не вдалося завантажити відео');
+                const blob = await response.blob();
+                const file = new File([blob], `${mode}.mp4`, { type: blob.type || 'video/mp4' });
+                openImageEditor(file, mode, (settings) => {
+                    const profile = getProfile();
+                    profile[mode === 'avatar' ? 'avatarVideoSettings' : 'bannerVideoSettings'] = settings;
+                    saveProfile(profile);
+                    if (Router.currentRoute === 'profile') renderProfilePage();
+                    if (Router.currentRoute === 'settings') renderSettingsPage();
+                    showToast(mode === 'avatar' ? 'Відео-аватарку оновлено' : 'Відео-банер оновлено');
+                });
+            } catch (err) {
+                console.error('Existing profile video editor error:', err);
+                showToast('Не вдалося відкрити редактор відео');
+            }
         }
 
         function compressImage(file, maxW, maxH, quality, callback) {
@@ -6694,7 +6763,7 @@ function renderProfilePage() {
             container.innerHTML = `
             <div class="profile-wrapper">
               <div class="${bannerClass}">
-                ${profile.bannerVideo ? profileMediaMarkup(profile.bannerVideo, 'profile-banner-media', 'video banner') : (profile.banner ? `<img class="profile-banner-media" src="${escapeHtml(profile.banner)}" alt="banner" onerror="this.style.display='none'">` : '')}
+                ${profile.bannerVideo ? profileMediaMarkup(profile.bannerVideo, 'profile-banner-media', 'video banner', profile.bannerVideoSettings) : (profile.banner ? `<img class="profile-banner-media" src="${escapeHtml(profile.banner)}" alt="banner" onerror="this.style.display='none'">` : '')}
                 ${profile.atmosphere && profile.atmosphere !== 'none' ? `<div class="atmosphere-${profile.atmosphere}"></div>` : ''}
                 ${profile.effect && profile.effect !== 'none' ? buildEffectOverlayHtml(profile.effect) : ''}
                 <div class="profile-banner-overlay"></div>
@@ -6702,7 +6771,7 @@ function renderProfilePage() {
               <div class="profile-info">
                 <div class="profile-avatar-wrap${decorationClass}">
                   <div class="${avatarClass}">
-                    ${profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, 'profile-avatar-media', 'video avatar') : (profile.avatar ? `<img class="profile-avatar-media" src="${escapeHtml(profile.avatar)}" alt="avatar" onerror="this.style.display='none'; this.parentElement.querySelector('.avatar-placeholder').style.display='flex'">` : '')}
+                    ${profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, 'profile-avatar-media', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? `<img class="profile-avatar-media" src="${escapeHtml(profile.avatar)}" alt="avatar" onerror="this.style.display='none'; this.parentElement.querySelector('.avatar-placeholder').style.display='flex'">` : '')}
                     <span class="avatar-placeholder" style="display:none;">${escapeHtml(profile.nickname.charAt(0).toUpperCase())}</span>
                   </div>
                 </div>
@@ -7310,13 +7379,13 @@ function renderProfilePage() {
             const maxSize = isVideo ? 50 * 1024 * 1024 : (isGif ? 10 * 1024 * 1024 : 15 * 1024 * 1024);
             if (file.size > maxSize) { showToast(isVideo ? 'Відео занадто велике (максимум 50 МБ)' : (isGif ? 'GIF занадто великий (максимум 10 МБ) — стисни його або вибери коротший' : 'Файл занадто великий (максимум 15 МБ)')); e.target.value = ''; return; }
 
-            const doUpload = async (blobOrFile, raw, mediaType = 'image') => {
+            const doUpload = async (blobOrFile, raw, mediaType = 'image', mediaSettings = null) => {
                 showToast(mediaType === 'video' ? 'Завантаження відео-аватарки...' : (isGif ? 'Завантаження GIF-аватарки...' : 'Завантаження аватарки...'));
                 try {
                     const imageUrl = mediaType === 'video' ? await uploadVideoToCloudinary(blobOrFile, 'avatar.mp4') : (raw ? await uploadRawToCloudinary(blobOrFile, 'avatar.gif') : await uploadBlobToCloudinary(blobOrFile, 'avatar.jpg'));
                     const profile = getProfile();
-                    if (mediaType === 'video') { profile.avatarVideo = imageUrl; profile.avatar = ''; }
-                    else { profile.avatar = imageUrl; profile.avatarVideo = ''; }
+                    if (mediaType === 'video') { profile.avatarVideo = imageUrl; profile.avatar = ''; profile.avatarVideoSettings = mediaSettings || null; }
+                    else { profile.avatar = imageUrl; profile.avatarVideo = ''; profile.avatarVideoSettings = null; }
                     saveProfile(profile);
                     if (Router.currentRoute === 'profile') renderProfilePage();
                     if (Router.currentRoute === 'settings') renderSettingsPage();
@@ -7328,7 +7397,7 @@ function renderProfilePage() {
             };
 
             if (isVideo) {
-                await doUpload(file, true, 'video');
+                openImageEditor(file, 'avatar', (settings) => doUpload(file, true, 'video', settings));
             } else if (isGif) {
                 // GIFs skip the cropper — canvas cropping would flatten the animation to 1 frame.
                 showToast('GIF без кадрування — щоб зберегти анімацію');
@@ -7481,13 +7550,13 @@ function renderProfilePage() {
             const maxSize = isVideo ? 50 * 1024 * 1024 : (isGif ? 10 * 1024 * 1024 : 15 * 1024 * 1024);
             if (file.size > maxSize) { showToast(isVideo ? 'Відео занадто велике (максимум 50 МБ)' : (isGif ? 'GIF занадто великий (максимум 10 МБ) — стисни його або вибери коротший' : 'Файл занадто великий (максимум 15 МБ)')); e.target.value = ''; return; }
 
-            const doUpload = async (blobOrFile, raw, mediaType = 'image') => {
+            const doUpload = async (blobOrFile, raw, mediaType = 'image', mediaSettings = null) => {
                 showToast(mediaType === 'video' ? 'Завантаження відео-банера...' : (isGif ? 'Завантаження GIF-банера...' : 'Завантаження банера...'));
                 try {
                     const imageUrl = mediaType === 'video' ? await uploadVideoToCloudinary(blobOrFile, 'banner.mp4') : (raw ? await uploadRawToCloudinary(blobOrFile, 'banner.gif') : await uploadBlobToCloudinary(blobOrFile, 'banner.jpg'));
                     const profile = getProfile();
-                    if (mediaType === 'video') { profile.bannerVideo = imageUrl; profile.banner = ''; }
-                    else { profile.banner = imageUrl; profile.bannerVideo = ''; }
+                    if (mediaType === 'video') { profile.bannerVideo = imageUrl; profile.banner = ''; profile.bannerVideoSettings = mediaSettings || null; }
+                    else { profile.banner = imageUrl; profile.bannerVideo = ''; profile.bannerVideoSettings = null; }
                     saveProfile(profile);
                     if (Router.currentRoute === 'profile') renderProfilePage();
                     if (Router.currentRoute === 'settings') renderSettingsPage();
@@ -7499,7 +7568,7 @@ function renderProfilePage() {
             };
 
             if (isVideo) {
-                await doUpload(file, true, 'video');
+                openImageEditor(file, 'banner', (settings) => doUpload(file, true, 'video', settings));
             } else if (isGif) {
                 showToast('GIF без кадрування — щоб зберегти анімацію');
                 await doUpload(file, true);

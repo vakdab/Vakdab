@@ -236,12 +236,15 @@
             position: relative;
             overflow: hidden;
         }
-        .settings-media-preview--banner img {
+        .settings-media-preview--banner img,
+        .settings-media-preview--banner video {
             width: 100%;
             height: 100%;
             object-fit: cover;
             background: transparent;
             opacity: 0.85;
+            transform-origin: center center;
+            will-change: transform;
         }
         .settings-media-preview--banner::after {
             content: '';
@@ -250,7 +253,7 @@
             background: linear-gradient(180deg, transparent 30%, rgba(var(--accent-rgb), 0.45) 100%);
             pointer-events: none;
         }
-        .settings-media-preview--banner:not(:has(img))::before {
+        .settings-media-preview--banner:not(:has(img, video))::before {
             content: '\f03e';
             font-family: 'Font Awesome 6 Free';
             font-weight: 900;
@@ -290,7 +293,8 @@
             justify-content: center;
             color: var(--text-muted);
         }
-        .settings-media-preview--avatar img { width: 100%; height: 100%; object-fit: cover; background: transparent; }
+        .settings-media-preview--avatar img,
+        .settings-media-preview--avatar video { width: 100%; height: 100%; object-fit: cover; background: transparent; transform-origin: center center; will-change: transform; }
         .settings-media-card--avatar .settings-media-actions {
             position: static;
             flex: 1;
@@ -314,6 +318,7 @@
         }
         .settings-media-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); opacity: 0.92; }
         .settings-media-btn:active { transform: translateY(0) scale(0.96); }
+        .settings-media-edit-video { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
         .settings-media-delete {
             width: 38px;
             height: 38px;
@@ -887,6 +892,8 @@
         .profile-banner.is-gif:hover video {
             opacity: 0.85;
         }
+        .profile-banner-media,
+        .profile-avatar-media { transform-origin: center center; will-change: transform; }
         .profile-banner-overlay {
             position: absolute;
             inset: 0;
@@ -984,7 +991,7 @@
             height: 100%;
             object-fit: contain;
             background: transparent;
-            filter: grayscale(60%) contrast(1.05);
+            filter: none;
         }
         /* GIF autoplay: no grayscale on GIF avatars */
         .profile-avatar.is-gif img,
