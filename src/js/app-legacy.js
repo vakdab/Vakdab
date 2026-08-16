@@ -2076,6 +2076,8 @@ let externalSourceCache = {};
         //  ГЕРО БАНЕР
         // ====================================================================
         let heroItems = [],
+            heroPool = [],
+            heroSeenUrls = new Set(),
             heroCurrentIndex = 0,
             heroRotationTimer = null,
             heroJustSwiped = false;
@@ -2093,15 +2095,11 @@ let externalSourceCache = {};
             const topAnime = topResult.status === 'fulfilled' ? (topResult.value || []) : [];
             const ordinaryAnime = mainResult.status === 'fulfilled' ? (mainResult.value || []) : [];
 
-            const getRandomItems = (arr, n) => {
-                const validItems = arr.filter(a => a.images?.jpg?.large_image_url);
-                const shuffled = [...validItems].sort(() => 0.5 - Math.random());
-                return shuffled.slice(0, n);
-            };
-
-            const selectedTop = getRandomItems(topAnime, 4);
-            const selectedOrdinary = getRandomItems(ordinaryAnime, 4);
-            heroItems = [...selectedTop, ...selectedOrdinary].sort(() => 0.5 - Math.random());
+            heroPool = [...topAnime, ...ordinaryAnime]
+                .filter(item => item?.url && item.images?.jpg?.large_image_url)
+                .filter((item, index, list) => list.findIndex(other => other.url === item.url) === index);
+            heroSeenUrls = new Set();
+            heroItems = takeHeroBatch();
 
             if (heroItems.length === 0) {
                 console.warn('Hero: no items loaded');
@@ -2131,6 +2129,32 @@ let externalSourceCache = {};
             if (heroItems.length > 1) {
                 loadHeroItemDetails(1).catch(() => {});
             }
+        }
+
+        function takeHeroBatch() {
+            const available = heroPool.filter(item => item?.url && !heroSeenUrls.has(item.url));
+            const batch = [...available].sort(() => Math.random() - 0.5).slice(0, 8);
+            batch.forEach(item => heroSeenUrls.add(item.url));
+            return batch;
+        }
+
+        async function loadNextHeroBatch() {
+            stopHeroRotation();
+            let nextBatch = takeHeroBatch();
+            if (nextBatch.length < 8 && heroSeenUrls.size >= heroPool.length) {
+                heroSeenUrls = new Set();
+                nextBatch = takeHeroBatch();
+            }
+            if (!nextBatch.length) return;
+            heroItems = nextBatch;
+            heroCurrentIndex = 0;
+            renderHeroSlide(heroItems[0]);
+            buildHeroIndicators();
+            startHeroRotation();
+            loadHeroItemDetails(0).then(() => {
+                if (heroCurrentIndex === 0) renderHeroSlide(heroItems[0]);
+            }).catch(() => {});
+            if (heroItems.length > 1) loadHeroItemDetails(1).catch(() => {});
         }
 
         async function loadHeroItemDetails(idx) {
@@ -2173,7 +2197,7 @@ let externalSourceCache = {};
             if (year) metaParts.push(year);
             if (episodes > 0) metaParts.push(episodes + ' еп.');
             const metaHtml = metaParts.length > 0
-                ? `<div class="hero-meta">${metaParts.join(' <span class="hero-meta-dot"></span> ')}</div>`
+                ? `<span class="hero-info-separator">·</span><span class="hero-meta">${metaParts.join(' <span class="hero-meta-dot"></span> ')}</span>`
                 : '';
 
             const synopsisHtml = synopsis
@@ -2199,8 +2223,8 @@ let externalSourceCache = {};
                     <div class="hero-slide-tags">
                         ${genres.slice(0, 3).map(g => `<span class="hero-tag genre-tag">${g}</span>`).join('')}
                     </div>
-                    <div class="hero-rating-row hero-rating-row--bottom">
-                        <div class="hero-rating-badge"><span class="star">★</span> ${rating}</div>
+                    <div class="hero-info-pill hero-rating-row hero-rating-row--bottom">
+                        <span class="hero-rating-badge"><span class="star">★</span> ${rating}</span>
                         ${metaHtml}
                     </div>
                 </div>
@@ -2271,7 +2295,11 @@ let externalSourceCache = {};
         }
 
         function nextSlide() {
-            goToSlide((heroCurrentIndex + 1) % heroItems.length);
+            if (heroCurrentIndex >= heroItems.length - 1) {
+                loadNextHeroBatch().catch(() => {});
+                return;
+            }
+            goToSlide(heroCurrentIndex + 1);
         }
 
         function prevSlide() {
