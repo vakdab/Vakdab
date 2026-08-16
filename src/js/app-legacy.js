@@ -6,6 +6,7 @@ import './utils/string.js';
 
 let playerPageAnimeuaSeasons = null;
 let externalSourceCache = {};
+const PROFILE_STICKER_SLOTS = 8;
 
         // ====================================================================
         //  ІНІЦІАЛІЗАЦІЯ FIREBASE
@@ -705,7 +706,7 @@ let externalSourceCache = {};
                         : getDefaultStickers();
                     parsed.singles = Array.isArray(parsed.singles) ? parsed.singles.filter(Boolean) : [];
                     parsed.sets = Array.isArray(parsed.sets) ? parsed.sets.filter(Boolean) : [];
-                    parsed.medals = Array.isArray(parsed.medals) ? parsed.medals.filter(m => typeof m === 'string' || typeof m === 'number').slice(0, 28) : [];
+                    parsed.medals = Array.isArray(parsed.medals) ? parsed.medals.filter(m => typeof m === 'string' || typeof m === 'number').slice(0, PROFILE_STICKER_SLOTS) : [];
                     parsed.colors = parsed.colors && typeof parsed.colors === 'object' && !Array.isArray(parsed.colors) ? parsed.colors : {};
                     // Міграція старого формату (nickBadge/medals зберігали номер варіанта напряму)
                     if (typeof parsed.nickBadge === 'number') parsed.nickBadge = 'v:' + parsed.nickBadge;
@@ -5593,8 +5594,8 @@ let externalSourceCache = {};
             const decorationClass = (profile.avatarDecoration && profile.avatarDecoration !== 'none') ? ` avatar-decoration-${profile.avatarDecoration}` : '';
             const stickerData = Storage.getStickers();
             const nickBadge = stickerData.nickBadge ? `<span class="settings-preview-nick-badge">${renderStickerFaceByKey(stickerData, stickerData.nickBadge)}</span>` : '';
-            const stickerKeys = (stickerData.medals || []).slice(0, 28);
-            const stickerSlots = Array.from({ length: 28 }, (_, index) => {
+            const stickerKeys = (stickerData.medals || []).slice(0, PROFILE_STICKER_SLOTS);
+            const stickerSlots = Array.from({ length: PROFILE_STICKER_SLOTS }, (_, index) => {
                 const key = stickerKeys[index];
                 return `<div class="settings-preview-sticker-slot${key ? ' is-filled' : ''}" style="--sticker-color:${escapeHtml(key ? (stickerData.colors?.[key] || 'var(--accent)') : 'transparent')}">${key ? renderStickerFaceByKey(stickerData, key) : '<i class="fas fa-plus"></i>'}</div>`;
             }).join('');
@@ -6684,7 +6685,6 @@ function renderProfilePage() {
             const profileHandle = escapeHtml('@' + profile.nickname.toLowerCase().replace(/\s/g, '_'));
             const profileBioText = escapeHtml(profile.bio);
             const stickerData = Storage.getStickers();
-            const PROFILE_STICKER_SLOTS = 28;
             const profileStickerKeys = (stickerData.medals || []).slice(0, PROFILE_STICKER_SLOTS);
             const profileStickerSlots = Array.from({ length: PROFILE_STICKER_SLOTS }, (_, index) => {
                 const key = profileStickerKeys[index];
@@ -7457,7 +7457,7 @@ function renderProfilePage() {
                     const stickerKey = 'img:' + stickerId;
                     cur.singles.unshift({ id: stickerId, image: imageUrl, favorite: false, addedAt: Date.now() });
                     if (!Array.isArray(cur.medals)) cur.medals = [];
-                    if (!cur.medals.includes(stickerKey) && cur.medals.length < 28) cur.medals.push(stickerKey);
+                    if (!cur.medals.includes(stickerKey) && cur.medals.length < PROFILE_STICKER_SLOTS) cur.medals.push(stickerKey);
                     if (!cur.colors) cur.colors = {};
                     if (!cur.colors[stickerKey]) cur.colors[stickerKey] = '#7c8494';
                     Storage.setStickers(cur);
@@ -11141,7 +11141,7 @@ function renderProfilePage() {
                     const stickerKey = 'v:' + ui.pickedSingle;
                     cur.singles.unshift({ id: stickerId, variant: ui.pickedSingle, favorite: false, addedAt: Date.now() });
                     if (!Array.isArray(cur.medals)) cur.medals = [];
-                    if (!cur.medals.includes(stickerKey) && cur.medals.length < 28) cur.medals.push(stickerKey);
+                    if (!cur.medals.includes(stickerKey) && cur.medals.length < PROFILE_STICKER_SLOTS) cur.medals.push(stickerKey);
                     if (!cur.colors) cur.colors = {};
                     if (!cur.colors[stickerKey]) cur.colors[stickerKey] = '#7c8494';
                     saveData(cur);
@@ -11249,7 +11249,7 @@ function renderProfilePage() {
                                 if (cur.medals.includes(sKey)) {
                                     cur.medals = cur.medals.filter(k => k !== sKey);
                                 } else {
-                                    if (cur.medals.length >= 28) { showToast('Максимум 28 наліпок у профілі — спочатку приберіть одну'); return; }
+                                    if (cur.medals.length >= PROFILE_STICKER_SLOTS) { showToast('Максимум 8 наліпок у профілі — спочатку приберіть одну'); return; }
                                     cur.medals.push(sKey);
                                 }
                             }
