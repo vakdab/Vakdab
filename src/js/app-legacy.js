@@ -7198,6 +7198,7 @@ function renderProfilePage() {
                 return result;
             } catch (error) {
                 console.warn('AI background removal failed; using flat-color fallback:', error);
+                stickerBackgroundRemoverPromise = null;
                 showToast('AI-видалення недоступне — використовую резервну обробку');
                 return removeFlatStickerBackground(blob);
             }
@@ -10690,6 +10691,7 @@ function renderProfilePage() {
                             </div>
                             <label class="sticker-color-control">Колір стікера та blur <input id="stickerColorInput" type="color" value="${escapeHtml(d.colors?.[sKey] || '#7c8494')}" title="Змінити колір стікера"><span>фон — тільки розмиття</span></label>
                             <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                                ${s.image ? '<button class="sticker-action-btn" data-act="remove-bg" data-single-id="' + s.id + '">' + sIconRow('fa-wand-magic-sparkles', 'Видалити фон AI') + '</button>' : ''}
                                 <button class="sticker-action-btn" data-act="favorite" data-single-id="${s.id}">${sIconRow(s.favorite ? 'fa-star' : 'fa-star', s.favorite ? 'Прибрати з улюблених' : 'Додати в улюблені')}</button>
                                 <button class="sticker-action-btn" data-act="nick" data-single-id="${s.id}">${sIconRow('fa-id-badge', isNick ? 'Прибрати біля ніку' : 'Встановити біля ніку')}</button>
                                 <button class="sticker-action-btn" data-act="medal" data-single-id="${s.id}">${sIconRow('fa-medal', isMedal ? 'Прибрати медаль' : 'Додати як медаль')}</button>
@@ -10920,9 +10922,32 @@ function renderProfilePage() {
                 });
 
                 document.querySelectorAll('.sticker-action-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
+                    btn.addEventListener('click', async () => {
                         const act = btn.dataset.act;
                         const cur = data();
+                        if (act === 'remove-bg') {
+                            const s = cur.singles.find(x => x.id === btn.dataset.singleId);
+                            if (!s?.image) return;
+                            btn.disabled = true;
+                            showToast('AI вирізає фон — перше оброблення може тривати довше...');
+                            try {
+                                const response = await fetch(s.image, { mode: 'cors', cache: 'no-store' });
+                                if (!response.ok) throw new Error('Не вдалося завантажити зображення наліпки');
+                                const sourceBlob = await response.blob();
+                                const processedBlob = await removeStickerBackground(sourceBlob);
+                                showToast('Завантажую наліпку без фону...');
+                                s.image = await uploadBlobToCloudinary(processedBlob, 'sticker-no-bg.png');
+                                s.updatedAt = Date.now();
+                                saveData(cur);
+                                showToast('Фон наліпки видалено');
+                                render();
+                            } catch (error) {
+                                console.error('Sticker reprocess error:', error);
+                                showToast('Не вдалося видалити фон: ' + (error.message || 'невідома помилка'));
+                                btn.disabled = false;
+                            }
+                            return;
+                        }
                         if (act === 'favorite') {
                             const s = cur.singles.find(x => x.id === btn.dataset.singleId);
                             if (s) s.favorite = !s.favorite;
