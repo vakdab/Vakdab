@@ -10367,7 +10367,7 @@ function renderProfilePage() {
                     const ownerNickname = d.profile?.nickname || 'Користувач';
                     const ownerAvatar = d.profile?.avatar || '';
                     const source = Object.assign(getDefaultStickers(), d.stickers);
-                    const sourceSingles = Array.isArray(source.singles) ? source.singles : [];
+                    const sourceSingles = (Array.isArray(source.singles) ? source.singles : []).filter(single => single && single.image);
                     const sourceColors = source.colors || {};
                     sourceSingles.forEach(single => singles.push({
                         ...single,
@@ -10377,17 +10377,21 @@ function renderProfilePage() {
                         _ownerAvatar: ownerAvatar,
                         _sourceColor: sourceColors[stickerKeyFor(single)] || ''
                     }));
-                    (Array.isArray(source.sets) ? source.sets : []).forEach(set => sets.push({
+                    (Array.isArray(source.sets) ? source.sets : []).forEach(set => {
+                        const imageIds = (Array.isArray(set.images) ? set.images : []).filter(id => sourceSingles.some(single => single.id === id));
+                        if (!imageIds.length) return;
+                        sets.push({
                         ...set,
-                        variants: Array.isArray(set.variants) ? set.variants : [],
-                        images: Array.isArray(set.images) ? set.images : [],
+                        variants: [],
+                        images: imageIds,
                         _public: true,
                         _ownerId: ownerId,
                         _ownerNickname: ownerNickname,
                         _ownerAvatar: ownerAvatar,
                         _sourceSingles: sourceSingles,
                         _sourceColors: sourceColors
-                    }));
+                        });
+                    });
                     users.push({ id: ownerId, nickname: ownerNickname, avatar: ownerAvatar, stickers: source });
                 });
                 // Фільтруємо дублікати за ID
@@ -10425,7 +10429,21 @@ function renderProfilePage() {
             }
             const ui = window.stickersUI;
 
-            function data() { return Storage.getStickers(); }
+            let stickersDataSanitized = false;
+            function data() {
+                const current = Storage.getStickers();
+                if (!stickersDataSanitized) {
+                    stickersDataSanitized = true;
+                    const legacyKeys = new Set((current.singles || []).filter(s => s && !s.image && s.variant !== undefined).map(stickerKeyFor));
+                    current.singles = (current.singles || []).filter(s => s && s.image);
+                    current.sets = (current.sets || []).map(st => ({ ...st, variants: [], images: (st.images || []).filter(id => current.singles.some(s => s.id === id)) })).filter(st => st.images.length);
+                    current.medals = (current.medals || []).filter(key => !legacyKeys.has(key));
+                    if (current.nickBadge && legacyKeys.has(current.nickBadge)) current.nickBadge = null;
+                    if (current.colors) legacyKeys.forEach(key => delete current.colors[key]);
+                    if (legacyKeys.size) Storage.setStickers(current);
+                }
+                return current;
+            }
             function saveData(d) {
                 Storage.setStickers(d);
                 if (Router.currentRoute === 'profile') renderProfilePage();
@@ -10634,15 +10652,11 @@ function renderProfilePage() {
                         <div style="display:flex;flex-direction:column;gap:0.7rem;">
                             <button id="stickersChooseSingle" style="display:flex;align-items:center;gap:0.8rem;border:1px solid var(--border);border-radius:16px;padding:0.9rem;background:var(--tag-bg);cursor:pointer;text-align:left;color:var(--text);">
                                 <div style="width:44px;height:44px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-face-smile"></i></div>
-                                <div><div style="font-weight:700;font-size:0.88rem;">Одиночна наліпка</div><div style="font-size:0.75rem;color:var(--text-muted);">Додати одну наліпку в загальний список</div></div>
+                                <div><div style="font-weight:700;font-size:0.88rem;">Власне фото</div><div style="font-size:0.75rem;color:var(--text-muted);">Завантажити одне фото як наліпку</div></div>
                             </button>
                             <button id="stickersChoosePack" style="display:flex;align-items:center;gap:0.8rem;border:1px solid var(--border);border-radius:16px;padding:0.9rem;background:var(--tag-bg);cursor:pointer;text-align:left;color:var(--text);">
                                 <div style="width:44px;height:44px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-layer-group"></i></div>
                                 <div><div style="font-weight:700;font-size:0.88rem;">Набір наліпок</div><div style="font-size:0.75rem;color:var(--text-muted);">Створити іменований набір з кількох наліпок</div></div>
-                            </button>
-                            <button id="stickersChooseUpload" style="display:flex;align-items:center;gap:0.8rem;border:1px solid var(--border);border-radius:16px;padding:0.9rem;background:var(--tag-bg);cursor:pointer;text-align:left;color:var(--text);">
-                                <div style="width:44px;height:44px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-camera"></i></div>
-                                <div><div style="font-weight:700;font-size:0.88rem;">Власне фото</div><div style="font-size:0.75rem;color:var(--text-muted);">Завантажити своє зображення як наліпку</div></div>
                             </button>
                         </div>
                     `;
@@ -10663,14 +10677,7 @@ function renderProfilePage() {
                     `;
                 }
                 if (ui.step === 'pack') {
-                    const allOwned = [...d.singles];
-                    // Також додаємо базові варіанти, якщо їх ще немає в singles
-                    const ownedVariants = d.singles.map(s => s.variant).filter(v => v !== undefined);
-                    for (let i = 0; i < STICKER_VARIANT_COUNT; i++) {
-                        if (!ownedVariants.includes(i)) {
-                            allOwned.push({ variant: i, id: 'v_' + i });
-                        }
-                    }
+                    const allOwned = d.singles.filter(Boolean);
 
                     return `
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
@@ -10683,7 +10690,8 @@ function renderProfilePage() {
                             <input id="stickersPackNameInput" type="text" maxlength="30" placeholder="Наприклад: Мої улюблені" value="${escapeHtml(ui.packName)}"
                                 style="width:100%;background:var(--tag-bg);border:1.5px solid var(--border);border-radius:12px;padding:0.75rem 0.9rem;color:var(--text);font-family:inherit;font-size:0.9rem;outline:none;">
                         </div>
-                        <label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text-muted);margin-bottom:0.5rem;">Виберіть наліпки (${ui.pickedForPack.length})</label>
+                        <label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text-muted);margin-bottom:0.5rem;">Виберіть свої одиночні наліпки (${ui.pickedForPack.length})</label>
+                        ${allOwned.length ? '' : '<div style="padding:1rem;border:1px dashed var(--border);border-radius:14px;color:var(--text-muted);text-align:center;margin-bottom:1rem;">Спочатку додайте власне фото як одиночну наліпку.</div>'}
                         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.6rem;margin-bottom:1.2rem;max-height:300px;overflow-y:auto;padding:2px;">
                             ${allOwned.map(s => {
                                 const v = s.variant !== undefined ? s.variant : null;
@@ -10839,7 +10847,11 @@ function renderProfilePage() {
                 document.getElementById('stickersOverlayBg')?.addEventListener('click', closeOverlay);
                 document.getElementById('stickersCloseOverlay')?.addEventListener('click', closeOverlay);
                 document.getElementById('stickersBackToChoose')?.addEventListener('click', () => { ui.step = 'choose'; render(); });
-                document.getElementById('stickersChooseSingle')?.addEventListener('click', () => { ui.step = 'single'; render(); });
+                document.getElementById('stickersChooseSingle')?.addEventListener('click', () => {
+                    ui.step = null;
+                    render();
+                    document.getElementById('stickerFileInput')?.click();
+                });
                 document.getElementById('stickersChoosePack')?.addEventListener('click', () => { ui.step = 'pack'; render(); });
                 document.getElementById('stickersChooseUpload')?.addEventListener('click', () => {
                     ui.step = null;
