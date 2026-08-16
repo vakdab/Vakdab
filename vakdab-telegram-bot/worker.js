@@ -848,20 +848,16 @@ async function renderDetails(chatId, messageId, url, env) {
     const state = getState(chatId);
 
     const buttons = [];
-    const mikaiUrl = findMikaiWatchUrl(details);
     if (state.previous?.kind === 'random') {
       buttons.push({ text: 'Випадкове', callback_data: 'random' });
     }
     buttons.push({ text: 'Головна', callback_data: 'home' });
 
     let keyboard;
-    if (watchUrl || mikaiUrl) {
-      const watchButtons = [];
-      if (watchUrl) watchButtons.push({ text: 'Дивитись на VakDab', url: watchUrl });
-      if (mikaiUrl) watchButtons.push({ text: 'Джерело Mikai', url: mikaiUrl });
+    if (watchUrl) {
       keyboard = {
         inline_keyboard: [
-          watchButtons,
+          [{ text: 'Дивитись на VakDab', url: watchUrl }],
           buttons
         ]
       };
@@ -1065,6 +1061,14 @@ function statusLabelUa(status) {
   return map[String(status || '').toLowerCase()] || String(status || '');
 }
 
+function cleanSynopsis(value = '') {
+  let text = String(value || '').replace(/\r/g, '').trim();
+  text = text.replace(/(?:^|\n)\s*(?:Джерело|Source|Источник)\s*:?[\s\S]*$/i, '');
+  text = text.replace(/\[([^\]]+)\]\(https?:\/\/[^)\s]+(?:\s+["'][^)]*["'])?\)/g, '$1');
+  text = text.replace(/https?:\/\/\S+/gi, '');
+  return text.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 function detailsText(details) {
   let text = `<b>${escapeHtml(details.title)}</b>`;
   if (details.year) text += `\nРік: ${escapeHtml(details.year)}`;
@@ -1076,9 +1080,10 @@ function detailsText(details) {
   }
   if (details.status) text += `\nСтатус: ${escapeHtml(statusLabelUa(details.status))}`;
   if (details.genres.length) text += `\nЖанри: ${escapeHtml(details.genres.join(', '))}`;
-  if (details.synopsis) {
-    const synopsis = details.synopsis.slice(0, 900);
-    text += `\n\nОпис:\n${escapeHtml(synopsis)}${details.synopsis.length > 900 ? '…' : ''}`;
+  const synopsis = cleanSynopsis(details.synopsis);
+  if (synopsis) {
+    const shortSynopsis = synopsis.slice(0, 900);
+    text += `\n\nОпис:\n${escapeHtml(shortSynopsis)}${synopsis.length > 900 ? '…' : ''}`;
   }
   return text;
 }
