@@ -3344,13 +3344,11 @@ let externalSourceCache = {};
             if (sorted.length >= 3) {
                 const order  = [sorted[1], sorted[0], sorted[2]];
                 const cls    = ['p2', 'p1', 'p3'];
-                const crowns = ['\ud83e\udd48', '\ud83d\udc51', '\ud83e\udd49'];
                 html += '<div class="rg-podium">';
                 order.forEach((u, i) => {
                     const gifCls = isGifUrl(u.avatar) ? ' class="is-gif"' : '';
                     const av = u.avatar ? `<img src="${u.avatar}" alt=""${gifCls}>` : `<span>${u.name[0].toUpperCase()}</span>`;
                     html += `<div class="rg-podium-item ${cls[i]}" style="animation-delay:${i*0.08}s">
-                        <div class="rg-podium-crown">${crowns[i]}</div>
                         <img class="rg-podium-badge" src="${TOP_BADGES[cls[i]]}" alt="Топ ${cls[i] === 'p1' ? '1' : cls[i] === 'p2' ? '2' : '3'}" loading="lazy">
                         <div class="rg-podium-avatar">${av}</div>
                         <div class="rg-podium-name">${u.name}</div>
