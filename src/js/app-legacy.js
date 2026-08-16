@@ -7572,7 +7572,11 @@ function renderProfilePage() {
                 content.querySelectorAll('.schedule-week-item').forEach(el => el.addEventListener('click', () => openScheduleItemInPlayer(el.dataset.title, el)));
                 if (scheduleState.weekTimer) clearInterval(scheduleState.weekTimer);
                 scheduleState.weekTimer = setInterval(() => content.querySelectorAll('.schedule-countdown').forEach(el => { const d = new Date(el.dataset.time); el.textContent = countdownText(d); }), 60000);
-            } catch (e) { content.innerHTML = `<div class="loader">Не вдалося завантажити розклад. <button class="btn-outline" type="button" onclick="loadScheduleWeek()">Повторити</button></div>`; }
+            } catch (e) {
+                console.error('Помилка завантаження розкладу Mikai:', e);
+                const details = e?.message ? ` (${escapeHtml(e.message)})` : '';
+                content.innerHTML = `<div class="loader">Не вдалося завантажити розклад${details}. <button class="btn-outline" type="button" onclick="loadScheduleWeek()">Повторити</button></div>`;
+            }
             finally { scheduleState.weekLoading = false; }
         }
         window.loadScheduleWeek = loadScheduleWeek;
