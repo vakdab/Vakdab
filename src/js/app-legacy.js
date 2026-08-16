@@ -4635,99 +4635,108 @@ let externalSourceCache = {};
             await Promise.all(Array.from({ length: Math.min(4, visible.length) }, worker));
         }
 
+        let homeCatalogPage = 1;
+        let homeCatalogItems = [];
+        let homeCatalogLoading = false;
+
+        function homeCatalogCardHtml(a) {
+            const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
+            const title = a.title || 'Без назви';
+            const type = a.typeLabel || animeTypeLabel(a.type);
+            const status = statusLabelUa(a.status);
+            const meta = [type, a.year, status].filter(Boolean).join(' · ');
+            return `<article class="home-catalog-card" data-url="${escapeHtml(String(a.url || ''))}" tabindex="0" role="button" aria-label="${escapeHtml(title)}">
+                <div class="home-catalog-card__poster">
+                    <img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" onload="this.classList.add('img--loaded')" onerror="this.onerror=null;this.src='${ANIME_CARD_PLACEHOLDER}'">
+                    ${status ? `<span class="home-catalog-card__status">${escapeHtml(status)}</span>` : ''}
+                    <span class="home-catalog-card__play"><i class="fas fa-play"></i></span>
+                </div>
+                <div class="home-catalog-card__title">${escapeHtml(title)}</div>
+                <div class="home-catalog-card__meta">${escapeHtml(meta || 'Аніме')}</div>
+            </article>`;
+        }
+
+        function bindHomeCatalogCards(root) {
+            root?.querySelectorAll('.home-catalog-card:not([data-bound])').forEach(card => {
+                card.dataset.bound = '1';
+                const open = () => { if (card.dataset.url) openPlayerPage(card.dataset.url); };
+                card.addEventListener('click', open);
+                card.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
+                });
+            });
+        }
+
+        function buildHomeCatalogSectionHtml(items) {
+            if (!items?.length) return '<section class="home-catalog-section" id="homeCatalogSection"><div class="home-catalog-empty">Каталог тимчасово недоступний.</div></section>';
+            return `<section class="home-catalog-section" id="homeCatalogSection">
+                <div class="home-catalog-heading">
+                    <div><span class="home-catalog-kicker">HIKKA</span><h2>Каталог аніме</h2></div>
+                    <span class="home-catalog-count" id="homeCatalogCount">${items.length} тайтлів</span>
+                </div>
+                <div class="home-catalog-grid" id="homeCatalogGrid">${items.map(homeCatalogCardHtml).join('')}</div>
+                <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Показати ще</button>
+            </section>`;
+        }
+
+        async function loadHomeCatalogMore() {
+            if (homeCatalogLoading) return;
+            const button = document.getElementById('homeCatalogMoreBtn');
+            const grid = document.getElementById('homeCatalogGrid');
+            if (!button || !grid) return;
+            homeCatalogLoading = true;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Завантаження...';
+            try {
+                const nextPage = homeCatalogPage + 1;
+                const nextItems = await fetchHikkaMain(nextPage);
+                const existing = new Set(homeCatalogItems.map(item => item.url));
+                const freshItems = nextItems.filter(item => item.url && !existing.has(item.url));
+                homeCatalogItems.push(...freshItems);
+                homeCatalogPage = nextPage;
+                grid.insertAdjacentHTML('beforeend', freshItems.map(homeCatalogCardHtml).join(''));
+                bindHomeCatalogCards(grid);
+                const count = document.getElementById('homeCatalogCount');
+                if (count) count.textContent = `${homeCatalogItems.length} тайтлів`;
+                if (!freshItems.length || nextItems.length < 24) {
+                    button.remove();
+                } else {
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-plus"></i> Показати ще';
+                }
+            } catch (error) {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-rotate-right"></i> Спробувати ще';
+                showToast('Не вдалося завантажити наступну сторінку каталогу');
+            } finally {
+                homeCatalogLoading = false;
+            }
+        }
+        window.loadHomeCatalogMore = loadHomeCatalogMore;
+
         async function loadAndDisplayGenreSections() {
             const requestId = ++homeSectionsRequestId;
             const container = document.getElementById('genreSectionsContainer');
             if (!container) return;
-            container.innerHTML = '<div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження секцій...</div>';
+            container.innerHTML = '<div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження каталогу...</div>';
             container.style.display = 'flex';
+            homeCatalogPage = 1;
+            homeCatalogItems = [];
+            homeCatalogLoading = false;
 
             try {
-                const genrePromises = genreList.map(async (genre) => {
-                    try {
-                        const items = await fetchHikkaByCategory(genre.slug, 1);
-                        const slice = items.slice(0, 80);
-                        return { genre, items: slice };
-                    } catch (e) {
-                        console.error(`Помилка завантаження жанру ${genre.name}:`, e);
-                        return { genre, items: [] };
-                    }
-                });
-
-                const newestPromise = fetchHikkaMain(1).catch(e => {
-                    console.error('Помилка завантаження нових аніме:', e);
-                    return [];
-                });
-
-                const schedulePromise = fetchScheduleByOffset(0).catch(e => {
-                    console.error('Помилка завантаження розкладу:', e);
-                    return [];
-                });
-
-                const popularPromise = fetchHikkaTop100().catch(e => {
-                    console.error('Помилка завантаження популярних аніме:', e);
-                    return [];
-                });
-
-                const [results, newestItems, scheduleItems, popularItems] = await Promise.all([
-                    Promise.all(genrePromises), newestPromise, schedulePromise, popularPromise
+                const [catalogItems, scheduleItems] = await Promise.all([
+                    fetchHikkaMain(1).catch(error => { console.error('Помилка завантаження каталогу:', error); return []; }),
+                    fetchScheduleByOffset(0).catch(error => { console.error('Помилка завантаження розкладу:', error); return []; })
                 ]);
                 if (requestId !== homeSectionsRequestId) return;
-
-                let html = '';
-
-                const newestWide = newestItems.filter(a => a.type !== 'movie').slice(0, 80).map(a => ({ ...a, typeLabel: animeTypeLabel(a.type) }));
-
-                html += buildHistoryCarouselSectionHtml();
+                homeCatalogItems = catalogItems.filter(item => item?.url);
+                let html = buildHistoryCarouselSectionHtml();
                 html += buildScheduleWidgetHtml(scheduleItems);
-                html += buildPopularVerticalSectionHtml(popularItems);
-                html += buildAnimeCarouselSectionHtml('genre-newest', 'Нові аніме', newestWide, 'wide');
-
-                for (const { genre, items } of results) {
-                    if (items.length === 0) continue;
-                    const sectionId = 'genre-' + genre.slug;
-                    if (genre.slug === 'format:movie') {
-                        const filmWide = items.filter(a => a.type === 'movie').map(a => ({ ...a, typeLabel: 'Фільм' }));
-                        html += buildAnimeCarouselSectionHtml(sectionId, genre.name, filmWide, 'wide');
-                    } else {
-                        html += buildAnimeCarouselSectionHtml(sectionId, genre.name, items, 'wide');
-                    }
-                }
-
-                if (!html) {
-                    container.innerHTML = '<div class="loader">Не вдалося завантажити жанри</div>';
-                    return;
-                }
-
+                html += buildHomeCatalogSectionHtml(homeCatalogItems);
                 container.innerHTML = html;
-
-                registerAnimeCardData(newestWide);
-                for (const { items } of results) registerAnimeCardData(items);
-                observeAnimeCardsForTmdb(container);
-
-                container.querySelectorAll('.anime-card, .wide-card, .popular-card').forEach(card => {
-                    card.addEventListener('click', () => openPlayerPage(card.dataset.url));
-                    card.addEventListener('keydown', e => { if (e.key === 'Enter') openPlayerPage(card.dataset
-                            .url); });
-                });
-
-                document.getElementById('homePopularShowAllBtn')?.addEventListener('click', () => {
-                    document.getElementById('top100Btn')?.click();
-                });
-
-                container.querySelectorAll('.carousel-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const targetId = this.dataset.target;
-                        const carousel = document.getElementById(targetId + '-carousel');
-                        if (!carousel) return;
-                        const scrollAmount = carousel.clientWidth * 0.8;
-                        if (this.classList.contains('carousel-btn-left')) {
-                            carousel.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-                        } else {
-                            carousel.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-                        }
-                    });
-                });
+                bindHomeCatalogCards(container);
+                document.getElementById('homeCatalogMoreBtn')?.addEventListener('click', loadHomeCatalogMore);
 
                 const homeScheduleDayTabs = document.getElementById('homeScheduleDayTabs');
                 if (homeScheduleDayTabs) {
@@ -4740,13 +4749,10 @@ let externalSourceCache = {};
                         });
                     });
                 }
-
                 wireHomeScheduleItemClicks(document.getElementById('homeScheduleDayContent'));
-
             } catch (err) {
-                console.error('Помилка завантаження жанрових секцій:', err);
-                container.innerHTML =
-                    `<div class="loader"><i class="fas fa-exclamation-triangle"></i> Помилка: ${err.message}<br><button class="btn-outline" style="margin-top:1rem;" onclick="loadAndDisplayGenreSections()">Спробувати знову</button></div>`;
+                console.error('Помилка завантаження головної сторінки:', err);
+                container.innerHTML = `<div class="loader"><i class="fas fa-exclamation-triangle"></i> Помилка: ${escapeHtml(err.message || 'невідома помилка')}<br><button class="btn-outline" style="margin-top:1rem;" onclick="loadAndDisplayGenreSections()">Спробувати знову</button></div>`;
             }
         }
 
