@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=schedule-theme-v1';
+import './app-legacy.js?v=release-menu-v2';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';
