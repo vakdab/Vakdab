@@ -1018,6 +1018,20 @@ let externalSourceCache = {};
             return Object.keys(dubObject).length ? { '1': dubObject } : {};
         }
 
+        const ashdiPlaybackCache = new Map();
+        async function resolveAshdiPlaybackUrl(ashdiPageUrl) {
+            if (!ashdiPageUrl) throw new Error('Порожній ASHDI URL');
+            const cached = ashdiPlaybackCache.get(ashdiPageUrl);
+            if (cached) return cached;
+            const html = await fetchMikaiHtml(ashdiPageUrl);
+            const matches = String(html).replace(/\\u002F/g, '/').match(/https?:\/\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?/gi) || [];
+            const manifest = matches.find(url => /ashdi\.vip|video\d+/i.test(url)) || matches[0];
+            if (!manifest) throw new Error('ASHDI m3u8 manifest не знайдено');
+            const proxiedManifest = getProxyUrl(manifest, 'desktop');
+            ashdiPlaybackCache.set(ashdiPageUrl, proxiedManifest);
+            return proxiedManifest;
+        }
+
         async function loadMikaiSeasons(mikaiUrl) {
             if (!mikaiUrl) return {};
             const html = await fetchMikaiHtml(mikaiUrl);
@@ -8790,7 +8804,6 @@ function renderProfilePage() {
 
         async function playEpisode(file, epNum) {
             if (!file) { showToast('Немає файлу для відтворення'); return; }
-            playerPageActiveEpisodeFile = file;
             playerPageCurrentEpisodeNum = epNum || '1';
             renderAllEpisodeViews(getCurrentEpisodes(), null, null);
             const videoContainer = document.getElementById('playerVideoContainer');
@@ -8802,8 +8815,17 @@ function renderProfilePage() {
             videoDiv.innerHTML = '';
 
             let finalUrl = file;
-            // isEmbedUrl() дозволяє LampaPlayer автоматично визначити embed-посилання
-            // (напр. tortuga/aniboom) і вставити iframe замість <video>.
+            if (/ashdi\.vip\/vod\//i.test(file)) {
+                showToast('Підключення ASHDI через проксі...');
+                try {
+                    finalUrl = await resolveAshdiPlaybackUrl(file);
+                } catch (error) {
+                    console.warn('[ASHDI playback]', error);
+                    showToast(`ASHDI: ${error.message || 'відео недоступне'}`);
+                    return;
+                }
+            }
+            playerPageActiveEpisodeFile = finalUrl;
 
             if (playerPagePlayer) { playerPagePlayer.destroy();
                 playerPagePlayer = null; }
