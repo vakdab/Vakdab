@@ -5082,11 +5082,38 @@ const PROFILE_STICKER_SLOTS = 8;
 
         async function getZenkoTitles() {
             if (!zenkoTitlesPromise) {
-                zenkoTitlesPromise = fetchZenkoJson('/titles?limit=1000')
-                    .then(payload => Array.isArray(payload?.data) ? payload.data : [])
-                    .catch(error => { console.warn('Zenko catalog lookup failed:', error); return []; });
+                zenkoTitlesPromise = (async () => {
+                    const all = [];
+                    for (let batchStart = 0; batchStart < 4000; batchStart += 800) {
+                        const pages = await Promise.all(Array.from({ length: 8 }, (_, index) => {
+                            const offset = batchStart + index * 100;
+                            return fetchZenkoJson(`/titles?limit=100&offset=${offset}`);
+                        }));
+                        let reachedEnd = false;
+                        pages.forEach(payload => {
+                            const page = Array.isArray(payload?.data) ? payload.data : [];
+                            all.push(...page);
+                            if (page.length < 100 || payload?.meta?.hasNextPage === false) reachedEnd = true;
+                        });
+                        if (reachedEnd) break;
+                    }
+                    return all;
+                })().catch(error => { console.warn('Zenko catalog lookup failed:', error); return []; });
             }
             return zenkoTitlesPromise;
+        }
+
+        function zenkoNamesMatch(left, right) {
+            const a = normalizeZenkoMatch(left);
+            const b = normalizeZenkoMatch(right);
+            if (!a || !b) return false;
+            if (a === b) return true;
+            const aTokens = a.split(/\s+/).filter(token => token.length >= 2);
+            const bTokens = b.split(/\s+/).filter(token => token.length >= 2);
+            if (!aTokens.length || !bTokens.length) return false;
+            const shorter = aTokens.length <= bTokens.length ? aTokens : bTokens;
+            const longer = aTokens.length <= bTokens.length ? bTokens : aTokens;
+            return shorter.length >= 2 && shorter.every(token => longer.includes(token));
         }
 
         async function resolveZenkoReader(item) {
@@ -5098,7 +5125,7 @@ const PROFILE_STICKER_SLOTS = 8;
             const titles = await getZenkoTitles();
             const match = titles.find(title => {
                 const candidates = [title.name, title.engName, title.originalName].map(normalizeZenkoMatch).filter(Boolean);
-                return candidates.some(candidate => keys.includes(candidate) || keys.some(key => candidate.includes(key) || key.includes(candidate)));
+                return candidates.some(candidate => keys.some(key => zenkoNamesMatch(key, candidate)));
             });
             if (!match?.id) { zenkoReaderCache.set(cacheKey, ''); return item; }
             try {
