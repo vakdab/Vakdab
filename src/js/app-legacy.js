@@ -5178,6 +5178,24 @@ const PROFILE_STICKER_SLOTS = 8;
             return [...values.values()].sort((a, b) => a.localeCompare(b, 'uk'));
         }
 
+        function homeCatalogGenreHtml() {
+            if (homeCatalogMode !== 'manga') return '';
+            return `<label class="home-catalog-genre-filter"><span>Жанр манґи</span><select id="homeCatalogGenre" aria-label="Жанр манґи"><option value="all">Усі жанри</option>${getHoneyGenreOptions(homeCatalogItems).map(genre => `<option value="${escapeHtml(genre)}"${homeCatalogGenre === genre ? ' selected' : ''}>${escapeHtml(genre)}</option>`).join('')}</select></label>`;
+        }
+
+        function syncHomeCatalogGenreControl(root = document) {
+            const presets = root.querySelector('#homeCatalogPresets');
+            const existing = root.querySelector('#homeCatalogGenre')?.closest('.home-catalog-genre-filter');
+            if (existing) existing.remove();
+            if (homeCatalogMode === 'manga' && presets) {
+                presets.insertAdjacentHTML('afterend', homeCatalogGenreHtml());
+                root.querySelector('#homeCatalogGenre')?.addEventListener('change', event => {
+                    homeCatalogGenre = event.target.value || 'all';
+                    renderHomeCatalogGrid();
+                });
+            }
+        }
+
         function honeyCatalogItem(item) {
             const posterId = item?.posterUrl || item?.posterId || '';
             const poster = posterId ? `${HONEY_IMAGE}/${posterId}?optimizer=image&width=296` : ANIME_CARD_PLACEHOLDER;
@@ -5340,7 +5358,7 @@ const PROFILE_STICKER_SLOTS = 8;
                     </div>
                 </div>
                 <div class="home-catalog-presets" id="homeCatalogPresets">${HOME_CATALOG_PRESETS.map(preset => `<button type="button" class="home-catalog-preset${preset.key === homeCatalogPreset ? ' active' : ''}" data-catalog-preset="${preset.key}">${preset.label}</button>`).join('')}</div>
-                ${homeCatalogMode === 'manga' ? `<label class="home-catalog-genre-filter"><span>Жанр манґи</span><select id="homeCatalogGenre" aria-label="Жанр манґи"><option value="all">Усі жанри</option>${getHoneyGenreOptions(homeCatalogItems).map(genre => `<option value="${escapeHtml(genre)}"${homeCatalogGenre === genre ? ' selected' : ''}>${escapeHtml(genre)}</option>`).join('')}</select></label>` : ''}
+                ${homeCatalogGenreHtml()}
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
                 <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>
@@ -5386,10 +5404,6 @@ const PROFILE_STICKER_SLOTS = 8;
                 root.querySelectorAll('[data-catalog-preset]').forEach(item => item.classList.toggle('active', item === button));
                 renderHomeCatalogGrid();
             }));
-            root.querySelector('#homeCatalogGenre')?.addEventListener('change', event => {
-                homeCatalogGenre = event.target.value || 'all';
-                renderHomeCatalogGrid();
-            });
             let searchTimer = null;
             root.querySelector('#homeCatalogSearch')?.addEventListener('input', event => {
                 clearTimeout(searchTimer);
@@ -5426,6 +5440,7 @@ const PROFILE_STICKER_SLOTS = 8;
                 const nextItems = await fetchHomeCatalogPage(1);
                 if (requestId !== homeCatalogRequestId) return;
                 homeCatalogItems = nextItems;
+                syncHomeCatalogGenreControl();
                 renderHomeCatalogGrid();
                 const button = document.getElementById('homeCatalogMoreBtn');
                 if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-plus"></i> Продовжити'; }
