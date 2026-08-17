@@ -33,6 +33,7 @@ function renderShell(container, ids, pages, background, chapterUrl, onNavigate) 
         <details class="manga-reader__about"><summary>Про манґу</summary><p id="mangaReaderDescription">Завантаження опису…</p></details>
     </section>`;
     const pagesRoot = container.querySelector('#mangaReaderPages');
+    pagesRoot?.style.setProperty('--manga-reader-zoom', '1');
     const figures = [...container.querySelectorAll('.manga-reader__page')];
     const preloader = createPagePreloader(figures);
     let active = 0; let zoom = 1;

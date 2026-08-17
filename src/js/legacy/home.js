@@ -396,6 +396,8 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         export const honeyReaderCache = new Map();
         export let honeyAvailabilityMap = null;
         export let honeyAvailabilityMapPromise = null;
+        export let honeyCatalogReadableTotal = 0;
+        export let honeyCatalogReadableTotalPromise = null;
 
         export async function loadHoneyAvailabilityMap() {
             if (honeyAvailabilityMap) return honeyAvailabilityMap;
@@ -420,6 +422,36 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             return honeyAvailabilityMapPromise;
         }
 
+        export async function loadHoneyCatalogReadableTotal() {
+            if (honeyCatalogReadableTotal) return honeyCatalogReadableTotal;
+            if (!honeyCatalogReadableTotalPromise) {
+                honeyCatalogReadableTotalPromise = (async () => {
+                    const pageSize = 200;
+                    const totalPages = Math.max(1, Math.ceil((homeCatalogTotal || 2152) / pageSize));
+                    let nextPage = 1;
+                    const worker = async () => {
+                        let count = 0;
+                        while (nextPage <= totalPages) {
+                            const page = nextPage++;
+                            const payload = await fetchHoneyJson('/v2/manga/cursor-list', {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ page, pageSize, sort: { sortBy: 'lastUpdated', sortOrder: 'DESC' }, filters: [] })
+                            });
+                            const data = Array.isArray(payload?.data) ? payload.data : [];
+                            count += data.filter(item => Number(item?.chapters) > 0).length;
+                            if (data.length < pageSize) nextPage = totalPages + 1;
+                        }
+                        return count;
+                    };
+                    const counts = await Promise.all(Array.from({ length: Math.min(4, totalPages) }, worker));
+                    honeyCatalogReadableTotal = counts.reduce((sum, count) => sum + count, 0);
+                    const label = document.getElementById('homeCatalogResultsLabel');
+                    if (label && homeCatalogMode === 'manga') label.textContent = homeCatalogCountText(homeCatalogItems.length);
+                    return honeyCatalogReadableTotal;
+                })().catch(error => { console.warn('Honey catalog availability total failed:', error); honeyCatalogReadableTotalPromise = null; return 0; });
+            }
+            return honeyCatalogReadableTotalPromise;
+        }
         export function normalizeHoneyMatch(value = '') {
             return String(value || '').toLocaleLowerCase('uk-UA').normalize('NFKD')
                 .replace(/[\u0300-\u036f]/g, '').replace(/[’'`]/g, '')
@@ -457,7 +489,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         export async function resolveHoneyReader(item) {
             if (!item || homeCatalogMode !== 'manga') return item;
             const map = await loadHoneyAvailabilityMap();
-            const mapped = map?.byHikka?.[String(item.mal_id)] || map?.byHikka?.[String(item.slug)];
+            const mapped = map?.byHikka?.[String(item.mal_id)] || map?.byHikka?.[String(item.slug)] || map?.byHoney?.[String(item.honeyTitleId || item.honeyId || '')];
             if (mapped?.id && mapped?.chapterId) {
                 const readerUrl = `${HONEY_WEB}/read/${mapped.chapterId}/${mapped.id}`;
                 return { ...item, readerUrl, honeyTitleId: mapped.id, honeyChapterId: mapped.chapterId };
@@ -467,6 +499,19 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             if (!keys.length) return item;
             const cacheKey = keys.join('|');
             if (honeyReaderCache.has(cacheKey)) return { ...item, readerUrl: honeyReaderCache.get(cacheKey) };
+            const directHoneyId = item.honeyTitleId || item.honeyId || '';
+            if (directHoneyId && Number(item.chapters) > 0) {
+                try {
+                    const payload = await fetchHoneyJson('/v2/chapter/cursor-list', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mangaId: directHoneyId, page: 1, pageSize: 100, sort: { sortBy: 'chapterNum', sortOrder: 'ASC' } }) });
+                    const chapters = (Array.isArray(payload?.data) ? payload.data : []).filter(chapter => chapter?.id);
+                    const first = chapters[chapters.length - 1] || chapters[0];
+                    if (first) {
+                        const readerUrl = `${HONEY_WEB}/read/${first.id}/${directHoneyId}`;
+                        honeyReaderCache.set(cacheKey, readerUrl);
+                        return { ...item, readerUrl, honeyTitleId: directHoneyId, honeyChapterId: first.id };
+                    }
+                } catch (error) { console.warn('Honey Manga direct chapter lookup failed:', error); }
+            }
             const resultSets = [];
             for (const query of rawKeys.slice(0, 3)) {
                 const results = await searchHoneyTitles(query);
@@ -495,15 +540,8 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         export async function attachHoneyReaders(items) {
             if (homeCatalogMode !== 'manga') return items;
             await loadHoneyAvailabilityMap();
-            let cursor = 0;
-            const worker = async () => {
-                while (cursor < items.length) {
-                    const index = cursor++;
-                    items[index] = await resolveHoneyReader(items[index]);
-                }
-            };
-            await Promise.all(Array.from({ length: Math.min(4, items.length) }, worker));
-            return items;
+            // Do not block the catalog on one chapter request per card. Resolve the reader lazily on click.
+            return items.map(item => ({ ...item, readerAvailable: Boolean(item.readerUrl) || Number(item.chapters) > 0 }));
         }
 
         export function getHoneyGenreOptions(items = homeCatalogItems) {
@@ -554,6 +592,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 readerUrl: chapterId ? `${HONEY_WEB}/read/${chapterId}/${item.id}` : '',
                 honeyTitleId: item.id,
                 honeyChapterId: chapterId,
+                chapters: Number(item.chapters || 0),
                 images: { jpg: { large_image_url: poster, image_url: poster } },
                 genres: normalizeGenreList(item.genresAndTags || item.genres || []),
                 tags: normalizeGenreList(item.tags || []),
@@ -592,9 +631,11 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             });
             await mapPromise;
             homeCatalogTotal = Number(payload?.counter || payload?.total || payload?.data?.length || 0);
+            loadHoneyCatalogReadableTotal();
             const items = (Array.isArray(payload?.data) ? payload.data : []).map(honeyCatalogItem);
-            honeyCatalogPageCache.set(cacheKey, { total: homeCatalogTotal, items });
-            return items;
+            const enrichedItems = await attachHoneyReaders(items);
+            honeyCatalogPageCache.set(cacheKey, { total: homeCatalogTotal, items: enrichedItems });
+            return enrichedItems;
         }
 
         export async function fetchHomeCatalogPage(page) {
@@ -637,7 +678,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             const total = homeCatalogTotal || visibleCount;
             if (homeCatalogMode === 'manga') {
                 const available = homeCatalogMode === 'manga'
-                    ? Number(honeyAvailabilityMap?.honeyAvailable || honeyAvailabilityMap?.available || homeCatalogItems.filter(item => item?.readerUrl).length)
+                    ? Number(honeyCatalogReadableTotal || honeyAvailabilityMap?.honeyAvailable || honeyAvailabilityMap?.available || homeCatalogItems.filter(item => item?.readerUrl || Number(item?.chapters) > 0).length)
                     : homeCatalogItems.filter(item => item?.readerUrl).length;
                 return `Доступно для читання: ${formatHomeCatalogNumber(available)} із ${formatHomeCatalogNumber(total)} манґи`;
             }
@@ -650,7 +691,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             const type = a.typeLabel || animeTypeLabel(a.type);
             const status = statusLabelUa(a.status);
             const meta = [type, a.year, status].filter(Boolean).join(' · ');
-            return `<article class="home-catalog-card${a.readerUrl ? ' home-catalog-card--reader' : ''}" data-url="${escapeHtml(String(a.url || ''))}"${a.readerUrl ? ` data-reader-url="${escapeHtml(a.readerUrl)}"` : ''} tabindex="0" role="button" aria-label="${escapeHtml(title)}">
+            return `<article class="home-catalog-card${a.readerUrl || a.readerAvailable ? ' home-catalog-card--reader' : ''}" data-url="${escapeHtml(String(a.url || ''))}"${a.readerUrl ? ` data-reader-url="${escapeHtml(a.readerUrl)}"` : ''}${a.readerAvailable && !a.readerUrl ? ` data-reader-pending="1" data-honey-id="${escapeHtml(String(a.honeyId || a.honeyTitleId || ''))}"` : ''} tabindex="0" role="button" aria-label="${escapeHtml(title)}">
                 <div class="home-catalog-card__poster">
                     <img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" onload="this.classList.add('img--loaded')" onerror="this.onerror=null;this.src='${ANIME_CARD_PLACEHOLDER}'">
                     ${status ? `<span class="home-catalog-card__status">${escapeHtml(status)}</span>` : ''}
@@ -664,10 +705,20 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         export function bindHomeCatalogCards(root) {
             root?.querySelectorAll('.home-catalog-card:not([data-bound])').forEach(card => {
                 card.dataset.bound = '1';
-                const open = () => {
+                const open = async () => {
                     if (!card.dataset.url) return;
                     if (card.dataset.readerUrl) {
                         Router.goTo('manga', { url: card.dataset.readerUrl });
+                        return;
+                    }
+                    if (homeCatalogMode === 'manga' && card.dataset.readerPending && card.dataset.honeyId) {
+                        card.setAttribute('aria-busy', 'true');
+                        try {
+                            const item = homeCatalogItems.find(entry => String(entry.honeyId || entry.honeyTitleId) === String(card.dataset.honeyId)) || { honeyId: card.dataset.honeyId, honeyTitleId: card.dataset.honeyId, title: card.getAttribute('aria-label'), chapters: 1 };
+                            const resolved = await resolveHoneyReader({ ...item, honeyTitleId: card.dataset.honeyId, chapters: Math.max(1, Number(item.chapters || 1)) });
+                            if (resolved.readerUrl) { Router.goTo('manga', { url: resolved.readerUrl }); return; }
+                        } finally { card.removeAttribute('aria-busy'); }
+                        showToast('Розділи цього тайтлу ще не готові');
                         return;
                     }
                     if (homeCatalogMode !== 'anime') { showToast('Для цього тайтлу ще не підключено джерело читання'); return; }
