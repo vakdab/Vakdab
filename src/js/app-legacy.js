@@ -2320,8 +2320,9 @@ const PROFILE_STICKER_SLOTS = 8;
                 ? `<span class="hero-info-separator">·</span><span class="hero-meta">${metaParts.join(' <span class="hero-meta-dot"></span> ')}</span>`
                 : '';
 
-            const synopsisHtml = synopsis
-                ? `<div class="hero-slide-desc">${synopsis.substring(0, 220)}${synopsis.length > 220 ? '…' : ''}</div>`
+            const heroSynopsis = synopsis.trim().replace(/\s+/g, ' ');
+            const synopsisHtml = heroSynopsis
+                ? `<div class="hero-slide-desc">${heroSynopsis.substring(0, 170)}${heroSynopsis.length > 170 ? '…' : ''}</div>`
                 : '';
 
             const slide = document.createElement('div');
