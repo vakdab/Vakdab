@@ -363,6 +363,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         // Kept as a compatibility export for older modules; the catalog UI no longer exposes age categories.
         export const HOME_MANGA_AGE_OPTIONS = [{ key: 'all', label: 'Усі' }];
         export const honeyCatalogPageCache = new Map();
+        export let honeyAdultCatalogPromise = null;
 
         export const HOME_CATALOG_MODES = [
             { key: 'anime', label: 'Аніме', icon: 'fa-photo-film' },
@@ -617,7 +618,62 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             };
         }
 
+        export function isAdultHoneyManga(item) {
+            return String(item?.adult || '').trim() === '18+' || item?.isAdultCover === true;
+        }
+
+        export async function fetchHoneyAdultCatalog() {
+            if (honeyAdultCatalogPromise) return honeyAdultCatalogPromise;
+            honeyAdultCatalogPromise = (async () => {
+                const pageSize = 200;
+                const firstPayload = await fetchHoneyJson('/v2/manga/cursor-list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ page: 1, pageSize, sort: { sortBy: 'lastUpdated', sortOrder: 'DESC' }, filters: [] })
+                });
+                const totalPages = Math.max(1, Math.ceil(Number(firstPayload?.counter || 0) / pageSize));
+                const payloads = [firstPayload];
+                let nextPage = 2;
+                const worker = async () => {
+                    while (nextPage <= totalPages) {
+                        const page = nextPage++;
+                        payloads.push(await fetchHoneyJson('/v2/manga/cursor-list', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ page, pageSize, sort: { sortBy: 'lastUpdated', sortOrder: 'DESC' }, filters: [] })
+                        }));
+                    }
+                };
+                await Promise.all(Array.from({ length: Math.min(2, Math.max(1, totalPages - 1)) }, worker));
+                const items = payloads.flatMap(payload => Array.isArray(payload?.data) ? payload.data : [])
+                    .filter(isAdultHoneyManga)
+                    .map(honeyCatalogItem);
+                homeCatalogTotal = items.length;
+                const enrichedItems = await attachHoneyReaders(items);
+                honeyCatalogPageCache.set('__adult_manga__', { total: homeCatalogTotal, items: enrichedItems });
+                return enrichedItems;
+            })().catch(error => {
+                honeyAdultCatalogPromise = null;
+                throw error;
+            });
+            return honeyAdultCatalogPromise;
+        }
+
         export async function fetchHoneyCatalogPage(page) {
+            if (homeCatalogAdult) {
+                if (homeCatalogQuery) {
+                    const results = await searchHoneyTitles(homeCatalogQuery);
+                    const items = results.map(honeyCatalogItem).filter(isAdultHoneyManga);
+                    homeCatalogTotal = items.length;
+                    return attachHoneyReaders(items);
+                }
+                const cachedAdult = honeyCatalogPageCache.get('__adult_manga__');
+                if (cachedAdult) {
+                    homeCatalogTotal = cachedAdult.total;
+                    return cachedAdult.items.map(item => ({ ...item, images: { ...item.images, jpg: { ...item.images.jpg } }, genres: [...(item.genres || [])] }));
+                }
+                return fetchHoneyAdultCatalog();
+            }
             const cacheKey = `${homeCatalogQuery || '__all__'}:${page}`;
             if (honeyCatalogPageCache.has(cacheKey)) {
                 const cached = honeyCatalogPageCache.get(cacheKey);
@@ -700,7 +756,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
             const title = a.title || 'Без назви';
             const type = a.typeLabel || animeTypeLabel(a.type);
-            const status = homeCatalogAdult ? '18+' : statusLabelUa(a.status);
+            const status = homeCatalogAdult && homeCatalogMode === 'manga' ? '18+' : statusLabelUa(a.status);
             const meta = [type, a.year, status].filter(Boolean).join(' · ');
             return `<article class="home-catalog-card${a.readerUrl || a.readerAvailable ? ' home-catalog-card--reader' : ''}" data-url="${escapeHtml(String(a.url || ''))}"${a.readerUrl ? ` data-reader-url="${escapeHtml(a.readerUrl)}"` : ''}${a.readerAvailable && !a.readerUrl ? ` data-reader-pending="1" data-honey-id="${escapeHtml(String(a.honeyId || a.honeyTitleId || ''))}"` : ''} tabindex="0" role="button" aria-label="${escapeHtml(title)}">
                 <div class="home-catalog-card__poster">
@@ -745,7 +801,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         export function buildHomeCatalogSectionHtml(items) {
             const activeMode = HOME_CATALOG_MODES.find(mode => mode.key === homeCatalogMode) || HOME_CATALOG_MODES[0];
             const visibleItems = getHomeCatalogVisibleItems();
-            const catalogTitle = homeCatalogAdult ? '18+ аніме' : `Каталог ${activeMode.label.toLowerCase()}`;
+            const catalogTitle = homeCatalogAdult ? '18+ манґа' : `Каталог ${activeMode.label.toLowerCase()}`;
             return `<section class="home-catalog-section" id="homeCatalogSection">
                 <div class="home-catalog-heading">
                     <div><h2>${escapeHtml(catalogTitle)}</h2></div>
@@ -763,7 +819,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                     <div class="home-catalog-quick-actions" role="group" aria-label="Швидкі дії каталогу">
                         <button class="home-catalog-filter-btn home-catalog-schedule-btn" id="homeCatalogScheduleBtn" type="button"><i class="fas fa-calendar-days"></i><span>Розклад виходу</span></button>
                         <button class="home-catalog-filter-btn" id="homeCatalogFilterBtn" type="button"><i class="fas fa-filter"></i><span>Фільтри</span></button>
-                        <button class="home-catalog-filter-btn home-catalog-adult-btn${homeCatalogAdult ? ' active' : ''}" id="homeCatalogAdultBtn" type="button" aria-pressed="${homeCatalogAdult ? 'true' : 'false'}" aria-label="Аніме 18+"><span>18+</span></button>
+                        ${homeCatalogMode === 'manga' ? `<button class="home-catalog-filter-btn home-catalog-adult-btn${homeCatalogAdult ? ' active' : ''}" id="homeCatalogAdultBtn" type="button" aria-pressed="${homeCatalogAdult ? 'true' : 'false'}" aria-label="Манґа 18+"><span>18+</span></button>` : ''}
                     </div>
                 </div>
                 <div id="homeCatalogGenreRailHost">${homeCatalogGenreHtml()}</div>
@@ -811,7 +867,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             root.querySelector('#homeCatalogAdultBtn')?.addEventListener('click', async () => {
                 if (homeCatalogLoading) return;
                 homeCatalogAdult = !homeCatalogAdult;
-                homeCatalogMode = 'anime';
+                homeCatalogMode = 'manga';
                 homeCatalogQuery = '';
                 homeCatalogPreset = 'all';
                 homeCatalogGenre = 'all';
@@ -836,8 +892,8 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             const mode = HOME_CATALOG_MODES.find(item => item.key === homeCatalogMode) || HOME_CATALOG_MODES[0];
             const title = document.querySelector('#homeCatalogSection h2');
             const search = document.getElementById('homeCatalogSearch');
-            if (title) title.textContent = homeCatalogAdult ? '18+ аніме' : `Каталог ${mode.label.toLowerCase()}`;
-            if (search) search.placeholder = `Введіть назву ${mode.label.toLowerCase()}...`;
+            if (title) title.textContent = homeCatalogAdult ? '18+ манґа' : `Каталог ${mode.label.toLowerCase()}`;
+            if (search) search.placeholder = `Введіть назву ${homeCatalogAdult ? 'манґи' : mode.label.toLowerCase()}...`;
             document.querySelectorAll('[data-catalog-mode]').forEach(tab => tab.classList.toggle('active', tab.dataset.catalogMode === homeCatalogMode));
             const adultButton = document.getElementById('homeCatalogAdultBtn');
             if (adultButton) {
