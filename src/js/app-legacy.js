@@ -5059,199 +5059,64 @@ const PROFILE_STICKER_SLOTS = 8;
             return body;
         }
 
-        // Hikka є джерелом метаданих і постерів. Zenko використовується тільки для читання.
-        const ZENKO_API = 'https://api.zenko.online';
-        const ZENKO_WEB = 'https://zenko.online';
-        let zenkoTitlesPromise = null;
-        const zenkoReaderCache = new Map();
+        // Hikka є джерелом метаданих і постерів. Honey Manga використовується для читання.
+        const HONEY_API = 'https://data.api.honey-manga.com.ua';
+        const HONEY_WEB = 'https://honey-manga.com.ua';
+        let honeyTitlesPromise = null;
+        const honeyReaderCache = new Map();
 
-        function normalizeZenkoMatch(value = '') {
+        function normalizeHoneyMatch(value = '') {
             return String(value || '').toLocaleLowerCase('uk-UA').normalize('NFKD')
                 .replace(/[\u0300-\u036f]/g, '').replace(/[’'`]/g, '')
                 .replace(/[^a-z0-9а-яіїєґ]+/gi, ' ').trim();
         }
 
-        async function fetchZenkoJson(path) {
-            const url = `${ZENKO_API}${path}`;
-            const request = async target => {
-                const response = await fetch(target, { mode: 'cors', credentials: 'omit', cache: 'no-cache', headers: { Accept: 'application/json' } });
-                if (!response.ok) throw new Error(`Zenko API: HTTP ${response.status}`);
-                return response.json();
-            };
-            try { return await request(url); } catch { return request(getProxyUrl(url, 'desktop')); }
+        async function fetchHoneyJson(path, options = {}) {
+            const url = `${HONEY_API}${path}`;
+            const response = await fetch(getProxyUrl(url, 'desktop'), { mode: 'cors', credentials: 'omit', cache: 'no-cache', ...options });
+            if (!response.ok) throw new Error(`Honey Manga API: HTTP ${response.status}`);
+            return response.json();
         }
 
-        async function getZenkoTitles() {
-            if (!zenkoTitlesPromise) {
-                zenkoTitlesPromise = (async () => {
-                    const all = [];
-                    for (let batchStart = 0; batchStart < 4000; batchStart += 800) {
-                        const pages = await Promise.all(Array.from({ length: 8 }, (_, index) => {
-                            const offset = batchStart + index * 100;
-                            return fetchZenkoJson(`/titles?limit=100&offset=${offset}`);
-                        }));
-                        let reachedEnd = false;
-                        pages.forEach(payload => {
-                            const page = Array.isArray(payload?.data) ? payload.data : [];
-                            all.push(...page);
-                            if (page.length < 100 || payload?.meta?.hasNextPage === false) reachedEnd = true;
-                        });
-                        if (reachedEnd) break;
-                    }
-                    return all;
-                })().catch(error => { console.warn('Zenko catalog lookup failed:', error); return []; });
+        async function getHoneyTitles() {
+            if (!honeyTitlesPromise) {
+                honeyTitlesPromise = fetchHoneyJson('/v2/manga/cursor-list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ page: 1, pageSize: 2000, filters: [{ filterBy: 'adult', filterValue: ['18+'], filterOperator: 'NOT_IN' }], sort: { sortBy: 'lastUpdated', sortOrder: 'DESC' } })
+                }).then(payload => Array.isArray(payload?.data) ? payload.data : []).catch(error => { console.warn('Honey Manga catalog lookup failed:', error); return []; });
             }
-            return zenkoTitlesPromise;
+            return honeyTitlesPromise;
         }
 
-        function zenkoNamesMatch(left, right) {
-            const a = normalizeZenkoMatch(left);
-            const b = normalizeZenkoMatch(right);
+        function honeyNamesMatch(left, right) {
+            const a = normalizeHoneyMatch(left);
+            const b = normalizeHoneyMatch(right);
             if (!a || !b) return false;
             if (a === b) return true;
-            const aTokens = a.split(/\s+/).filter(token => token.length >= 2);
-            const bTokens = b.split(/\s+/).filter(token => token.length >= 2);
-            if (!aTokens.length || !bTokens.length) return false;
-            const shorter = aTokens.length <= bTokens.length ? aTokens : bTokens;
-            const longer = aTokens.length <= bTokens.length ? bTokens : aTokens;
+            const shorter = a.split(/\s+/).filter(token => token.length >= 2);
+            const longer = b.split(/\s+/);
             return shorter.length >= 2 && shorter.every(token => longer.includes(token));
         }
 
-        async function resolveZenkoReader(item) {
+        async function resolveHoneyReader(item) {
             if (!item || homeCatalogMode !== 'manga') return item;
-            const keys = [item.title, item.originalTitle, item.title_en, item.title_ja].map(normalizeZenkoMatch).filter(Boolean);
+            const keys = [item.title, item.originalTitle, item.title_en, item.title_ja].map(normalizeHoneyMatch).filter(Boolean);
             if (!keys.length) return item;
             const cacheKey = keys.join('|');
-            if (zenkoReaderCache.has(cacheKey)) return { ...item, readerUrl: zenkoReaderCache.get(cacheKey) };
-            const titles = await getZenkoTitles();
-            const match = titles.find(title => {
-                const candidates = [title.name, title.engName, title.originalName].map(normalizeZenkoMatch).filter(Boolean);
-                return candidates.some(candidate => keys.some(key => zenkoNamesMatch(key, candidate)));
-            });
-            if (!match?.id) { zenkoReaderCache.set(cacheKey, ''); return item; }
+            if (honeyReaderCache.has(cacheKey)) return { ...item, readerUrl: honeyReaderCache.get(cacheKey) };
+            const titles = await getHoneyTitles();
+            const match = titles.find(title => [title.title, title.alternativeTitle].some(candidate => keys.some(key => honeyNamesMatch(key, candidate))));
+            if (!match?.id) { honeyReaderCache.set(cacheKey, ''); return item; }
             try {
-                const payload = await fetchZenkoJson(`/titles/${encodeURIComponent(match.id)}/chapters`);
-                const chapters = (Array.isArray(payload) ? payload : payload?.data || []).filter(chapter => chapter?.id && chapter?.isPublished !== false);
-                const first = chapters[0];
-                if (!first) {
-                    zenkoReaderCache.set(cacheKey, '');
-                    return item;
-                }
-                const readerUrl = `${ZENKO_WEB}/titles/${match.id}/${first.id}`;
-                zenkoReaderCache.set(cacheKey, readerUrl);
-                return { ...item, readerUrl, zenkoTitleId: match.id };
-            } catch (error) { console.warn('Zenko chapter lookup failed:', error); return item; }
-        }
-
-        async function attachZenkoReaders(items) {
-            if (homeCatalogMode !== 'manga') return items;
-            let cursor = 0;
-            const worker = async () => { while (cursor < items.length) { const index = cursor++; items[index] = await resolveZenkoReader(items[index]); } };
-            await Promise.all(Array.from({ length: Math.min(4, items.length) }, worker));
-            return items;
-        }
-
-        function getHomeCatalogVisibleItems() {
-            const items = [...homeCatalogItems];
-            const filtered = homeCatalogMode === 'anime' && homeCatalogPreset !== 'all'
-                ? items.filter(item => homeCatalogPreset === 'finished' ? ['finished', 'released', 'completed'].includes(item.status) : item.status === homeCatalogPreset)
-                : items;
-            return filtered.sort((a, b) => {
-                const availability = Number(Boolean(b.readerUrl)) - Number(Boolean(a.readerUrl));
-                if (availability) return availability;
-                if (homeCatalogSort === 'title') return String(a.title || '').localeCompare(String(b.title || ''), 'uk');
-                if (homeCatalogSort === 'newest') return Number(b.year || 0) - Number(a.year || 0);
-                return (Number(b.score || b.native_score || 0) - Number(a.score || a.native_score || 0));
-            });
-        }
-
-        async function fetchHomeCatalogPage(page) {
-            const endpoint = homeCatalogMode === 'manga' ? 'manga' : homeCatalogMode === 'novel' ? 'novel' : 'anime';
-            const apiUrl = `${HIKKA_API}/${endpoint}?page=${Math.max(1, page)}&size=24`;
-            const response = await hikkaRequest(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(homeCatalogRequestBody()) });
-            if (!response.ok) throw new Error(`Hikka API: HTTP ${response.status}`);
-            const data = await response.json();
-            homeCatalogTotal = Number(data.pagination?.total || data.total || data.count || 0);
-            const items = (data.list || []).map(item => hikkaItem(item, endpoint));
-            return endpoint === 'manga' ? attachZenkoReaders(items) : items;
-        }
-
-        function formatHomeCatalogNumber(value) {
-            return new Intl.NumberFormat('uk-UA').format(Number(value) || 0).replace(/\u00a0/g, ' ');
-        }
-
-        function homeCatalogCountText(visibleCount) {
-            const total = homeCatalogTotal || visibleCount;
-            if (homeCatalogMode === 'manga') {
-                const available = homeCatalogItems.filter(item => item?.readerUrl).length;
-                return `Доступно для читання: ${formatHomeCatalogNumber(available)} із ${formatHomeCatalogNumber(total)} манґи`;
-            }
-            return `Знайдено ${formatHomeCatalogNumber(total)} результатів`;
-        }
-
-        function homeCatalogCardHtml(a) {
-            const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
-            const title = a.title || 'Без назви';
-            const type = a.typeLabel || animeTypeLabel(a.type);
-            const status = statusLabelUa(a.status);
-            const meta = [type, a.year, status].filter(Boolean).join(' · ');
-            return `<article class="home-catalog-card${a.readerUrl ? ' home-catalog-card--reader' : ''}" data-url="${escapeHtml(String(a.url || ''))}"${a.readerUrl ? ` data-reader-url="${escapeHtml(a.readerUrl)}"` : ''} tabindex="0" role="button" aria-label="${escapeHtml(title)}">
-                <div class="home-catalog-card__poster">
-                    <img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" onload="this.classList.add('img--loaded')" onerror="this.onerror=null;this.src='${ANIME_CARD_PLACEHOLDER}'">
-                    ${status ? `<span class="home-catalog-card__status">${escapeHtml(status)}</span>` : ''}
-                    <span class="home-catalog-card__play"><i class="fas fa-play"></i></span>
-                </div>
-                <div class="home-catalog-card__title">${escapeHtml(title)}</div>
-                <div class="home-catalog-card__meta">${escapeHtml(meta || 'Аніме')}</div>
-            </article>`;
-        }
-
-        function bindHomeCatalogCards(root) {
-            root?.querySelectorAll('.home-catalog-card:not([data-bound])').forEach(card => {
-                card.dataset.bound = '1';
-                const open = () => {
-                    if (!card.dataset.url) return;
-                    if (card.dataset.readerUrl) {
-                        Router.goTo('manga', { url: card.dataset.readerUrl });
-                        return;
-                    }
-                    if (homeCatalogMode !== 'anime') { showToast('Для цього тайтлу ще не підключено джерело читання'); return; }
-                    openPlayerPage(card.dataset.url);
-                };
-                card.addEventListener('click', open);
-                card.addEventListener('keydown', event => {
-                    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
-                });
-            });
-        }
-
-        function buildHomeCatalogSectionHtml(items) {
-            const activeMode = HOME_CATALOG_MODES.find(mode => mode.key === homeCatalogMode) || HOME_CATALOG_MODES[0];
-            const visibleItems = getHomeCatalogVisibleItems();
-            return `<section class="home-catalog-section" id="homeCatalogSection">
-                <div class="home-catalog-heading">
-                    <div><span class="home-catalog-kicker">HIKKA</span><h2>Каталог ${escapeHtml(activeMode.label.toLowerCase())}</h2></div>
-                    <span class="home-catalog-count" id="homeCatalogCount">${homeCatalogCountText(visibleItems.length)}</span>
-                </div>
-                <nav class="home-catalog-tabs" id="homeCatalogTabs" aria-label="Тип каталогу">
-                    ${HOME_CATALOG_MODES.map(mode => `<button class="home-catalog-tab${mode.key === homeCatalogMode ? ' active' : ''}" type="button" data-catalog-mode="${mode.key}"><i class="fas ${mode.icon}"></i><span>${mode.label}</span></button>`).join('')}
-                </nav>
-                <div class="home-catalog-search-row">
-                    <label class="home-catalog-search"><i class="fas fa-search"></i><input id="homeCatalogSearch" type="search" value="${escapeHtml(homeCatalogQuery)}" placeholder="Введіть назву ${activeMode.label.toLowerCase()}..." autocomplete="off"></label>
-                </div>
-                <div class="home-catalog-controls">
-                    <label class="home-catalog-sort"><select id="homeCatalogSort" aria-label="Сортування"><option value="score"${homeCatalogSort === 'score' ? ' selected' : ''}>За оцінкою</option><option value="newest"${homeCatalogSort === 'newest' ? ' selected' : ''}>Новіші</option><option value="title"${homeCatalogSort === 'title' ? ' selected' : ''}>За назвою</option></select><i class="fas fa-arrow-up-wide-short"></i></label>
-                    <div class="home-catalog-view-toggle" role="group" aria-label="Вигляд каталогу"><button type="button" class="home-catalog-view${homeCatalogView === 'grid' ? ' active' : ''}" data-catalog-view="grid" aria-label="Сітка"><i class="fas fa-grip"></i></button><button type="button" class="home-catalog-view${homeCatalogView === 'list' ? ' active' : ''}" data-catalog-view="list" aria-label="Список"><i class="fas fa-list"></i></button></div>
-                    <div class="home-catalog-quick-actions" role="group" aria-label="Швидкі дії каталогу">
-                        <button class="home-catalog-filter-btn home-catalog-schedule-btn" id="homeCatalogScheduleBtn" type="button"><i class="fas fa-calendar-days"></i><span>Розклад виходу</span></button>
-                        <button class="home-catalog-filter-btn" id="homeCatalogFilterBtn" type="button"><i class="fas fa-filter"></i><span>Фільтри</span></button>
-                    </div>
-                </div>
-                <div class="home-catalog-presets" id="homeCatalogPresets">${HOME_CATALOG_PRESETS.map(preset => `<button type="button" class="home-catalog-preset${preset.key === homeCatalogPreset ? ' active' : ''}" data-catalog-preset="${preset.key}">${preset.label}</button>`).join('')}</div>
-                <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
-                <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
-                <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>
-            </section>`;
+                const payload = await fetchHoneyJson('/v2/chapter/cursor-list', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mangaId: match.id, page: 1, pageSize: 100, sort: { sortBy: 'chapterNum', sortOrder: 'ASC' } }) });
+                const chapters = (Array.isArray(payload?.data) ? payload.data : []).filter(chapter => chapter?.id);
+                const first = chapters[chapters.length - 1] || chapters[0];
+                if (!first) { honeyReaderCache.set(cacheKey, ''); return item; }
+                const readerUrl = `${HONEY_WEB}/read/${first.id}/${match.id}`;
+                honeyReaderCache.set(cacheKey, readerUrl);
+                return { ...item, readerUrl, honeyTitleId: match.id };
+            } catch (error) { console.warn('Honey Manga chapter lookup failed:', error); return item; }
         }
 
         function renderHomeCatalogGrid() {

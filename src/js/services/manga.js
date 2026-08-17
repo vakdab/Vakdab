@@ -1,7 +1,8 @@
 import { getProxyUrl } from '../utils/image.js';
 
-const ZENKO_API = 'https://api.zenko.online';
-const ZENKO_IMAGE = 'https://image.zenko.online';
+const HONEY_API = 'https://data.api.honey-manga.com.ua';
+const HONEY_WEB = 'https://honey-manga.com.ua';
+const HONEY_IMAGE = 'https://hmvolumestorage.b-cdn.net/public-resources';
 const DEFAULT_CHAPTER_URL = '';
 const jsonCache = new Map();
 
@@ -21,6 +22,13 @@ function escapeHtml(value = '') {
 }
 
 function normalizeChapterName(value = '') {
+    if (value && typeof value === 'object') {
+        const volume = value.volume ?? '';
+        const chapter = value.chapterNum ?? '';
+        const sub = value.subChapterNum ? `.${value.subChapterNum}` : '';
+        const title = String(value.title || '').trim();
+        return `Том ${volume} · Розділ ${chapter}${sub}${title ? `: ${title}` : ''}`;
+    }
     const raw = String(value || '').trim().replace(/&amp;/g, '&');
     const parts = raw.split(/@#%&;№%#&\*\*#!@/).filter(Boolean);
     if (parts.length >= 2) {
@@ -33,17 +41,18 @@ function normalizeChapterName(value = '') {
 }
 
 function chapterNumber(value = '') {
+    if (value && typeof value === 'object') return Number(value.chapterNum || Number.MAX_SAFE_INTEGER);
     const match = String(value).match(/@#%&;№%#&\*\*#!@(\d+)/);
     return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
 }
 
-function fetchJson(sourceUrl) {
+function fetchJson(sourceUrl, options = {}) {
     const cached = jsonCache.get(sourceUrl);
     if (cached) return cached;
     const request = fetch(getProxyUrl(sourceUrl, 'desktop'), {
-        mode: 'cors', credentials: 'omit', cache: 'force-cache'
+        mode: 'cors', credentials: 'omit', cache: 'no-cache', ...options
     }).then(response => {
-        if (!response.ok) throw new Error(`Zenko API: HTTP ${response.status}`);
+        if (!response.ok) throw new Error(`Honey Manga API: HTTP ${response.status}`);
         return response.json();
     }).catch(error => {
         jsonCache.delete(sourceUrl);
@@ -55,30 +64,35 @@ function fetchJson(sourceUrl) {
 
 function parseChapterUrl(value) {
     const url = safeUrl(value, '');
-    const match = url.match(/\/titles\/(\d+)\/(\d+)/i);
-    if (!match) throw new Error('Неправильне посилання на розділ Zenko');
-    return { titleId: match[1], chapterId: match[2], url };
+    const honeyMatch = url.match(/\/read\/([0-9a-f-]{36})\/([0-9a-f-]{36})/i);
+    if (!honeyMatch) throw new Error('Неправильне посилання на розділ Honey Manga');
+    return { chapterId: honeyMatch[1], titleId: honeyMatch[2], url };
 }
 
 function pageImageUrl(content) {
     const value = String(content || '').trim();
     if (!value) return '';
-    return getProxyUrl(/^https?:\/\//i.test(value) ? value : `${ZENKO_IMAGE}/${value}`, 'desktop');
+    return getProxyUrl(/^https?:\/\//i.test(value) ? value : `${HONEY_IMAGE}/${value}`, 'desktop');
 }
 
 async function loadMangaData(chapterUrl) {
     const { titleId, chapterId, url } = parseChapterUrl(chapterUrl);
-    const [title, chapter, chapters] = await Promise.all([
-        fetchJson(`${ZENKO_API}/titles/${titleId}`),
-        fetchJson(`${ZENKO_API}/chapters/${chapterId}`),
-        fetchJson(`${ZENKO_API}/titles/${titleId}/chapters`)
+    const [title, chapter, chapterListPayload, frames] = await Promise.all([
+        fetchJson(`${HONEY_API}/manga/${titleId}`),
+        fetchJson(`${HONEY_API}/chapter/${chapterId}`),
+        fetchJson(`${HONEY_API}/v2/chapter/cursor-list`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mangaId: titleId, page: 1, pageSize: 100, sort: { sortBy: 'chapterNum', sortOrder: 'ASC' } })
+        }),
+        fetchJson(`${HONEY_API}/v2/chapter/frames/${chapterId}/${titleId}`)
     ]);
-    const pages = (Array.isArray(chapter.pages) ? chapter.pages : [])
-        .filter(page => page?.content)
-        .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
-    const chapterList = (Array.isArray(chapters) ? chapters : [])
-        .filter(item => item?.isPublished !== false)
-        .sort((a, b) => chapterNumber(a.name) - chapterNumber(b.name));
+    const pages = Object.entries(frames?.resourceIds || {})
+        .sort(([a], [b]) => Number(a) - Number(b))
+        .map(([, content]) => ({ content }));
+    const chapterList = (Array.isArray(chapterListPayload?.data) ? chapterListPayload.data : [])
+        .filter(item => item?.id)
+        .sort((a, b) => Number(a.volume || 0) - Number(b.volume || 0) || Number(a.chapterNum || 0) - Number(b.chapterNum || 0));
     const currentIndex = chapterList.findIndex(item => String(item.id) === String(chapterId));
     return { title, chapter, pages, chapterList, currentIndex, titleId, chapterId, url };
 }
@@ -94,9 +108,9 @@ export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_
         const data = await loadMangaData(chapterUrl);
         if (!data.pages.length) throw new Error('У розділі немає сторінок');
         const { title, chapter, pages, chapterList, currentIndex } = data;
-        const safeTitle = escapeHtml(title.name || 'Манґа');
+        const safeTitle = escapeHtml(title.title || 'Манґа');
         const safeDescription = escapeHtml(title.description || '');
-        const chapterOptions = chapterList.map(item => `<option value="${escapeHtml(String(item.id))}"${String(item.id) === String(data.chapterId) ? ' selected' : ''}>${escapeHtml(normalizeChapterName(item.name))}</option>`).join('');
+        const chapterOptions = chapterList.map(item => `<option value="${escapeHtml(String(item.id))}"${String(item.id) === String(data.chapterId) ? ' selected' : ''}>${escapeHtml(normalizeChapterName(item))}</option>`).join('');
         const previous = currentIndex > 0 ? chapterList[currentIndex - 1] : null;
         const next = currentIndex >= 0 && currentIndex < chapterList.length - 1 ? chapterList[currentIndex + 1] : null;
         const pageMarkup = pages.map((page, index) => {
@@ -107,7 +121,7 @@ export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_
         container.innerHTML = `<section class="manga-reader" aria-label="Рідер манґи">
             <header class="manga-reader__header">
                 <button class="manga-reader__back" type="button" aria-label="Назад"><i class="fas fa-arrow-left"></i><span>Назад</span></button>
-                <div class="manga-reader__heading"><span>VAKDAB · МАНҐА</span><h1>${safeTitle}</h1><p>${escapeHtml(normalizeChapterName(chapter.name))}</p></div>
+                <div class="manga-reader__heading"><span>VAKDAB · МАНҐА</span><h1>${safeTitle}</h1><p>${escapeHtml(normalizeChapterName(chapter))}</p></div>
             </header>
             <div class="manga-reader__intro"><div><strong>Зручне читання</strong><span>Сторінки завантажуються поступово та оптимізовано для телефону.</span></div><span class="manga-reader__counter" id="mangaReaderCounter">1 / ${pages.length}</span></div>
             <div class="manga-reader__toolbar" role="toolbar" aria-label="Керування рідером">
@@ -120,7 +134,7 @@ export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_
             </div>
             <div class="manga-reader__chapter-select"><label for="mangaReaderChapter">Розділ</label><select id="mangaReaderChapter"${chapterOptions ? '' : ' disabled'}>${chapterOptions || '<option>Розділи недоступні</option>'}</select></div>
             <div class="manga-reader__pages" id="mangaReaderPages">${pageMarkup}</div>
-            <nav class="manga-reader__pager" aria-label="Навігація розділами"><button type="button" data-chapter-url="${previous ? escapeHtml(`https://zenko.online/titles/${data.titleId}/${previous.id}`) : ''}"${previous ? '' : ' disabled'}>← Попередній розділ</button><button type="button" data-chapter-url="${next ? escapeHtml(`https://zenko.online/titles/${data.titleId}/${next.id}`) : ''}"${next ? '' : ' disabled'}>Наступний розділ →</button></nav>
+            <nav class="manga-reader__pager" aria-label="Навігація розділами"><button type="button" data-chapter-url="${previous ? escapeHtml(`${HONEY_WEB}/read/${previous.id}/${data.titleId}`) : ''}"${previous ? '' : ' disabled'}>← Попередній розділ</button><button type="button" data-chapter-url="${next ? escapeHtml(`${HONEY_WEB}/read/${next.id}/${data.titleId}`) : ''}"${next ? '' : ' disabled'}>Наступний розділ →</button></nav>
             <details class="manga-reader__about"><summary>Про манґу</summary><p>${safeDescription || 'Опис відсутній.'}</p></details>
         </section>`;
 
@@ -182,13 +196,13 @@ export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_
         }));
         container.querySelector('#mangaReaderChapter')?.addEventListener('change', event => {
             const selected = chapterList.find(item => String(item.id) === event.target.value);
-            if (selected) onNavigate(`https://zenko.online/titles/${data.titleId}/${selected.id}`);
+            if (selected) onNavigate(`${HONEY_WEB}/read/${selected.id}/${data.titleId}`);
         });
         container.querySelectorAll('[data-chapter-url]').forEach(button => button.addEventListener('click', () => {
             if (button.dataset.chapterUrl) onNavigate(button.dataset.chapterUrl);
         }));
         container.querySelector('.manga-reader__back')?.addEventListener('click', () => onNavigate(null));
-        document.title = `${title.name || 'Манґа'} — VakDab`;
+        document.title = `${title.title || 'Манґа'} — VakDab`;
     } catch (error) {
         container.innerHTML = `<section class="manga-reader manga-reader--error"><div class="manga-reader__error"><i class="fas fa-triangle-exclamation"></i><h1>Не вдалося завантажити манґу</h1><p>${escapeHtml(error?.message || 'Перевірте з’єднання та спробуйте ще раз.')}</p><button type="button" id="mangaReaderRetry">Спробувати ще раз</button></div></section>`;
         container.querySelector('#mangaReaderRetry')?.addEventListener('click', () => renderMangaReader(container, chapterUrl, onNavigate));
