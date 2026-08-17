@@ -2,7 +2,7 @@ import { getProxyUrl } from '../utils/image.js';
 
 const ZENKO_API = 'https://api.zenko.online';
 const ZENKO_IMAGE = 'https://image.zenko.online';
-const DEFAULT_CHAPTER_URL = 'https://zenko.online/titles/4162/80090';
+const DEFAULT_CHAPTER_URL = '';
 const jsonCache = new Map();
 
 function safeUrl(value, fallback = '') {
@@ -54,7 +54,7 @@ function fetchJson(sourceUrl) {
 }
 
 function parseChapterUrl(value) {
-    const url = safeUrl(value, DEFAULT_CHAPTER_URL);
+    const url = safeUrl(value, '');
     const match = url.match(/\/titles\/(\d+)\/(\d+)/i);
     if (!match) throw new Error('Неправильне посилання на розділ Zenko');
     return { titleId: match[1], chapterId: match[2], url };
@@ -108,7 +108,6 @@ export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_
             <header class="manga-reader__header">
                 <button class="manga-reader__back" type="button" aria-label="Назад"><i class="fas fa-arrow-left"></i><span>Назад</span></button>
                 <div class="manga-reader__heading"><span>VAKDAB · МАНҐА</span><h1>${safeTitle}</h1><p>${escapeHtml(normalizeChapterName(chapter.name))}</p></div>
-                <button class="manga-reader__source" type="button" title="Відкрити джерело Zenko"><i class="fas fa-arrow-up-right-from-square"></i></button>
             </header>
             <div class="manga-reader__intro"><div><strong>Зручне читання</strong><span>Сторінки завантажуються поступово та оптимізовано для телефону.</span></div><span class="manga-reader__counter" id="mangaReaderCounter">1 / ${pages.length}</span></div>
             <div class="manga-reader__toolbar" role="toolbar" aria-label="Керування рідером">
@@ -122,7 +121,7 @@ export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_
             <div class="manga-reader__chapter-select"><label for="mangaReaderChapter">Розділ</label><select id="mangaReaderChapter"${chapterOptions ? '' : ' disabled'}>${chapterOptions || '<option>Розділи недоступні</option>'}</select></div>
             <div class="manga-reader__pages" id="mangaReaderPages">${pageMarkup}</div>
             <nav class="manga-reader__pager" aria-label="Навігація розділами"><button type="button" data-chapter-url="${previous ? escapeHtml(`https://zenko.online/titles/${data.titleId}/${previous.id}`) : ''}"${previous ? '' : ' disabled'}>← Попередній розділ</button><button type="button" data-chapter-url="${next ? escapeHtml(`https://zenko.online/titles/${data.titleId}/${next.id}`) : ''}"${next ? '' : ' disabled'}>Наступний розділ →</button></nav>
-            <details class="manga-reader__about"><summary>Про манґу</summary><p>${safeDescription || 'Опис відсутній.'}</p><a href="${escapeHtml(data.url)}" target="_blank" rel="noopener">Відкрити сторінку на Zenko</a></details>
+            <details class="manga-reader__about"><summary>Про манґу</summary><p>${safeDescription || 'Опис відсутній.'}</p></details>
         </section>`;
 
         const pagesRoot = container.querySelector('#mangaReaderPages');
@@ -189,7 +188,6 @@ export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_
             if (button.dataset.chapterUrl) onNavigate(button.dataset.chapterUrl);
         }));
         container.querySelector('.manga-reader__back')?.addEventListener('click', () => onNavigate(null));
-        container.querySelector('.manga-reader__source')?.addEventListener('click', () => window.open(data.url, '_blank', 'noopener'));
         document.title = `${title.name || 'Манґа'} — VakDab`;
     } catch (error) {
         container.innerHTML = `<section class="manga-reader manga-reader--error"><div class="manga-reader__error"><i class="fas fa-triangle-exclamation"></i><h1>Не вдалося завантажити манґу</h1><p>${escapeHtml(error?.message || 'Перевірте з’єднання та спробуйте ще раз.')}</p><button type="button" id="mangaReaderRetry">Спробувати ще раз</button></div></section>`;

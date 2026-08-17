@@ -2719,7 +2719,8 @@ const PROFILE_STICKER_SLOTS = 8;
                 } else if (route === 'stickers') {
                     this.showStickers();
                 } else if (route === 'manga') {
-                    this.showManga(params.url || DEFAULT_CHAPTER_URL);
+                    if (params.url) this.showManga(params.url);
+                    else this.showMain();
                 } else if (route.startsWith('anime/')) {
                     // Deep-link для Telegram: #anime/<Hikka ID>.
                     // Використовуємо той самий openPlayerPage(), що й звичайні картки.
@@ -5132,7 +5133,11 @@ const PROFILE_STICKER_SLOTS = 8;
                 const payload = await fetchZenkoJson(`/titles/${encodeURIComponent(match.id)}/chapters`);
                 const chapters = (Array.isArray(payload) ? payload : payload?.data || []).filter(chapter => chapter?.id && chapter?.isPublished !== false);
                 const first = chapters[0];
-                const readerUrl = first ? `${ZENKO_WEB}/titles/${match.id}/${first.id}` : `${ZENKO_WEB}/titles/${match.id}`;
+                if (!first) {
+                    zenkoReaderCache.set(cacheKey, '');
+                    return item;
+                }
+                const readerUrl = `${ZENKO_WEB}/titles/${match.id}/${first.id}`;
                 zenkoReaderCache.set(cacheKey, readerUrl);
                 return { ...item, readerUrl, zenkoTitleId: match.id };
             } catch (error) { console.warn('Zenko chapter lookup failed:', error); return item; }
@@ -5152,8 +5157,8 @@ const PROFILE_STICKER_SLOTS = 8;
                 ? items.filter(item => homeCatalogPreset === 'finished' ? ['finished', 'released', 'completed'].includes(item.status) : item.status === homeCatalogPreset)
                 : items;
             return filtered.sort((a, b) => {
-                if (a.readerUrl && !b.readerUrl) return -1;
-                if (!a.readerUrl && b.readerUrl) return 1;
+                const availability = Number(Boolean(b.readerUrl)) - Number(Boolean(a.readerUrl));
+                if (availability) return availability;
                 if (homeCatalogSort === 'title') return String(a.title || '').localeCompare(String(b.title || ''), 'uk');
                 if (homeCatalogSort === 'newest') return Number(b.year || 0) - Number(a.year || 0);
                 return (Number(b.score || b.native_score || 0) - Number(a.score || a.native_score || 0));
@@ -5176,7 +5181,12 @@ const PROFILE_STICKER_SLOTS = 8;
         }
 
         function homeCatalogCountText(visibleCount) {
-            return `Знайдено ${formatHomeCatalogNumber(homeCatalogTotal || visibleCount)} результатів`;
+            const total = homeCatalogTotal || visibleCount;
+            if (homeCatalogMode === 'manga') {
+                const available = homeCatalogItems.filter(item => item?.readerUrl).length;
+                return `Доступно для читання: ${formatHomeCatalogNumber(available)} із ${formatHomeCatalogNumber(total)} манґи`;
+            }
+            return `Знайдено ${formatHomeCatalogNumber(total)} результатів`;
         }
 
         function homeCatalogCardHtml(a) {
@@ -10722,7 +10732,10 @@ function renderProfilePage() {
         window.showTop100 = showTop100;
         window.openRandomAnime = openRandomAnime;
         window.openPlayerPage = openPlayerPage;
-        window.openMangaReader = (url = DEFAULT_CHAPTER_URL) => Router.goTo('manga', { url });
+        window.openMangaReader = url => {
+            if (url) Router.goTo('manga', { url });
+            else Router.goTo('main');
+        };
         window.closePlayerPage = closePlayerPage;
         window.toggleTheme = toggleTheme;
         window.toggleLeftdock = toggleLeftdock;
