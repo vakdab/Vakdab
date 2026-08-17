@@ -5594,11 +5594,6 @@ const PROFILE_STICKER_SLOTS = 8;
             const decorationClass = (profile.avatarDecoration && profile.avatarDecoration !== 'none') ? ` avatar-decoration-${profile.avatarDecoration}` : '';
             const stickerData = Storage.getStickers();
             const nickBadge = stickerData.nickBadge ? `<span class="settings-preview-nick-badge">${renderStickerFaceByKey(stickerData, stickerData.nickBadge)}</span>` : '';
-            const stickerKeys = (stickerData.medals || []).slice(0, PROFILE_STICKER_SLOTS);
-            const stickerSlots = Array.from({ length: PROFILE_STICKER_SLOTS }, (_, index) => {
-                const key = stickerKeys[index];
-                return `<div class="settings-preview-sticker-slot${key ? ' is-filled' : ''}" style="--sticker-color:${escapeHtml(key ? (stickerData.colors?.[key] || 'var(--accent)') : 'transparent')}">${key ? renderStickerFaceByKey(stickerData, key) : '<i class="fas fa-plus"></i>'}</div>`;
-            }).join('');
             const avatarMarkup = profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, '', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, '', 'avatar') : `<span class="settings-preview-avatar-fallback">${escapeHtml((profile.nickname || 'К').charAt(0).toUpperCase())}</span>`);
             panel.innerHTML = `
               <div class="settings-preview-profile">
@@ -5614,8 +5609,6 @@ const PROFILE_STICKER_SLOTS = 8;
                   <div class="settings-preview-handle">@${escapeHtml((profile.nickname || 'user').toLowerCase().replace(/\s/g, '_'))}</div>
                   <div class="settings-preview-bio${profile.bioBold ? ' is-bold' : ''}">${escapeHtml(profile.bio || 'Опис профілю не додано')}</div>
                   <button type="button" class="settings-preview-bio-btn"><i class="fas fa-align-left"></i> Опис профілю</button>
-                  <div class="settings-preview-sticker-title"><span>Наліпки профілю</span><strong>${stickerKeys.length}/${PROFILE_STICKER_SLOTS}</strong></div>
-                  <div class="settings-preview-sticker-grid">${stickerSlots}</div>
                   <div class="settings-preview-tabs profile-tabs profile-tabs--${profile.tabStyle || 'underline'}"><span class="profile-tab active">Профіль</span><span class="profile-tab">Статистика</span><span class="profile-tab">Досягнення</span></div>
                 </div>
               </div>
@@ -5836,12 +5829,8 @@ const PROFILE_STICKER_SLOTS = 8;
                 <span class="settings-sticker-summary-label">Наліпка біля ніку</span>
                 ${s.nickBadge !== null ? `<span class="settings-sticker-mini">${renderStickerFaceByKey(s, s.nickBadge)}</span>` : `<span class="settings-sticker-summary-empty">Не встановлено</span>`}
               </div>
-              <div class="settings-sticker-summary-row">
-                <span class="settings-sticker-summary-label">Наліпки профілю (${s.medals.length}/${PROFILE_STICKER_SLOTS})</span>
-                <div class="settings-sticker-medals-mini">${s.medals.length ? s.medals.map(k => `<span class="settings-sticker-mini">${renderStickerFaceByKey(s, k)}</span>`).join('') : `<span class="settings-sticker-summary-empty">Немає</span>`}</div>
-              </div>
               <button class="settings-media-btn" id="settingsOpenStickersBtn" style="margin-top:0.9rem;width:100%;justify-content:center;">
-                <i class="fas fa-icons"></i> Керувати наліпками
+                <i class="fas fa-icons"></i> Керувати наліпкою біля ніку
               </button>
             </div>`;
         }
@@ -5905,7 +5894,7 @@ const PROFILE_STICKER_SLOTS = 8;
             </div>
 
             <div class="appearance-section-card">
-            <div class="settings-section-title">Наліпки профілю</div>
+            <div class="settings-section-title">Наліпка біля ніку</div>
             ${buildStickerSummaryHtml()}
 
             <div class="settings-section-title">Фільтр банера</div>
@@ -6829,12 +6818,6 @@ function renderProfilePage() {
             const profileHandle = escapeHtml('@' + profile.nickname.toLowerCase().replace(/\s/g, '_'));
             const profileBioText = escapeHtml(profile.bio);
             const stickerData = Storage.getStickers();
-            const profileStickerKeys = (stickerData.medals || []).slice(0, PROFILE_STICKER_SLOTS);
-            const profileStickerSlots = Array.from({ length: PROFILE_STICKER_SLOTS }, (_, index) => {
-                const key = profileStickerKeys[index];
-                const slotColor = key ? (stickerData.colors?.[key] || 'var(--accent)') : 'transparent';
-                return `<button type="button" class="profile-medal-slot${key ? ' is-filled' : ''}" data-medal-index="${index}" draggable="${key ? 'true' : 'false'}" aria-label="${key ? 'Наліпка ' + (index + 1) : 'Порожній слот ' + (index + 1)}" style="--sticker-color:${escapeHtml(slotColor)}">${key ? renderStickerFaceByKey(stickerData, key) : '<i class="fas fa-plus"></i>'}</button>`;
-            }).join('');
             container.innerHTML = `
             <div class="profile-wrapper">
               <div class="${bannerClass}">
@@ -6873,13 +6856,6 @@ function renderProfilePage() {
                     <div class="num">${stats.achievements}</div>
                     <div class="label">Досягнень</div>
                   </div>
-                </div>
-                <div class="profile-medals-section">
-                  <div class="profile-medals-heading">
-                    <div class="profile-medals-count">НАЛІПКИ ПРОФІЛЮ · ${profileStickerKeys.length}/${PROFILE_STICKER_SLOTS}</div>
-                  </div>
-                  <div class="profile-medals-row profile-sticker-slots" id="profileStickerSlots">${profileStickerSlots}</div>
-                  <div class="profile-medals-hint">Натисніть дві наліпки або перетягніть, щоб поміняти місцями</div>
                 </div>
               </div>
             </div>
