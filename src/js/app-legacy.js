@@ -5058,19 +5058,69 @@ const PROFILE_STICKER_SLOTS = 8;
             return body;
         }
 
-        const ZENKO_MANGA_CARD = {
-            title: 'Квітучий Шлях Юності',
-            typeLabel: 'Манґа',
-            year: '',
-            status: 'Доступно для читання',
-            score: 0,
-            url: DEFAULT_CHAPTER_URL,
-            readerUrl: DEFAULT_CHAPTER_URL,
-            images: { jpg: { large_image_url: ANIME_CARD_PLACEHOLDER } }
-        };
+        // Hikka є джерелом метаданих і постерів. Zenko використовується тільки для читання.
+        const ZENKO_API = 'https://api.zenko.online';
+        const ZENKO_WEB = 'https://zenko.online';
+        let zenkoTitlesPromise = null;
+        const zenkoReaderCache = new Map();
+
+        function normalizeZenkoMatch(value = '') {
+            return String(value || '').toLocaleLowerCase('uk-UA').normalize('NFKD')
+                .replace(/[\u0300-\u036f]/g, '').replace(/[’'`]/g, '')
+                .replace(/[^a-z0-9а-яіїєґ]+/gi, ' ').trim();
+        }
+
+        async function fetchZenkoJson(path) {
+            const url = `${ZENKO_API}${path}`;
+            const request = async target => {
+                const response = await fetch(target, { mode: 'cors', credentials: 'omit', cache: 'no-cache', headers: { Accept: 'application/json' } });
+                if (!response.ok) throw new Error(`Zenko API: HTTP ${response.status}`);
+                return response.json();
+            };
+            try { return await request(url); } catch { return request(getProxyUrl(url, 'desktop')); }
+        }
+
+        async function getZenkoTitles() {
+            if (!zenkoTitlesPromise) {
+                zenkoTitlesPromise = fetchZenkoJson('/titles?limit=1000')
+                    .then(payload => Array.isArray(payload?.data) ? payload.data : [])
+                    .catch(error => { console.warn('Zenko catalog lookup failed:', error); return []; });
+            }
+            return zenkoTitlesPromise;
+        }
+
+        async function resolveZenkoReader(item) {
+            if (!item || homeCatalogMode !== 'manga') return item;
+            const keys = [item.title, item.originalTitle, item.title_en, item.title_ja].map(normalizeZenkoMatch).filter(Boolean);
+            if (!keys.length) return item;
+            const cacheKey = keys.join('|');
+            if (zenkoReaderCache.has(cacheKey)) return { ...item, readerUrl: zenkoReaderCache.get(cacheKey) };
+            const titles = await getZenkoTitles();
+            const match = titles.find(title => {
+                const candidates = [title.name, title.engName, title.originalName].map(normalizeZenkoMatch).filter(Boolean);
+                return candidates.some(candidate => keys.includes(candidate) || keys.some(key => candidate.includes(key) || key.includes(candidate)));
+            });
+            if (!match?.id) { zenkoReaderCache.set(cacheKey, ''); return item; }
+            try {
+                const payload = await fetchZenkoJson(`/titles/${encodeURIComponent(match.id)}/chapters`);
+                const chapters = (Array.isArray(payload) ? payload : payload?.data || []).filter(chapter => chapter?.id && chapter?.isPublished !== false);
+                const first = chapters[0];
+                const readerUrl = first ? `${ZENKO_WEB}/titles/${match.id}/${first.id}` : `${ZENKO_WEB}/titles/${match.id}`;
+                zenkoReaderCache.set(cacheKey, readerUrl);
+                return { ...item, readerUrl, zenkoTitleId: match.id };
+            } catch (error) { console.warn('Zenko chapter lookup failed:', error); return item; }
+        }
+
+        async function attachZenkoReaders(items) {
+            if (homeCatalogMode !== 'manga') return items;
+            let cursor = 0;
+            const worker = async () => { while (cursor < items.length) { const index = cursor++; items[index] = await resolveZenkoReader(items[index]); } };
+            await Promise.all(Array.from({ length: Math.min(4, items.length) }, worker));
+            return items;
+        }
 
         function getHomeCatalogVisibleItems() {
-            const items = homeCatalogMode === 'manga' ? [ZENKO_MANGA_CARD, ...homeCatalogItems] : [...homeCatalogItems];
+            const items = [...homeCatalogItems];
             const filtered = homeCatalogMode === 'anime' && homeCatalogPreset !== 'all'
                 ? items.filter(item => homeCatalogPreset === 'finished' ? ['finished', 'released', 'completed'].includes(item.status) : item.status === homeCatalogPreset)
                 : items;
@@ -5090,7 +5140,8 @@ const PROFILE_STICKER_SLOTS = 8;
             if (!response.ok) throw new Error(`Hikka API: HTTP ${response.status}`);
             const data = await response.json();
             homeCatalogTotal = Number(data.pagination?.total || data.total || data.count || 0);
-            return (data.list || []).map(item => hikkaItem(item, endpoint));
+            const items = (data.list || []).map(item => hikkaItem(item, endpoint));
+            return endpoint === 'manga' ? attachZenkoReaders(items) : items;
         }
 
         function formatHomeCatalogNumber(value) {
@@ -5160,7 +5211,6 @@ const PROFILE_STICKER_SLOTS = 8;
                     </div>
                 </div>
                 <div class="home-catalog-presets" id="homeCatalogPresets">${HOME_CATALOG_PRESETS.map(preset => `<button type="button" class="home-catalog-preset${preset.key === homeCatalogPreset ? ' active' : ''}" data-catalog-preset="${preset.key}">${preset.label}</button>`).join('')}</div>
-                ${homeCatalogMode === 'manga' ? `<button class="home-catalog-featured-manga" id="zenkoFeaturedManga" type="button"><span class="home-catalog-featured-manga__icon"><i class="fas fa-book-open"></i></span><span><strong>Квітучий Шлях Юності</strong><small>Читати українською через проксі Zenko · 35 сторінок</small></span><i class="fas fa-arrow-right"></i></button>` : ''}
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
                 <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>
@@ -5210,9 +5260,6 @@ const PROFILE_STICKER_SLOTS = 8;
                 clearTimeout(searchTimer);
                 homeCatalogQuery = event.target.value.trim();
                 searchTimer = setTimeout(() => reloadHomeCatalog(), 450);
-            });
-            root.querySelector('#zenkoFeaturedManga')?.addEventListener('click', () => {
-                Router.goTo('manga', { url: DEFAULT_CHAPTER_URL });
             });
             root.querySelector('#homeCatalogScheduleBtn')?.addEventListener('click', () => {
                 Router.goTo('schedule');
