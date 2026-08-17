@@ -2,7 +2,7 @@ import { FIREBASE_CONFIG, initializeApp, getAuth, signInWithEmailAndPassword, cr
 import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_CORS_PROXY, MIKAI_BASE, GENRE_MAP } from './config/constants.js';
 import { safeQuery, safeQueryAll } from './utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from './utils/image.js';
-import { renderMangaReader, DEFAULT_CHAPTER_URL } from './services/manga.js';
+import { renderMangaReader, DEFAULT_CHAPTER_URL } from './services/manga.js?v=20260817-reader-optimization-v2';
 import './utils/string.js';
 
 let playerPageAnimeuaSeasons = null;
