@@ -50,7 +50,11 @@ function extractPages(payload) {
 }
 
 export async function getChapterFrames(chapterId, titleId) {
+    // Honey's public reader currently exposes resourceIds on the chapter
+    // payload; keep the legacy frames routes as fallbacks for older chapters.
     const endpoints = [
+        `${HONEY_API}/v2/chapter/${chapterId}`,
+        `${HONEY_API}/chapter/${chapterId}`,
         `${HONEY_API}/v2/chapter/frames/${chapterId}/${titleId}`,
         `${HONEY_API}/chapter/frames/${chapterId}/${titleId}`
     ];

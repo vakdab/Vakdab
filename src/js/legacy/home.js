@@ -562,12 +562,12 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         }
         export function homeCatalogGenreHtml() {
             if (homeCatalogMode !== 'manga') return '';
-            return `<label class="home-catalog-genre-filter"><span>Вікова категорія</span><select id="homeCatalogGenre" aria-label="Вікова категорія">${HOME_MANGA_AGE_OPTIONS.map(option => `<option value="${option.key}"${homeCatalogGenre === option.key ? ' selected' : ''}>${option.label}</option>`).join('')}</select></label>`;
+            return `<label class="home-catalog-age-filter"><span class="home-catalog-age-filter__label">Вікова категорія</span><span class="home-catalog-age-filter__control"><select id="homeCatalogGenre" aria-label="Вікова категорія">${HOME_MANGA_AGE_OPTIONS.map(option => `<option value="${option.key}"${homeCatalogGenre === option.key ? ' selected' : ''}>${option.label}</option>`).join('')}</select><i class="fas fa-chevron-down" aria-hidden="true"></i></span></label>`;
         }
 
         export function syncHomeCatalogGenreControl(root = document) {
             const presets = root.querySelector('#homeCatalogPresets');
-            const existing = root.querySelector('#homeCatalogGenre')?.closest('.home-catalog-genre-filter');
+            const existing = root.querySelector('#homeCatalogGenre')?.closest('.home-catalog-age-filter');
             if (existing) existing.remove();
             if (homeCatalogMode === 'manga' && presets) {
                 presets.insertAdjacentHTML('afterend', homeCatalogGenreHtml());
@@ -741,7 +741,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             const visibleItems = getHomeCatalogVisibleItems();
             return `<section class="home-catalog-section" id="homeCatalogSection">
                 <div class="home-catalog-heading">
-                    <div><span class="home-catalog-kicker">HIKKA</span><h2>Каталог ${escapeHtml(activeMode.label.toLowerCase())}</h2></div>
+                    <div><h2>Каталог ${escapeHtml(activeMode.label.toLowerCase())}</h2></div>
                     <span class="home-catalog-count" id="homeCatalogCount">${homeCatalogCountText(visibleItems.length)}</span>
                 </div>
                 <nav class="home-catalog-tabs" id="homeCatalogTabs" aria-label="Тип каталогу">

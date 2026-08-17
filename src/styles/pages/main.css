@@ -427,12 +427,49 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     line-height: 1.1;
     letter-spacing: -.04em;
 }
-.home-catalog-kicker {
-    color: var(--accent);
-    font-size: .65rem;
+.home-catalog-kicker { display: none; }
+.home-catalog-age-filter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    width: min(100%, 520px);
+    margin: 1rem 0 1.15rem;
+    padding: .75rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+    box-shadow: var(--shadow-sm);
+}
+.home-catalog-age-filter__label {
+    color: var(--text);
+    font-size: clamp(.9rem, 2.2vw, 1rem);
     font-weight: 800;
-    letter-spacing: .16em;
-    text-transform: uppercase;
+}
+.home-catalog-age-filter__control {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-width: 9rem;
+}
+.home-catalog-age-filter select {
+    width: 100%;
+    appearance: none;
+    padding: .55rem 2rem .55rem .8rem;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--surface-2, var(--surface));
+    color: var(--text);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+.home-catalog-age-filter__control i {
+    position: absolute;
+    right: .75rem;
+    pointer-events: none;
+    color: var(--accent);
+    font-size: .8rem;
 }
 .home-catalog-count {
     color: var(--text-muted);
