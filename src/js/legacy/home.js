@@ -679,7 +679,11 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             const total = homeCatalogTotal || visibleCount;
             if (homeCatalogMode === 'manga') {
                 const available = homeCatalogMode === 'manga'
-                    ? Number(honeyCatalogReadableTotal || honeyAvailabilityMap?.honeyAvailable || honeyAvailabilityMap?.available || HONEY_CATALOG_READABLE_FALLBACK)
+                    ? Math.max(
+                        Number(honeyCatalogReadableTotal || 0),
+                        Number(honeyAvailabilityMap?.honeyAvailable || honeyAvailabilityMap?.available || 0),
+                        HONEY_CATALOG_READABLE_FALLBACK
+                    )
                     : homeCatalogItems.filter(item => item?.readerUrl).length;
                 return `Доступно для читання: ${formatHomeCatalogNumber(available)} із ${formatHomeCatalogNumber(total)} манґи`;
             }
