@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=20260817-honey-posters-v2';
+import './app-legacy.js?v=20260817-honey-genres-v3';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';

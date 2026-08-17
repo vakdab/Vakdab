@@ -5038,6 +5038,8 @@ const PROFILE_STICKER_SLOTS = 8;
         let homeCatalogSort = 'score';
         let homeCatalogView = 'grid';
         let homeCatalogPreset = 'all';
+        let homeCatalogGenre = 'all';
+        const honeyCatalogPageCache = new Map();
 
         const HOME_CATALOG_MODES = [
             { key: 'anime', label: 'Аніме', icon: 'fa-photo-film' },
@@ -5167,6 +5169,15 @@ const PROFILE_STICKER_SLOTS = 8;
             return items;
         }
 
+        function getHoneyGenreOptions(items = homeCatalogItems) {
+            const values = new Map();
+            items.forEach(item => (item?.genres || []).forEach(genre => {
+                const value = String(genre?.name || genre || '').trim();
+                if (value) values.set(normalizeHoneyMatch(value), value);
+            }));
+            return [...values.values()].sort((a, b) => a.localeCompare(b, 'uk'));
+        }
+
         function honeyCatalogItem(item) {
             const posterId = item?.posterUrl || item?.posterId || '';
             const poster = posterId ? `${HONEY_IMAGE}/${posterId}?optimizer=image&width=296` : ANIME_CARD_PLACEHOLDER;
@@ -5195,19 +5206,31 @@ const PROFILE_STICKER_SLOTS = 8;
         }
 
         async function fetchHoneyCatalogPage(page) {
-            await loadHoneyAvailabilityMap();
+            const cacheKey = `${homeCatalogQuery || '__all__'}:${page}`;
+            if (honeyCatalogPageCache.has(cacheKey)) {
+                const cached = honeyCatalogPageCache.get(cacheKey);
+                homeCatalogTotal = cached.total;
+                return cached.items.map(item => ({ ...item, images: { ...item.images, jpg: { ...item.images.jpg } }, genres: [...(item.genres || [])] }));
+            }
+            const mapPromise = loadHoneyAvailabilityMap();
             if (homeCatalogQuery) {
                 const results = await searchHoneyTitles(homeCatalogQuery);
+                await mapPromise;
+                const items = results.map(honeyCatalogItem);
                 homeCatalogTotal = results.length;
-                return results.map(honeyCatalogItem);
+                honeyCatalogPageCache.set(cacheKey, { total: homeCatalogTotal, items });
+                return items;
             }
             const payload = await fetchHoneyJson('/v2/manga/cursor-list', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ page: Math.max(1, page), pageSize: 24, sort: { sortBy: 'lastUpdated', sortOrder: 'DESC' }, filters: [] })
             });
+            await mapPromise;
             homeCatalogTotal = Number(payload?.counter || payload?.total || payload?.data?.length || 0);
-            return (Array.isArray(payload?.data) ? payload.data : []).map(honeyCatalogItem);
+            const items = (Array.isArray(payload?.data) ? payload.data : []).map(honeyCatalogItem);
+            honeyCatalogPageCache.set(cacheKey, { total: homeCatalogTotal, items });
+            return items;
         }
 
         async function fetchHomeCatalogPage(page) {
@@ -5224,9 +5247,16 @@ const PROFILE_STICKER_SLOTS = 8;
 
         function getHomeCatalogVisibleItems() {
             const items = [...homeCatalogItems];
-            const filtered = homeCatalogMode === 'anime' && homeCatalogPreset !== 'all'
-                ? items.filter(item => homeCatalogPreset === 'finished' ? ['finished', 'released', 'completed'].includes(item.status) : item.status === homeCatalogPreset)
-                : items;
+            let filtered = items;
+            if (homeCatalogMode === 'anime' && homeCatalogPreset !== 'all') {
+                filtered = filtered.filter(item => homeCatalogPreset === 'finished'
+                    ? ['finished', 'released', 'completed'].includes(item.status)
+                    : item.status === homeCatalogPreset);
+            }
+            if (homeCatalogMode === 'manga' && homeCatalogGenre !== 'all') {
+                const wanted = normalizeHoneyMatch(homeCatalogGenre);
+                filtered = filtered.filter(item => (item.genres || []).some(genre => normalizeHoneyMatch(genre?.name || genre) === wanted));
+            }
             return filtered.sort((a, b) => {
                 const availability = Number(Boolean(b.readerUrl)) - Number(Boolean(a.readerUrl));
                 if (availability) return availability;
@@ -5310,6 +5340,7 @@ const PROFILE_STICKER_SLOTS = 8;
                     </div>
                 </div>
                 <div class="home-catalog-presets" id="homeCatalogPresets">${HOME_CATALOG_PRESETS.map(preset => `<button type="button" class="home-catalog-preset${preset.key === homeCatalogPreset ? ' active' : ''}" data-catalog-preset="${preset.key}">${preset.label}</button>`).join('')}</div>
+                ${homeCatalogMode === 'manga' ? `<label class="home-catalog-genre-filter"><span>Жанр манґи</span><select id="homeCatalogGenre" aria-label="Жанр манґи"><option value="all">Усі жанри</option>${getHoneyGenreOptions(homeCatalogItems).map(genre => `<option value="${escapeHtml(genre)}"${homeCatalogGenre === genre ? ' selected' : ''}>${escapeHtml(genre)}</option>`).join('')}</select></label>` : ''}
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
                 <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>
@@ -5338,6 +5369,7 @@ const PROFILE_STICKER_SLOTS = 8;
                 homeCatalogMode = tab.dataset.catalogMode;
                 homeCatalogQuery = '';
                 homeCatalogPreset = 'all';
+                homeCatalogGenre = 'all';
                 await reloadHomeCatalog();
             }));
             root.querySelector('#homeCatalogSort')?.addEventListener('change', async event => {
@@ -5354,6 +5386,10 @@ const PROFILE_STICKER_SLOTS = 8;
                 root.querySelectorAll('[data-catalog-preset]').forEach(item => item.classList.toggle('active', item === button));
                 renderHomeCatalogGrid();
             }));
+            root.querySelector('#homeCatalogGenre')?.addEventListener('change', event => {
+                homeCatalogGenre = event.target.value || 'all';
+                renderHomeCatalogGrid();
+            });
             let searchTimer = null;
             root.querySelector('#homeCatalogSearch')?.addEventListener('input', event => {
                 clearTimeout(searchTimer);
