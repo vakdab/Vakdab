@@ -396,6 +396,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         export const honeyReaderCache = new Map();
         export let honeyAvailabilityMap = null;
         export let honeyAvailabilityMapPromise = null;
+        export const HONEY_CATALOG_READABLE_FALLBACK = 2054;
         export let honeyCatalogReadableTotal = 0;
         export let honeyCatalogReadableTotalPromise = null;
 
@@ -678,7 +679,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             const total = homeCatalogTotal || visibleCount;
             if (homeCatalogMode === 'manga') {
                 const available = homeCatalogMode === 'manga'
-                    ? Number(honeyCatalogReadableTotal || honeyAvailabilityMap?.honeyAvailable || honeyAvailabilityMap?.available || homeCatalogItems.filter(item => item?.readerUrl || Number(item?.chapters) > 0).length)
+                    ? Number(honeyCatalogReadableTotal || honeyAvailabilityMap?.honeyAvailable || honeyAvailabilityMap?.available || HONEY_CATALOG_READABLE_FALLBACK)
                     : homeCatalogItems.filter(item => item?.readerUrl).length;
                 return `Доступно для читання: ${formatHomeCatalogNumber(available)} із ${formatHomeCatalogNumber(total)} манґи`;
             }
