@@ -5058,12 +5058,25 @@ const PROFILE_STICKER_SLOTS = 8;
             return body;
         }
 
+        const ZENKO_MANGA_CARD = {
+            title: 'Квітучий Шлях Юності',
+            typeLabel: 'Манґа',
+            year: '',
+            status: 'Доступно для читання',
+            score: 0,
+            url: DEFAULT_CHAPTER_URL,
+            readerUrl: DEFAULT_CHAPTER_URL,
+            images: { jpg: { large_image_url: ANIME_CARD_PLACEHOLDER } }
+        };
+
         function getHomeCatalogVisibleItems() {
-            const items = [...homeCatalogItems];
+            const items = homeCatalogMode === 'manga' ? [ZENKO_MANGA_CARD, ...homeCatalogItems] : [...homeCatalogItems];
             const filtered = homeCatalogMode === 'anime' && homeCatalogPreset !== 'all'
                 ? items.filter(item => homeCatalogPreset === 'finished' ? ['finished', 'released', 'completed'].includes(item.status) : item.status === homeCatalogPreset)
                 : items;
             return filtered.sort((a, b) => {
+                if (a.readerUrl && !b.readerUrl) return -1;
+                if (!a.readerUrl && b.readerUrl) return 1;
                 if (homeCatalogSort === 'title') return String(a.title || '').localeCompare(String(b.title || ''), 'uk');
                 if (homeCatalogSort === 'newest') return Number(b.year || 0) - Number(a.year || 0);
                 return (Number(b.score || b.native_score || 0) - Number(a.score || a.native_score || 0));
@@ -5094,7 +5107,7 @@ const PROFILE_STICKER_SLOTS = 8;
             const type = a.typeLabel || animeTypeLabel(a.type);
             const status = statusLabelUa(a.status);
             const meta = [type, a.year, status].filter(Boolean).join(' · ');
-            return `<article class="home-catalog-card" data-url="${escapeHtml(String(a.url || ''))}" tabindex="0" role="button" aria-label="${escapeHtml(title)}">
+            return `<article class="home-catalog-card${a.readerUrl ? ' home-catalog-card--reader' : ''}" data-url="${escapeHtml(String(a.url || ''))}"${a.readerUrl ? ` data-reader-url="${escapeHtml(a.readerUrl)}"` : ''} tabindex="0" role="button" aria-label="${escapeHtml(title)}">
                 <div class="home-catalog-card__poster">
                     <img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" onload="this.classList.add('img--loaded')" onerror="this.onerror=null;this.src='${ANIME_CARD_PLACEHOLDER}'">
                     ${status ? `<span class="home-catalog-card__status">${escapeHtml(status)}</span>` : ''}
@@ -5110,6 +5123,10 @@ const PROFILE_STICKER_SLOTS = 8;
                 card.dataset.bound = '1';
                 const open = () => {
                     if (!card.dataset.url) return;
+                    if (card.dataset.readerUrl) {
+                        Router.goTo('manga', { url: card.dataset.readerUrl });
+                        return;
+                    }
                     if (homeCatalogMode !== 'anime') { showToast('Для цього тайтлу ще не підключено джерело читання'); return; }
                     openPlayerPage(card.dataset.url);
                 };
