@@ -737,7 +737,7 @@ import {
             return merged;
         }
 
-        function saveProfile(data) {
+        export function saveProfile(data) {
             Storage.setProfile(data);
         }
 
