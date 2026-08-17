@@ -5119,6 +5119,30 @@ const PROFILE_STICKER_SLOTS = 8;
             } catch (error) { console.warn('Honey Manga chapter lookup failed:', error); return item; }
         }
 
+        async function attachHoneyReaders(items) {
+            if (homeCatalogMode !== 'manga') return items;
+            let cursor = 0;
+            const worker = async () => {
+                while (cursor < items.length) {
+                    const index = cursor++;
+                    items[index] = await resolveHoneyReader(items[index]);
+                }
+            };
+            await Promise.all(Array.from({ length: Math.min(4, items.length) }, worker));
+            return items;
+        }
+
+        async function fetchHomeCatalogPage(page) {
+            const endpoint = homeCatalogMode === 'manga' ? 'manga' : homeCatalogMode === 'novel' ? 'novel' : 'anime';
+            const apiUrl = `${HIKKA_API}/${endpoint}?page=${Math.max(1, page)}&size=24`;
+            const response = await hikkaRequest(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(homeCatalogRequestBody()) });
+            if (!response.ok) throw new Error(`Hikka API: HTTP ${response.status}`);
+            const data = await response.json();
+            homeCatalogTotal = Number(data.pagination?.total || data.total || data.count || 0);
+            const items = (data.list || []).map(item => hikkaItem(item, endpoint));
+            return endpoint === 'manga' ? attachHoneyReaders(items) : items;
+        }
+
         function renderHomeCatalogGrid() {
             const grid = document.getElementById('homeCatalogGrid');
             const count = document.getElementById('homeCatalogCount');
