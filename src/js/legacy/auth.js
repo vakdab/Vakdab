@@ -1,9 +1,10 @@
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, signInAnonymously, sendPasswordResetEmail, deleteUser, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot } from '../config/firebase.js';
 import { auth, db, initialized as firebaseInitialized } from '../services/firebase/client.js';
 import {
-    Router, getDefaultProfile, getDefaultStickers, calcTotalXP, getLevel,
+    Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
 } from './app-legacy.js';
+import { getDefaultProfile } from './settings.js';
 import { Storage } from './storage.js';
 
         const Auth = {
