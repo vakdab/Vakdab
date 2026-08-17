@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=20260817-media-editor-v2';
+import './app-legacy.js?v=20260817-banner-controls-v1';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';

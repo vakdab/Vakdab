@@ -1280,3 +1280,34 @@
 @media (prefers-reduced-motion: reduce) {
     .settings-option-item, .settings-swatch, .settings-bio-bold-btn { transition: none; }
 }
+
+/* Banner controls stay outside the media preview so mobile users can always change, edit, or remove it. */
+.settings-media-card--banner .settings-media-actions {
+    position: static;
+    width: 100%;
+    max-width: none;
+    padding: .72rem;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+}
+.settings-media-edit-image {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+@media (max-width: 680px) {
+    .settings-media-card--banner .settings-media-actions {
+        justify-content: stretch;
+        gap: .5rem;
+    }
+    .settings-media-card--banner .settings-media-actions .settings-media-btn {
+        flex: 1 1 calc(50% - .25rem);
+        min-width: 0;
+        padding-inline: .72rem;
+    }
+    .settings-media-card--banner .settings-media-actions .settings-media-delete {
+        flex: 0 0 40px;
+    }
+}

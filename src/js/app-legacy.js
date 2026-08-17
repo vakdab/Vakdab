@@ -5870,14 +5870,14 @@ const PROFILE_STICKER_SLOTS = 8;
             <div class="appearance-media-grid">
             <div class="appearance-media-block">
             <div class="settings-section-title">Банер</div>
-            <div class="settings-media-card">
+            <div class="settings-media-card settings-media-card--banner">
               <div class="settings-media-preview--banner" id="settingsBannerPreview">
                 ${bannerVideoSrc ? profileMediaMarkup(bannerVideoSrc, '', 'video banner', profile.bannerVideoSettings) : (bannerSrc ? profileMediaMarkup(bannerSrc, '', 'banner') : '')}
-                <div class="settings-media-actions">
-                  <button class="settings-media-btn" id="settingsBannerUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
-                  ${bannerVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsBannerEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : (bannerSrc && !isGifUrl(bannerSrc) ? `<button class="settings-media-btn settings-media-edit-image" id="settingsBannerEditImageBtn"><i class="fas fa-crop-simple"></i> Редагувати банер</button>` : '')}
-                  ${(bannerSrc || bannerVideoSrc) ? `<button class="settings-media-delete" id="settingsBannerRemoveBtn" title="Видалити банер"><i class="fas fa-trash"></i></button>` : ''}
-                </div>
+              </div>
+              <div class="settings-media-actions" aria-label="Керування банером">
+                <button class="settings-media-btn" id="settingsBannerUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
+                ${bannerVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsBannerEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : (bannerSrc && !isGifUrl(bannerSrc) ? `<button class="settings-media-btn settings-media-edit-image" id="settingsBannerEditImageBtn"><i class="fas fa-crop-simple"></i> Редагувати банер</button>` : '')}
+                ${(bannerSrc || bannerVideoSrc) ? `<button class="settings-media-delete" id="settingsBannerRemoveBtn" title="Видалити банер"><i class="fas fa-trash"></i></button>` : ''}
               </div>
             </div>
             <div class="settings-hint-text">JPG, PNG, WebP, GIF, MP4, WebM, MOV · відео до 50 МБ</div>
