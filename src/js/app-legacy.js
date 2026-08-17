@@ -5875,7 +5875,7 @@ const PROFILE_STICKER_SLOTS = 8;
                 ${bannerVideoSrc ? profileMediaMarkup(bannerVideoSrc, '', 'video banner', profile.bannerVideoSettings) : (bannerSrc ? profileMediaMarkup(bannerSrc, '', 'banner') : '')}
                 <div class="settings-media-actions">
                   <button class="settings-media-btn" id="settingsBannerUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
-                  ${bannerVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsBannerEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : ''}
+                  ${bannerVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsBannerEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : (bannerSrc && !isGifUrl(bannerSrc) ? `<button class="settings-media-btn settings-media-edit-image" id="settingsBannerEditImageBtn"><i class="fas fa-crop-simple"></i> Редагувати банер</button>` : '')}
                   ${(bannerSrc || bannerVideoSrc) ? `<button class="settings-media-delete" id="settingsBannerRemoveBtn" title="Видалити банер"><i class="fas fa-trash"></i></button>` : ''}
                 </div>
               </div>
@@ -5888,7 +5888,7 @@ const PROFILE_STICKER_SLOTS = 8;
               <div class="settings-media-preview--avatar" id="settingsAvatarPreview">${avatarVideoSrc ? profileMediaMarkup(avatarVideoSrc, '', 'video avatar', profile.avatarVideoSettings) : (avatarSrc ? profileMediaMarkup(avatarSrc, '', 'avatar') : '<i class="fas fa-user"></i>')}</div>
               <div class="settings-media-actions">
                 <button class="settings-media-btn" id="settingsAvatarUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
-                ${avatarVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsAvatarEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : ''}
+                ${avatarVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsAvatarEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : (avatarSrc && !isGifUrl(avatarSrc) ? `<button class="settings-media-btn settings-media-edit-image" id="settingsAvatarEditImageBtn"><i class="fas fa-crop-simple"></i> Редагувати аватарку</button>` : '')}
                 ${(avatarSrc || avatarVideoSrc) ? `<button class="settings-media-delete" id="settingsAvatarRemoveBtn" title="Видалити аватар"><i class="fas fa-trash"></i></button>` : ''}
               </div>
             </div>
@@ -6093,6 +6093,14 @@ const PROFILE_STICKER_SLOTS = 8;
             document.getElementById('settingsAvatarEditVideoBtn')?.addEventListener('click', () => {
                 const p = getProfile();
                 editExistingProfileVideo(p.avatarVideo, 'avatar');
+            });
+            document.getElementById('settingsBannerEditImageBtn')?.addEventListener('click', () => {
+                const p = getProfile();
+                editExistingProfileImage(p.banner, 'banner');
+            });
+            document.getElementById('settingsAvatarEditImageBtn')?.addEventListener('click', () => {
+                const p = getProfile();
+                editExistingProfileImage(p.avatar, 'avatar');
             });
             document.getElementById('settingsBannerRemoveBtn')?.addEventListener('click', () => {
                 if (!confirm('Видалити банер?')) return;
@@ -6548,9 +6556,16 @@ const PROFILE_STICKER_SLOTS = 8;
             }
 
             function applyTransform() {
+                const scaledW = natW * scale;
+                const scaledH = natH * scale;
                 const scaleX = mirrorX ? -1 : 1;
                 const scaleY = mirrorY ? -1 : 1;
-                mediaEl.style.transform = `translate(${tx}px, ${ty}px) scale(${scale * scaleX}, ${scale * scaleY})`;
+                // The editor image uses transform-origin: 0 0. Shift the origin
+                // by the rendered dimensions before applying a negative scale,
+                // otherwise iOS moves the mirrored media outside the stage.
+                const renderTx = mirrorX ? tx + scaledW : tx;
+                const renderTy = mirrorY ? ty + scaledH : ty;
+                mediaEl.style.transform = `translate(${renderTx}px, ${renderTy}px) scale(${scale * scaleX}, ${scale * scaleY})`;
             }
 
             function centerImage() {
@@ -6667,19 +6682,20 @@ const PROFILE_STICKER_SLOTS = 8;
                     const sW = frameW / scale;
                     const sH = frameH / scale;
 
-                    // Якщо є віддзеркалення — малюємо на canvas через scale(-1,1)
-                    if (mirrorX || mirrorY) {
-                        ctx.save();
-                        // Вертикальне віддзеркалення: інвертуємо sy та sH
-                        const finalSy = mirrorY ? (natH - sy - sH) : sy;
-                        const finalSh = mirrorY ? -sH : sH;
-                        ctx.translate(mirrorX ? outW / 2 : 0, mirrorY ? outH / 2 : 0);
-                        ctx.scale(mirrorX ? -1 : 1, mirrorY ? -1 : 1);
-                        ctx.drawImage(mediaEl, sx, finalSy, sW, finalSh, mirrorX ? -outW / 2 : 0, mirrorY ? -outH / 2 : 0, outW, outH);
-                        ctx.restore();
-                    } else {
-                        ctx.drawImage(mediaEl, sx, sy, sW, sH, 0, 0, outW, outH);
+                    // Mirror the already-selected crop exactly once. The old
+                    // implementation inverted both source and destination for
+                    // vertical flips, which cancelled the mirror on iOS.
+                    ctx.save();
+                    if (mirrorX) {
+                        ctx.translate(outW, 0);
+                        ctx.scale(-1, 1);
                     }
+                    if (mirrorY) {
+                        ctx.translate(0, outH);
+                        ctx.scale(1, -1);
+                    }
+                    ctx.drawImage(mediaEl, sx, sy, sW, sH, 0, 0, outW, outH);
+                    ctx.restore();
 
                     // PNG зберігаємо з прозорістю, решта — JPEG
                     const format = isPng ? 'image/png' : 'image/jpeg';
@@ -6703,6 +6719,45 @@ const PROFILE_STICKER_SLOTS = 8;
                     centerImage();
                 }
             });
+        }
+
+        async function editExistingProfileImage(url, mode) {
+            if (!url) return;
+            showToast('Підготовка редактора зображення...');
+            try {
+                const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+                if (!response.ok) throw new Error('Не вдалося завантажити зображення');
+                const blob = await response.blob();
+                const type = blob.type || 'image/jpeg';
+                const extension = type === 'image/png' ? 'png' : 'jpg';
+                const file = new File([blob], `${mode}.${extension}`, { type });
+                openImageEditor(file, mode, async (croppedBlob) => {
+                    try {
+                        showToast(mode === 'avatar' ? 'Збереження аватарки...' : 'Збереження банера...');
+                        const imageUrl = await uploadBlobToCloudinary(croppedBlob, `${mode}.${extension}`);
+                        const profile = getProfile();
+                        if (mode === 'avatar') {
+                            profile.avatar = imageUrl;
+                            profile.avatarVideo = '';
+                            profile.avatarVideoSettings = null;
+                        } else {
+                            profile.banner = imageUrl;
+                            profile.bannerVideo = '';
+                            profile.bannerVideoSettings = null;
+                        }
+                        saveProfile(profile);
+                        if (Router.currentRoute === 'profile') renderProfilePage();
+                        if (Router.currentRoute === 'settings') renderSettingsPage();
+                        showToast(mode === 'avatar' ? 'Аватарку оновлено' : 'Банер оновлено');
+                    } catch (err) {
+                        console.error('Edited profile image upload error:', err);
+                        showToast('Не вдалося зберегти відредаговане зображення');
+                    }
+                });
+            } catch (err) {
+                console.error('Existing profile image editor error:', err);
+                showToast('Не вдалося відкрити редактор зображення');
+            }
         }
 
         async function editExistingProfileVideo(url, mode) {
