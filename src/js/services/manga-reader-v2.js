@@ -44,7 +44,8 @@ function fetchJson(sourceUrl, options = {}) {
     const method = options.method || 'GET';
     const cacheKey = `${method}:${sourceUrl}:${options.body || ''}`;
     if (jsonCache.has(cacheKey)) return jsonCache.get(cacheKey);
-    const request = fetch(method === 'GET' ? getProxyUrl(sourceUrl, 'desktop') : getProxyUrl(sourceUrl, 'desktop'), {
+    const requestUrl = method === 'GET' ? getProxyUrl(sourceUrl, 'desktop') : sourceUrl;
+    const request = fetch(requestUrl, {
         mode: 'cors', credentials: 'omit', cache: method === 'GET' ? 'force-cache' : 'no-store', ...options
     }).then(response => {
         if (!response.ok) throw new Error(`Honey Manga API: HTTP ${response.status}`);
