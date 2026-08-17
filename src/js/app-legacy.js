@@ -5074,7 +5074,7 @@ const PROFILE_STICKER_SLOTS = 8;
 
         async function fetchHoneyJson(path, options = {}, baseUrl = HONEY_API) {
             const url = `${baseUrl}${path}`;
-            const response = await fetch(getProxyUrl(url, 'desktop'), { mode: 'cors', credentials: 'omit', cache: 'no-cache', ...options });
+            const response = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-cache', ...options });
             if (!response.ok) throw new Error(`Honey Manga API: HTTP ${response.status}`);
             return response.json();
         }

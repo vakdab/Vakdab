@@ -49,7 +49,7 @@ function chapterNumber(value = '') {
 function fetchJson(sourceUrl, options = {}) {
     const cached = jsonCache.get(sourceUrl);
     if (cached) return cached;
-    const request = fetch(getProxyUrl(sourceUrl, 'desktop'), {
+    const request = fetch(options.method && options.method !== 'GET' ? sourceUrl : getProxyUrl(sourceUrl, 'desktop'), {
         mode: 'cors', credentials: 'omit', cache: 'no-cache', ...options
     }).then(response => {
         if (!response.ok) throw new Error(`Honey Manga API: HTTP ${response.status}`);
