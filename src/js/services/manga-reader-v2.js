@@ -87,9 +87,18 @@ async function loadMangaData(chapterUrl) {
         }),
         fetchJson(`${HONEY_API}/v2/chapter/frames/${chapterId}/${titleId}`)
     ]);
-    const pages = Object.entries(frames?.resourceIds || {})
-        .sort(([a], [b]) => Number(a) - Number(b))
-        .map(([, content]) => ({ content }));
+    const extractPages = payload => {
+        const resources = payload?.resourceIds || payload?.data?.resourceIds || payload?.resources || {};
+        if (Array.isArray(resources)) return resources.map(item => typeof item === 'string' ? item : (item?.url || item?.resourceId || item?.id || '')).filter(Boolean).map(content => ({ content }));
+        return Object.entries(resources).sort(([a], [b]) => Number(a) - Number(b)).map(([, content]) => ({ content: typeof content === 'string' ? content : (content?.url || content?.resourceId || content?.id || '') })).filter(page => page.content);
+    };
+    let pages = extractPages(frames);
+    if (!pages.length) {
+        try {
+            const fallbackFrames = await fetchJson(`${HONEY_API}/chapter/frames/${chapterId}/${titleId}`);
+            pages = extractPages(fallbackFrames);
+        } catch {}
+    }
     const chapterList = (Array.isArray(chapterListPayload?.data) ? chapterListPayload.data : [])
         .filter(item => item?.id)
         .sort((a, b) => Number(a.volume || 0) - Number(b.volume || 0) || Number(a.chapterNum || 0) - Number(b.chapterNum || 0));

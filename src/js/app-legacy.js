@@ -5039,6 +5039,12 @@ const PROFILE_STICKER_SLOTS = 8;
         let homeCatalogView = 'grid';
         let homeCatalogPreset = 'all';
         let homeCatalogGenre = 'all';
+        const HOME_MANGA_AGE_OPTIONS = [
+            { key: 'all', label: 'Усі' },
+            { key: 'adult', label: 'Для дорослих' },
+            { key: 'teen', label: 'Для підлітків' },
+            { key: 'children', label: 'Для дітей' }
+        ];
         const honeyCatalogPageCache = new Map();
 
         const HOME_CATALOG_MODES = [
@@ -5178,9 +5184,15 @@ const PROFILE_STICKER_SLOTS = 8;
             return [...values.values()].sort((a, b) => a.localeCompare(b, 'uk'));
         }
 
+        function honeyAgeCategory(item) {
+            const words = normalizeHoneyMatch([...(item?.genres || []), ...(item?.tags || [])].join(' '));
+            if (item?.adult && String(item.adult).toUpperCase() !== 'NONE' || item?.isAdultCover || /(18|adult|ерот|еччі|гарем|порн|для дорослих|хентай)/i.test(words)) return 'adult';
+            if (/(кодомо|для дітей|дитяч|сімейн|казк|дошкіль)/i.test(words)) return 'children';
+            return 'teen';
+        }
         function homeCatalogGenreHtml() {
             if (homeCatalogMode !== 'manga') return '';
-            return `<label class="home-catalog-genre-filter"><span>Жанр манґи</span><select id="homeCatalogGenre" aria-label="Жанр манґи"><option value="all">Усі жанри</option>${getHoneyGenreOptions(homeCatalogItems).map(genre => `<option value="${escapeHtml(genre)}"${homeCatalogGenre === genre ? ' selected' : ''}>${escapeHtml(genre)}</option>`).join('')}</select></label>`;
+            return `<label class="home-catalog-genre-filter"><span>Вікова категорія</span><select id="homeCatalogGenre" aria-label="Вікова категорія">${HOME_MANGA_AGE_OPTIONS.map(option => `<option value="${option.key}"${homeCatalogGenre === option.key ? ' selected' : ''}>${option.label}</option>`).join('')}</select></label>`;
         }
 
         function syncHomeCatalogGenreControl(root = document) {
@@ -5213,6 +5225,9 @@ const PROFILE_STICKER_SLOTS = 8;
                 honeyChapterId: chapterId,
                 images: { jpg: { large_image_url: poster, image_url: poster } },
                 genres: normalizeGenreList(item.genresAndTags || item.genres || []),
+                tags: normalizeGenreList(item.tags || []),
+                adult: item.adult || 'NONE',
+                isAdultCover: Boolean(item.isAdultCover),
                 type: 'manga',
                 typeLabel: item.type || 'Манґа',
                 status: item.titleStatus || '',
@@ -5272,8 +5287,7 @@ const PROFILE_STICKER_SLOTS = 8;
                     : item.status === homeCatalogPreset);
             }
             if (homeCatalogMode === 'manga' && homeCatalogGenre !== 'all') {
-                const wanted = normalizeHoneyMatch(homeCatalogGenre);
-                filtered = filtered.filter(item => (item.genres || []).some(genre => normalizeHoneyMatch(genre?.name || genre) === wanted));
+                filtered = filtered.filter(item => honeyAgeCategory(item) === homeCatalogGenre);
             }
             return filtered.sort((a, b) => {
                 const availability = Number(Boolean(b.readerUrl)) - Number(Boolean(a.readerUrl));
