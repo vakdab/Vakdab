@@ -5061,8 +5061,9 @@ const PROFILE_STICKER_SLOTS = 8;
 
         // Hikka є джерелом метаданих і постерів. Honey Manga використовується для читання.
         const HONEY_API = 'https://data.api.honey-manga.com.ua';
+        const HONEY_SEARCH_API = 'https://search.api.honey-manga.com.ua';
         const HONEY_WEB = 'https://honey-manga.com.ua';
-        let honeyTitlesPromise = null;
+        const honeySearchCache = new Map();
         const honeyReaderCache = new Map();
 
         function normalizeHoneyMatch(value = '') {
@@ -5071,22 +5072,11 @@ const PROFILE_STICKER_SLOTS = 8;
                 .replace(/[^a-z0-9а-яіїєґ]+/gi, ' ').trim();
         }
 
-        async function fetchHoneyJson(path, options = {}) {
-            const url = `${HONEY_API}${path}`;
+        async function fetchHoneyJson(path, options = {}, baseUrl = HONEY_API) {
+            const url = `${baseUrl}${path}`;
             const response = await fetch(getProxyUrl(url, 'desktop'), { mode: 'cors', credentials: 'omit', cache: 'no-cache', ...options });
             if (!response.ok) throw new Error(`Honey Manga API: HTTP ${response.status}`);
             return response.json();
-        }
-
-        async function getHoneyTitles() {
-            if (!honeyTitlesPromise) {
-                honeyTitlesPromise = fetchHoneyJson('/v2/manga/cursor-list', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ page: 1, pageSize: 2000, filters: [{ filterBy: 'adult', filterValue: ['18+'], filterOperator: 'NOT_IN' }], sort: { sortBy: 'lastUpdated', sortOrder: 'DESC' } })
-                }).then(payload => Array.isArray(payload?.data) ? payload.data : []).catch(error => { console.warn('Honey Manga catalog lookup failed:', error); return []; });
-            }
-            return honeyTitlesPromise;
         }
 
         function honeyNamesMatch(left, right) {
@@ -5099,14 +5089,37 @@ const PROFILE_STICKER_SLOTS = 8;
             return shorter.length >= 2 && shorter.every(token => longer.includes(token));
         }
 
+        async function searchHoneyTitles(query) {
+            const normalized = normalizeHoneyMatch(query);
+            if (!normalized) return [];
+            if (honeySearchCache.has(normalized)) return honeySearchCache.get(normalized);
+            const promise = fetchHoneyJson(`/v2/manga/pattern?query=${encodeURIComponent(query)}`, {}, HONEY_SEARCH_API)
+                .then(payload => Array.isArray(payload) ? payload : [])
+                .catch(error => { console.warn('Honey Manga title search failed:', error); return []; });
+            honeySearchCache.set(normalized, promise);
+            return promise;
+        }
+
         async function resolveHoneyReader(item) {
             if (!item || homeCatalogMode !== 'manga') return item;
-            const keys = [item.title, item.originalTitle, item.title_en, item.title_ja].map(normalizeHoneyMatch).filter(Boolean);
+            const rawKeys = [item.title, item.originalTitle, item.title_en, item.title_ja].filter(Boolean);
+            const keys = rawKeys.map(normalizeHoneyMatch).filter(Boolean);
             if (!keys.length) return item;
             const cacheKey = keys.join('|');
             if (honeyReaderCache.has(cacheKey)) return { ...item, readerUrl: honeyReaderCache.get(cacheKey) };
-            const titles = await getHoneyTitles();
-            const match = titles.find(title => [title.title, title.alternativeTitle].some(candidate => keys.some(key => honeyNamesMatch(key, candidate))));
+            const resultSets = [];
+            for (const query of rawKeys.slice(0, 3)) {
+                const results = await searchHoneyTitles(query);
+                resultSets.push(...results);
+                const exact = results.find(title => [title.title, title.lowTitle, title.alternativeTitle, ...(title.titleTags || [])]
+                    .some(candidate => keys.some(key => honeyNamesMatch(key, candidate))));
+                if (exact) break;
+            }
+            const unique = [...new Map(resultSets.filter(title => title?.id).map(title => [title.id, title])).values()];
+            const exactMatch = unique.find(title => [title.title, title.lowTitle, title.alternativeTitle, ...(title.titleTags || [])]
+                .some(candidate => keys.includes(normalizeHoneyMatch(candidate))));
+            const match = exactMatch || unique.find(title => [title.title, title.lowTitle, title.alternativeTitle, ...(title.titleTags || [])]
+                .some(candidate => keys.some(key => honeyNamesMatch(key, candidate))));
             if (!match?.id) { honeyReaderCache.set(cacheKey, ''); return item; }
             try {
                 const payload = await fetchHoneyJson('/v2/chapter/cursor-list', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mangaId: match.id, page: 1, pageSize: 100, sort: { sortBy: 'chapterNum', sortOrder: 'ASC' } }) });
