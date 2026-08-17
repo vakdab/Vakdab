@@ -400,10 +400,21 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         export async function loadHoneyAvailabilityMap() {
             if (honeyAvailabilityMap) return honeyAvailabilityMap;
             if (!honeyAvailabilityMapPromise) {
-                const mapUrl = new URL('src/data/manga-honey-map.json?map-v1', document.baseURI).href;
+                const mapUrl = new URL('src/data/manga-honey-map.json?map-v2', document.baseURI).href;
                 honeyAvailabilityMapPromise = fetch(mapUrl, { cache: 'no-cache' })
                     .then(response => response.ok ? response.json() : null)
-                    .then(payload => { honeyAvailabilityMap = payload || { byHikka: {}, byHoney: {}, available: 0, honeyAvailable: 0 }; return honeyAvailabilityMap; })
+                    .then(payload => {
+                        honeyAvailabilityMap = payload || { byHikka: {}, byHoney: {}, available: 0, honeyAvailable: 0 };
+                        // Legacy map is keyed by Hikka IDs; native Honey cards use Honey title IDs.
+                        // Build the reverse index so native catalog items receive their reader URL.
+                        if (!honeyAvailabilityMap.byHoney || !Object.keys(honeyAvailabilityMap.byHoney).length) {
+                            honeyAvailabilityMap.byHoney = Object.values(honeyAvailabilityMap.byHikka || {})
+                                .filter(item => item?.id)
+                                .reduce((index, item) => { index[String(item.id)] = item; return index; }, {});
+                        }
+                        honeyAvailabilityMap.honeyAvailable = Number(honeyAvailabilityMap.honeyAvailable || honeyAvailabilityMap.available || Object.keys(honeyAvailabilityMap.byHoney).length);
+                        return honeyAvailabilityMap;
+                    })
                     .catch(error => { console.warn('Honey availability map failed:', error); honeyAvailabilityMap = { byHikka: {}, byHoney: {}, available: 0, honeyAvailable: 0 }; return honeyAvailabilityMap; });
             }
             return honeyAvailabilityMapPromise;
