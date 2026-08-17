@@ -16,7 +16,7 @@ export function bootstrap() {
         }
     });
     startGlobalEvents();
-    bootstrapPromise = import('../legacy/app-legacy.js?v=20260817-architecture-v3')
+    bootstrapPromise = import('../legacy/app-legacy.js?v=20260817-architecture-v4')
         .then(module => {
             window.VakDabLegacy = module;
             // Expose compatibility services only after the legacy module has fully evaluated.
