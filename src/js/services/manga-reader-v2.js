@@ -72,7 +72,8 @@ function parseChapterUrl(value) {
 function pageImageUrl(content) {
     const value = String(content || '').trim();
     if (!value) return '';
-    return getProxyUrl(/^https?:\/\//i.test(value) ? value : `${HONEY_IMAGE}/${value}`, 'desktop');
+    const direct = /^https?:\/\//i.test(value) ? value : `${HONEY_IMAGE}/${value}`;
+    return direct.startsWith(HONEY_IMAGE) ? direct : getProxyUrl(direct, 'desktop');
 }
 
 async function loadMangaData(chapterUrl) {
@@ -124,8 +125,8 @@ export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_
         const next = currentIndex >= 0 && currentIndex < chapterList.length - 1 ? chapterList[currentIndex + 1] : null;
         const pageMarkup = pages.map((page, index) => {
             const imageUrl = escapeHtml(pageImageUrl(page.content));
-            const source = index === 0 ? `src="${imageUrl}" fetchpriority="high"` : `data-src="${imageUrl}"`;
-            return `<figure class="manga-reader__page" data-page-index="${index}"><img ${source} alt="${safeTitle}, сторінка ${index + 1}" loading="${index === 0 ? 'eager' : 'lazy'}" decoding="async"><figcaption>${pageLabel(index, pages.length)}</figcaption></figure>`;
+            const source = index < 2 ? `src="${imageUrl}" fetchpriority="${index === 0 ? 'high' : 'auto'}"` : `data-src="${imageUrl}"`;
+            return `<figure class="manga-reader__page" data-page-index="${index}"><img ${source} alt="${safeTitle}, сторінка ${index + 1}" loading="${index < 2 ? 'eager' : 'lazy'}" decoding="async"><figcaption>${pageLabel(index, pages.length)}</figcaption></figure>`;
         }).join('');
         container.innerHTML = `<section class="manga-reader" aria-label="Рідер манґи">
             <header class="manga-reader__header">
@@ -158,14 +159,14 @@ export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_
             image.removeAttribute('data-src');
         };
         const loadAroundPage = index => {
-            [index - 1, index, index + 1].forEach(position => {
+            [index - 2, index - 1, index, index + 1, index + 2].forEach(position => {
                 if (figures[position]) loadPage(figures[position]);
             });
         };
         const pageObserver = 'IntersectionObserver' in window
             ? new IntersectionObserver(entries => entries.forEach(entry => {
                 if (entry.isIntersecting) loadPage(entry.target);
-            }), { rootMargin: '1100px 0px' })
+            }), { rootMargin: '1800px 0px' })
             : null;
         figures.forEach(figure => pageObserver?.observe(figure));
         loadAroundPage(0);
