@@ -819,7 +819,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                     <div class="home-catalog-quick-actions" role="group" aria-label="Швидкі дії каталогу">
                         <button class="home-catalog-filter-btn home-catalog-schedule-btn" id="homeCatalogScheduleBtn" type="button"><i class="fas fa-calendar-days"></i><span>Розклад виходу</span></button>
                         <button class="home-catalog-filter-btn" id="homeCatalogFilterBtn" type="button"><i class="fas fa-filter"></i><span>Фільтри</span></button>
-                        ${homeCatalogMode === 'manga' ? `<button class="home-catalog-filter-btn home-catalog-adult-btn${homeCatalogAdult ? ' active' : ''}" id="homeCatalogAdultBtn" type="button" aria-pressed="${homeCatalogAdult ? 'true' : 'false'}" aria-label="Манґа 18+"><span>18+</span></button>` : ''}
+                        <button class="home-catalog-filter-btn home-catalog-adult-btn${homeCatalogAdult ? ' active' : ''}" id="homeCatalogAdultBtn" type="button" aria-pressed="${homeCatalogAdult ? 'true' : 'false'}" aria-label="Манґа 18+"${homeCatalogMode === 'manga' ? '' : ' hidden'}><span>18+</span></button>
                     </div>
                 </div>
                 <div id="homeCatalogGenreRailHost">${homeCatalogGenreHtml()}</div>
@@ -897,8 +897,9 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             document.querySelectorAll('[data-catalog-mode]').forEach(tab => tab.classList.toggle('active', tab.dataset.catalogMode === homeCatalogMode));
             const adultButton = document.getElementById('homeCatalogAdultBtn');
             if (adultButton) {
-                adultButton.classList.toggle('active', homeCatalogAdult);
-                adultButton.setAttribute('aria-pressed', String(homeCatalogAdult));
+                adultButton.hidden = homeCatalogMode !== 'manga';
+                adultButton.classList.toggle('active', homeCatalogAdult && homeCatalogMode === 'manga');
+                adultButton.setAttribute('aria-pressed', String(homeCatalogAdult && homeCatalogMode === 'manga'));
             }
         }
 
