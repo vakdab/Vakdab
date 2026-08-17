@@ -127,3 +127,33 @@
     .modern-community-composer select, .modern-community-composer button { width: 100%; min-height: 40px; }
 }
 @media (prefers-reduced-motion: reduce) { .modern-community-category-card, .modern-community-topic-row, .modern-community-categories-button { transition: none; } }
+
+/* Community interaction layer */
+.modern-community-composer-tools { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 7px; }
+.modern-community-tool { display: inline-flex; align-items: center; min-height: 34px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--tag-bg); color: var(--text-secondary); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.modern-community-tool:hover, .modern-community-tool.is-active { border-color: rgba(var(--accent-rgb), .46); background: rgba(var(--accent-rgb), .1); color: var(--accent); }
+.modern-community-anime-fields { display: grid; gap: 7px; margin: 4px 0 10px; }
+.modern-community-anime-fields input { width: 100%; min-height: 35px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; outline: none; }
+.modern-community-anime-fields input:focus { border-color: rgba(var(--accent-rgb), .5); }
+.modern-community-media-preview { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.modern-community-media-preview span { padding: 5px 8px; border-radius: 7px; background: rgba(var(--accent-rgb), .1); color: var(--text-secondary); font-size: 10px; }
+.modern-community-reply-banner { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 7px 9px; border-left: 3px solid var(--accent); border-radius: 7px; background: rgba(var(--accent-rgb), .08); font-size: 11px; }
+.modern-community-reply-banner b { color: var(--accent); white-space: nowrap; }
+.modern-community-reply-banner span { overflow: hidden; color: var(--text-muted); text-overflow: ellipsis; white-space: nowrap; }
+.modern-community-reply-banner button { margin-left: auto; border: 0; background: transparent; color: var(--text-muted); font-size: 18px; line-height: 1; cursor: pointer; }
+.modern-community-reply-quote { display: grid; gap: 3px; margin: 14px 0 -5px; padding: 7px 9px; border-left: 3px solid var(--accent); border-radius: 6px; background: rgba(var(--accent-rgb), .06); }
+.modern-community-reply-quote b { color: var(--accent); font-size: 10px; }
+.modern-community-reply-quote span { overflow: hidden; color: var(--text-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.modern-community-media-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 13px; overflow: hidden; border-radius: 12px; }
+.modern-community-media-grid img, .modern-community-media-grid video { display: block; width: 100%; max-height: 260px; min-height: 120px; object-fit: cover; background: #111; }
+.modern-community-media-grid video { object-fit: contain; }
+.modern-community-anime-card { display: flex; align-items: stretch; gap: 11px; margin-top: 13px; overflow: hidden; border-radius: 12px; background: rgba(var(--accent-rgb), .08); }
+.modern-community-anime-card > img { width: 72px; min-height: 102px; object-fit: cover; }
+.modern-community-anime-card > div { display: grid; align-content: center; gap: 4px; padding: 10px 10px 10px 0; }
+.modern-community-anime-card small { color: var(--accent); font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.modern-community-anime-card b { font-size: 14px; }
+.modern-community-anime-card p { display: -webkit-box; overflow: hidden; margin: 0; color: var(--text-muted); font-size: 11px; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.modern-community-anime-card a { color: var(--accent); font-size: 11px; font-weight: 700; text-decoration: none; }
+.modern-community-reaction { padding: 4px 7px; border: 1px solid var(--border); border-radius: 999px; background: var(--tag-bg); color: var(--text-secondary); font: inherit; font-size: 11px; cursor: pointer; }
+.modern-community-reaction.is-mine { border-color: rgba(var(--accent-rgb), .55); background: rgba(var(--accent-rgb), .12); color: var(--accent); }
+@media (max-width: 720px) { .modern-community-composer-tools { justify-content: stretch; } .modern-community-tool, .modern-community-composer-tools > button[type="submit"] { flex: 1; justify-content: center; } .modern-community-media-grid { grid-template-columns: 1fr; } }

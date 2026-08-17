@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=20260817-community-hierarchy-v2';
+import './app-legacy.js?v=20260817-community-features-v1';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';
