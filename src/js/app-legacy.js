@@ -5059,10 +5059,11 @@ const PROFILE_STICKER_SLOTS = 8;
             return body;
         }
 
-        // Hikka є джерелом метаданих і постерів. Honey Manga використовується для читання.
+        // Honey Manga є єдиним джерелом каталогу, постерів і читання манґи. Hikka використовується для аніме та ранобе.
         const HONEY_API = 'https://data.api.honey-manga.com.ua';
         const HONEY_SEARCH_API = 'https://search.api.honey-manga.com.ua';
         const HONEY_WEB = 'https://honey-manga.com.ua';
+        const HONEY_IMAGE = 'https://hmvolumestorage.b-cdn.net/public-resources';
         const honeySearchCache = new Map();
         const honeyReaderCache = new Map();
         let honeyAvailabilityMap = null;
@@ -5074,8 +5075,8 @@ const PROFILE_STICKER_SLOTS = 8;
                 const mapUrl = new URL('src/data/manga-honey-map.json?map-v1', document.baseURI).href;
                 honeyAvailabilityMapPromise = fetch(mapUrl, { cache: 'no-cache' })
                     .then(response => response.ok ? response.json() : null)
-                    .then(payload => { honeyAvailabilityMap = payload || { byHikka: {}, available: 0 }; return honeyAvailabilityMap; })
-                    .catch(error => { console.warn('Honey availability map failed:', error); honeyAvailabilityMap = { byHikka: {}, available: 0 }; return honeyAvailabilityMap; });
+                    .then(payload => { honeyAvailabilityMap = payload || { byHikka: {}, byHoney: {}, available: 0, honeyAvailable: 0 }; return honeyAvailabilityMap; })
+                    .catch(error => { console.warn('Honey availability map failed:', error); honeyAvailabilityMap = { byHikka: {}, byHoney: {}, available: 0, honeyAvailable: 0 }; return honeyAvailabilityMap; });
             }
             return honeyAvailabilityMapPromise;
         }
@@ -5166,15 +5167,59 @@ const PROFILE_STICKER_SLOTS = 8;
             return items;
         }
 
+        function honeyCatalogItem(item) {
+            const posterId = item?.posterUrl || item?.posterId || '';
+            const poster = posterId ? `${HONEY_IMAGE}/${posterId}` : ANIME_CARD_PLACEHOLDER;
+            const mapped = honeyAvailabilityMap?.byHoney?.[item.id] || null;
+            const chapterId = mapped?.chapterId || '';
+            return {
+                honeyId: item.id,
+                mal_id: `honey-${item.id}`,
+                slug: item.id,
+                title: item.title || item.lowTitle || 'Без назви',
+                originalTitle: item.alternativeTitle || item.title || '',
+                url: `${HONEY_WEB}/manga/${item.id}`,
+                readerUrl: chapterId ? `${HONEY_WEB}/read/${chapterId}/${item.id}` : '',
+                honeyTitleId: item.id,
+                honeyChapterId: chapterId,
+                images: { jpg: { large_image_url: poster, image_url: poster } },
+                genres: normalizeGenreList(item.genresAndTags || item.genres || []),
+                type: 'manga',
+                typeLabel: item.type || 'Манґа',
+                status: item.titleStatus || '',
+                synopsis: normalizeSynopsisText(item.description || ''),
+                score: Number(item.rate || item.rateScore || 0),
+                year: item.lastUpdated ? String(item.lastUpdated).slice(0, 4) : '',
+                from: 'honey'
+            };
+        }
+
+        async function fetchHoneyCatalogPage(page) {
+            await loadHoneyAvailabilityMap();
+            if (homeCatalogQuery) {
+                const results = await searchHoneyTitles(homeCatalogQuery);
+                homeCatalogTotal = results.length;
+                return results.map(honeyCatalogItem);
+            }
+            const payload = await fetchHoneyJson('/v2/manga/cursor-list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ page: Math.max(1, page), pageSize: 24, sort: { sortBy: 'lastUpdated', sortOrder: 'DESC' }, filters: [] })
+            });
+            homeCatalogTotal = Number(payload?.counter || payload?.total || payload?.data?.length || 0);
+            return (Array.isArray(payload?.data) ? payload.data : []).map(honeyCatalogItem);
+        }
+
         async function fetchHomeCatalogPage(page) {
-            const endpoint = homeCatalogMode === 'manga' ? 'manga' : homeCatalogMode === 'novel' ? 'novel' : 'anime';
+            if (homeCatalogMode === 'manga') return fetchHoneyCatalogPage(page);
+            const endpoint = homeCatalogMode === 'novel' ? 'novel' : 'anime';
             const apiUrl = `${HIKKA_API}/${endpoint}?page=${Math.max(1, page)}&size=24`;
             const response = await hikkaRequest(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(homeCatalogRequestBody()) });
             if (!response.ok) throw new Error(`Hikka API: HTTP ${response.status}`);
             const data = await response.json();
             homeCatalogTotal = Number(data.pagination?.total || data.total || data.count || 0);
             const items = (data.list || []).map(item => hikkaItem(item, endpoint));
-            return endpoint === 'manga' ? attachHoneyReaders(items) : items;
+            return items;
         }
 
         function getHomeCatalogVisibleItems() {
@@ -5198,7 +5243,9 @@ const PROFILE_STICKER_SLOTS = 8;
         function homeCatalogCountText(visibleCount) {
             const total = homeCatalogTotal || visibleCount;
             if (homeCatalogMode === 'manga') {
-                const available = Number(honeyAvailabilityMap?.available || homeCatalogItems.filter(item => item?.readerUrl).length);
+                const available = homeCatalogMode === 'manga'
+                    ? Number(honeyAvailabilityMap?.honeyAvailable || honeyAvailabilityMap?.available || homeCatalogItems.filter(item => item?.readerUrl).length)
+                    : homeCatalogItems.filter(item => item?.readerUrl).length;
                 return `Доступно для читання: ${formatHomeCatalogNumber(available)} із ${formatHomeCatalogNumber(total)} манґи`;
             }
             return `Знайдено ${formatHomeCatalogNumber(total)} результатів`;

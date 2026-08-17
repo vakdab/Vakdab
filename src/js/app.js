@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=20260817-manga-map-v4';
+import './app-legacy.js?v=20260817-honey-native-v1';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';
