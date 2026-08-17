@@ -5169,7 +5169,7 @@ const PROFILE_STICKER_SLOTS = 8;
 
         function honeyCatalogItem(item) {
             const posterId = item?.posterUrl || item?.posterId || '';
-            const poster = posterId ? `${HONEY_IMAGE}/${posterId}` : ANIME_CARD_PLACEHOLDER;
+            const poster = posterId ? `${HONEY_IMAGE}/${posterId}?optimizer=image&width=296` : ANIME_CARD_PLACEHOLDER;
             const mapped = honeyAvailabilityMap?.byHoney?.[item.id] || null;
             const chapterId = mapped?.chapterId || '';
             return {
