@@ -3,6 +3,7 @@ import { getProxyUrl } from '../utils/image.js';
 const ZENKO_API = 'https://api.zenko.online';
 const ZENKO_IMAGE = 'https://image.zenko.online';
 const DEFAULT_CHAPTER_URL = 'https://zenko.online/titles/4162/80090';
+const jsonCache = new Map();
 
 function safeUrl(value, fallback = '') {
     try {
@@ -36,12 +37,20 @@ function chapterNumber(value = '') {
     return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
 }
 
-async function fetchJson(sourceUrl) {
-    const response = await fetch(getProxyUrl(sourceUrl, 'desktop'), {
-        mode: 'cors', credentials: 'omit', cache: 'no-cache'
+function fetchJson(sourceUrl) {
+    const cached = jsonCache.get(sourceUrl);
+    if (cached) return cached;
+    const request = fetch(getProxyUrl(sourceUrl, 'desktop'), {
+        mode: 'cors', credentials: 'omit', cache: 'force-cache'
+    }).then(response => {
+        if (!response.ok) throw new Error(`Zenko API: HTTP ${response.status}`);
+        return response.json();
+    }).catch(error => {
+        jsonCache.delete(sourceUrl);
+        throw error;
     });
-    if (!response.ok) throw new Error(`Zenko API: HTTP ${response.status}`);
-    return response.json();
+    jsonCache.set(sourceUrl, request);
+    return request;
 }
 
 function parseChapterUrl(value) {
@@ -80,7 +89,7 @@ function pageLabel(index, total) {
 
 export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_URL, onNavigate = () => {}) {
     if (!container) return;
-    container.innerHTML = `<section class="manga-reader manga-reader--loading"><div class="manga-reader__loader"><i class="fas fa-spinner fa-pulse"></i><p>Завантаження манґи…</p><small>Підключення до Zenko через проксі</small></div></section>`;
+    container.innerHTML = `<section class="manga-reader manga-reader--loading"><div class="manga-reader__loader"><i class="fas fa-spinner fa-pulse"></i><p>Завантаження манґи…</p><small>Підготовка сторінок для читання</small></div></section>`;
     try {
         const data = await loadMangaData(chapterUrl);
         if (!data.pages.length) throw new Error('У розділі немає сторінок');
@@ -90,14 +99,18 @@ export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_
         const chapterOptions = chapterList.map(item => `<option value="${escapeHtml(String(item.id))}"${String(item.id) === String(data.chapterId) ? ' selected' : ''}>${escapeHtml(normalizeChapterName(item.name))}</option>`).join('');
         const previous = currentIndex > 0 ? chapterList[currentIndex - 1] : null;
         const next = currentIndex >= 0 && currentIndex < chapterList.length - 1 ? chapterList[currentIndex + 1] : null;
-        const pageMarkup = pages.map((page, index) => `<figure class="manga-reader__page" data-page-index="${index}"><img src="${escapeHtml(pageImageUrl(page.content))}" alt="${safeTitle}, сторінка ${index + 1}" loading="${index < 2 ? 'eager' : 'lazy'}" decoding="async"><figcaption>${pageLabel(index, pages.length)}</figcaption></figure>`).join('');
+        const pageMarkup = pages.map((page, index) => {
+            const imageUrl = escapeHtml(pageImageUrl(page.content));
+            const source = index === 0 ? `src="${imageUrl}" fetchpriority="high"` : `data-src="${imageUrl}"`;
+            return `<figure class="manga-reader__page" data-page-index="${index}"><img ${source} alt="${safeTitle}, сторінка ${index + 1}" loading="${index === 0 ? 'eager' : 'lazy'}" decoding="async"><figcaption>${pageLabel(index, pages.length)}</figcaption></figure>`;
+        }).join('');
         container.innerHTML = `<section class="manga-reader" aria-label="Рідер манґи">
             <header class="manga-reader__header">
                 <button class="manga-reader__back" type="button" aria-label="Назад"><i class="fas fa-arrow-left"></i><span>Назад</span></button>
                 <div class="manga-reader__heading"><span>VAKDAB · МАНҐА</span><h1>${safeTitle}</h1><p>${escapeHtml(normalizeChapterName(chapter.name))}</p></div>
                 <button class="manga-reader__source" type="button" title="Відкрити джерело Zenko"><i class="fas fa-arrow-up-right-from-square"></i></button>
             </header>
-            <div class="manga-reader__intro"><div><strong>Читання через проксі</strong><span>Зображення завантажуються безпечно та оптимізовано для телефону.</span></div><span class="manga-reader__counter" id="mangaReaderCounter">1 / ${pages.length}</span></div>
+            <div class="manga-reader__intro"><div><strong>Зручне читання</strong><span>Сторінки завантажуються поступово та оптимізовано для телефону.</span></div><span class="manga-reader__counter" id="mangaReaderCounter">1 / ${pages.length}</span></div>
             <div class="manga-reader__toolbar" role="toolbar" aria-label="Керування рідером">
                 <button type="button" data-reader-action="prev" aria-label="Попередня сторінка"><i class="fas fa-chevron-left"></i></button>
                 <button type="button" data-reader-action="zoom-out" aria-label="Зменшити"><i class="fas fa-minus"></i></button>
@@ -116,8 +129,27 @@ export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_
         const figures = [...container.querySelectorAll('.manga-reader__page')];
         let activePage = 0;
         let zoom = 1;
+        const loadPage = figure => {
+            const image = figure?.querySelector('img[data-src]');
+            if (!image) return;
+            image.src = image.dataset.src;
+            image.removeAttribute('data-src');
+        };
+        const loadAroundPage = index => {
+            [index - 1, index, index + 1].forEach(position => {
+                if (figures[position]) loadPage(figures[position]);
+            });
+        };
+        const pageObserver = 'IntersectionObserver' in window
+            ? new IntersectionObserver(entries => entries.forEach(entry => {
+                if (entry.isIntersecting) loadPage(entry.target);
+            }), { rootMargin: '1100px 0px' })
+            : null;
+        figures.forEach(figure => pageObserver?.observe(figure));
+        loadAroundPage(0);
         const setActivePage = index => {
             activePage = Math.max(0, Math.min(figures.length - 1, index));
+            loadAroundPage(activePage);
             figures[activePage]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const counter = container.querySelector('#mangaReaderCounter');
             if (counter) counter.textContent = pageLabel(activePage, figures.length);
