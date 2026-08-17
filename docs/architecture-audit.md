@@ -94,3 +94,8 @@ All JavaScript files under `src/js` pass `node --check`. Relative local imports 
 ## Remaining optimization opportunities
 
 The compatibility layer is still large because it intentionally preserves current behavior. The next safe migrations are the player data pipeline, community read/write flows, and profile/settings rendering, each moved behind explicit state and service contracts with route-level smoke tests. After each migration, browser-level checks should record initial JS requests, total modules loaded, Firebase requests, duplicate requests, and time until the first interactive catalog card. No redesign is required for those steps.
+
+
+## 2026-08-17 cleanup
+
+Removed unused placeholder modules that were not imported by the runtime. The active compatibility layer remains in `src/js/legacy/app-legacy.js`; it was intentionally not split mechanically because its shared lexical state spans authentication, routing, catalog, player, community, and profile features.

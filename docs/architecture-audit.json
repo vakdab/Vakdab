@@ -336,75 +336,12 @@
       ]
     },
     {
-      "path": "src/js/components/pages/filter.js",
-      "bytes": 102,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "renderFilter"
-      ]
-    },
-    {
-      "path": "src/js/components/pages/genre.js",
-      "bytes": 100,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "renderGenre"
-      ]
-    },
-    {
-      "path": "src/js/components/pages/genres.js",
-      "bytes": 102,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "renderGenres"
-      ]
-    },
-    {
-      "path": "src/js/components/pages/main.js",
-      "bytes": 98,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "renderMain"
-      ]
-    },
-    {
       "path": "src/js/components/pages/profile.js",
       "bytes": 104,
       "lines": 3,
       "imports": [],
       "exports": [
         "renderProfile"
-      ]
-    },
-    {
-      "path": "src/js/components/pages/schedule.js",
-      "bytes": 106,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "renderSchedule"
-      ]
-    },
-    {
-      "path": "src/js/components/pages/search.js",
-      "bytes": 102,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "renderSearch"
-      ]
-    },
-    {
-      "path": "src/js/components/pages/settings.js",
-      "bytes": 106,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "renderSettings"
       ]
     },
     {
@@ -417,84 +354,12 @@
       ]
     },
     {
-      "path": "src/js/components/player/LampaPlayer.js",
-      "bytes": 59,
-      "lines": 2,
-      "imports": [],
-      "exports": [
-        "getPlayer"
-      ]
-    },
-    {
       "path": "src/js/components/player/animePage.js",
       "bytes": 66,
       "lines": 2,
       "imports": [],
       "exports": [
         "openAnimePage"
-      ]
-    },
-    {
-      "path": "src/js/components/player/episodes.js",
-      "bytes": 67,
-      "lines": 2,
-      "imports": [],
-      "exports": [
-        "getEpisodeController"
-      ]
-    },
-    {
-      "path": "src/js/components/ui/backToTop.js",
-      "bytes": 109,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "mountBackToTop"
-      ]
-    },
-    {
-      "path": "src/js/components/ui/bottomNav.js",
-      "bytes": 109,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "mountBottomNav"
-      ]
-    },
-    {
-      "path": "src/js/components/ui/header.js",
-      "bytes": 103,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "mountHeader"
-      ]
-    },
-    {
-      "path": "src/js/components/ui/hero.js",
-      "bytes": 99,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "mountHero"
-      ]
-    },
-    {
-      "path": "src/js/components/ui/leftMenu.js",
-      "bytes": 107,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "mountLeftMenu"
-      ]
-    },
-    {
-      "path": "src/js/components/ui/toast.js",
-      "bytes": 101,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "mountToast"
       ]
     },
     {
@@ -562,15 +427,6 @@
       ]
     },
     {
-      "path": "src/js/services/achievements.js",
-      "bytes": 73,
-      "lines": 2,
-      "imports": [],
-      "exports": [
-        "getAchievementsService"
-      ]
-    },
-    {
       "path": "src/js/services/api.js",
       "bytes": 574,
       "lines": 14,
@@ -597,52 +453,6 @@
         "../utils/image.js"
       ],
       "exports": []
-    },
-    {
-      "path": "src/js/services/manga.js",
-      "bytes": 149,
-      "lines": 3,
-      "imports": [],
-      "exports": []
-    },
-    {
-      "path": "src/js/services/parser.js",
-      "bytes": 156,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "parseHtml"
-      ]
-    },
-    {
-      "path": "src/js/services/stickers.js",
-      "bytes": 65,
-      "lines": 2,
-      "imports": [],
-      "exports": [
-        "getStickersService"
-      ]
-    },
-    {
-      "path": "src/js/services/user.js",
-      "bytes": 125,
-      "lines": 3,
-      "imports": [
-        "../core/auth.js"
-      ],
-      "exports": [
-        "getCurrentUser"
-      ]
-    },
-    {
-      "path": "src/js/utils/device.js",
-      "bytes": 189,
-      "lines": 3,
-      "imports": [],
-      "exports": [
-        "isMobileDevice",
-        "isTouchDevice"
-      ]
     },
     {
       "path": "src/js/utils/dom.js",
@@ -674,16 +484,6 @@
       "imports": [],
       "exports": [
         "hashCode"
-      ]
-    },
-    {
-      "path": "src/js/utils/time.js",
-      "bytes": 307,
-      "lines": 7,
-      "imports": [],
-      "exports": [
-        "padTime",
-        "formatDuration"
       ]
     }
   ]
