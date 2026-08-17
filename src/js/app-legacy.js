@@ -5513,7 +5513,7 @@ const PROFILE_STICKER_SLOTS = 8;
         //  СТОРІНКА НАЛАШТУВАНЬ
         // ====================================================================
         // Стан сторінки Налаштувань — яка вкладка активна, чи відкрито прев'ю
-        let settingsState = { tab: 'profile', previewOpen: false };
+        let settingsState = { tab: 'profile', previewOpen: true };
 
         const PROFILE_EFFECTS = [
             { id: 'none', label: 'Немає', icon: 'fa-ban' },
@@ -5612,9 +5612,9 @@ const PROFILE_STICKER_SLOTS = 8;
                   <div class="settings-preview-avatar-wrap${decorationClass}"><div class="profile-avatar">${avatarMarkup}</div></div>
                   <div class="settings-preview-nick-row"><strong>${escapeHtml(profile.nickname || 'Користувач')}</strong>${nickBadge}</div>
                   <div class="settings-preview-handle">@${escapeHtml((profile.nickname || 'user').toLowerCase().replace(/\s/g, '_'))}</div>
-                  <div class="settings-preview-bio">${escapeHtml(profile.bio || 'Опис профілю не додано')}</div>
+                  <div class="settings-preview-bio${profile.bioBold ? ' is-bold' : ''}">${escapeHtml(profile.bio || 'Опис профілю не додано')}</div>
                   <button type="button" class="settings-preview-bio-btn"><i class="fas fa-align-left"></i> Опис профілю</button>
-                  <div class="settings-preview-sticker-title"><span>Наліпки профілю</span><strong>${stickerKeys.length}/28</strong></div>
+                  <div class="settings-preview-sticker-title"><span>Наліпки профілю</span><strong>${stickerKeys.length}/${PROFILE_STICKER_SLOTS}</strong></div>
                   <div class="settings-preview-sticker-grid">${stickerSlots}</div>
                   <div class="settings-preview-tabs profile-tabs profile-tabs--${profile.tabStyle || 'underline'}"><span class="profile-tab active">Профіль</span><span class="profile-tab">Статистика</span><span class="profile-tab">Досягнення</span></div>
                 </div>
@@ -5860,8 +5860,12 @@ const PROFILE_STICKER_SLOTS = 8;
             <div class="settings-section-title">Опис профілю</div>
             <div class="settings-field">
               <textarea id="settingsBioInput" maxlength="160" rows="3">${escapeHtml(profile.bio || '')}</textarea>
-              <span class="settings-field-hint">До 160 символів. Зміни зберігаються автоматично.</span>
-            </div>
+                <div class="settings-bio-tools">
+                  <button type="button" class="settings-bio-bold-btn${profile.bioBold ? ' active' : ''}" id="settingsBioBoldBtn" aria-pressed="${profile.bioBold ? 'true' : 'false'}"><i class="fas fa-bold"></i> Жирний текст</button>
+                  <span class="settings-bio-tool-hint">Перемикає жирний опис у профілі та прев’ю.</span>
+                </div>
+                <span class="settings-field-hint">До 160 символів. Зміни зберігаються автоматично.</span>
+              </div>
 
             <div class="appearance-media-grid">
             <div class="appearance-media-block">
@@ -6059,7 +6063,21 @@ const PROFILE_STICKER_SLOTS = 8;
                 const p = getProfile();
                 p.bio = bioInput.value.trim() || p.bio;
                 saveProfile(p);
+                if (settingsState.previewOpen) renderSettingsPreviewPanel(p);
                 if (Router.currentRoute === 'profile') renderProfilePage();
+            });
+            document.getElementById('settingsBioBoldBtn')?.addEventListener('click', () => {
+                const p = getProfile();
+                p.bioBold = !p.bioBold;
+                saveProfile(p);
+                const btn = document.getElementById('settingsBioBoldBtn');
+                if (btn) {
+                    btn.classList.toggle('active', p.bioBold);
+                    btn.setAttribute('aria-pressed', p.bioBold ? 'true' : 'false');
+                }
+                if (settingsState.previewOpen) renderSettingsPreviewPanel(p);
+                if (Router.currentRoute === 'profile') renderProfilePage();
+                showToast(p.bioBold ? 'Жирний опис увімкнено' : 'Жирний опис вимкнено');
             });
 
             document.getElementById('settingsBannerUploadBtn')?.addEventListener('click', () => {
@@ -6201,6 +6219,7 @@ const PROFILE_STICKER_SLOTS = 8;
                 banner: '',
                 bannerVideo: '',
                 bio: 'Аніме ентузіаст. Дивлюсь усе підряд — від слайс-оф-лайф до психологічного трилера.',
+                bioBold: false,
                 realName: '',
                 birthdate: '',
                 showBirthdate: true,
@@ -6224,6 +6243,7 @@ const PROFILE_STICKER_SLOTS = 8;
                 if (typeof merged[key] !== 'string') merged[key] = def[key];
             });
             merged.nickname = merged.nickname.trim() || def.nickname;
+            merged.bioBold = merged.bioBold === true;
             return merged;
         }
 
@@ -6783,7 +6803,7 @@ function renderProfilePage() {
                   <span>${profileHandle}</span>
                 </div>
                 <div class="profile-bio-row">
-                  <div class="profile-bio" id="profileBioText">${profileBioText}</div>
+                  <div class="profile-bio${profile.bioBold ? ' is-bold' : ''}" id="profileBioText">${profileBioText}</div>
                 </div>
                 <div class="profile-stats">
                   <div class="profile-stat-pill">

@@ -1431,3 +1431,9 @@
     outline: 2px solid var(--accent);
     outline-offset: 2px;
 }
+
+/* Profile bio weight controlled from Settings → Appearance. */
+.profile-bio.is-bold {
+    font-weight: 800;
+    color: var(--text);
+}

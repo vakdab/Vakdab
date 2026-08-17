@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=20260816-profile-media-v1';
+import './app-legacy.js?v=20260817-appearance-v2';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';
