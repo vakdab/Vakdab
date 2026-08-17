@@ -8510,7 +8510,7 @@ function renderProfilePage() {
                 updatePlayFabLabel();
                 document.getElementById('episodePanel').classList.add('visible');
                 if (seasons.length === 0 || Object.keys(anime.seasons || {}).length === 0) {
-                    renderPlayerEpisodeError('Серії, сезони або озвучки не завантажилися.', anime._diagnostics, anime.url);
+                    renderPlayerEpisodeError('Аніме поки що не вийшло в українській озвучці.', anime._diagnostics, anime.url);
                     console.warn('No episodes found for anime:', anime.url, anime._diagnostics);
                 }
                 buildBottomSheetData();
