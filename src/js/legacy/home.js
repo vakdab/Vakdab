@@ -5,7 +5,7 @@ import {
     showToast, showToastProgress, syncLeftdockActive
 } from './app-legacy.js';
 import { getProfile, saveProfile } from './settings.js';
-import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaItem, hikkaRequest, searchHikka } from './catalog.js';
+import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from './catalog.js';
 
         // ====================================================================
         export let currentTab = 'main',
