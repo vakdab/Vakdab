@@ -1,34 +1,22 @@
-import { FIREBASE_CONFIG, initializeApp, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, setPersistence, browserLocalPersistence, signInAnonymously, sendPasswordResetEmail, deleteUser, getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot } from './config/firebase.js';
-import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_CORS_PROXY, MIKAI_BASE, GENRE_MAP } from './config/constants.js';
-import { safeQuery, safeQueryAll } from './utils/dom.js';
-import { getProxyUrl, isEmbedUrl } from './utils/image.js';
-import { renderMangaReader, DEFAULT_CHAPTER_URL } from './services/manga-reader-v2.js';
-import './utils/string.js';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, signInAnonymously, sendPasswordResetEmail, deleteUser, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot } from '../config/firebase.js';
+import { auth, db, initialized as firebaseInitialized } from '../services/firebase/client.js';
+import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_CORS_PROXY, MIKAI_BASE, GENRE_MAP } from '../config/constants.js';
+import { safeQuery, safeQueryAll } from '../utils/dom.js';
+import { getProxyUrl, isEmbedUrl } from '../utils/image.js';
+import { loadFeature } from '../core/feature-loader.js';
+import '../utils/string.js';
 
 let playerPageAnimeuaSeasons = null;
+const loadMangaReader = () => loadFeature('manga');
 let externalSourceCache = {};
 const PROFILE_STICKER_SLOTS = 8;
 
         // ====================================================================
         //  ІНІЦІАЛІЗАЦІЯ FIREBASE
         // ====================================================================
-        let firebaseApp = null;
-        let auth = null;
-        let db = null;
-        let firebaseInitialized = false;
-
-        try {
-            firebaseApp = initializeApp(FIREBASE_CONFIG);
-            auth = getAuth(firebaseApp);
-            // browserLocalPersistence — сесія зберігається в браузері (localStorage)
-            setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence error:', e));
-            db = getFirestore(firebaseApp);
-            firebaseInitialized = true;
-            /* console.log removed */
-        } catch (e) {
-            console.warn('Firebase init error:', e.message);
-            firebaseInitialized = false;
-        }
+        // Firebase client is initialized by services/firebase/client.js.
+        // Auth/Firestore operations remain in this compatibility layer until their
+        // domain services are migrated and browser smoke-tested.
 
         // ====================================================================
         //  СИСТЕМА АВТОРИЗАЦІЇ
@@ -2765,6 +2753,7 @@ const PROFILE_STICKER_SLOTS = 8;
             },
 
             showProfile() {
+                loadFeature('profile').catch(error => console.warn('[VakDab] profile feature preload:', error));
                 const container = document.getElementById('profilePageContainer');
                 container.style.display = 'block';
                 container.classList.add('active');
@@ -2811,6 +2800,7 @@ const PROFILE_STICKER_SLOTS = 8;
                 renderSchedulePage();
             },
             showStickers() {
+                loadFeature('stickers').catch(error => console.warn('[VakDab] stickers feature preload:', error));
                 const container = document.getElementById('stickersPageContainer');
                 if (container) {
                     container.style.display = 'block';
@@ -2825,9 +2815,12 @@ const PROFILE_STICKER_SLOTS = 8;
                 if (!container) return;
                 container.style.display = 'block';
                 container.classList.add('active');
-                renderMangaReader(container, chapterUrl, nextUrl => {
+                loadMangaReader().then(({ renderMangaReader }) => renderMangaReader(container, chapterUrl, nextUrl => {
                     if (nextUrl) this.goTo('manga', { url: nextUrl });
                     else this.goTo('main');
+                })).catch(error => {
+                    console.error('[VakDab] manga feature failed to load:', error);
+                    container.innerHTML = '<div class="loader">Не вдалося завантажити модуль манґи. Спробуйте ще раз.</div>';
                 });
             },
 
@@ -8625,6 +8618,7 @@ function renderProfilePage() {
         }
 
         async function openPlayerPage(url, options = {}) {
+            loadFeature('player').catch(error => console.warn('[VakDab] player feature preload:', error));
             const modal = document.getElementById('playerPageModal');
             if (!modal) return;
             if (!playerPageIsOpen) {
@@ -10968,6 +10962,8 @@ function renderProfilePage() {
                 if (route !== 'rating') return;
                 setTimeout(() => {
                     if (tab.dataset.panel === 'community') {
+                        loadFeature('community').catch(error => console.warn('[VakDab] community feature preload:', error));
+                        loadFeature('chat').catch(error => console.warn('[VakDab] chat feature preload:', error));
                         nav.classList.add('hidden-nav');
                     } else {
                         nav.classList.remove('hidden-nav');

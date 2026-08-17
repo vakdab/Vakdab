@@ -1,0 +1,690 @@
+{
+  "legacy": {
+    "bytes": 722090,
+    "lines": 11731,
+    "functions": [
+      "renderProfilePage"
+    ],
+    "arrow_functions": [],
+    "top_level_declarations": [
+      "PROFILE_STICKER_SLOTS",
+      "externalSourceCache",
+      "playerPageAnimeuaSeasons"
+    ],
+    "listeners": [
+      "play",
+      "pause",
+      "loadedmetadata",
+      "durationchange",
+      "timeupdate",
+      "waiting",
+      "playing",
+      "canplay",
+      "error",
+      "ended",
+      "click",
+      "dblclick",
+      "mousemove",
+      "touchstart",
+      "click",
+      "mousedown",
+      "mousemove",
+      "mouseup",
+      "touchstart",
+      "touchmove",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "fullscreenchange",
+      "webkitfullscreenchange",
+      "keydown",
+      "error",
+      "canplay",
+      "error",
+      "canplay",
+      "click",
+      "click",
+      "touchstart",
+      "touchend",
+      "click",
+      "keydown",
+      "hashchange",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "input",
+      "click",
+      "click",
+      "keydown",
+      "click",
+      "change",
+      "click",
+      "click",
+      "click",
+      "click",
+      "pointerdown",
+      "pointermove",
+      "contextmenu",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "keydown",
+      "click",
+      "keydown",
+      "click",
+      "keydown",
+      "click",
+      "click",
+      "click",
+      "input",
+      "keydown",
+      "click",
+      "click",
+      "keydown",
+      "change",
+      "input",
+      "change",
+      "change",
+      "change",
+      "click",
+      "change",
+      "click",
+      "change",
+      "click",
+      "click",
+      "click",
+      "click",
+      "loadedmetadata",
+      "pointerdown",
+      "pointermove",
+      "wheel",
+      "input",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "resize",
+      "error",
+      "error",
+      "click",
+      "keydown",
+      "click",
+      "pointerdown",
+      "pointermove",
+      "pointerup",
+      "pointercancel",
+      "click",
+      "dragstart",
+      "dragend",
+      "dragover",
+      "dragleave",
+      "drop",
+      "click",
+      "click",
+      "click",
+      "blur",
+      "keydown",
+      "blur",
+      "keydown",
+      "click",
+      "click",
+      "keydown",
+      "change",
+      "click",
+      "change",
+      "click",
+      "change",
+      "click",
+      "keydown",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "playing",
+      "playing",
+      "pause",
+      "waiting",
+      "seeking",
+      "seeked",
+      "timeupdate",
+      "click",
+      "keydown",
+      "click",
+      "keydown",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "keydown",
+      "click",
+      "scroll",
+      "beforeunload",
+      "visibilitychange",
+      "DOMContentLoaded",
+      "click",
+      "hashchange",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click",
+      "click"
+    ],
+    "imports": [
+      "./config/firebase.js",
+      "./config/constants.js",
+      "./utils/dom.js",
+      "./utils/image.js",
+      "./services/manga-reader-v2.js"
+    ],
+    "exports": [],
+    "urls": [
+      "http://www.w3.org/2000/svg",
+      "https://animeon.club/api/player/${animeId}/episodes?take=100&skip=-1&playerId=${encodeURIComponent(player.id",
+      "https://animeon.club/api/player/${animeId}/translations",
+      "https://animeon.club/api/player/${encodeURIComponent(ref.id",
+      "https://animeon.club/api/uploads/images/${a.image.preview}",
+      "https://animeon.club/api/uploads/images/${translation.studios[0].avatar.preview}",
+      "https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${f.type.startsWith(",
+      "https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${file.type.startsWith(",
+      "https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload",
+      "https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload",
+      "https://api.jikan.moe/v4",
+      "https://api.mikai.me/v1",
+      "https://api.themoviedb.org/3",
+      "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm",
+      "https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js",
+      "https://data.api.honey-manga.com.ua",
+      "https://graphql.anilist.co",
+      "https://hmvolumestorage.b-cdn.net/public-resources",
+      "https://honey-manga.com.ua",
+      "https://image.tmdb.org/t/p",
+      "https://images.mikai.me/avatar/medium/${encodeURIComponent(avatarUid",
+      "https://images.mikai.me/poster/small/${posterUid}.webp",
+      "https://search.api.honey-manga.com.ua",
+      "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"
+    ],
+    "domain_signals": {
+      "firebase": {
+        "firebase": 62,
+        "firestore": 32,
+        "auth": 226,
+        "onAuthStateChanged": 7
+      },
+      "hikka": {
+        "hikka": 115
+      },
+      "honey": {
+        "honey-manga": 3,
+        "hmvolumestorage": 1
+      },
+      "mikai": {
+        "mikai": 62
+      },
+      "cloudinary": {
+        "cloudinary": 39
+      },
+      "proxy": {
+        "getProxyUrl": 7,
+        "proxy": 26
+      },
+      "player": {
+        "player": 551,
+        "episode": 326,
+        "season": 287,
+        "fullscreen": 54
+      },
+      "community": {
+        "community": 249,
+        "chat": 17,
+        "comment": 3,
+        "reaction": 26,
+        "sticker": 304,
+        "badge": 74,
+        "group": 110
+      },
+      "profile": {
+        "profile": 574,
+        "avatar": 232,
+        "banner": 159
+      },
+      "catalog": {
+        "catalog": 257,
+        "genre": 222,
+        "schedule": 95,
+        "search": 197
+      },
+      "storage": {
+        "localStorage": 44
+      },
+      "routing": {
+        "location": 8,
+        "hash": 33,
+        "route": 165,
+        "navigate": 2,
+        "URLSearchParams": 5
+      },
+      "rendering": {
+        "innerHTML": 189,
+        "createElement": 28,
+        "appendChild": 20,
+        "insertAdjacentHTML": 1
+      }
+    }
+  },
+  "modules": [
+    {
+      "path": "src/js/app-legacy.js",
+      "bytes": 722090,
+      "lines": 11731,
+      "imports": [
+        "./config/firebase.js",
+        "./config/constants.js",
+        "./utils/dom.js",
+        "./utils/image.js",
+        "./services/manga-reader-v2.js"
+      ],
+      "exports": []
+    },
+    {
+      "path": "src/js/app.js",
+      "bytes": 696,
+      "lines": 25,
+      "imports": [],
+      "exports": []
+    },
+    {
+      "path": "src/js/components/community/chat.js",
+      "bytes": 56,
+      "lines": 2,
+      "imports": [],
+      "exports": [
+        "getChatModule"
+      ]
+    },
+    {
+      "path": "src/js/components/community/group.js",
+      "bytes": 58,
+      "lines": 2,
+      "imports": [],
+      "exports": [
+        "getGroupModule"
+      ]
+    },
+    {
+      "path": "src/js/components/pages/filter.js",
+      "bytes": 102,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "renderFilter"
+      ]
+    },
+    {
+      "path": "src/js/components/pages/genre.js",
+      "bytes": 100,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "renderGenre"
+      ]
+    },
+    {
+      "path": "src/js/components/pages/genres.js",
+      "bytes": 102,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "renderGenres"
+      ]
+    },
+    {
+      "path": "src/js/components/pages/main.js",
+      "bytes": 98,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "renderMain"
+      ]
+    },
+    {
+      "path": "src/js/components/pages/profile.js",
+      "bytes": 104,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "renderProfile"
+      ]
+    },
+    {
+      "path": "src/js/components/pages/schedule.js",
+      "bytes": 106,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "renderSchedule"
+      ]
+    },
+    {
+      "path": "src/js/components/pages/search.js",
+      "bytes": 102,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "renderSearch"
+      ]
+    },
+    {
+      "path": "src/js/components/pages/settings.js",
+      "bytes": 106,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "renderSettings"
+      ]
+    },
+    {
+      "path": "src/js/components/pages/stickersPage.js",
+      "bytes": 114,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "renderStickersPage"
+      ]
+    },
+    {
+      "path": "src/js/components/player/LampaPlayer.js",
+      "bytes": 59,
+      "lines": 2,
+      "imports": [],
+      "exports": [
+        "getPlayer"
+      ]
+    },
+    {
+      "path": "src/js/components/player/animePage.js",
+      "bytes": 66,
+      "lines": 2,
+      "imports": [],
+      "exports": [
+        "openAnimePage"
+      ]
+    },
+    {
+      "path": "src/js/components/player/episodes.js",
+      "bytes": 67,
+      "lines": 2,
+      "imports": [],
+      "exports": [
+        "getEpisodeController"
+      ]
+    },
+    {
+      "path": "src/js/components/ui/backToTop.js",
+      "bytes": 109,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "mountBackToTop"
+      ]
+    },
+    {
+      "path": "src/js/components/ui/bottomNav.js",
+      "bytes": 109,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "mountBottomNav"
+      ]
+    },
+    {
+      "path": "src/js/components/ui/header.js",
+      "bytes": 103,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "mountHeader"
+      ]
+    },
+    {
+      "path": "src/js/components/ui/hero.js",
+      "bytes": 99,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "mountHero"
+      ]
+    },
+    {
+      "path": "src/js/components/ui/leftMenu.js",
+      "bytes": 107,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "mountLeftMenu"
+      ]
+    },
+    {
+      "path": "src/js/components/ui/toast.js",
+      "bytes": 101,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "mountToast"
+      ]
+    },
+    {
+      "path": "src/js/config/constants.js",
+      "bytes": 978,
+      "lines": 9,
+      "imports": [],
+      "exports": [
+        "PROXY_URL",
+        "CLOUDINARY_CLOUD_NAME",
+        "CLOUDINARY_UPLOAD_PRESET",
+        "HIKKA_API",
+        "HIKKA_CORS_PROXY",
+        "MIKAI_BASE",
+        "GENRE_MAP"
+      ]
+    },
+    {
+      "path": "src/js/config/firebase.js",
+      "bytes": 1263,
+      "lines": 6,
+      "imports": [
+        "firebase/app",
+        "firebase/auth",
+        "firebase/firestore"
+      ],
+      "exports": [
+        "FIREBASE_CONFIG"
+      ]
+    },
+    {
+      "path": "src/js/core/auth.js",
+      "bytes": 139,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "getAuthService"
+      ]
+    },
+    {
+      "path": "src/js/core/router.js",
+      "bytes": 113,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "getRouter"
+      ]
+    },
+    {
+      "path": "src/js/core/state.js",
+      "bytes": 474,
+      "lines": 11,
+      "imports": [],
+      "exports": [
+        "createStore"
+      ]
+    },
+    {
+      "path": "src/js/core/storage.js",
+      "bytes": 137,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "getStorageService"
+      ]
+    },
+    {
+      "path": "src/js/services/achievements.js",
+      "bytes": 73,
+      "lines": 2,
+      "imports": [],
+      "exports": [
+        "getAchievementsService"
+      ]
+    },
+    {
+      "path": "src/js/services/api.js",
+      "bytes": 574,
+      "lines": 14,
+      "imports": [
+        "./fetch-cache.js"
+      ],
+      "exports": []
+    },
+    {
+      "path": "src/js/services/fetch-cache.js",
+      "bytes": 3216,
+      "lines": 104,
+      "imports": [],
+      "exports": [
+        "abortUrl",
+        "clearCache"
+      ]
+    },
+    {
+      "path": "src/js/services/manga-reader-v2.js",
+      "bytes": 15422,
+      "lines": 162,
+      "imports": [
+        "../utils/image.js"
+      ],
+      "exports": []
+    },
+    {
+      "path": "src/js/services/manga.js",
+      "bytes": 149,
+      "lines": 3,
+      "imports": [],
+      "exports": []
+    },
+    {
+      "path": "src/js/services/parser.js",
+      "bytes": 156,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "parseHtml"
+      ]
+    },
+    {
+      "path": "src/js/services/stickers.js",
+      "bytes": 65,
+      "lines": 2,
+      "imports": [],
+      "exports": [
+        "getStickersService"
+      ]
+    },
+    {
+      "path": "src/js/services/user.js",
+      "bytes": 125,
+      "lines": 3,
+      "imports": [
+        "../core/auth.js"
+      ],
+      "exports": [
+        "getCurrentUser"
+      ]
+    },
+    {
+      "path": "src/js/utils/device.js",
+      "bytes": 189,
+      "lines": 3,
+      "imports": [],
+      "exports": [
+        "isMobileDevice",
+        "isTouchDevice"
+      ]
+    },
+    {
+      "path": "src/js/utils/dom.js",
+      "bytes": 505,
+      "lines": 11,
+      "imports": [],
+      "exports": [
+        "safeQuery",
+        "safeQueryAll",
+        "escapeHtml"
+      ]
+    },
+    {
+      "path": "src/js/utils/image.js",
+      "bytes": 490,
+      "lines": 12,
+      "imports": [
+        "../config/constants.js"
+      ],
+      "exports": [
+        "getProxyUrl",
+        "isEmbedUrl"
+      ]
+    },
+    {
+      "path": "src/js/utils/string.js",
+      "bytes": 278,
+      "lines": 9,
+      "imports": [],
+      "exports": [
+        "hashCode"
+      ]
+    },
+    {
+      "path": "src/js/utils/time.js",
+      "bytes": 307,
+      "lines": 7,
+      "imports": [],
+      "exports": [
+        "padTime",
+        "formatDuration"
+      ]
+    }
+  ]
+}
