@@ -664,6 +664,45 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
 .home-catalog-preset { flex: 0 0 auto; padding: .65rem .85rem; border: 1px solid var(--border); border-radius: 12px; background: transparent; color: var(--text-secondary); cursor: pointer; font: inherit; font-size: .72rem; font-weight: 700; white-space: nowrap; }
 .home-catalog-preset:hover { color: var(--text); border-color: var(--text-muted); }
 .home-catalog-preset.active { border-color: color-mix(in srgb, var(--accent) 58%, var(--border)); background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+.home-catalog-genre-rail {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin: .15rem 0 .75rem;
+    padding: .15rem 0 .45rem;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+}
+.home-catalog-genre-rail::-webkit-scrollbar { display: none; }
+.home-catalog-genre-chip {
+    flex: 0 0 auto;
+    min-height: 2.25rem;
+    padding: .5rem .85rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font: inherit;
+    font-size: .72rem;
+    font-weight: 750;
+    white-space: nowrap;
+    transition: background var(--transition), color var(--transition), border-color var(--transition), transform var(--transition);
+}
+.home-catalog-genre-chip:hover { border-color: var(--text-muted); color: var(--text); transform: translateY(-1px); }
+.home-catalog-genre-chip.active { border-color: #0b0b0b; background: #0b0b0b; color: #fff; }
+.home-catalog-adult-btn,
+.home-catalog-adult-btn:hover,
+.home-catalog-adult-btn:focus-visible {
+    min-width: 3rem;
+    border-color: #58bd61 !important;
+    background: #63c568 !important;
+    color: #0b0b0b !important;
+    font-weight: 950;
+    -webkit-text-fill-color: #0b0b0b !important;
+}
+.home-catalog-adult-btn.active { box-shadow: 0 0 0 3px color-mix(in srgb, #63c568 32%, transparent); }
 .home-catalog-results-label { margin: .55rem 0 .8rem; color: var(--text-muted); font-size: .78rem; }
 .home-catalog-results-label strong { color: var(--text); font-size: .95rem; }
 .home-catalog-grid.is-list { grid-template-columns: 1fr 1fr; }
@@ -805,6 +844,13 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     .home-catalog-quick-actions .home-catalog-filter-btn span {
         display: none;
     }
+    .home-catalog-quick-actions .home-catalog-adult-btn span {
+        display: inline !important;
+        font-size: .68rem;
+        font-weight: 950;
+    }
+    .home-catalog-genre-rail { margin-inline: -.1rem; padding-inline: .1rem; }
+    .home-catalog-genre-chip { min-height: 2.1rem; padding-inline: .75rem; font-size: .68rem; }
 }
 .home-catalog-more {
     min-height: 2.8rem;

@@ -359,12 +359,9 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         export let homeCatalogView = 'grid';
         export let homeCatalogPreset = 'all';
         export let homeCatalogGenre = 'all';
-        export const HOME_MANGA_AGE_OPTIONS = [
-            { key: 'all', label: 'Усі' },
-            { key: 'adult', label: 'Для дорослих' },
-            { key: 'teen', label: 'Для підлітків' },
-            { key: 'children', label: 'Для дітей' }
-        ];
+        export let homeCatalogAdult = false;
+        // Kept as a compatibility export for older modules; the catalog UI no longer exposes age categories.
+        export const HOME_MANGA_AGE_OPTIONS = [{ key: 'all', label: 'Усі' }];
         export const honeyCatalogPageCache = new Map();
 
         export const HOME_CATALOG_MODES = [
@@ -574,21 +571,19 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             return 'teen';
         }
         export function homeCatalogGenreHtml() {
-            if (homeCatalogMode !== 'manga') return '';
-            return `<label class="home-catalog-age-filter"><span class="home-catalog-age-filter__label">Вікова категорія</span><span class="home-catalog-age-filter__control"><select id="homeCatalogGenre" aria-label="Вікова категорія">${HOME_MANGA_AGE_OPTIONS.map(option => `<option value="${option.key}"${homeCatalogGenre === option.key ? ' selected' : ''}>${option.label}</option>`).join('')}</select><i class="fas fa-chevron-down" aria-hidden="true"></i></span></label>`;
+            const options = getHoneyGenreOptions(homeCatalogItems);
+            return `<div class="home-catalog-genre-rail" role="group" aria-label="Жанри"><button type="button" class="home-catalog-genre-chip${homeCatalogGenre === 'all' ? ' active' : ''}" data-catalog-genre="all">Усі жанри</button>${options.map(genre => `<button type="button" class="home-catalog-genre-chip${normalizeHoneyMatch(genre) === normalizeHoneyMatch(homeCatalogGenre) ? ' active' : ''}" data-catalog-genre="${escapeHtml(genre)}">${escapeHtml(genre)}</button>`).join('')}</div>`;
         }
 
         export function syncHomeCatalogGenreControl(root = document) {
-            const presets = root.querySelector('#homeCatalogPresets');
-            const existing = root.querySelector('#homeCatalogGenre')?.closest('.home-catalog-age-filter');
-            if (existing) existing.remove();
-            if (homeCatalogMode === 'manga' && presets) {
-                presets.insertAdjacentHTML('afterend', homeCatalogGenreHtml());
-                root.querySelector('#homeCatalogGenre')?.addEventListener('change', event => {
-                    homeCatalogGenre = event.target.value || 'all';
-                    renderHomeCatalogGrid();
-                });
-            }
+            const host = root.querySelector('#homeCatalogGenreRailHost');
+            if (!host) return;
+            host.innerHTML = homeCatalogGenreHtml();
+            host.querySelectorAll('[data-catalog-genre]').forEach(button => button.addEventListener('click', () => {
+                homeCatalogGenre = button.dataset.catalogGenre || 'all';
+                host.querySelectorAll('[data-catalog-genre]').forEach(item => item.classList.toggle('active', item === button));
+                renderHomeCatalogGrid();
+            }));
         }
 
         export function honeyCatalogItem(item) {
@@ -656,7 +651,9 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             if (homeCatalogMode === 'manga') return fetchHoneyCatalogPage(page);
             const endpoint = homeCatalogMode === 'novel' ? 'novel' : 'anime';
             const apiUrl = `${HIKKA_API}/${endpoint}?page=${Math.max(1, page)}&size=24`;
-            const response = await hikkaRequest(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(homeCatalogRequestBody()) });
+            const requestBody = homeCatalogRequestBody();
+            if (homeCatalogMode === 'anime' && homeCatalogAdult) requestBody.rating = ['rx'];
+            const response = await hikkaRequest(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
             if (!response.ok) throw new Error(`Hikka API: HTTP ${response.status}`);
             const data = await response.json();
             homeCatalogTotal = Number(data.pagination?.total || data.total || data.count || 0);
@@ -667,13 +664,9 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         export function getHomeCatalogVisibleItems() {
             const items = [...homeCatalogItems];
             let filtered = items;
-            if (homeCatalogMode === 'anime' && homeCatalogPreset !== 'all') {
-                filtered = filtered.filter(item => homeCatalogPreset === 'finished'
-                    ? ['finished', 'released', 'completed'].includes(item.status)
-                    : item.status === homeCatalogPreset);
-            }
-            if (homeCatalogMode === 'manga' && homeCatalogGenre !== 'all') {
-                filtered = filtered.filter(item => honeyAgeCategory(item) === homeCatalogGenre);
+            if (homeCatalogGenre !== 'all') {
+                const selectedGenre = normalizeHoneyMatch(homeCatalogGenre);
+                filtered = filtered.filter(item => (item.genres || []).some(genre => normalizeHoneyMatch(genre) === selectedGenre));
             }
             return filtered.sort((a, b) => {
                 const availability = Number(Boolean(b.readerUrl)) - Number(Boolean(a.readerUrl));
@@ -707,7 +700,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
             const title = a.title || 'Без назви';
             const type = a.typeLabel || animeTypeLabel(a.type);
-            const status = statusLabelUa(a.status);
+            const status = homeCatalogAdult ? '18+' : statusLabelUa(a.status);
             const meta = [type, a.year, status].filter(Boolean).join(' · ');
             return `<article class="home-catalog-card${a.readerUrl || a.readerAvailable ? ' home-catalog-card--reader' : ''}" data-url="${escapeHtml(String(a.url || ''))}"${a.readerUrl ? ` data-reader-url="${escapeHtml(a.readerUrl)}"` : ''}${a.readerAvailable && !a.readerUrl ? ` data-reader-pending="1" data-honey-id="${escapeHtml(String(a.honeyId || a.honeyTitleId || ''))}"` : ''} tabindex="0" role="button" aria-label="${escapeHtml(title)}">
                 <div class="home-catalog-card__poster">
@@ -752,9 +745,10 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         export function buildHomeCatalogSectionHtml(items) {
             const activeMode = HOME_CATALOG_MODES.find(mode => mode.key === homeCatalogMode) || HOME_CATALOG_MODES[0];
             const visibleItems = getHomeCatalogVisibleItems();
+            const catalogTitle = homeCatalogAdult ? '18+ аніме' : `Каталог ${activeMode.label.toLowerCase()}`;
             return `<section class="home-catalog-section" id="homeCatalogSection">
                 <div class="home-catalog-heading">
-                    <div><h2>Каталог ${escapeHtml(activeMode.label.toLowerCase())}</h2></div>
+                    <div><h2>${escapeHtml(catalogTitle)}</h2></div>
                     <span class="home-catalog-count" id="homeCatalogCount">${homeCatalogCountText(visibleItems.length)}</span>
                 </div>
                 <nav class="home-catalog-tabs" id="homeCatalogTabs" aria-label="Тип каталогу">
@@ -769,13 +763,13 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                     <div class="home-catalog-quick-actions" role="group" aria-label="Швидкі дії каталогу">
                         <button class="home-catalog-filter-btn home-catalog-schedule-btn" id="homeCatalogScheduleBtn" type="button"><i class="fas fa-calendar-days"></i><span>Розклад виходу</span></button>
                         <button class="home-catalog-filter-btn" id="homeCatalogFilterBtn" type="button"><i class="fas fa-filter"></i><span>Фільтри</span></button>
+                        <button class="home-catalog-filter-btn home-catalog-adult-btn${homeCatalogAdult ? ' active' : ''}" id="homeCatalogAdultBtn" type="button" aria-pressed="${homeCatalogAdult ? 'true' : 'false'}" aria-label="Аніме 18+"><span>18+</span></button>
                     </div>
                 </div>
-                <div class="home-catalog-presets" id="homeCatalogPresets">${HOME_CATALOG_PRESETS.map(preset => `<button type="button" class="home-catalog-preset${preset.key === homeCatalogPreset ? ' active' : ''}" data-catalog-preset="${preset.key}">${preset.label}</button>`).join('')}</div>
-                ${homeCatalogGenreHtml()}
+                <div id="homeCatalogGenreRailHost">${homeCatalogGenreHtml()}</div>
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
-                <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>
+                ${homeCatalogAdult ? '' : '<button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>'}
             </section>`;
         }
 
@@ -799,6 +793,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             tabs.forEach(tab => tab.addEventListener('click', async () => {
                 if (tab.dataset.catalogMode === homeCatalogMode || homeCatalogLoading) return;
                 homeCatalogMode = tab.dataset.catalogMode;
+                homeCatalogAdult = false;
                 homeCatalogQuery = '';
                 homeCatalogPreset = 'all';
                 homeCatalogGenre = 'all';
@@ -813,11 +808,15 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 root.querySelectorAll('[data-catalog-view]').forEach(item => item.classList.toggle('active', item === button));
                 renderHomeCatalogGrid();
             }));
-            root.querySelectorAll('[data-catalog-preset]').forEach(button => button.addEventListener('click', async () => {
-                homeCatalogPreset = button.dataset.catalogPreset;
-                root.querySelectorAll('[data-catalog-preset]').forEach(item => item.classList.toggle('active', item === button));
-                renderHomeCatalogGrid();
-            }));
+            root.querySelector('#homeCatalogAdultBtn')?.addEventListener('click', async () => {
+                if (homeCatalogLoading) return;
+                homeCatalogAdult = !homeCatalogAdult;
+                homeCatalogMode = 'anime';
+                homeCatalogQuery = '';
+                homeCatalogPreset = 'all';
+                homeCatalogGenre = 'all';
+                await reloadHomeCatalog();
+            });
             let searchTimer = null;
             root.querySelector('#homeCatalogSearch')?.addEventListener('input', event => {
                 clearTimeout(searchTimer);
@@ -837,9 +836,14 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             const mode = HOME_CATALOG_MODES.find(item => item.key === homeCatalogMode) || HOME_CATALOG_MODES[0];
             const title = document.querySelector('#homeCatalogSection h2');
             const search = document.getElementById('homeCatalogSearch');
-            if (title) title.textContent = `Каталог ${mode.label.toLowerCase()}`;
+            if (title) title.textContent = homeCatalogAdult ? '18+ аніме' : `Каталог ${mode.label.toLowerCase()}`;
             if (search) search.placeholder = `Введіть назву ${mode.label.toLowerCase()}...`;
             document.querySelectorAll('[data-catalog-mode]').forEach(tab => tab.classList.toggle('active', tab.dataset.catalogMode === homeCatalogMode));
+            const adultButton = document.getElementById('homeCatalogAdultBtn');
+            if (adultButton) {
+                adultButton.classList.toggle('active', homeCatalogAdult);
+                adultButton.setAttribute('aria-pressed', String(homeCatalogAdult));
+            }
         }
 
         export async function reloadHomeCatalog() {
@@ -856,6 +860,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 homeCatalogItems = nextItems;
                 syncHomeCatalogGenreControl();
                 renderHomeCatalogGrid();
+                syncHomeCatalogMoreButton();
                 const button = document.getElementById('homeCatalogMoreBtn');
                 if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-plus"></i> Продовжити'; }
             } catch (error) {
@@ -889,6 +894,16 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 showToast('Не вдалося завантажити наступну сторінку каталогу');
             } finally { homeCatalogLoading = false; }
         }
+        export function syncHomeCatalogMoreButton() {
+            const grid = document.getElementById('homeCatalogGrid');
+            let button = document.getElementById('homeCatalogMoreBtn');
+            if (homeCatalogAdult) { button?.remove(); return; }
+            if (!button && grid) {
+                grid.insertAdjacentHTML('afterend', '<button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>');
+                button = document.getElementById('homeCatalogMoreBtn');
+                button?.addEventListener('click', loadHomeCatalogMore);
+            }
+        }
         window.loadHomeCatalogMore = loadHomeCatalogMore;
 
         export async function loadAndDisplayGenreSections() {
@@ -913,7 +928,8 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 container.innerHTML = html;
                 bindHomeCatalogCards(container);
                 bindHomeCatalogMenu(container);
-                document.getElementById('homeCatalogMoreBtn')?.addEventListener('click', loadHomeCatalogMore);
+                syncHomeCatalogGenreControl(container);
+                syncHomeCatalogMoreButton();
 
 
             } catch (err) {
