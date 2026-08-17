@@ -1,5 +1,5 @@
 /** VakDab browser entrypoint. */
-import './app-legacy.js?v=20260817-catalog-fix-v3';
+import './app-legacy.js?v=20260817-manga-map-v4';
 import './utils/dom.js';
 import './utils/string.js';
 import './utils/time.js';

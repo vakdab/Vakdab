@@ -5065,6 +5065,20 @@ const PROFILE_STICKER_SLOTS = 8;
         const HONEY_WEB = 'https://honey-manga.com.ua';
         const honeySearchCache = new Map();
         const honeyReaderCache = new Map();
+        let honeyAvailabilityMap = null;
+        let honeyAvailabilityMapPromise = null;
+
+        async function loadHoneyAvailabilityMap() {
+            if (honeyAvailabilityMap) return honeyAvailabilityMap;
+            if (!honeyAvailabilityMapPromise) {
+                const mapUrl = new URL('src/data/manga-honey-map.json?map-v1', document.baseURI).href;
+                honeyAvailabilityMapPromise = fetch(mapUrl, { cache: 'no-cache' })
+                    .then(response => response.ok ? response.json() : null)
+                    .then(payload => { honeyAvailabilityMap = payload || { byHikka: {}, available: 0 }; return honeyAvailabilityMap; })
+                    .catch(error => { console.warn('Honey availability map failed:', error); honeyAvailabilityMap = { byHikka: {}, available: 0 }; return honeyAvailabilityMap; });
+            }
+            return honeyAvailabilityMapPromise;
+        }
 
         function normalizeHoneyMatch(value = '') {
             return String(value || '').toLocaleLowerCase('uk-UA').normalize('NFKD')
@@ -5102,6 +5116,12 @@ const PROFILE_STICKER_SLOTS = 8;
 
         async function resolveHoneyReader(item) {
             if (!item || homeCatalogMode !== 'manga') return item;
+            const map = await loadHoneyAvailabilityMap();
+            const mapped = map?.byHikka?.[String(item.mal_id)] || map?.byHikka?.[String(item.slug)];
+            if (mapped?.id && mapped?.chapterId) {
+                const readerUrl = `${HONEY_WEB}/read/${mapped.chapterId}/${mapped.id}`;
+                return { ...item, readerUrl, honeyTitleId: mapped.id, honeyChapterId: mapped.chapterId };
+            }
             const rawKeys = [item.title, item.originalTitle, item.title_en, item.title_ja].filter(Boolean);
             const keys = rawKeys.map(normalizeHoneyMatch).filter(Boolean);
             if (!keys.length) return item;
@@ -5134,6 +5154,7 @@ const PROFILE_STICKER_SLOTS = 8;
 
         async function attachHoneyReaders(items) {
             if (homeCatalogMode !== 'manga') return items;
+            await loadHoneyAvailabilityMap();
             let cursor = 0;
             const worker = async () => {
                 while (cursor < items.length) {
@@ -5177,7 +5198,7 @@ const PROFILE_STICKER_SLOTS = 8;
         function homeCatalogCountText(visibleCount) {
             const total = homeCatalogTotal || visibleCount;
             if (homeCatalogMode === 'manga') {
-                const available = homeCatalogItems.filter(item => item?.readerUrl).length;
+                const available = Number(honeyAvailabilityMap?.available || homeCatalogItems.filter(item => item?.readerUrl).length);
                 return `Доступно для читання: ${formatHomeCatalogNumber(available)} із ${formatHomeCatalogNumber(total)} манґи`;
             }
             return `Знайдено ${formatHomeCatalogNumber(total)} результатів`;
