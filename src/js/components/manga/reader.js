@@ -1,4 +1,4 @@
-import { DEFAULT_CHAPTER_URL, HONEY_WEB, getChapterFrames, getReaderBackgroundData, pageImageUrl, parseChapterUrl } from '../../services/api/honey.js';
+import { DEFAULT_CHAPTER_URL, HONEY_WEB, getChapterFrames, getReaderBackgroundData, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/honey.js';
 import { buildPageMarkup, escapeHtml, normalizeChapterName, pageLabel } from './pages.js';
 import { createPagePreloader } from './preload.js';
 
@@ -22,7 +22,7 @@ function showReaderError(container, error, chapterUrl, onNavigate) {
 
 function renderShell(container, ids, pages, background, chapterUrl, onNavigate) {
     const titleFallback = 'Манґа';
-    const pageMarkup = buildPageMarkup(pages, pageImageUrl);
+    const pageMarkup = buildPageMarkup(pages, pageImageUrl, pageImageFallbackUrl);
     container.innerHTML = `<section class="manga-reader" aria-label="Рідер манґи">
         <header class="manga-reader__header"><button class="manga-reader__back" type="button" aria-label="Назад"><i class="fas fa-arrow-left"></i><span>Назад</span></button><div class="manga-reader__heading"><span>VAKDAB · МАНҐА</span><h1 id="mangaReaderTitle">${titleFallback}</h1><p id="mangaReaderChapter">${escapeHtml(normalizeChapterName(chapterUrl))}</p></div></header>
         <div class="manga-reader__intro"><div><strong>Швидке читання</strong><span>Перша сторінка вже завантажується, інші — поступово у фоні.</span></div><span class="manga-reader__counter" id="mangaReaderCounter">1 / ${pages.length}</span></div>

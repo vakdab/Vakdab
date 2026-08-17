@@ -25,7 +25,19 @@ export function pageImageUrl(content) {
     const value = String(content || '').trim();
     if (!value) return '';
     const direct = /^https?:\/\//i.test(value) ? value : `${HONEY_IMAGE}/${value}`;
-    return direct.startsWith(HONEY_IMAGE) ? direct : getProxyUrl(direct, 'desktop');
+    if (!direct.startsWith(HONEY_IMAGE)) return getProxyUrl(direct, 'desktop');
+    const url = new URL(direct);
+    url.searchParams.set('optimizer', 'image');
+    url.searchParams.set('quality', '85');
+    url.searchParams.set('width', '1080');
+    return url.href;
+}
+
+export function pageImageFallbackUrl(content) {
+    const value = String(content || '').trim();
+    if (!value) return '';
+    const direct = /^https?:\/\//i.test(value) ? value : `${HONEY_IMAGE}/${value}`;
+    return getProxyUrl(direct, 'desktop');
 }
 
 function fetchJson(sourceUrl, options = {}) {
@@ -50,12 +62,11 @@ function extractPages(payload) {
 }
 
 export async function getChapterFrames(chapterId, titleId) {
-    // Honey's public reader currently exposes resourceIds on the chapter
-    // payload; keep the legacy frames routes as fallbacks for older chapters.
+    // The canonical public reader endpoint is the v2 frames route. The old
+    // /v2/chapter/:id route returns 404 and must not be probed first.
     const endpoints = [
-        `${HONEY_API}/v2/chapter/${chapterId}`,
-        `${HONEY_API}/chapter/${chapterId}`,
         `${HONEY_API}/v2/chapter/frames/${chapterId}/${titleId}`,
+        `${HONEY_API}/chapter/${chapterId}`,
         `${HONEY_API}/chapter/frames/${chapterId}/${titleId}`
     ];
     for (const endpoint of endpoints) {

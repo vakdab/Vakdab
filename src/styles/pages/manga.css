@@ -63,8 +63,12 @@
 .home-catalog-featured-manga span:nth-child(2) { display: grid; gap: 4px; min-width: 0; flex: 1; }
 .home-catalog-featured-manga small { color: var(--text-muted); font-size: 12px; }
 .home-catalog-featured-manga > i { color: var(--accent); }
-@media (max-width: 600px) {
-    .manga-reader { padding: 12px 8px 90px; }
+@media (max-width: 720px) {
+    .manga-reader { width: 100%; max-width: none; box-sizing: border-box; padding: 12px max(8px, env(safe-area-inset-left)) 90px max(8px, env(safe-area-inset-right)); }
+    .manga-reader__header, .manga-reader__intro, .manga-reader__chapter-select, .manga-reader__pager, .manga-reader__about { width: 100%; max-width: none; box-sizing: border-box; }
+    .manga-reader__pages { width: calc(100% + max(8px, env(safe-area-inset-left)) + max(8px, env(safe-area-inset-right))); max-width: none; margin-left: calc(-1 * max(8px, env(safe-area-inset-left))); margin-right: calc(-1 * max(8px, env(safe-area-inset-right))); }
+    .manga-reader__page { width: 100%; }
+    .manga-reader__page img { border-radius: 0; }
     .manga-reader__header { grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
     .manga-reader__back { width: 44px; padding: 0; justify-content: center; }
     .manga-reader__back span { display: none; }
@@ -74,9 +78,9 @@
     .manga-reader__intro span:not(.manga-reader__counter) { line-height: 1.35; }
     .manga-reader__toolbar { top: 5px; gap: 4px; width: 100%; justify-content: space-between; }
     .manga-reader__toolbar button { width: 38px; }
-    .manga-reader__pages { width: 100%; gap: 8px; margin-inline: 0; }
+    .manga-reader__pages { gap: 8px; }
     .manga-reader__page { width: 100%; max-width: 100%; }
-    .manga-reader__page img { width: 100%; max-width: 100%; border-radius: 0; }
+    .manga-reader__page img { width: 100%; max-width: 100%; }
     .manga-reader__pager { flex-direction: column; }
     .manga-reader__chapter-select { align-items: flex-start; flex-direction: column; }
     .manga-reader__chapter-select select { width: 100%; }

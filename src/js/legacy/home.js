@@ -444,7 +444,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                         }
                         return count;
                     };
-                    const counts = await Promise.all(Array.from({ length: Math.min(4, totalPages) }, worker));
+                    const counts = await Promise.all(Array.from({ length: Math.min(2, totalPages) }, worker));
                     honeyCatalogReadableTotal = counts.reduce((sum, count) => sum + count, 0);
                     const label = document.getElementById('homeCatalogResultsLabel');
                     if (label && homeCatalogMode === 'manga') label.textContent = homeCatalogCountText(homeCatalogItems.length);
@@ -461,9 +461,22 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
 
         export async function fetchHoneyJson(path, options = {}, baseUrl = HONEY_API) {
             const url = `${baseUrl}${path}`;
-            const response = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-cache', ...options });
-            if (!response.ok) throw new Error(`Honey Manga API: HTTP ${response.status}`);
-            return response.json();
+            const maxAttempts = 3;
+            for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+                try {
+                    const response = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-cache', ...options });
+                    if (response.ok) return response.json();
+                    const retryable = response.status === 429 || response.status >= 500;
+                    if (!retryable || attempt === maxAttempts - 1) throw new Error(`Honey Manga API: HTTP ${response.status}`);
+                    const retryAfter = Number(response.headers.get('Retry-After'));
+                    const delay = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000, 8000) : 700 * (attempt + 1);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } catch (error) {
+                    if (attempt === maxAttempts - 1 || /HTTP (?!429|5\d\d)/.test(String(error?.message || ''))) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 700 * (attempt + 1)));
+                }
+            }
+            throw new Error('Honey Manga API: повторні спроби вичерпано');
         }
 
         export function honeyNamesMatch(left, right) {
