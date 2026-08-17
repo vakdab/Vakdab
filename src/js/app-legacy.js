@@ -2,6 +2,7 @@ import { FIREBASE_CONFIG, initializeApp, getAuth, signInWithEmailAndPassword, cr
 import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_CORS_PROXY, MIKAI_BASE, GENRE_MAP } from './config/constants.js';
 import { safeQuery, safeQueryAll } from './utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from './utils/image.js';
+import { renderMangaReader, DEFAULT_CHAPTER_URL } from './services/manga.js';
 import './utils/string.js';
 
 let playerPageAnimeuaSeasons = null;
@@ -2639,6 +2640,12 @@ const PROFILE_STICKER_SLOTS = 8;
             },
 
             navigate(route, params) {
+                const playerModal = document.getElementById('playerPageModal');
+                if (playerModal && route !== 'anime') {
+                    playerModal.classList.remove('active', 'show', 'open');
+                    playerModal.style.display = 'none';
+                    playerModal.setAttribute('aria-hidden', 'true');
+                }
                 document.getElementById('genreSectionsContainer').style.display = 'none';
                 document.getElementById('animeContainer').style.display = 'none';
                 document.getElementById('paginationRow').innerHTML = '';
@@ -2658,6 +2665,8 @@ const PROFILE_STICKER_SLOTS = 8;
                 document.getElementById('schedulePageContainer').style.display = 'none';
                 document.getElementById('stickersPageContainer').classList.remove('active');
                 document.getElementById('stickersPageContainer').style.display = 'none';
+                document.getElementById('mangaPageContainer').classList.remove('active');
+                document.getElementById('mangaPageContainer').style.display = 'none';
 
                 const hero = document.getElementById('heroWrapper');
                 const actions = document.getElementById('actionsRow');
@@ -2709,6 +2718,8 @@ const PROFILE_STICKER_SLOTS = 8;
                     this.showSchedule();
                 } else if (route === 'stickers') {
                     this.showStickers();
+                } else if (route === 'manga') {
+                    this.showManga(params.url || DEFAULT_CHAPTER_URL);
                 } else if (route.startsWith('anime/')) {
                     // Deep-link для Telegram: #anime/<Hikka ID>.
                     // Використовуємо той самий openPlayerPage(), що й звичайні картки.
@@ -2806,6 +2817,17 @@ const PROFILE_STICKER_SLOTS = 8;
                 }
                 renderStickersPage();
                 syncLeftdockActive();
+            },
+
+            showManga(chapterUrl) {
+                const container = document.getElementById('mangaPageContainer');
+                if (!container) return;
+                container.style.display = 'block';
+                container.classList.add('active');
+                renderMangaReader(container, chapterUrl, nextUrl => {
+                    if (nextUrl) this.goTo('manga', { url: nextUrl });
+                    else this.goTo('main');
+                });
             },
 
             showFilter() {
@@ -5088,7 +5110,7 @@ const PROFILE_STICKER_SLOTS = 8;
                 card.dataset.bound = '1';
                 const open = () => {
                     if (!card.dataset.url) return;
-                    if (homeCatalogMode !== 'anime') { showToast('Плеєр доступний для аніме-контенту'); return; }
+                    if (homeCatalogMode !== 'anime') { showToast('Для цього тайтлу ще не підключено джерело читання'); return; }
                     openPlayerPage(card.dataset.url);
                 };
                 card.addEventListener('click', open);
@@ -5121,6 +5143,7 @@ const PROFILE_STICKER_SLOTS = 8;
                     </div>
                 </div>
                 <div class="home-catalog-presets" id="homeCatalogPresets">${HOME_CATALOG_PRESETS.map(preset => `<button type="button" class="home-catalog-preset${preset.key === homeCatalogPreset ? ' active' : ''}" data-catalog-preset="${preset.key}">${preset.label}</button>`).join('')}</div>
+                ${homeCatalogMode === 'manga' ? `<button class="home-catalog-featured-manga" id="zenkoFeaturedManga" type="button"><span class="home-catalog-featured-manga__icon"><i class="fas fa-book-open"></i></span><span><strong>Квітучий Шлях Юності</strong><small>Читати українською через проксі Zenko · 35 сторінок</small></span><i class="fas fa-arrow-right"></i></button>` : ''}
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
                 <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>
@@ -5170,6 +5193,9 @@ const PROFILE_STICKER_SLOTS = 8;
                 clearTimeout(searchTimer);
                 homeCatalogQuery = event.target.value.trim();
                 searchTimer = setTimeout(() => reloadHomeCatalog(), 450);
+            });
+            root.querySelector('#zenkoFeaturedManga')?.addEventListener('click', () => {
+                Router.goTo('manga', { url: DEFAULT_CHAPTER_URL });
             });
             root.querySelector('#homeCatalogScheduleBtn')?.addEventListener('click', () => {
                 Router.goTo('schedule');
@@ -10605,6 +10631,7 @@ function renderProfilePage() {
         window.showTop100 = showTop100;
         window.openRandomAnime = openRandomAnime;
         window.openPlayerPage = openPlayerPage;
+        window.openMangaReader = (url = DEFAULT_CHAPTER_URL) => Router.goTo('manga', { url });
         window.closePlayerPage = closePlayerPage;
         window.toggleTheme = toggleTheme;
         window.toggleLeftdock = toggleLeftdock;
