@@ -2,6 +2,9 @@ const RANOBELIB_ORIGIN = 'https://ranobelib.me';
 const RANOBELIB_PROXY = 'https://corsproxy.io/?url=';
 const RANOBELIB_API = 'https://api.cdnlibs.org/api/manga';
 const RANOBELIB_SITE_ID = 3;
+// Current full RanobeLib catalog size: 393 full pages × 60 + 18 records on the last page.
+// The API does not expose `meta.total`; this value is refreshed when the catalog boundary changes.
+export const RANOBELIB_TOTAL_COUNT = 23598;
 const TRANSLATE_ENDPOINT = 'https://translate.googleapis.com/translate_a/single';
 const translationCache = new Map();
 const htmlCache = new Map();
@@ -90,16 +93,21 @@ function parseMarkdownLinks(text) {
     return [...String(text || '').matchAll(/\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g)].map(match => ({ label: normalizeNovelText(match[1]), url: absoluteUrl(match[2]) }));
 }
 
+function isRanobeChapterImageUrl(url) {
+    return /\/uploads\/ranobe\/[^?#]+\/chapters\/[^?#]+/i.test(String(url || ''));
+}
+
 function parseRanobeMarkdown(text, chapterUrl = '') {
-    const source = String(text || '');
-    const imageUrls = [...source.matchAll(/!\[[^\]]*\]\s*(?:\r?\n\s*)?\((https?:\/\/[^)\s]+)\)/g)].map(match => absoluteUrl(match[1])).filter(Boolean);
+    const source = String(text || '').replace(/\\([\\()[\]_])/g, '$1');
+    const imagePattern = /!\[[^\]]*\]\s*\((https?:\/\/[^)\s]+)\)/g;
+    const imageUrls = [...source.matchAll(imagePattern)].map(match => absoluteUrl(match[1])).filter(isRanobeChapterImageUrl);
     const lines = source.split(/\n+/).map(line => line.trim()).filter(Boolean);
     const contentStart = Math.max(0, lines.findIndex(line => /^Markdown Content:/i.test(line)) + 1);
     const content = lines.slice(contentStart);
     const headingIndex = content.findIndex(line => /^#{1,3}\s/.test(line));
     const heading = (headingIndex >= 0 ? content[headingIndex] : lines[0] || 'Розділ').replace(/^#{1,3}\s+/, '');
     const body = headingIndex >= 0 ? content.slice(headingIndex + 1) : content;
-    const paragraphs = body.map(line => line.replace(/^[-*]\s+/, '').replace(/^\[([^\]]+)\]$/, '$1').trim())
+    const paragraphs = body.map(line => line.replace(imagePattern, '').replace(/^[-*]\s+/, '').replace(/^\[([^\]]+)\]$/, '$1').trim())
         .filter(line => line && !/^!\[[^\]]*\]$/.test(line) && !/^\(https?:\/\/.*\)$/.test(line) && !/^\[.*\]\(https?:\/\/.*\)$/.test(line) && !/^(реклама|отключить рекламу|оглавление|назад|вперёд|вперед)$/i.test(line) && !/^Title:|^URL Source:|^Published Time:|^Markdown Content:/i.test(line) && line !== heading);
     const links = parseMarkdownLinks(text).filter(item => isChapterLink(item.url));
     return { title: normalizeNovelText(heading), paragraphs, imageUrls: [...new Set(imageUrls)], chapterUrl: absoluteUrl(chapterUrl), prevUrl: links[0]?.url || '', nextUrl: links[1]?.url || '' };
@@ -143,7 +151,7 @@ export function parseRanobeChapterHtml(html, chapterUrl = '') {
     })).filter(item => isChapterLink(item.url));
     const prev = links.find(item => /назад|предыдущ/i.test(item.label))?.url || links[0]?.url || '';
     const next = links.find(item => /вперёд|вперед|следующ/i.test(item.label))?.url || links[1]?.url || '';
-    const imageUrls = [...new Set([...root.querySelectorAll('img[src]')].map(node => absoluteUrl(node.getAttribute('src') || node.src)).filter(Boolean))];
+    const imageUrls = [...new Set([...root.querySelectorAll('img[src]')].map(node => absoluteUrl(node.getAttribute('src') || node.src)).filter(isRanobeChapterImageUrl))];
     return { title: normalizeNovelText(heading), paragraphs: uniqueParagraphs, imageUrls, chapterUrl: absoluteUrl(chapterUrl), prevUrl: prev, nextUrl: next };
 }
 
@@ -324,22 +332,42 @@ function parseRanobeCatalogHtml(html) {
 
 export async function fetchRanobeCatalogTotal(query = '', options = {}) {
     const cacheKey = String(query || '').trim().toLowerCase() || '__all__';
+    if (!query && !options.forceScan) return RANOBELIB_TOTAL_COUNT;
     const cached = ranobeTotalCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < (options.cacheTtl || 15 * 60 * 1000)) return cached.total;
-    let page = 1;
-    let total = 0;
-    const seen = new Set();
     const maxPages = Number(options.maxPages || 2000);
-    while (page <= maxPages) {
-        const result = await fetchRanobeApiPage(page, query);
-        const unique = result.items.filter(item => item.url && !seen.has(item.url));
-        unique.forEach(item => seen.add(item.url));
-        total += unique.length;
-        if (!result.hasNextPage || !result.items.length) break;
-        page += 1;
+    const first = await fetchRanobeApiPage(1, query);
+    if (!first.items.length) return 0;
+    const pageSize = Math.max(first.items.length, 60);
+    let low = 1;
+    let high = 1;
+    let highResult = first;
+    // Find an empty/terminal page exponentially, avoiding hundreds of sequential requests.
+    while (high < maxPages && highResult.items.length && highResult.hasNextPage) {
+        low = high;
+        high = Math.min(high * 2, maxPages);
+        highResult = await fetchRanobeApiPage(high, query);
     }
-    const value = { total, timestamp: Date.now() };
-    ranobeTotalCache.set(cacheKey, value);
+    let lastPage;
+    let lastResult;
+    if (highResult.items.length && !highResult.hasNextPage) {
+        lastPage = high;
+        lastResult = highResult;
+    } else {
+        // Binary-search the last non-empty page in [low, high].
+        let left = low;
+        let right = high;
+        while (left + 1 < right) {
+            const middle = Math.floor((left + right) / 2);
+            const result = await fetchRanobeApiPage(middle, query);
+            if (result.items.length) left = middle;
+            else right = middle;
+        }
+        lastPage = left;
+        lastResult = await fetchRanobeApiPage(lastPage, query);
+    }
+    const total = Math.max(0, (lastPage - 1) * pageSize + lastResult.items.length);
+    ranobeTotalCache.set(cacheKey, { total, timestamp: Date.now() });
     return total;
 }
 

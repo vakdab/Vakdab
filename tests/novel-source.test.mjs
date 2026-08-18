@@ -4,7 +4,8 @@ import {
     scoreNovelTitleMatch,
     proxiedRanobeUrl,
     parseRanobeChapterList,
-    parseRanobeChapterHtml
+    parseRanobeChapterHtml,
+    RANOBELIB_TOTAL_COUNT
 } from '../src/js/services/api/novel.js';
 
 assert.equal(normalizeNovelTitle('Инструкция по эксплуатации Регрессора (Новелла)'), 'instruktsiya po ekspluatatsii regressora');
@@ -33,8 +34,13 @@ if (typeof DOMParser === 'undefined') {
 const chapters = parseRanobeChapterList(chapterHtml, 'https://ranobelib.me/ru/demo/read/v1/c1?bid=7');
 assert.equal(chapters.length, 2);
 assert.equal(chapters[1].url, 'https://ranobelib.me/ru/demo/read/v1/c1?bid=7');
-const markdownChapter = `Title: Demo\nURL Source: https://ranobelib.me/ru/demo/read/v1/c1\nMarkdown Content:\n# Глава 1\n![Image 1]\n(https://ranobelib.me/uploads/demo/image.png)\nТекст розділу.`;
+const markdownChapter = `Title: Demo\nURL Source: https://ranobelib.me/ru/demo/read/v1/c1\nMarkdown Content:\n# Глава 1\n![Image 1](https://ranobelib.me/uploads/ranobe/demo/chapters/123/image_1.png)\nТекст розділу.\n!\\[Image 2\\](https://ranobelib.me/uploads/ranobe/demo/chapters/123/image_2.png)!\\[Image 3\\] (https://ranobelib.me/uploads/ranobe/demo/chapters/123/image_3.png)`;
 const parsedMarkdown = parseRanobeChapterHtml(markdownChapter, 'https://ranobelib.me/ru/demo/read/v1/c1');
-assert.deepEqual(parsedMarkdown.imageUrls, ['https://ranobelib.me/uploads/demo/image.png']);
+assert.deepEqual(parsedMarkdown.imageUrls, [
+    'https://ranobelib.me/uploads/ranobe/demo/chapters/123/image_1.png',
+    'https://ranobelib.me/uploads/ranobe/demo/chapters/123/image_2.png',
+    'https://ranobelib.me/uploads/ranobe/demo/chapters/123/image_3.png'
+]);
 assert.deepEqual(parsedMarkdown.paragraphs, ['Текст розділу.']);
+assert.equal(RANOBELIB_TOTAL_COUNT, 23598);
 console.log('novel-source.test.mjs: ok');
