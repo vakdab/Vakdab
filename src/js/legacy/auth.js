@@ -3,7 +3,7 @@ import { auth, db, initialized as firebaseInitialized } from '../services/fireba
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from './app-legacy.js';
+} from './app-legacy.js?v=20260818-manga-filters-v7';
 import { getDefaultProfile } from '../components/pages/settingsLegacy.js';
 import { Storage } from './storage.js';
 

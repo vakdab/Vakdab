@@ -1,5 +1,5 @@
 import { Auth } from './auth.js';
-import { getDefaultStickers } from './app-legacy.js';
+import { getDefaultStickers } from './app-legacy.js?v=20260818-manga-filters-v7';
 
         export const Storage = {
             _syncTimer: null,
