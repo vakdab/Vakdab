@@ -377,6 +377,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
         // Full manga index is loaded lazily only when exact manga filters are opened.
         export let homeCatalogFilterResultItems = null;
         export let homeCatalogFilterResultOffset = 0;
+        export let homeCatalogFilterIndexReady = false;
         export const HOME_MANGA_AGE_OPTIONS = [
             { key: 'all', label: 'Усі' },
             { key: 'adult', label: 'Для дорослих' },
@@ -875,10 +876,14 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
         }
 
         export function homeCatalogCountText(visibleCount) {
-            const total = homeCatalogTotal || visibleCount;
+            const isFilteredManga = homeCatalogMode === 'manga' && (homeCatalogAdult || homeCatalogAge !== 'all' || homeCatalogFilterResultItems !== null);
+            const total = isFilteredManga
+                ? (homeCatalogFilterIndexReady && homeCatalogFilterResultItems ? homeCatalogFilterResultItems.length : visibleCount)
+                : (homeCatalogTotal || visibleCount);
             if (homeCatalogMode === 'manga') {
                 const available = homeCatalogAvailableTotal || homeCatalogItems.filter(item => item?.readerAvailable || item?.readerUrl).length;
-                return `Доступно для читання: ${formatHomeCatalogNumber(available)} із ${formatHomeCatalogNumber(total)} манґи`;
+                const suffix = isFilteredManga && !homeCatalogFilterIndexReady ? '' : ` із ${formatHomeCatalogNumber(total)}`;
+                return `Доступно для читання: ${formatHomeCatalogNumber(available)}${suffix} манґи`;
             }
             return `Знайдено ${formatHomeCatalogNumber(total)} результатів`;
         }
@@ -1026,6 +1031,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                     const source = await loadHoneyMangaFullCatalog();
                     const result = filterMangaCatalogItems(source);
                     homeCatalogFilterResultItems = result;
+                    homeCatalogFilterIndexReady = true;
                     homeCatalogFilterResultOffset = Math.min(24, result.length);
                     homeCatalogItems = result.slice(0, homeCatalogFilterResultOffset);
                     homeCatalogPage = 0;
@@ -1119,6 +1125,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
             homeCatalogLoading = true;
             homeCatalogFilterResultItems = null;
             homeCatalogFilterResultOffset = 0;
+            homeCatalogFilterIndexReady = false;
             homeCatalogPage = 1;
             // Do not carry the previous anime/novel page total (usually 24) into manga.
             homeCatalogTotal = 0;
@@ -1137,6 +1144,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                     loadHoneyMangaFullCatalog().then(fullCatalog => {
                         if (requestId !== homeCatalogRequestId || homeCatalogMode !== 'manga' || !homeCatalogAdult) return;
                         homeCatalogFilterResultItems = filterMangaCatalogItems(fullCatalog);
+                        homeCatalogFilterIndexReady = true;
                         homeCatalogFilterResultOffset = Math.min(24, homeCatalogFilterResultItems.length);
                         homeCatalogItems = homeCatalogFilterResultItems.slice(0, homeCatalogFilterResultOffset);
                         homeCatalogTotal = homeCatalogFilterResultItems.length;
@@ -1174,6 +1182,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                 if (homeCatalogMode === 'manga' && homeCatalogAdult && !homeCatalogFilterResultItems) {
                     const fullCatalog = await loadHoneyMangaFullCatalog();
                     homeCatalogFilterResultItems = filterMangaCatalogItems(fullCatalog);
+                    homeCatalogFilterIndexReady = true;
                     homeCatalogFilterResultOffset = Math.min(homeCatalogItems.length || 24, homeCatalogFilterResultItems.length);
                     homeCatalogItems = homeCatalogFilterResultItems.slice(0, homeCatalogFilterResultOffset);
                     homeCatalogTotal = homeCatalogFilterResultItems.length;
