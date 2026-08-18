@@ -11,6 +11,37 @@ import { getProxyUrl } from '../../utils/image.js';
 import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260818-honey-type-filter-v1';
 import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } from '../../services/api/novel.js?v=20260818-ranobe-v6';
 
+        // Hikka may remain pending behind corsproxy for 25+ seconds. The catalog
+        // shell must stay interactive so users can switch to Honey Manga or
+        // RanobeLib without waiting for the unrelated anime request.
+        export const HOME_CATALOG_ANIME_TIMEOUT_MS = 12000;
+        export function withHomeCatalogTimeout(promise, timeoutMs = HOME_CATALOG_ANIME_TIMEOUT_MS) {
+            return new Promise((resolve, reject) => {
+                let settled = false;
+                const timer = setTimeout(() => {
+                    if (settled) return;
+                    settled = true;
+                    reject(new Error('Hikka catalog timeout'));
+                }, timeoutMs);
+                Promise.resolve(promise).then(value => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timer);
+                    resolve(value);
+                }, error => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timer);
+                    reject(error);
+                });
+            });
+        }
+
+        export async function fetchHomeCatalogPageSafe(page = 1) {
+            const request = fetchHomeCatalogPage(page);
+            return homeCatalogMode === 'anime' ? withHomeCatalogTimeout(request) : request;
+        }
+
         // ====================================================================
         export let currentTab = 'main',
             currentPage = 1,
@@ -778,7 +809,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 const suffix = isFilteredManga && !homeCatalogFilterIndexReady ? '' : ` із ${formatHomeCatalogNumber(total)}`;
                 return `Доступно для читання: ${formatHomeCatalogNumber(available)}${suffix} манґи`;
             }
-            if (homeCatalogMode === 'novel' && homeCatalogHasMore) return `Показано ${formatHomeCatalogNumber(total)}+ результатів`;
+            if (homeCatalogMode === 'novel' && !homeCatalogTotal) return `Показано ${formatHomeCatalogNumber(total)}+ результатів`;
             return `Знайдено ${formatHomeCatalogNumber(total)} результатів`;
         }
 
@@ -966,6 +997,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const tabs = root.querySelectorAll('[data-catalog-mode]');
             tabs.forEach(tab => tab.addEventListener('click', async () => {
                 if (tab.dataset.catalogMode === homeCatalogMode || homeCatalogLoading) return;
+                // Invalidate a still-pending initial anime request. Without this,
+                // a late Hikka response could overwrite a freshly selected Ranobe tab.
+                homeSectionsRequestId++;
                 homeCatalogMode = tab.dataset.catalogMode;
                 homeCatalogAdult = false;
                 homeCatalogAge = 'all';
@@ -1068,7 +1102,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                         syncHomeCatalogMoreButton();
                     }).catch(() => {});
                 } else {
-                    nextItems = await fetchHomeCatalogPage(1);
+                    nextItems = await fetchHomeCatalogPageSafe(1);
                 }
                 if (requestId !== homeCatalogRequestId) return;
                 homeCatalogItems = nextItems;
@@ -1158,7 +1192,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const requestId = ++homeSectionsRequestId;
             const container = document.getElementById('genreSectionsContainer');
             if (!container) return;
-            container.innerHTML = '<div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження каталогу...</div>';
             container.style.display = 'flex';
             homeCatalogPage = 1;
             homeCatalogItems = [];
@@ -1169,20 +1202,28 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             homeCatalogFilterResultOffset = 0;
             homeCatalogLoading = false;
 
+            // Paint the catalog shell before the source request resolves. This
+            // keeps the RanobeLib and Honey Manga tabs usable even when Hikka's
+            // corsproxy request is slow or unavailable.
+            container.innerHTML = buildHomeCatalogSectionHtml([]);
+            const initialGrid = container.querySelector('#homeCatalogGrid');
+            if (initialGrid) initialGrid.innerHTML = '<div class="loader home-catalog-loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження каталогу...</div>';
+            bindHomeCatalogCards(container);
+            bindHomeCatalogMenu(container);
+            syncHomeCatalogGenreControl(container);
+            syncHomeCatalogMoreButton();
+
             try {
-                const catalogItems = await fetchHomeCatalogPage(1).catch(error => {
+                const catalogItems = await fetchHomeCatalogPageSafe(1).catch(error => {
                     console.error('Помилка завантаження каталогу:', error);
                     homeCatalogTotal = 0;
-                    return [];
+                    throw error;
                 });
                 if (requestId !== homeSectionsRequestId) return;
                 homeCatalogItems = catalogItems.filter(item => item?.url);
                 if (homeCatalogMode === 'manga') homeCatalogAvailableTotal = homeCatalogItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
-                const html = buildHomeCatalogSectionHtml(homeCatalogItems);
-                container.innerHTML = html;
-                bindHomeCatalogCards(container);
-                bindHomeCatalogMenu(container);
                 syncHomeCatalogGenreControl(container);
+                renderHomeCatalogGrid();
                 syncHomeCatalogMoreButton();
                 if (homeCatalogMode === 'novel') {
                     fetchRanobeCatalogTotal(homeCatalogQuery).then(total => {
@@ -1195,7 +1236,13 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
             } catch (err) {
                 console.error('Помилка завантаження головної сторінки:', err);
-                container.innerHTML = `<div class="loader"><i class="fas fa-exclamation-triangle"></i> Помилка: ${escapeHtml(err.message || 'невідома помилка')}<br><button class="btn-outline" style="margin-top:1rem;" onclick="loadAndDisplayGenreSections()">Спробувати знову</button></div>`;
+                const grid = container.querySelector('#homeCatalogGrid');
+                if (grid) {
+                    grid.innerHTML = `<div class="home-catalog-empty">Не вдалося завантажити каталог. <button class="btn-outline" type="button" id="homeCatalogRetryBtn">Спробувати ще</button></div>`;
+                    grid.querySelector('#homeCatalogRetryBtn')?.addEventListener('click', () => reloadHomeCatalog());
+                }
+                homeCatalogHasMore = false;
+                syncHomeCatalogMoreButton();
             }
         }
 
