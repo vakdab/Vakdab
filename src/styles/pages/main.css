@@ -913,3 +913,19 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     border-color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
 }
+
+
+/* Unified modern filter affordance for all catalog modes. */
+.home-catalog-filter-btn {
+    min-height: 2.7rem;
+    border-radius: 999px;
+    font-weight: 800;
+    box-shadow: 0 5px 18px rgba(0, 0, 0, .05);
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, color .2s ease;
+}
+.home-catalog-filter-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0, 0, 0, .1); }
+.home-catalog-filter-btn:active { transform: translateY(0) scale(.98); }
+.home-catalog-filter-btn i { font-size: .8rem; }
+@media (max-width: 479px) {
+    .home-catalog-filter-btn { min-width: 2.9rem; min-height: 2.7rem; }
+}

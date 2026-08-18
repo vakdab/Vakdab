@@ -308,6 +308,8 @@ function ranobeApiItem(item) {
         score: Number(item?.rating?.average || 0),
         year: String(item?.releaseDateString || '').slice(0, 4),
         status: ranobeStatusUa(item?.status?.label || item?.status || ''),
+        ageRating: item?.ageRestriction?.label || item?.ageRestriction?.name || '',
+        originLabel: item?.type?.label || item?.type?.name || '',
         typeLabel: 'Ранобе',
         synopsis: '',
         genres: [],
