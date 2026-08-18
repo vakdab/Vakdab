@@ -8,7 +8,7 @@ import { getProfile, saveProfile } from './settingsLegacy.js';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
-import { hasHoneyPageResources, selectHoneyReaderChapter } from '../../services/api/manga.js?v=20260818-honey-frames-v3';
+import { hasHoneyPageResources, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260818-honey-reading-order-v4';
 
         // ====================================================================
         export let currentTab = 'main',
@@ -542,9 +542,10 @@ import { hasHoneyPageResources, selectHoneyReaderChapter } from '../../services/
                     body: JSON.stringify({ page: 1, pageSize: 100, mangaId: String(mangaId), sortOrder: 'DESC' })
                 });
                 const chapters = Array.isArray(payload?.data) ? payload.data : [];
+                const readingOrder = sortHoneyChaptersForReading(chapters);
                 const publicFirst = [
-                    ...chapters.filter(entry => entry && entry.isMonetized !== true),
-                    ...chapters.filter(entry => entry && entry.isMonetized === true)
+                    ...readingOrder.filter(entry => entry && entry.isMonetized !== true),
+                    ...readingOrder.filter(entry => entry && entry.isMonetized === true)
                 ];
                 let chapter = null;
                 // A chapter may be marked public but still have no uploaded pages.

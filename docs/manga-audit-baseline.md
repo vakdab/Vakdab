@@ -113,3 +113,11 @@ The direct Honey frames API for the previously working free chapter returns a no
 Local frames-fix smoke reached Honey Manga mode successfully: `30 із 1 889` cards loaded, including the reported first title, after the new parser and chapter probing changes.
 
 The reported first Honey card was clicked in the local browser after the frames fix. The catalog stayed stable while the resolver asynchronously probed candidate chapter manifests before routing, which is expected for skipping chapters without uploaded pages.
+Local reading-order smoke: root route and catalog initialized normally after the new sorting helper; Honey Manga mode is ready for the first-card route verification.
+
+Local reading-order smoke reached Honey Manga mode with `30 із 1 889` cards. The reported title `Оце так врожай, Володарю Демонів!` is visible in the catalog and ready for direct card-click verification.
+
+The reported title card was clicked in local Honey Manga mode after applying ascending volume/chapter sorting. The async reader resolver was still processing chapter manifests at the first observation; the expected target is the lowest available chapter rather than the API’s newest item.
+
+Honey chapter API for the reported title returns `chapterNum` values in descending order (`80, 79, 78, …, 1`). The resolver has been changed to sort by `volume`, `chapterNum`, and `subChapterNum` ascending before probing frames, so the first public chapter with pages is selected from the beginning of the story rather than chapter 78/80.
+

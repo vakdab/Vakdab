@@ -39,9 +39,27 @@ export function parseChapterUrl(value) {
     return { source: 'honey-manga.com.ua', chapterId: decodeURIComponent(match[1]), titleId: decodeURIComponent(match[2]), url };
 }
 
-/** Select the newest public chapter, falling back to the newest monetized one. */
-export function selectHoneyReaderChapter(chapters = []) {
+/** Sort Honey chapters in reading order: oldest volume/chapter first. */
+export function sortHoneyChaptersForReading(chapters = []) {
     const list = Array.isArray(chapters) ? chapters.filter(Boolean) : [];
+    const numberOf = (value, fallback = Number.POSITIVE_INFINITY) => {
+        const number = Number(value);
+        return Number.isFinite(number) ? number : fallback;
+    };
+    return [...list].sort((left, right) => {
+        const volumeDiff = numberOf(left.volume, 0) - numberOf(right.volume, 0);
+        if (volumeDiff) return volumeDiff;
+        const chapterDiff = numberOf(left.chapterNum) - numberOf(right.chapterNum);
+        if (chapterDiff) return chapterDiff;
+        const subChapterDiff = numberOf(left.subChapterNum, 0) - numberOf(right.subChapterNum, 0);
+        if (subChapterDiff) return subChapterDiff;
+        return String(left.lastUpdated || '').localeCompare(String(right.lastUpdated || ''));
+    });
+}
+
+/** Select the first public chapter in reading order, falling back to the first monetized one. */
+export function selectHoneyReaderChapter(chapters = []) {
+    const list = sortHoneyChaptersForReading(chapters);
     return list.find(chapter => chapter.isMonetized !== true) || list[0] || null;
 }
 
