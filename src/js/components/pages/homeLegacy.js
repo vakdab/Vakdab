@@ -6,6 +6,7 @@ import {
 } from '../../legacy/app-legacy.js';
 import { getProfile, saveProfile } from './settingsLegacy.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
+import { getProxyUrl } from '../../utils/image.js';
 
         // ====================================================================
         export let currentTab = 'main',
@@ -399,15 +400,15 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         }
 
         // Honey Manga є єдиним джерелом каталогу, постерів і читання манґи. Hikka використовується для аніме та ранобе.
-        export const HONEY_API = 'https://data.api.honey-manga.com.ua';
-        export const HONEY_SEARCH_API = 'https://search.api.honey-manga.com.ua';
-        export const HONEY_WEB = 'https://honey-manga.com.ua';
+        export const HONEY_API = 'https://manga.in.ua';
+        export const HONEY_SEARCH_API = 'https://manga.in.ua/search/';
+        export const HONEY_WEB = 'https://manga.in.ua';
         export const MANGA_IN_UA_WEB = 'https://manga.in.ua';
         const MANGA_IN_UA_READER_MAP = new Map([
             ['хлопяча безодня', 'https://manga.in.ua/chapters/64318-hlopjacha-bezodnja-tom-1-rozdil-1.html'],
             ['хлоп\'яча безодня', 'https://manga.in.ua/chapters/64318-hlopjacha-bezodnja-tom-1-rozdil-1.html']
         ]);
-        export const HONEY_IMAGE = 'https://hmvolumestorage.b-cdn.net/public-resources';
+        export const HONEY_IMAGE = 'https://manga.in.ua';
         export const honeySearchCache = new Map();
         export const honeyReaderCache = new Map();
         export let honeyAvailabilityMap = null;
@@ -510,52 +511,18 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             const mangaTitle = normalizeHoneyMatch(item.title || item.originalTitle || item.title_ua || '');
             const mangaInUaUrl = MANGA_IN_UA_READER_MAP.get(mangaTitle);
             if (mangaInUaUrl) return { ...item, readerUrl: mangaInUaUrl, readerSource: 'manga.in.ua' };
-            const map = await loadHoneyAvailabilityMap();
-            const mapped = map?.byHikka?.[String(item.mal_id)] || map?.byHikka?.[String(item.slug)] || map?.byHoney?.[String(item.honeyTitleId || item.honeyId || '')];
-            if (mapped?.id && mapped?.chapterId) {
-                const readerUrl = `${HONEY_WEB}/read/${mapped.chapterId}/${mapped.id}`;
-                return { ...item, readerUrl, honeyTitleId: mapped.id, honeyChapterId: mapped.chapterId };
-            }
-            const directHoneyId = item.honeyTitleId || item.honeyId || '';
-            const rawKeys = [item.title, item.originalTitle, item.title_en, item.title_ja].filter(Boolean);
-            const keys = rawKeys.map(normalizeHoneyMatch).filter(Boolean);
-            const cacheKey = keys.join('|') || `id:${directHoneyId}`;
-            if (honeyReaderCache.has(cacheKey)) return { ...item, readerUrl: honeyReaderCache.get(cacheKey) };
-            if (directHoneyId) {
+            if (item.url && /^https?:\\/\\/manga\\.in\\.ua\\/mangas\\//i.test(item.url)) {
                 try {
-                    const payload = await fetchHoneyJson('/v2/chapter/cursor-list', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mangaId: directHoneyId, page: 1, pageSize: 100, sort: { sortBy: 'chapterNum', sortOrder: 'ASC' } }) });
-                    const chapters = (Array.isArray(payload?.data) ? payload.data : []).filter(chapter => chapter?.id);
-                    const first = chapters[chapters.length - 1] || chapters[0];
-                    if (first) {
-                        const readerUrl = `${HONEY_WEB}/read/${first.id}/${directHoneyId}`;
-                        honeyReaderCache.set(cacheKey, readerUrl);
-                        return { ...item, readerUrl, honeyTitleId: directHoneyId, honeyChapterId: first.id };
-                    }
-                } catch (error) { console.warn('Honey Manga direct chapter lookup failed:', error); }
+                    const response = await fetch(getProxyUrl(item.url, 'desktop'), { credentials: 'omit', cache: 'no-store' });
+                    const html = await response.text();
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    const chapter = [...doc.querySelectorAll('a[href*="/chapters/"], select#linkstocomics option')]
+                        .map(node => node.value || node.href || '')
+                        .find(url => /^https?:\\/\\/manga\\.in\\.ua\\/chapters\\/\\d+-[^?#]+\\.html/i.test(url));
+                    if (chapter) return { ...item, readerUrl: chapter, readerSource: 'manga.in.ua' };
+                } catch (error) { console.warn('manga.in.ua chapter lookup failed:', error); }
             }
-            const resultSets = [];
-            for (const query of rawKeys.slice(0, 3)) {
-                const results = await searchHoneyTitles(query);
-                resultSets.push(...results);
-                const exact = results.find(title => [title.title, title.lowTitle, title.alternativeTitle, ...(title.titleTags || [])]
-                    .some(candidate => keys.some(key => honeyNamesMatch(key, candidate))));
-                if (exact) break;
-            }
-            const unique = [...new Map(resultSets.filter(title => title?.id).map(title => [title.id, title])).values()];
-            const exactMatch = unique.find(title => [title.title, title.lowTitle, title.alternativeTitle, ...(title.titleTags || [])]
-                .some(candidate => keys.includes(normalizeHoneyMatch(candidate))));
-            const match = exactMatch || unique.find(title => [title.title, title.lowTitle, title.alternativeTitle, ...(title.titleTags || [])]
-                .some(candidate => keys.some(key => honeyNamesMatch(key, candidate))));
-            if (!match?.id) { honeyReaderCache.set(cacheKey, ''); return item; }
-            try {
-                const payload = await fetchHoneyJson('/v2/chapter/cursor-list', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mangaId: match.id, page: 1, pageSize: 100, sort: { sortBy: 'chapterNum', sortOrder: 'ASC' } }) });
-                const chapters = (Array.isArray(payload?.data) ? payload.data : []).filter(chapter => chapter?.id);
-                const first = chapters[chapters.length - 1] || chapters[0];
-                if (!first) { honeyReaderCache.set(cacheKey, ''); return item; }
-                const readerUrl = `${HONEY_WEB}/read/${first.id}/${match.id}`;
-                honeyReaderCache.set(cacheKey, readerUrl);
-                return { ...item, readerUrl, honeyTitleId: match.id };
-            } catch (error) { console.warn('Honey Manga chapter lookup failed:', error); return item; }
+            return item;
         }
 
         export async function attachHoneyReaders(items) {
@@ -604,7 +571,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 title: item.title || item.lowTitle || 'Без назви',
                 originalTitle: item.alternativeTitle || item.title || '',
                 url: `${HONEY_WEB}/manga/${item.id}`,
-                readerUrl: chapterId ? `${HONEY_WEB}/read/${chapterId}/${item.id}` : '',
+                readerUrl: '',
                 honeyTitleId: item.id,
                 honeyChapterId: chapterId,
                 chapters: Number(item.chapters || 0),
@@ -659,43 +626,33 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             return honeyAdultCatalogPromise;
         }
 
+        async function fetchMangaInUaCatalogPage(page = 1) {
+            const source = `${HONEY_WEB}/mangas/${page > 1 ? `?page=${page}` : ''}`;
+            const response = await fetch(getProxyUrl(source, 'desktop'), { credentials: 'omit', cache: 'no-store' });
+            if (!response.ok) throw new Error(`manga.in.ua: HTTP ${response.status}`);
+            const html = await response.text();
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const seen = new Set();
+            const items = [...doc.querySelectorAll('a[href*="/mangas/"]')].map(link => {
+                const href = link.href || link.getAttribute('href') || '';
+                const match = href.match(/https?:\/\/manga\.in\.ua\/mangas\/[^/]+\/(\d+-[^?#]+\.html)/i);
+                if (!match || seen.has(match[1])) return null;
+                seen.add(match[1]);
+                const title = (link.querySelector('h2,h3,.title,.name')?.textContent || link.textContent || '').replace(/ОНОВЛЕННЯ.*$/i, '').trim();
+                const image = link.querySelector('img');
+                const poster = image?.dataset?.src || image?.getAttribute('data-src') || image?.getAttribute('src') || '';
+                return { id: match[1], title: title || match[1], href: `https://manga.in.ua/mangas/${match[1]}`, poster: poster.startsWith('http') ? poster : `https://manga.in.ua${poster}` };
+            }).filter(Boolean);
+            return items.map(item => ({ honeyId: item.id, mal_id: `manga-${item.id}`, slug: item.id, title: item.title, originalTitle: item.title, url: item.href, readerUrl: '', chapters: 1, images: { jpg: { large_image_url: getProxyUrl(item.poster, 'desktop'), image_url: getProxyUrl(item.poster, 'desktop') } }, genres: [], tags: [], adult: 'NONE', isAdultCover: false, type: 'manga', typeLabel: 'Манґа', status: '', synopsis: '', score: 0, year: '', from: 'manga.in.ua' }));
+        }
+
         export async function fetchHoneyCatalogPage(page) {
-            if (homeCatalogAdult) {
-                if (homeCatalogQuery) {
-                    const results = await searchHoneyTitles(homeCatalogQuery);
-                    const items = results.map(honeyCatalogItem).filter(isAdultHoneyManga);
-                    homeCatalogTotal = items.length;
-                    return attachHoneyReaders(items);
-                }
-                const cachedAdult = honeyCatalogPageCache.get('__adult_manga__');
-                if (cachedAdult) {
-                    homeCatalogTotal = cachedAdult.total;
-                    return cachedAdult.items.map(item => ({ ...item, images: { ...item.images, jpg: { ...item.images.jpg } }, genres: [...(item.genres || [])] }));
-                }
-                return fetchHoneyAdultCatalog();
-            }
-            const cacheKey = `${homeCatalogQuery || '__all__'}:${page}`;
-            if (honeyCatalogPageCache.has(cacheKey)) {
-                const cached = honeyCatalogPageCache.get(cacheKey);
-                homeCatalogTotal = cached.total;
-                return cached.items.map(item => ({ ...item, images: { ...item.images, jpg: { ...item.images.jpg } }, genres: [...(item.genres || [])] }));
-            }
-            if (homeCatalogQuery) {
-                const results = await searchHoneyTitles(homeCatalogQuery);
-                const items = results.map(honeyCatalogItem);
-                homeCatalogTotal = results.length;
-                honeyCatalogPageCache.set(cacheKey, { total: homeCatalogTotal, items });
-                return items;
-            }
-            const payload = await fetchHoneyJson('/v2/manga/cursor-list', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ page: Math.max(1, page), pageSize: 24, sort: { sortBy: 'lastUpdated', sortOrder: 'DESC' }, filters: [] })
-            });
-            homeCatalogTotal = Number(payload?.counter || payload?.total || payload?.data?.length || 0);
-            loadHoneyCatalogReadableTotal();
-            const items = (Array.isArray(payload?.data) ? payload.data : []).map(honeyCatalogItem);
-            const enrichedItems = await attachHoneyReaders(items);
+            const cacheKey = `manga.in.ua:${homeCatalogQuery || '__all__'}:${page}`;
+            if (honeyCatalogPageCache.has(cacheKey)) return honeyCatalogPageCache.get(cacheKey).items;
+            const items = await fetchMangaInUaCatalogPage(page);
+            const filtered = homeCatalogQuery ? items.filter(item => normalizeHoneyMatch(item.title).includes(normalizeHoneyMatch(homeCatalogQuery))) : items;
+            homeCatalogTotal = filtered.length;
+            const enrichedItems = await attachHoneyReaders(filtered);
             honeyCatalogPageCache.set(cacheKey, { total: homeCatalogTotal, items: enrichedItems });
             return enrichedItems;
         }
