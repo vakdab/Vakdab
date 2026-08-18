@@ -1,3 +1,3 @@
-import { bootstrap } from './core/bootstrap.js?v=20260817-architecture-v2';
+import { bootstrap } from './core/bootstrap.js?v=20260818-image-fallback-v1';
 
 bootstrap();
