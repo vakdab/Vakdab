@@ -79,3 +79,17 @@ Correct Pages URL is `https://vakdab.github.io/Vakdab/`; bare `https://vakdab.gi
 ## Final live counter verification before last patch
 
 After PR #3, live production correctly switched to 18+ with 10 cards and showed `Доступно для читання: 10 манґи` while the filtered index was still loading. After the full index completed it showed `24 із 1 248 манґи`, confirming a contextual filtered denominator rather than 4 420. A live load-more check added 24 unique cards (`24 → 48`) but exposed one remaining count bug: the available count stayed 24 in the filtered-result branch. This was patched immediately so the count will now update with each filtered load-more batch.
+
+## Final production smoke after PR #4
+
+After PR #4 and Pages build `fca44462bbf274953a0f843d094faf64d911ded7`, live production behaves correctly on the mobile catalog flow. Manga mode starts at `24` cards and `Доступно для читання: 24 із 4 420 манґи`. 18+ starts with exactly `10` filtered cards and the temporary label `Доступно для читання: 10 манґи`, without a false denominator. After the full filtered index completes it becomes `24 із 1 248 манґи`. Load-more adds `24` unique cards (`24 → 48`) and keeps `Доступно для читання: 24 із 1 248 манґи`; DOM inspection shows 48 visible cards are pending reader resolution and 0 have a resolved reader URL, so the first number is the available-to-read count, not the visible card count.
+
+## Honey Manga local smoke after migration
+
+The local static build switched to Honey Manga mode successfully. The catalog displayed **30 cards** and `Доступно для читання: 30 із 1 889 манґи`, with posters served from `honeymangastorage-nocache.b-cdn.net` and Honey book metadata visible in each card. The 18+ toggle switched to a separate Honey API request and displayed only cards marked `18+`; the filtered mode completed with the source counter of **263** and no non-adult card was visible. This confirms the new catalog, card mapper, adult filter, counter and CDN image path work together in the browser before deployment.
+
+The local Honey Search smoke used the query `наречена`. The pattern endpoint returned 9 mapped results, the UI rendered 9 Honey cards, and the contextual label showed `Доступно для читання: 8 із 9 манґи`. Results included both ordinary and 16+ items while the public mode correctly excluded 18+ entries; posters continued to use the Honey CDN.
+
+The reader smoke used free chapter 9 of the same Honey book. The route `/#manga?url=https://honey-manga.com.ua/read/db4ed14e-f564-4103-be20-688948370f3d/8c336683-10ca-4912-9666-e18a1689da6e` loaded the full **10-page** frame manifest, displayed the Honey title/description, populated all **11** chapter options, and loaded CDN page images through the preloader. A monetized chapter correctly returned a user-facing access message instead of a broken reader. This validates both public frames and the expected Honey paywall behavior.
+
+After leaving the Honey reader and reloading the root route, the standard anime catalog still initialized normally, confirming the new manga route does not break the existing anime/novel route lifecycle. A subsequent switch back to Honey manga also restored the manga search/filter controls and loading state without a runtime error.

@@ -6,7 +6,7 @@ import {
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
     renderGenresPage, renderProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from './app-legacy.js?v=20260818-manga-filters-v7';
+} from './app-legacy.js?v=20260818-honey-manga-v1';
 
         export const Router = {
             currentRoute: 'main',
