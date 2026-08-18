@@ -37,7 +37,10 @@ export function pageImageFallbackUrl(content) {
     const value = String(content || '').trim();
     if (!value) return '';
     const direct = /^https?:\/\//i.test(value) ? value : `${HONEY_IMAGE}/${value}`;
-    return getProxyUrl(direct, 'desktop');
+    // The image worker can return 403 for GitHub Pages image requests. Weserv
+    // provides a CORS-enabled image fallback and also constrains huge source
+    // pages to a reader-friendly width while preserving their aspect ratio.
+    return `https://images.weserv.nl/?url=${encodeURIComponent(direct)}&w=1080`;
 }
 
 function fetchJson(sourceUrl, options = {}) {

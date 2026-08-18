@@ -1,4 +1,4 @@
-import { DEFAULT_CHAPTER_URL, HONEY_WEB, getChapterFrames, getReaderBackgroundData, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/honey.js?v=20260817-manga-api-v2';
+import { DEFAULT_CHAPTER_URL, HONEY_WEB, getChapterFrames, getReaderBackgroundData, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/honey.js?v=20260818-image-fallback-v1';
 import { buildPageMarkup, escapeHtml, normalizeChapterName, pageLabel } from './pages.js?v=20260817-manga-pages-v2';
 import { createPagePreloader } from './preload.js';
 
