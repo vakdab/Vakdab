@@ -980,8 +980,12 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             if (!button && grid) {
                 grid.insertAdjacentHTML('afterend', '<button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>');
                 button = document.getElementById('homeCatalogMoreBtn');
-                button?.addEventListener('click', loadHomeCatalogMore);
+                if (button) button.onclick = loadHomeCatalogMore;
             }
+            // The grid is re-rendered independently from the button. Assigning
+            // onclick every time makes the control reliable after filters, view
+            // changes, and lazy reader resolution.
+            if (button) button.onclick = loadHomeCatalogMore;
         }
         window.loadHomeCatalogMore = loadHomeCatalogMore;
 

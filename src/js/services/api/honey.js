@@ -47,8 +47,9 @@ function fetchJson(sourceUrl, options = {}) {
     const method = options.method || 'GET';
     const cacheKey = `${method}:${sourceUrl}:${options.body || ''}`;
     if (jsonCache.has(cacheKey)) return jsonCache.get(cacheKey);
-    const requestUrl = method === 'GET' ? getProxyUrl(sourceUrl, 'desktop') : sourceUrl;
-    const request = fetch(requestUrl, {
+    // Honey API supports CORS itself. The image proxy is not an API proxy and can
+    // return 404 for valid chapter routes, so never route API JSON through it.
+    const request = fetch(sourceUrl, {
         mode: 'cors', credentials: 'omit', cache: method === 'GET' ? 'force-cache' : 'no-store', ...options
     }).then(response => {
         if (!response.ok) throw new Error(`Honey Manga API: HTTP ${response.status}`);
@@ -69,8 +70,7 @@ export async function getChapterFrames(chapterId, titleId) {
     // /v2/chapter/:id route returns 404 and must not be probed first.
     const endpoints = [
         `${HONEY_API}/v2/chapter/frames/${chapterId}/${titleId}`,
-        `${HONEY_API}/chapter/${chapterId}`,
-        `${HONEY_API}/chapter/frames/${chapterId}/${titleId}`
+        `${HONEY_API}/chapter/${chapterId}`
     ];
     for (const endpoint of endpoints) {
         try {
