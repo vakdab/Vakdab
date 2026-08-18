@@ -353,7 +353,10 @@ import { getProxyUrl } from '../../utils/image.js';
         export let homeCatalogPage = 1;
         export let homeCatalogItems = [];
         export let homeCatalogLoading = false;
+        // Total reported by manga.in.ua, independent from loaded card count.
         export let homeCatalogTotal = 0;
+        export let homeCatalogAvailableTotal = 0;
+        export let homeCatalogHasMore = true;
         export let homeCatalogMode = 'anime';
         export let homeCatalogQuery = '';
         export let homeCatalogSort = 'score';
@@ -626,24 +629,67 @@ import { getProxyUrl } from '../../utils/image.js';
             return honeyAdultCatalogPromise;
         }
 
+        function parseMangaInUaNumber(value = '') {
+            const match = String(value).replace(/\u00a0/g, ' ').match(/[\d\s]+/);
+            return match ? Number(match[0].replace(/\s/g, '')) : 0;
+        }
+
+        function parseMangaInUaTotal(doc) {
+            const badge = doc.querySelector('.header__nav-link[href="/mangas/"] .badge, a[href="/mangas/"] .badge');
+            const badgeTotal = parseMangaInUaNumber(badge?.textContent || '');
+            if (badgeTotal) return badgeTotal;
+            const navigation = doc.querySelector('.page-navigation');
+            const pages = [...(navigation?.querySelectorAll('a[href*="/mangas/page/"]') || [])]
+                .map(link => Number(link.href.match(/\/page\/(\d+)\/?$/)?.[1] || 0)).filter(Boolean);
+            return pages.length ? Math.max(...pages) * 24 : 0;
+        }
+
+        function parseMangaInUaCard(card) {
+            const link = card.querySelector('a[href*="/mangas/"]');
+            const href = link?.href || '';
+            const match = href.match(/https?:\/\/manga\.in\.ua\/mangas\/[^/]+\/(\d+-[^?#]+\.html)/i);
+            if (!match) return null;
+            const titleLink = card.querySelector('.card__title a, h2 a, h3 a');
+            const title = (titleLink?.textContent || link?.getAttribute('title') || '').trim() || match[1];
+            const image = card.querySelector('img[data-src], img');
+            const rawPoster = image?.dataset?.src || image?.getAttribute('data-src') || image?.getAttribute('src') || '';
+            const poster = rawPoster.startsWith('http') ? rawPoster : `${HONEY_WEB}${rawPoster.startsWith('/') ? '' : '/'}${rawPoster}`;
+            const genres = [...card.querySelectorAll('.card__category a')].map(node => node.textContent.trim()).filter(Boolean);
+            const labels = [...card.querySelectorAll('.card__list li')].map(node => node.textContent.trim()).filter(Boolean);
+            const progress = card.querySelector('.progress__sm')?.textContent || '';
+            const chapterMatch = progress.match(/(\d+)/);
+            const score = Number(card.querySelector('.card__short-rate--num')?.textContent || 0);
+            const age = labels.find(label => /\d+\+/.test(label)) || '';
+            const typeLabel = labels.find(label => !/\d+\+/.test(label)) || 'Манґа';
+            return {
+                honeyId: match[1], mal_id: `manga-${match[1]}`, slug: match[1], title, originalTitle: title,
+                url: href, readerUrl: '', readerAvailable: true, chapters: Number(chapterMatch?.[1] || 1),
+                images: { jpg: { large_image_url: getProxyUrl(poster, 'desktop'), image_url: getProxyUrl(poster, 'desktop') } },
+                genres, tags: [], adult: age || 'NONE', isAdultCover: age === '18+', type: 'manga', typeLabel,
+                status: '', synopsis: card.querySelector('.card__text.desc')?.textContent?.trim() || '',
+                score: Number.isFinite(score) ? score : 0, year: '', from: 'manga.in.ua'
+            };
+        }
+
         async function fetchMangaInUaCatalogPage(page = 1) {
-            const source = `${HONEY_WEB}/mangas/${page > 1 ? `?page=${page}` : ''}`;
+            const source = page > 1 ? `${HONEY_WEB}/mangas/page/${page}/` : `${HONEY_WEB}/mangas/`;
             const response = await fetch(getProxyUrl(source, 'desktop'), { credentials: 'omit', cache: 'no-store' });
             if (!response.ok) throw new Error(`manga.in.ua: HTTP ${response.status}`);
             const html = await response.text();
             const doc = new DOMParser().parseFromString(html, 'text/html');
+            const sourceTotal = parseMangaInUaTotal(doc);
+            if (sourceTotal) {
+                homeCatalogTotal = sourceTotal;
+                homeCatalogAvailableTotal = sourceTotal;
+            }
             const seen = new Set();
-            const items = [...doc.querySelectorAll('a[href*="/mangas/"]')].map(link => {
-                const href = link.href || link.getAttribute('href') || '';
-                const match = href.match(/https?:\/\/manga\.in\.ua\/mangas\/[^/]+\/(\d+-[^?#]+\.html)/i);
-                if (!match || seen.has(match[1])) return null;
-                seen.add(match[1]);
-                const title = (link.querySelector('h2,h3,.title,.name')?.textContent || link.textContent || '').replace(/ОНОВЛЕННЯ.*$/i, '').trim();
-                const image = link.querySelector('img');
-                const poster = image?.dataset?.src || image?.getAttribute('data-src') || image?.getAttribute('src') || '';
-                return { id: match[1], title: title || match[1], href: `https://manga.in.ua/mangas/${match[1]}`, poster: poster.startsWith('http') ? poster : `https://manga.in.ua${poster}` };
-            }).filter(Boolean);
-            return items.map(item => ({ honeyId: item.id, mal_id: `manga-${item.id}`, slug: item.id, title: item.title, originalTitle: item.title, url: item.href, readerUrl: '', readerAvailable: true, chapters: 1, images: { jpg: { large_image_url: getProxyUrl(item.poster, 'desktop'), image_url: getProxyUrl(item.poster, 'desktop') } }, genres: [], tags: [], adult: 'NONE', isAdultCover: false, type: 'manga', typeLabel: 'Манґа', status: '', synopsis: '', score: 0, year: '', from: 'manga.in.ua' }));
+            const items = [...doc.querySelectorAll('article.item')].map(parseMangaInUaCard).filter(item => {
+                if (!item || seen.has(item.url)) return false;
+                seen.add(item.url);
+                return true;
+            });
+            homeCatalogHasMore = items.length >= 24 && (!homeCatalogTotal || page * 24 < homeCatalogTotal);
+            return items;
         }
 
         export async function fetchHoneyCatalogPage(page) {
@@ -705,9 +751,7 @@ import { getProxyUrl } from '../../utils/image.js';
         export function homeCatalogCountText(visibleCount) {
             const total = homeCatalogTotal || visibleCount;
             if (homeCatalogMode === 'manga') {
-                const available = homeCatalogMode === 'manga'
-                    ? homeCatalogItems.filter(item => item?.readerAvailable || item?.readerUrl).length
-                    : homeCatalogItems.filter(item => item?.readerUrl).length;
+                const available = homeCatalogAvailableTotal || homeCatalogItems.filter(item => item?.readerAvailable || item?.readerUrl).length;
                 return `Доступно для читання: ${formatHomeCatalogNumber(available)} із ${formatHomeCatalogNumber(total)} манґи`;
             }
             return `Знайдено ${formatHomeCatalogNumber(total)} результатів`;
@@ -897,7 +941,7 @@ import { getProxyUrl } from '../../utils/image.js';
                 const nextItems = await fetchHomeCatalogPage(1);
                 if (requestId !== homeCatalogRequestId) return;
                 homeCatalogItems = nextItems;
-                homeCatalogTotal = homeCatalogItems.length;
+                if (homeCatalogMode === 'manga' && homeCatalogTotal) homeCatalogAvailableTotal = homeCatalogTotal;
                 syncHomeCatalogGenreControl();
                 renderHomeCatalogGrid();
                 syncHomeCatalogMoreButton();
@@ -924,10 +968,10 @@ import { getProxyUrl } from '../../utils/image.js';
                 const nextItems = await fetchHomeCatalogPage(nextPage);
                 const existing = new Set(homeCatalogItems.map(item => item.url));
                 homeCatalogItems.push(...nextItems.filter(item => item.url && !existing.has(item.url)));
-                homeCatalogTotal = homeCatalogItems.length;
                 homeCatalogPage = nextPage;
                 renderHomeCatalogGrid();
-                if (!nextItems.length || nextItems.length < 24) button.remove();
+                homeCatalogHasMore = Boolean(nextItems.length) && (!homeCatalogTotal || homeCatalogItems.length < homeCatalogTotal);
+                if (!homeCatalogHasMore) button.remove();
                 else { button.disabled = false; button.innerHTML = '<i class="fas fa-plus"></i> Продовжити'; }
             } catch (error) {
                 button.disabled = false;
@@ -959,6 +1003,9 @@ import { getProxyUrl } from '../../utils/image.js';
             container.style.display = 'flex';
             homeCatalogPage = 1;
             homeCatalogItems = [];
+            homeCatalogTotal = 0;
+            homeCatalogAvailableTotal = 0;
+            homeCatalogHasMore = true;
             homeCatalogLoading = false;
 
             try {
@@ -969,7 +1016,7 @@ import { getProxyUrl } from '../../utils/image.js';
                 });
                 if (requestId !== homeSectionsRequestId) return;
                 homeCatalogItems = catalogItems.filter(item => item?.url);
-                homeCatalogTotal = homeCatalogItems.length;
+                if (homeCatalogMode === 'manga' && homeCatalogTotal) homeCatalogAvailableTotal = homeCatalogTotal;
                 const html = buildHomeCatalogSectionHtml(homeCatalogItems);
                 container.innerHTML = html;
                 bindHomeCatalogCards(container);
