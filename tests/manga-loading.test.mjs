@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { buildPageMarkup, normalizeChapterName } from '../src/js/components/manga/pages.js';
-import { parseChapterUrl, pageImageFallbackUrl, pageImageUrl, selectHoneyReaderChapter } from '../src/js/services/api/manga.js';
+import { extractHoneyResourceIds, hasHoneyPageResources, parseChapterUrl, pageImageFallbackUrl, pageImageUrl, selectHoneyReaderChapter } from '../src/js/services/api/manga.js';
 
 const chapterUrl = 'https://honey-manga.com.ua/read/db4ed14e-f564-4103-be20-688948370f3d/8c336683-10ca-4912-9666-e18a1689da6e';
 const resource = index => `resource-${index}-uuid`;
@@ -29,6 +29,11 @@ const publicOlder = { id: 'public-older', isMonetized: false };
 assert.equal(selectHoneyReaderChapter([paidLatest, publicOlder]), publicOlder, 'reader prefers a public chapter over a paid latest chapter');
 assert.equal(selectHoneyReaderChapter([paidLatest]), paidLatest, 'reader keeps paid fallback when no public chapter exists');
 assert.equal(selectHoneyReaderChapter([]), null, 'empty chapter lists do not create a reader URL');
+assert.deepEqual(extractHoneyResourceIds({ resourceIds: { 0: 'page-a', 1: 'page-b' } }), { 0: 'page-a', 1: 'page-b' });
+assert.deepEqual(extractHoneyResourceIds({ data: { resourceIds: { 0: 'page-a' } } }), { 0: 'page-a' });
+assert.deepEqual(extractHoneyResourceIds({ pages: [{ resourceId: 'page-a' }, { id: 'page-b' }] }), { 0: 'page-a', 1: 'page-b' });
+assert.equal(hasHoneyPageResources({ resourceIds: {} }), false);
+assert.equal(hasHoneyPageResources({ pages: [{ resourceId: 'page-a' }] }), true);
 assert.throws(() => parseChapterUrl('https://example.com/old-reader.html'), /Honey Manga/);
 
 console.log('manga-loading fixtures: ok');

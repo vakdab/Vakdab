@@ -8,7 +8,7 @@ import { getProfile, saveProfile } from './settingsLegacy.js';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
-import { selectHoneyReaderChapter } from '../../services/api/manga.js?v=20260818-honey-free-chapter-v2';
+import { hasHoneyPageResources, selectHoneyReaderChapter } from '../../services/api/manga.js?v=20260818-honey-frames-v3';
 
         // ====================================================================
         export let currentTab = 'main',
@@ -542,7 +542,21 @@ import { selectHoneyReaderChapter } from '../../services/api/manga.js?v=20260818
                     body: JSON.stringify({ page: 1, pageSize: 100, mangaId: String(mangaId), sortOrder: 'DESC' })
                 });
                 const chapters = Array.isArray(payload?.data) ? payload.data : [];
-                const chapter = selectHoneyReaderChapter(chapters);
+                const publicFirst = [
+                    ...chapters.filter(entry => entry && entry.isMonetized !== true),
+                    ...chapters.filter(entry => entry && entry.isMonetized === true)
+                ];
+                let chapter = null;
+                // A chapter may be marked public but still have no uploaded pages.
+                // Probe the frames manifest and skip empty chapters before routing.
+                for (const candidate of publicFirst.slice(0, 12)) {
+                    if (!candidate?.id) continue;
+                    try {
+                        const frames = await fetchHoneyJson(`/v2/chapter/frames/${encodeURIComponent(candidate.id)}/${encodeURIComponent(mangaId)}`);
+                        if (hasHoneyPageResources(frames)) { chapter = candidate; break; }
+                    } catch { /* Try the next chapter; the reader will report paywall only after all candidates fail. */ }
+                }
+                chapter ||= selectHoneyReaderChapter(chapters);
                 const reader = chapter?.id ? {
                     readerUrl: `${HONEY_WEB}/read/${chapter.id}/${mangaId}`,
                     honeyChapterId: chapter.id,
