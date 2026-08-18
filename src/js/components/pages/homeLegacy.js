@@ -399,7 +399,7 @@ import { getProxyUrl } from '../../utils/image.js';
             return body;
         }
 
-        // Honey Manga є єдиним джерелом каталогу, постерів і читання манґи. Hikka використовується для аніме та ранобе.
+        // manga.in.ua є єдиним джерелом каталогу, постерів і читання манґи. Hikka використовується для аніме та ранобе.
         export const HONEY_API = 'https://manga.in.ua';
         export const HONEY_SEARCH_API = 'https://manga.in.ua/search/';
         export const HONEY_WEB = 'https://manga.in.ua';
@@ -413,7 +413,7 @@ import { getProxyUrl } from '../../utils/image.js';
         export const honeyReaderCache = new Map();
         export let honeyAvailabilityMap = null;
         export let honeyAvailabilityMapPromise = null;
-        export const HONEY_CATALOG_READABLE_FALLBACK = 2054;
+        export const HONEY_CATALOG_READABLE_FALLBACK = 0;
         export let honeyCatalogReadableTotal = 0;
         export let honeyCatalogReadableTotalPromise = null;
 
@@ -470,7 +470,7 @@ import { getProxyUrl } from '../../utils/image.js';
                     const response = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-cache', ...options });
                     if (response.ok) return response.json();
                     const retryable = response.status === 429 || response.status >= 500;
-                    if (!retryable || attempt === maxAttempts - 1) throw new Error(`Honey Manga API: HTTP ${response.status}`);
+                    if (!retryable || attempt === maxAttempts - 1) throw new Error(`manga.in.ua API: HTTP ${response.status}`);
                     const retryAfter = Number(response.headers.get('Retry-After'));
                     const delay = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000, 8000) : 700 * (attempt + 1);
                     await new Promise(resolve => setTimeout(resolve, delay));
@@ -479,7 +479,7 @@ import { getProxyUrl } from '../../utils/image.js';
                     await new Promise(resolve => setTimeout(resolve, 700 * (attempt + 1)));
                 }
             }
-            throw new Error('Honey Manga API: повторні спроби вичерпано');
+            throw new Error('manga.in.ua API: повторні спроби вичерпано');
             })().catch(error => { honeyJsonCache.delete(cacheKey); throw error; });
             honeyJsonCache.set(cacheKey, request);
             return request;
@@ -501,7 +501,7 @@ import { getProxyUrl } from '../../utils/image.js';
             if (honeySearchCache.has(normalized)) return honeySearchCache.get(normalized);
             const promise = fetchHoneyJson(`/v2/manga/pattern?query=${encodeURIComponent(query)}`, {}, HONEY_SEARCH_API)
                 .then(payload => Array.isArray(payload) ? payload : [])
-                .catch(error => { console.warn('Honey Manga title search failed:', error); return []; });
+                .catch(error => { console.warn('manga.in.ua title search failed:', error); return []; });
             honeySearchCache.set(normalized, promise);
             return promise;
         }
@@ -643,7 +643,7 @@ import { getProxyUrl } from '../../utils/image.js';
                 const poster = image?.dataset?.src || image?.getAttribute('data-src') || image?.getAttribute('src') || '';
                 return { id: match[1], title: title || match[1], href: `https://manga.in.ua/mangas/${match[1]}`, poster: poster.startsWith('http') ? poster : `https://manga.in.ua${poster}` };
             }).filter(Boolean);
-            return items.map(item => ({ honeyId: item.id, mal_id: `manga-${item.id}`, slug: item.id, title: item.title, originalTitle: item.title, url: item.href, readerUrl: '', chapters: 1, images: { jpg: { large_image_url: getProxyUrl(item.poster, 'desktop'), image_url: getProxyUrl(item.poster, 'desktop') } }, genres: [], tags: [], adult: 'NONE', isAdultCover: false, type: 'manga', typeLabel: 'Манґа', status: '', synopsis: '', score: 0, year: '', from: 'manga.in.ua' }));
+            return items.map(item => ({ honeyId: item.id, mal_id: `manga-${item.id}`, slug: item.id, title: item.title, originalTitle: item.title, url: item.href, readerUrl: '', readerAvailable: true, chapters: 1, images: { jpg: { large_image_url: getProxyUrl(item.poster, 'desktop'), image_url: getProxyUrl(item.poster, 'desktop') } }, genres: [], tags: [], adult: 'NONE', isAdultCover: false, type: 'manga', typeLabel: 'Манґа', status: '', synopsis: '', score: 0, year: '', from: 'manga.in.ua' }));
         }
 
         export async function fetchHoneyCatalogPage(page) {
@@ -651,7 +651,6 @@ import { getProxyUrl } from '../../utils/image.js';
             if (honeyCatalogPageCache.has(cacheKey)) return honeyCatalogPageCache.get(cacheKey).items;
             const items = await fetchMangaInUaCatalogPage(page);
             const filtered = homeCatalogQuery ? items.filter(item => normalizeHoneyMatch(item.title).includes(normalizeHoneyMatch(homeCatalogQuery))) : items;
-            homeCatalogTotal = filtered.length;
             const enrichedItems = await attachHoneyReaders(filtered);
             honeyCatalogPageCache.set(cacheKey, { total: homeCatalogTotal, items: enrichedItems });
             return enrichedItems;
@@ -684,14 +683,14 @@ import { getProxyUrl } from '../../utils/image.js';
                     return homeCatalogStatus === 'ongoing' ? /ongoing|онго|publishing|active/.test(status) : /finished|completed|released|заверш/.test(status);
                 });
             }
-            if (homeCatalogAvailability === 'available') filtered = filtered.filter(item => item.readerUrl);
+            if (homeCatalogAvailability === 'available') filtered = filtered.filter(item => item.readerAvailable || item.readerUrl);
             if (homeCatalogMode === 'anime' && homeCatalogType !== 'all') filtered = filtered.filter(item => String(item.type || '').toLowerCase() === homeCatalogType);
             if (homeCatalogMode === 'anime' && homeCatalogYearMin) filtered = filtered.filter(item => Number(item.year || item.start_year || 0) >= Number(homeCatalogYearMin));
             if (homeCatalogMode === 'anime' && homeCatalogYearMax) filtered = filtered.filter(item => Number(item.year || item.start_year || 0) <= Number(homeCatalogYearMax));
             if (homeCatalogMode === 'anime' && homeCatalogScoreMin) filtered = filtered.filter(item => Number(item.score || item.native_score || 0) >= Number(homeCatalogScoreMin));
             if (homeCatalogGenres.size) filtered = filtered.filter(item => (item.genres || []).some(genre => homeCatalogGenres.has(normalizeHoneyMatch(typeof genre === 'object' ? genre.name || genre.name_ua : genre))));
             return filtered.sort((a, b) => {
-                const availability = Number(Boolean(b.readerUrl)) - Number(Boolean(a.readerUrl));
+                const availability = Number(Boolean(b.readerAvailable || b.readerUrl)) - Number(Boolean(a.readerAvailable || a.readerUrl));
                 if (availability) return availability;
                 if (homeCatalogSort === 'title') return String(a.title || '').localeCompare(String(b.title || ''), 'uk');
                 if (homeCatalogSort === 'newest') return Number(b.year || 0) - Number(a.year || 0);
@@ -707,11 +706,7 @@ import { getProxyUrl } from '../../utils/image.js';
             const total = homeCatalogTotal || visibleCount;
             if (homeCatalogMode === 'manga') {
                 const available = homeCatalogMode === 'manga'
-                    ? Math.max(
-                        Number(honeyCatalogReadableTotal || 0),
-                        Number(honeyAvailabilityMap?.honeyAvailable || honeyAvailabilityMap?.available || 0),
-                        HONEY_CATALOG_READABLE_FALLBACK
-                    )
+                    ? homeCatalogItems.filter(item => item?.readerAvailable || item?.readerUrl).length
                     : homeCatalogItems.filter(item => item?.readerUrl).length;
                 return `Доступно для читання: ${formatHomeCatalogNumber(available)} із ${formatHomeCatalogNumber(total)} манґи`;
             }
@@ -902,6 +897,7 @@ import { getProxyUrl } from '../../utils/image.js';
                 const nextItems = await fetchHomeCatalogPage(1);
                 if (requestId !== homeCatalogRequestId) return;
                 homeCatalogItems = nextItems;
+                homeCatalogTotal = homeCatalogItems.length;
                 syncHomeCatalogGenreControl();
                 renderHomeCatalogGrid();
                 syncHomeCatalogMoreButton();
@@ -928,6 +924,7 @@ import { getProxyUrl } from '../../utils/image.js';
                 const nextItems = await fetchHomeCatalogPage(nextPage);
                 const existing = new Set(homeCatalogItems.map(item => item.url));
                 homeCatalogItems.push(...nextItems.filter(item => item.url && !existing.has(item.url)));
+                homeCatalogTotal = homeCatalogItems.length;
                 homeCatalogPage = nextPage;
                 renderHomeCatalogGrid();
                 if (!nextItems.length || nextItems.length < 24) button.remove();
@@ -972,6 +969,7 @@ import { getProxyUrl } from '../../utils/image.js';
                 });
                 if (requestId !== homeSectionsRequestId) return;
                 homeCatalogItems = catalogItems.filter(item => item?.url);
+                homeCatalogTotal = homeCatalogItems.length;
                 const html = buildHomeCatalogSectionHtml(homeCatalogItems);
                 container.innerHTML = html;
                 bindHomeCatalogCards(container);

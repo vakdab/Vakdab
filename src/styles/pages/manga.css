@@ -41,9 +41,9 @@
 .manga-reader__zoom { min-width: 52px; text-align: center; color: var(--text-muted); font-size: 12px; font-weight: 800; }
 .manga-reader__chapter-select { display: flex; align-items: center; gap: 10px; max-width: 1120px; margin: 0 auto 14px; color: var(--text-muted); font-size: 12px; font-weight: 700; }
 .manga-reader__chapter-select select { min-width: min(100%, 420px); padding: 11px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; }
-.manga-reader__pages { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; width: 100%; max-width: 980px; margin: 0 auto; overflow-x: hidden; overscroll-behavior: contain; }
-.manga-reader__page { position: relative; display: block; margin: 0 auto; width: min(100%, calc(760px * var(--manga-reader-zoom, 1))); min-width: 0; min-height: 180px; text-align: center; scroll-margin-top: 90px; contain: layout paint; contain-intrinsic-size: 760px 420px; }
-.manga-reader__page img { display: block; width: 100%; inline-size: 100%; height: auto; block-size: auto; max-width: 100%; max-height: none; min-width: 0; min-height: 0; aspect-ratio: auto; object-fit: initial; border-radius: 5px; background: linear-gradient(135deg, color-mix(in srgb, var(--surface) 92%, var(--accent) 8%), var(--surface)); box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+.manga-reader__pages { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; width: 100%; max-width: 980px; margin: 0 auto; overflow-x: auto; overscroll-behavior: contain; background: #000; }
+.manga-reader__page { position: relative; display: block; margin: 0 auto; width: calc(100% * var(--manga-reader-zoom, 1)); max-width: none; min-width: 0; min-height: 180px; text-align: center; scroll-margin-top: 90px; contain: layout paint; contain-intrinsic-size: 760px 420px; background: #000; }
+.manga-reader__page img { display: block; width: 100%; inline-size: 100%; height: auto; block-size: auto; max-width: 100%; max-height: none; min-width: 0; min-height: 0; aspect-ratio: auto; object-fit: initial; border-radius: 0; background: #000; box-shadow: none; }
 .manga-reader__page figcaption { display: none; }
 .manga-reader__pager { display: flex; justify-content: space-between; gap: 12px; max-width: 980px; margin: 24px auto 0; }
 .manga-reader__pager button { flex: 1; }
@@ -67,7 +67,7 @@
     .manga-reader { width: 100%; max-width: none; box-sizing: border-box; padding: 12px max(8px, env(safe-area-inset-left)) 90px max(8px, env(safe-area-inset-right)); }
     .manga-reader__header, .manga-reader__intro, .manga-reader__chapter-select, .manga-reader__pager, .manga-reader__about { width: 100%; max-width: none; box-sizing: border-box; }
     .manga-reader__pages { width: calc(100% + max(8px, env(safe-area-inset-left)) + max(8px, env(safe-area-inset-right))); max-width: none; margin-left: calc(-1 * max(8px, env(safe-area-inset-left))); margin-right: calc(-1 * max(8px, env(safe-area-inset-right))); }
-    .manga-reader__page { width: 100%; }
+    .manga-reader__page { width: calc(100% * var(--manga-reader-zoom, 1)); }
     .manga-reader__page img { border-radius: 0; }
     .manga-reader__header { grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
     .manga-reader__back { width: 44px; padding: 0; justify-content: center; }
@@ -78,8 +78,8 @@
     .manga-reader__intro span:not(.manga-reader__counter) { line-height: 1.35; }
     .manga-reader__toolbar { top: 5px; gap: 4px; width: 100%; justify-content: space-between; }
     .manga-reader__toolbar button { width: 38px; }
-    .manga-reader__pages { gap: 8px; }
-    .manga-reader__page { display: block; width: 100%; max-width: 100%; min-width: 0; }
+    .manga-reader__pages { gap: 0; }
+    .manga-reader__page { display: block; width: calc(100% * var(--manga-reader-zoom, 1)); max-width: none; min-width: 0; }
     .manga-reader__page img { display: block; width: 100% !important; inline-size: 100% !important; max-width: none !important; height: auto !important; block-size: auto !important; aspect-ratio: auto !important; object-fit: initial !important; }
     .manga-reader__pager { flex-direction: column; }
     .manga-reader__chapter-select { align-items: flex-start; flex-direction: column; }

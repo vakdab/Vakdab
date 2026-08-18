@@ -2,10 +2,6 @@ import { getProxyUrl } from '../../utils/image.js';
 
 export const MANGA_WEB = 'https://manga.in.ua';
 export const MANGA_PROXY = 'https://monoanime.animegran8.workers.dev/';
-export const HONEY_WEB = MANGA_WEB;
-export const HONEY_API = MANGA_WEB;
-export const HONEY_SEARCH_API = MANGA_WEB;
-export const HONEY_IMAGE = MANGA_WEB;
 export const DEFAULT_CHAPTER_URL = `${MANGA_WEB}/chapters/64318-hlopjacha-bezodnja-tom-1-rozdil-1.html`;
 const htmlCache = new Map();
 
@@ -25,4 +21,4 @@ function extractMangaUserHash(html) { return html.match(/(?:site_login_hash|user
 async function fetchMangaAjaxPages(html, doc) { const newsId = doc.querySelector('#comics')?.getAttribute('data-news_id'); const userHash = extractMangaUserHash(html); if (!newsId || !userHash) return []; const endpoint = `${MANGA_WEB}/engine/ajax/controller.php?mod=load_chapters_image&news_id=${encodeURIComponent(newsId)}&action=show&user_hash=${encodeURIComponent(userHash)}`; const response = await fetch(getProxyUrl(endpoint, 'desktop'), { credentials: 'omit', cache: 'no-store', headers: { 'X-Requested-With': 'XMLHttpRequest' } }); if (!response.ok) return []; return extractPages(parseHtml(await response.text())); }
 export async function getChapterFrames(chapterUrl) { const url = safeUrl(chapterUrl, ''); if (!isMangaInUaChapterUrl(url)) throw new Error('Неправильне посилання на розділ manga.in.ua'); const endpoint = `${MANGA_PROXY}?url=${encodeURIComponent(url)}&manga_pages=1`; const response = await fetch(endpoint, { credentials: 'omit', cache: 'no-store' }); if (!response.ok) throw new Error(`Сторінки manga.in.ua: HTTP ${response.status}`); const payload = await response.json(); const pages = Array.isArray(payload.images) ? payload.images.map(content => ({ content })).filter(item => item.content) : []; if (!pages.length) throw new Error(payload.error || 'Сторінки manga.in.ua не завантажилися'); return pages; }
 export function getReaderBackgroundData(titleId, chapterUrl) { return fetchMangaHtml(chapterUrl).then(html => { const doc = parseHtml(html); const links = extractChapterLinks(doc); return { title: { title: doc.querySelector('h1')?.textContent?.trim() || 'Манґа', description: doc.querySelector('.full-text, .description')?.textContent?.trim() || '' }, chapter: chapterUrl, chapterList: links.map((item, index) => ({ id: item.url, url: item.url, title: item.title || `Розділ ${index + 1}` })) }; }).catch(() => ({ title: {}, chapter: chapterUrl, chapterList: [] })); }
-export function clearHoneyCache() { htmlCache.clear(); }
+export function clearMangaCache() { htmlCache.clear(); }

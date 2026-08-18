@@ -1,4 +1,4 @@
-import { DEFAULT_CHAPTER_URL, getChapterFrames, getReaderBackgroundData, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/honey.js?v=20260818-manga-reader-v3';
+import { DEFAULT_CHAPTER_URL, getChapterFrames, getReaderBackgroundData, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/manga.js?v=20260818-manga-reader-v4';
 import { buildPageMarkup, escapeHtml, normalizeChapterName, pageLabel } from './pages.js?v=20260817-manga-pages-v2';
 import { createPagePreloader } from './preload.js';
 
@@ -21,7 +21,7 @@ function showReaderError(container, error, chapterUrl, onNavigate) {
 }
 
 function renderShell(container, ids, pages, background, chapterUrl, onNavigate) {
-    const titleFallback = 'Манґа';
+    const titleFallback = decodeURIComponent(String(ids.slug || 'Манґа')).replace(/[-_]+/g, ' ').replace(/\b(tom|розділ|rozdil|chapter)\b.*$/i, '').trim() || 'Манґа';
     const pageMarkup = buildPageMarkup(pages, pageImageUrl, pageImageFallbackUrl);
     container.innerHTML = `<section class="manga-reader" aria-label="Рідер манґи">
         <header class="manga-reader__header"><button class="manga-reader__back" type="button" aria-label="Назад"><i class="fas fa-arrow-left"></i><span>Назад</span></button><div class="manga-reader__heading"><span>VAKDAB · МАНҐА</span><h1 id="mangaReaderTitle">${titleFallback}</h1><p id="mangaReaderChapter">${escapeHtml(normalizeChapterName(chapterUrl))}</p></div></header>
@@ -49,8 +49,10 @@ function renderShell(container, ids, pages, background, chapterUrl, onNavigate) 
     container.tabIndex = 0;
     container.querySelector('.manga-reader__back')?.addEventListener('click', () => onNavigate(null));
     background.then(data => {
-        const title = data.title || {}; const chapterList = data.chapterList || []; const currentIndex = chapterList.findIndex(item => String(item.id) === String(ids.chapterId));
-        container.querySelector('#mangaReaderTitle').textContent = title.title || titleFallback; container.querySelector('#mangaReaderChapter').textContent = normalizeChapterName(data.chapter || chapterUrl); container.querySelector('#mangaReaderDescription').textContent = title.description || 'Опис відсутній.'; document.title = `${title.title || titleFallback} — VakDab`;
+        const title = data.title || {}; const chapterList = data.chapterList || [];
+        const sourceTitle = String(title.title || '').trim();
+        const safeTitle = sourceTitle && !/^https?:\/\//i.test(sourceTitle) && !/\/chapters\//i.test(sourceTitle) ? sourceTitle : titleFallback; const currentIndex = chapterList.findIndex(item => String(item.id) === String(ids.chapterId));
+        container.querySelector('#mangaReaderTitle').textContent = safeTitle; container.querySelector('#mangaReaderChapter').textContent = normalizeChapterName(data.chapter || chapterUrl); container.querySelector('#mangaReaderDescription').textContent = title.description || 'Опис відсутній.'; document.title = `${safeTitle} — VakDab`;
         const select = container.querySelector('#mangaReaderChapterSelect'); select.innerHTML = chapterList.length ? chapterList.map(item => `<option value="${escapeHtml(String(item.id))}"${String(item.id) === String(ids.chapterId) ? ' selected' : ''}>${escapeHtml(normalizeChapterName(item))}</option>`).join('') : '<option>Розділи недоступні</option>'; select.disabled = !chapterList.length;
         const setChapterButton = (button, item, label) => { if (!item) { button.disabled = true; return; } button.disabled = false; button.dataset.chapterUrl = item.url || item.id || ''; button.textContent = label; };
         setChapterButton(container.querySelector('[data-chapter-url]:first-child'), currentIndex > 0 ? chapterList[currentIndex - 1] : null, '← Попередній розділ'); setChapterButton(container.querySelector('[data-chapter-url]:last-child'), currentIndex >= 0 && currentIndex < chapterList.length - 1 ? chapterList[currentIndex + 1] : null, 'Наступний розділ →');
