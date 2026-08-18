@@ -1,5 +1,5 @@
 import { Auth } from './auth.js';
-import { getDefaultStickers } from './app-legacy.js?v=20260818-honey-manga-v1';
+import { getDefaultStickers } from './app-legacy.js?v=20260818-honey-free-chapter-v2';
 
         export const Storage = {
             _syncTimer: null,

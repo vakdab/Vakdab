@@ -3,7 +3,7 @@ import { auth, db, initialized as firebaseInitialized } from '../services/fireba
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from './app-legacy.js?v=20260818-honey-manga-v1';
+} from './app-legacy.js?v=20260818-honey-free-chapter-v2';
 import { getDefaultProfile } from '../components/pages/settingsLegacy.js';
 import { Storage } from './storage.js';
 

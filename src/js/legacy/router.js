@@ -6,7 +6,7 @@ import {
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
     renderGenresPage, renderProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from './app-legacy.js?v=20260818-honey-manga-v1';
+} from './app-legacy.js?v=20260818-honey-free-chapter-v2';
 
         export const Router = {
             currentRoute: 'main',
