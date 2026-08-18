@@ -1,5 +1,5 @@
-import { DEFAULT_CHAPTER_URL, getChapterFrames, getReaderBackgroundData, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/manga.js?v=20260818-manga-reader-v4';
-import { buildPageMarkup, escapeHtml, normalizeChapterName, pageLabel } from './pages.js?v=20260817-manga-pages-v2';
+import { DEFAULT_CHAPTER_URL, getChapterFrames, getReaderBackgroundData, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/manga.js?v=20260818-manga-chapters-v1';
+import { buildPageMarkup, escapeHtml, normalizeChapterName, pageLabel } from './pages.js?v=20260818-manga-pages-v3';
 import { createPagePreloader } from './preload.js';
 
 export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_URL, onNavigate = () => {}) {

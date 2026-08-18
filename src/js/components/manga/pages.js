@@ -11,6 +11,19 @@ export function normalizeChapterName(value = '') {
         return `Том ${volume} · Розділ ${chapter}${sub}${title ? `: ${title}` : ''}`;
     }
     const raw = String(value || '').trim().replace(/&amp;/g, '&');
+    if (/^https?:\/\//i.test(raw)) {
+        try {
+            const url = new URL(raw);
+            const match = url.pathname.match(/\/chapters\/\d+-([^/]+)\.html/i);
+            if (match) {
+                const slug = decodeURIComponent(match[1]).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+                const numbered = slug.match(/^(.*?)(?:\s+(?:tom|том)\s*-?\s*(\d+))?\s*(?:rozdil|розділ|chapter)\s*-?\s*(\d+)(?:\s+.*)?$/i);
+                if (numbered) return `${numbered[2] ? `Том ${numbered[2]} · ` : ''}Розділ ${numbered[3]}`;
+                return slug || 'Розділ без назви';
+            }
+        } catch { /* URL fallback is intentionally hidden from the reader UI. */ }
+        return 'Розділ без назви';
+    }
     const parts = raw.split(/@#%&;№%#&\*\*#!@/).filter(Boolean);
     if (parts.length >= 2) return `Том ${parts[0]} · Розділ ${parts[1]}${parts.slice(2).join(' ').trim() ? `: ${parts.slice(2).join(' ').trim()}` : ''}`;
     return raw || 'Розділ без назви';

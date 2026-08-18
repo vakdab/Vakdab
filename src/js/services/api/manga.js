@@ -20,5 +20,18 @@ function extractPages(doc) { return [...doc.querySelectorAll('#comics img, img[d
 function extractMangaUserHash(html) { return html.match(/(?:site_login_hash|user_hash)\s*[=:]\s*["']([^"']+)/i)?.[1] || ''; }
 async function fetchMangaAjaxPages(html, doc) { const newsId = doc.querySelector('#comics')?.getAttribute('data-news_id'); const userHash = extractMangaUserHash(html); if (!newsId || !userHash) return []; const endpoint = `${MANGA_WEB}/engine/ajax/controller.php?mod=load_chapters_image&news_id=${encodeURIComponent(newsId)}&action=show&user_hash=${encodeURIComponent(userHash)}`; const response = await fetch(getProxyUrl(endpoint, 'desktop'), { credentials: 'omit', cache: 'no-store', headers: { 'X-Requested-With': 'XMLHttpRequest' } }); if (!response.ok) return []; return extractPages(parseHtml(await response.text())); }
 export async function getChapterFrames(chapterUrl) { const url = safeUrl(chapterUrl, ''); if (!isMangaInUaChapterUrl(url)) throw new Error('Неправильне посилання на розділ manga.in.ua'); const endpoint = `${MANGA_PROXY}?url=${encodeURIComponent(url)}&manga_pages=1`; const response = await fetch(endpoint, { credentials: 'omit', cache: 'no-store' }); if (!response.ok) throw new Error(`Сторінки manga.in.ua: HTTP ${response.status}`); const payload = await response.json(); const pages = Array.isArray(payload.images) ? payload.images.map(content => ({ content })).filter(item => item.content) : []; if (!pages.length) throw new Error(payload.error || 'Сторінки manga.in.ua не завантажилися'); return pages; }
+
+export async function getMangaChapters(mangaUrl) {
+    const url = safeUrl(mangaUrl, '');
+    if (!/^https?:\/\/manga\.in\.ua\/mangas\//i.test(url)) return { title: '', chapters: [] };
+    const endpoint = `${MANGA_PROXY}?url=${encodeURIComponent(url)}&manga_chapters=1`;
+    const response = await fetch(endpoint, { credentials: 'omit', cache: 'no-store' });
+    if (!response.ok) return { title: '', chapters: [] };
+    const payload = await response.json();
+    return {
+        title: String(payload?.title || '').trim(),
+        chapters: Array.isArray(payload?.chapters) ? payload.chapters.filter(item => isMangaInUaChapterUrl(item?.url)) : [],
+    };
+}
 export function getReaderBackgroundData(titleId, chapterUrl) { return fetchMangaHtml(chapterUrl).then(html => { const doc = parseHtml(html); const links = extractChapterLinks(doc); return { title: { title: doc.querySelector('h1')?.textContent?.trim() || 'Манґа', description: doc.querySelector('.full-text, .description')?.textContent?.trim() || '' }, chapter: chapterUrl, chapterList: links.map((item, index) => ({ id: item.url, url: item.url, title: item.title || `Розділ ${index + 1}` })) }; }).catch(() => ({ title: {}, chapter: chapterUrl, chapterList: [] })); }
 export function clearMangaCache() { htmlCache.clear(); }

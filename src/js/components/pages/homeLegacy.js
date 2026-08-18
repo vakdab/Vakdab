@@ -7,6 +7,7 @@ import {
 import { getProfile, saveProfile } from './settingsLegacy.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
+import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-chapters-v1';
 
         // ====================================================================
         export let currentTab = 'main',
@@ -511,20 +512,16 @@ import { getProxyUrl } from '../../utils/image.js';
 
         export async function resolveHoneyReader(item) {
             if (!item || homeCatalogMode !== 'manga') return item;
-            const mangaTitle = normalizeHoneyMatch(item.title || item.originalTitle || item.title_ua || '');
-            const mangaInUaUrl = MANGA_IN_UA_READER_MAP.get(mangaTitle);
-            if (mangaInUaUrl) return { ...item, readerUrl: mangaInUaUrl, readerSource: 'manga.in.ua' };
             if (item.url && /^https?:\/\/manga\.in\.ua\/mangas\//i.test(item.url)) {
                 try {
-                    const response = await fetch(getProxyUrl(item.url, 'desktop'), { credentials: 'omit', cache: 'no-store' });
-                    const html = await response.text();
-                    const doc = new DOMParser().parseFromString(html, 'text/html');
-                    const chapter = [...doc.querySelectorAll('a[href*="/chapters/"], select#linkstocomics option')]
-                        .map(node => node.value || node.href || '')
-                        .find(url => /^https?:\/\/manga\.in\.ua\/chapters\/\d+-[^?#]+\.html/i.test(url));
-                    if (chapter) return { ...item, readerUrl: chapter, readerSource: 'manga.in.ua' };
+                    const payload = await getMangaChapters(item.url);
+                    const chapter = payload.chapters?.[0]?.url || '';
+                    if (chapter) return { ...item, readerUrl: chapter, readerTitle: payload.title || item.title, readerSource: 'manga.in.ua' };
                 } catch (error) { console.warn('manga.in.ua chapter lookup failed:', error); }
             }
+            const mangaTitle = normalizeHoneyMatch(item.title || item.originalTitle || item.title_ua || '');
+            const mangaInUaUrl = MANGA_IN_UA_READER_MAP.get(mangaTitle);
+            if (mangaInUaUrl) return { ...item, readerUrl: mangaInUaUrl, readerTitle: item.title, readerSource: 'manga.in.ua' };
             return item;
         }
 

@@ -1,3 +1,3 @@
-import { bootstrap } from './core/bootstrap.js?v=0080a53-fix';
+import { bootstrap } from './core/bootstrap.js?v=20260818-manga-chapters-v1';
 
 bootstrap();
