@@ -1196,6 +1196,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                 if (homeCatalogFilterResultItems) {
                     homeCatalogFilterResultOffset = Math.min(homeCatalogFilterResultOffset + 24, homeCatalogFilterResultItems.length);
                     homeCatalogItems = homeCatalogFilterResultItems.slice(0, homeCatalogFilterResultOffset);
+                    homeCatalogAvailableTotal = homeCatalogItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
                     homeCatalogHasMore = homeCatalogFilterResultOffset < homeCatalogFilterResultItems.length;
                     renderHomeCatalogGrid();
                     if (!homeCatalogHasMore) button.remove();

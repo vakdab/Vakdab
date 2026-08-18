@@ -71,3 +71,11 @@ The chapter issue is more likely to be upstream/Worker extraction loss than `pag
 ## Final v9 reader smoke
 
 Після оновлення index/app/bootstrap/module versions фінальний local build v9 знову відкрив контрольний reader без module/runtime error: `56` figures, counter `1 / 56`, first/third images loaded, page 10 deferred, error state порожній.
+
+## Production fix verification
+
+Correct Pages URL is `https://vakdab.github.io/Vakdab/`; bare `https://vakdab.github.io/` is a GitHub Pages 404. After PR #2 merge and Pages build commit `06e86f7842911208bd1bbc28deef61e0b4c1e794`, live resource graph loads app v9 and versioned app-legacy/homeLegacy modules. The 18+ production screen now shows exactly 10 cards and the visible count is `10 із 4 420`, so the original `24 із 10` mismatch is fixed. A remaining UX issue is that while the full filtered index is still loading, the denominator is still the overall manga total; the 18+ label should show a contextual filtered total or omit the denominator until indexing completes.
+
+## Final live counter verification before last patch
+
+After PR #3, live production correctly switched to 18+ with 10 cards and showed `Доступно для читання: 10 манґи` while the filtered index was still loading. After the full index completed it showed `24 із 1 248 манґи`, confirming a contextual filtered denominator rather than 4 420. A live load-more check added 24 unique cards (`24 → 48`) but exposed one remaining count bug: the available count stayed 24 in the filtered-result branch. This was patched immediately so the count will now update with each filtered load-more batch.
