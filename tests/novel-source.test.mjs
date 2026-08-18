@@ -3,7 +3,8 @@ import {
     normalizeNovelTitle,
     scoreNovelTitleMatch,
     proxiedRanobeUrl,
-    parseRanobeChapterList
+    parseRanobeChapterList,
+    parseRanobeChapterHtml
 } from '../src/js/services/api/novel.js';
 
 assert.equal(normalizeNovelTitle('Инструкция по эксплуатации Регрессора (Новелла)'), 'instruktsiya po ekspluatatsii regressora');
@@ -32,4 +33,8 @@ if (typeof DOMParser === 'undefined') {
 const chapters = parseRanobeChapterList(chapterHtml, 'https://ranobelib.me/ru/demo/read/v1/c1?bid=7');
 assert.equal(chapters.length, 2);
 assert.equal(chapters[1].url, 'https://ranobelib.me/ru/demo/read/v1/c1?bid=7');
+const markdownChapter = `Title: Demo\nURL Source: https://ranobelib.me/ru/demo/read/v1/c1\nMarkdown Content:\n# Глава 1\n![Image 1]\n(https://ranobelib.me/uploads/demo/image.png)\nТекст розділу.`;
+const parsedMarkdown = parseRanobeChapterHtml(markdownChapter, 'https://ranobelib.me/ru/demo/read/v1/c1');
+assert.deepEqual(parsedMarkdown.imageUrls, ['https://ranobelib.me/uploads/demo/image.png']);
+assert.deepEqual(parsedMarkdown.paragraphs, ['Текст розділу.']);
 console.log('novel-source.test.mjs: ok');

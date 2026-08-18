@@ -9,7 +9,7 @@ import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
 import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260818-honey-type-filter-v1';
-import { fetchRanobeCatalogPage, resolveRanobeReader } from '../../services/api/novel.js?v=20260818-ranobe-v4';
+import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } from '../../services/api/novel.js?v=20260818-ranobe-v5';
 
         // ====================================================================
         export let currentTab = 'main',
@@ -1184,6 +1184,13 @@ import { fetchRanobeCatalogPage, resolveRanobeReader } from '../../services/api/
                 bindHomeCatalogMenu(container);
                 syncHomeCatalogGenreControl(container);
                 syncHomeCatalogMoreButton();
+                if (homeCatalogMode === 'novel') {
+                    fetchRanobeCatalogTotal(homeCatalogQuery).then(total => {
+                        if (requestId !== homeSectionsRequestId || !total) return;
+                        homeCatalogTotal = total;
+                        renderHomeCatalogGrid();
+                    }).catch(error => console.warn('RanobeLib total count unavailable:', error));
+                }
 
 
             } catch (err) {
