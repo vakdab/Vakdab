@@ -811,18 +811,20 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
         export function bindHomeCatalogCards(root) {
             root?.querySelectorAll('.home-catalog-card:not([data-bound])').forEach(card => {
                 card.dataset.bound = '1';
+                if (!card.dataset.readerTitle) card.dataset.readerTitle = card.getAttribute('aria-label') || '';
                 const open = async () => {
                     if (!card.dataset.url) return;
+                    const cardTitle = card.dataset.readerTitle || card.getAttribute('aria-label') || 'Манґа';
                     if (card.dataset.readerUrl) {
-                        Router.goTo('manga', { url: card.dataset.readerUrl, title: card.dataset.readerTitle || card.getAttribute('aria-label') || 'Манґа' });
+                        Router.goTo('manga', { url: card.dataset.readerUrl, title: cardTitle });
                         return;
                     }
                     if (homeCatalogMode === 'manga' && card.dataset.honeyId) {
                         card.setAttribute('aria-busy', 'true');
                         try {
-                            const item = homeCatalogItems.find(entry => String(entry.honeyId || entry.honeyTitleId) === String(card.dataset.honeyId)) || { honeyId: card.dataset.honeyId, honeyTitleId: card.dataset.honeyId, title: card.getAttribute('aria-label'), chapters: 1 };
+                            const item = homeCatalogItems.find(entry => String(entry.honeyId || entry.honeyTitleId) === String(card.dataset.honeyId)) || { honeyId: card.dataset.honeyId, honeyTitleId: card.dataset.honeyId, title: cardTitle, chapters: 1 };
                             const resolved = await resolveHoneyReader({ ...item, honeyTitleId: card.dataset.honeyId, chapters: Math.max(1, Number(item.chapters || 1)) });
-                            if (resolved.readerUrl) { Router.goTo('manga', { url: resolved.readerUrl, title: resolved.readerTitle || item.title || card.dataset.readerTitle || 'Манґа' }); return; }
+                            if (resolved.readerUrl) { Router.goTo('manga', { url: resolved.readerUrl, title: cardTitle }); return; }
                         } finally { card.removeAttribute('aria-busy'); }
                         showToast('Розділи цього тайтлу ще не готові');
                         return;
