@@ -3,7 +3,7 @@ import { auth, db, initialized as firebaseInitialized } from '../services/fireba
 import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_CORS_PROXY, MIKAI_BASE, GENRE_MAP } from '../config/constants.js';
 import { safeQuery, safeQueryAll } from '../utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from '../utils/image.js';
-import { loadFeature } from '../core/feature-loader.js?v=20260818-ranobe-v5';
+import { loadFeature } from '../core/feature-loader.js?v=20260818-ranobe-v6';
 import '../utils/string.js';
 
 export let playerPageAnimeuaSeasons = null;
