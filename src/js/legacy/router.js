@@ -1,5 +1,5 @@
 import { HIKKA_API } from '../config/constants.js';
-import { loadFeature } from '../core/feature-loader.js';
+import { loadFeature } from '../core/feature-loader.js?v=20260818-image-fallback-v3';
 import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
     initRatingPage, loadAndDisplayGenreSections, loadMangaReader,

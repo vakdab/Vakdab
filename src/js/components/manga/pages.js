@@ -1,4 +1,4 @@
-export function escapeHtml(value = '') {
+export function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 }
 
@@ -35,12 +35,14 @@ export function pageLabel(index, total) {
 
 export function buildPageMarkup(pages, pageImageUrl, fallbackImageUrl = () => '') {
     return pages.map((page, index) => {
-        const url = escapeHtml(pageImageUrl(page.content));
-        const fallback = escapeHtml(fallbackImageUrl(page.content));
+        const content = page?.content || page?.url || page;
+        const url = escapeHtml(pageImageUrl(content));
+        const fallback = escapeHtml(fallbackImageUrl(content));
         const immediate = index < 3;
-        const source = immediate ? `src="${url}" fetchpriority="${index === 0 ? 'high' : 'auto'}"` : `data-src="${url}"`;
+        const source = immediate
+            ? `src="${url}" fetchpriority="${index === 0 ? 'high' : 'auto'}"`
+            : `data-src="${url}"`;
         const fallbackAttr = fallback ? ` data-fallback-src="${fallback}"` : '';
-        const errorHandler = "if(this.dataset.fallbackSrc && this.src !== this.dataset.fallbackSrc){this.src=this.dataset.fallbackSrc;this.dataset.imageFallback='1'}else{this.closest('figure')?.setAttribute('data-image-state','error')}";
-        return `<figure class="manga-reader__page" data-page-index="${index}" data-image-state="${index === 0 ? 'loading' : 'idle'}"><img ${source}${fallbackAttr} alt="Сторінка ${index + 1}" loading="${index < 2 ? 'eager' : 'lazy'}" decoding="async" onerror="${errorHandler}"><figcaption>${pageLabel(index, pages.length)}</figcaption></figure>`;
+        return `<figure class="manga-reader__page" data-page-index="${index}" data-image-state="idle"><img ${source} data-page-src="${url}"${fallbackAttr} alt="Сторінка ${index + 1}" loading="${index < 2 ? 'eager' : 'lazy'}" decoding="async"><button type="button" class="manga-reader__page-retry" hidden>Повторити</button><figcaption>${pageLabel(index, pages.length)}</figcaption></figure>`;
     }).join('');
 }

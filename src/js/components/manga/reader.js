@@ -1,5 +1,6 @@
-import { DEFAULT_CHAPTER_URL, getChapterFrames, getReaderBackgroundData, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/manga.js?v=20260818-manga-chapters-v1';
-import { buildPageMarkup, escapeHtml, normalizeChapterName, pageLabel } from './pages.js?v=20260818-manga-pages-v3';
+import { DEFAULT_CHAPTER_URL, getChapterFrames, getReaderBackgroundData, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/manga.js?v=20260818-manga-chapters-v3';
+import { buildPageMarkup, escapeHtml, normalizeChapterName, pageLabel } from './pages.js?v=20260818-manga-pages-v5';
+import { debugLog } from '../../utils/debug.js';
 import { createPagePreloader } from './preload.js';
 
 export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_URL, onNavigate = () => {}, mangaTitle = '') {
@@ -36,9 +37,9 @@ function renderShell(container, ids, pages, background, chapterUrl, onNavigate, 
     const pagesRoot = container.querySelector('#mangaReaderPages');
     pagesRoot?.style.setProperty('--manga-reader-zoom', '1');
     const figures = [...container.querySelectorAll('.manga-reader__page')];
-    const preloader = createPagePreloader(figures);
+    const preloader = createPagePreloader(figures, { root: pagesRoot, debug: (event, details) => debugLog('manga', event, details) });
     let active = 0; let zoom = 1;
-    figures.slice(0, 3).forEach((figure, index) => { if (index > 0) preloader.enqueue(figure, true); });
+    figures.slice(0, 3).forEach((figure, index) => preloader.enqueue(figure, index === 0));
     const setActive = index => { active = Math.max(0, Math.min(figures.length - 1, index)); preloader.enqueue(figures[active], true); preloader.preloadAround(active); figures[active]?.scrollIntoView({ behavior: 'smooth', block: 'center' }); container.querySelector('#mangaReaderCounter').textContent = pageLabel(active, figures.length); };
     const updateScroll = () => { const top = pagesRoot.getBoundingClientRect().top; let closest = 0; let distance = Infinity; figures.forEach((figure, index) => { const d = Math.abs(figure.getBoundingClientRect().top - top); if (d < distance) { distance = d; closest = index; } }); active = closest; container.querySelector('#mangaReaderCounter').textContent = pageLabel(active, figures.length); preloader.preloadAround(active); };
     pagesRoot.addEventListener('scroll', updateScroll, { passive: true });

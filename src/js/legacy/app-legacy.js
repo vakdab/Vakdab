@@ -3,7 +3,7 @@ import { auth, db, initialized as firebaseInitialized } from '../services/fireba
 import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_CORS_PROXY, MIKAI_BASE, GENRE_MAP } from '../config/constants.js';
 import { safeQuery, safeQueryAll } from '../utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from '../utils/image.js';
-import { loadFeature } from '../core/feature-loader.js?v=20260818-image-fallback-v1';
+import { loadFeature } from '../core/feature-loader.js?v=20260818-image-fallback-v3';
 import '../utils/string.js';
 
 export let playerPageAnimeuaSeasons = null;
@@ -31,14 +31,14 @@ import { renderProfilePage } from '../components/pages/profileLegacy.js';
 import { getProfile, renderSettingsPage } from '../components/pages/settingsLegacy.js';
 import {
     currentTab, currentPage, currentSearchQuery, currentCategory, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, fetchContent, showSkeleton, loadContent, popularRenderGen, renderPopularCards, loadPopularCardDetails, ANIME_CARD_PLACEHOLDER, animeCardDataMap, registerAnimeCardData, TMDB_ENRICH_CONCURRENCY, tmdbEnrichActive, tmdbEnrichQueue, queueTmdbEnrich, pumpTmdbEnrichQueue, runTmdbEnrichJob, animeCardObserver, getAnimeCardObserver, observeAnimeCardsForTmdb, renderCards, renderPagination, showTop100, openRandomAnime, genreList, homeSectionsRequestId, homeCatalogRequestId, preloadHomepageTmdbGroups, homeCatalogPage, homeCatalogItems, homeCatalogLoading, homeCatalogTotal, homeCatalogMode, homeCatalogQuery, homeCatalogSort, homeCatalogView, homeCatalogPreset, homeCatalogGenre, HOME_MANGA_AGE_OPTIONS, honeyCatalogPageCache, HOME_CATALOG_MODES, HOME_CATALOG_PRESETS, homeCatalogRequestBody, HONEY_API, HONEY_SEARCH_API, HONEY_WEB, HONEY_IMAGE, honeySearchCache, honeyReaderCache, honeyAvailabilityMap, honeyAvailabilityMapPromise, loadHoneyAvailabilityMap, normalizeHoneyMatch, fetchHoneyJson, honeyNamesMatch, searchHoneyTitles, resolveHoneyReader, attachHoneyReaders, getHoneyGenreOptions, honeyAgeCategory, homeCatalogGenreHtml, syncHomeCatalogGenreControl, honeyCatalogItem, fetchHoneyCatalogPage, fetchHomeCatalogPage, getHomeCatalogVisibleItems, formatHomeCatalogNumber, homeCatalogCountText, homeCatalogCardHtml, bindHomeCatalogCards, buildHomeCatalogSectionHtml, renderHomeCatalogGrid, bindHomeCatalogMenu, updateHomeCatalogModeLabels, reloadHomeCatalog, loadHomeCatalogMore, loadAndDisplayGenreSections, statusLabelUa, buildAnimeCarouselSectionHtml, buildPopularVerticalSectionHtml, buildHistoryCarouselSectionHtml, openScheduleItemInPlayer, searchPageState, renderSearchPage, performSearchPage, uploadToCloudinary, isGifUrl, applyGifClass, uploadRawToCloudinary, uploadVideoToCloudinary, isVideoFile, isVideoUrl, profileMediaTransformStyle, profileMediaMarkup, uploadBlobToCloudinary, _imgeditClamp, openImageEditor, editExistingProfileImage, editExistingProfileVideo, compressImage, renderAuthPage, renderHistoryPanel, renderBookmarksPanel, renderAchievementsPanel, profileEditNick, profileEditBio, removeFlatStickerBackground, stickerBackgroundRemoverPromise, removeStickerBackground, genrePageState, renderGenresPage, renderGenrePage
-} from '../components/pages/homeLegacy.js?v=20260818-manga-filters-v6';
+} from '../components/pages/homeLegacy.js?v=20260818-manga-filters-v7';
 import {
     CATALOG_POSTER_FALLBACK, normalizeAnimeUrl, normalizePosterUrl, normalizeGenreList, normalizeSynopsisText, hikkaType, animeTypeLabel, extractExternalAnimeIds, hikkaItem, hikkaRequest, hikkaCatalog, fetchHikkaMain, searchHikka, fetchHikkaByCategory, fetchHikkaTop100, fetchHikkaByGenre, fetchAnimeLite, getExternalWatchUrl, getMikaiUrl, getAnimeOnUrl, getAnimeOnId, fetchAnimeOnJson, loadAnimeOnSeasons, resolveMikaiNuxtPayload, addNoAdsQuery, fetchMikaiHtml, getMikaiTeamLogoUrl, parseMikaiSeasonsFromHtml, ashdiPlaybackCache, resolveAshdiPlaybackUrl, inferAnimeSeasonNumber, loadMikaiSeasons, pickPreferredDub, loadHikkaDetail, unifyAnimeDataWithExternalDubs, sourceCache, getCachedSource, setCachedSource, switchProviderSource, refreshAfterSourceSwitch, extractPlayerIframeUrls, extractSourcesFromText
 } from '../services/catalog.js';
 
 export { Auth, Router, Storage, renderProfilePage, renderSettingsPage };
 export { renderSchedulePage };
-export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, fetchContent, showSkeleton, loadContent, popularRenderGen, renderPopularCards, loadPopularCardDetails, ANIME_CARD_PLACEHOLDER, animeCardDataMap, registerAnimeCardData, TMDB_ENRICH_CONCURRENCY, tmdbEnrichActive, tmdbEnrichQueue, queueTmdbEnrich, pumpTmdbEnrichQueue, runTmdbEnrichJob, animeCardObserver, getAnimeCardObserver, observeAnimeCardsForTmdb, renderCards, renderPagination, showTop100, openRandomAnime, genreList, homeSectionsRequestId, homeCatalogRequestId, preloadHomepageTmdbGroups, homeCatalogPage, homeCatalogItems, homeCatalogLoading, homeCatalogTotal, homeCatalogMode, homeCatalogQuery, homeCatalogSort, homeCatalogView, homeCatalogPreset, homeCatalogGenre, HOME_MANGA_AGE_OPTIONS, honeyCatalogPageCache, HOME_CATALOG_MODES, HOME_CATALOG_PRESETS, homeCatalogRequestBody, HONEY_API, HONEY_SEARCH_API, HONEY_WEB, HONEY_IMAGE, honeySearchCache, honeyReaderCache, honeyAvailabilityMap, honeyAvailabilityMapPromise, loadHoneyAvailabilityMap, normalizeHoneyMatch, fetchHoneyJson, honeyNamesMatch, searchHoneyTitles, resolveHoneyReader, attachHoneyReaders, getHoneyGenreOptions, honeyAgeCategory, homeCatalogGenreHtml, syncHomeCatalogGenreControl, honeyCatalogItem, fetchHoneyCatalogPage, fetchHomeCatalogPage, getHomeCatalogVisibleItems, formatHomeCatalogNumber, homeCatalogCountText, homeCatalogCardHtml, bindHomeCatalogCards, buildHomeCatalogSectionHtml, renderHomeCatalogGrid, bindHomeCatalogMenu, updateHomeCatalogModeLabels, reloadHomeCatalog, loadHomeCatalogMore, loadAndDisplayGenreSections, statusLabelUa, buildAnimeCarouselSectionHtml, buildPopularVerticalSectionHtml, buildHistoryCarouselSectionHtml, openScheduleItemInPlayer, searchPageState, renderSearchPage, performSearchPage, uploadToCloudinary, isGifUrl, applyGifClass, uploadRawToCloudinary, uploadVideoToCloudinary, isVideoFile, isVideoUrl, profileMediaTransformStyle, profileMediaMarkup, uploadBlobToCloudinary, _imgeditClamp, openImageEditor, editExistingProfileImage, editExistingProfileVideo, compressImage, renderAuthPage, renderHistoryPanel, renderBookmarksPanel, renderAchievementsPanel, profileEditNick, profileEditBio, removeFlatStickerBackground, stickerBackgroundRemoverPromise, removeStickerBackground, genrePageState, renderGenresPage, renderGenrePage } from '../components/pages/homeLegacy.js?v=20260818-manga-filters-v6';
+export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, fetchContent, showSkeleton, loadContent, popularRenderGen, renderPopularCards, loadPopularCardDetails, ANIME_CARD_PLACEHOLDER, animeCardDataMap, registerAnimeCardData, TMDB_ENRICH_CONCURRENCY, tmdbEnrichActive, tmdbEnrichQueue, queueTmdbEnrich, pumpTmdbEnrichQueue, runTmdbEnrichJob, animeCardObserver, getAnimeCardObserver, observeAnimeCardsForTmdb, renderCards, renderPagination, showTop100, openRandomAnime, genreList, homeSectionsRequestId, homeCatalogRequestId, preloadHomepageTmdbGroups, homeCatalogPage, homeCatalogItems, homeCatalogLoading, homeCatalogTotal, homeCatalogMode, homeCatalogQuery, homeCatalogSort, homeCatalogView, homeCatalogPreset, homeCatalogGenre, HOME_MANGA_AGE_OPTIONS, honeyCatalogPageCache, HOME_CATALOG_MODES, HOME_CATALOG_PRESETS, homeCatalogRequestBody, HONEY_API, HONEY_SEARCH_API, HONEY_WEB, HONEY_IMAGE, honeySearchCache, honeyReaderCache, honeyAvailabilityMap, honeyAvailabilityMapPromise, loadHoneyAvailabilityMap, normalizeHoneyMatch, fetchHoneyJson, honeyNamesMatch, searchHoneyTitles, resolveHoneyReader, attachHoneyReaders, getHoneyGenreOptions, honeyAgeCategory, homeCatalogGenreHtml, syncHomeCatalogGenreControl, honeyCatalogItem, fetchHoneyCatalogPage, fetchHomeCatalogPage, getHomeCatalogVisibleItems, formatHomeCatalogNumber, homeCatalogCountText, homeCatalogCardHtml, bindHomeCatalogCards, buildHomeCatalogSectionHtml, renderHomeCatalogGrid, bindHomeCatalogMenu, updateHomeCatalogModeLabels, reloadHomeCatalog, loadHomeCatalogMore, loadAndDisplayGenreSections, statusLabelUa, buildAnimeCarouselSectionHtml, buildPopularVerticalSectionHtml, buildHistoryCarouselSectionHtml, openScheduleItemInPlayer, searchPageState, renderSearchPage, performSearchPage, uploadToCloudinary, isGifUrl, applyGifClass, uploadRawToCloudinary, uploadVideoToCloudinary, isVideoFile, isVideoUrl, profileMediaTransformStyle, profileMediaMarkup, uploadBlobToCloudinary, _imgeditClamp, openImageEditor, editExistingProfileImage, editExistingProfileVideo, compressImage, renderAuthPage, renderHistoryPanel, renderBookmarksPanel, renderAchievementsPanel, profileEditNick, profileEditBio, removeFlatStickerBackground, stickerBackgroundRemoverPromise, removeStickerBackground, genrePageState, renderGenresPage, renderGenrePage } from '../components/pages/homeLegacy.js?v=20260818-manga-filters-v7';
 
         // ====================================================================
         //  СХОВИЩЕ
@@ -1347,6 +1347,8 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
             try {
                 const list = await fetchHikkaByGenre(genrePageState.slug, genrePageState.page);
                 genrePageState.list = list;
+                genrePageState.hasNextPage = list.hasNextPage !== undefined ? Boolean(list.hasNextPage) : list.length >= 24;
+                genrePageState.total = Number(list.total || list.pagination?.total || 0);
                 if (!list.length) {
                     content.innerHTML =
                         '<div class="loader" style="grid-column:1/-1;">Нічого не знайдено в цьому жанрі</div>';
@@ -1371,10 +1373,11 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
                             .url); });
                 });
                 const prevDisabled = genrePageState.page <= 1 ? 'disabled' : '';
+                const nextDisabled = genrePageState.hasNextPage ? '' : 'disabled';
                 pagination.innerHTML = `
               <button class="btn-outline" onclick="changeGenrePage(${genrePageState.page-1})" ${prevDisabled}><i class="fas fa-chevron-left"></i> Назад</button>
-              <span class="page-indicator">Сторінка ${genrePageState.page}</span>
-              <button class="btn-outline" onclick="changeGenrePage(${genrePageState.page+1})">Вперед <i class="fas fa-chevron-right"></i></button>
+              <span class="page-indicator">Сторінка ${genrePageState.page}${genrePageState.total ? ` · ${genrePageState.total}` : ''}</span>
+              <button class="btn-outline" onclick="changeGenrePage(${genrePageState.page+1})" ${nextDisabled}>Вперед <i class="fas fa-chevron-right"></i></button>
             `;
             } catch (err) {
                 content.innerHTML =
@@ -1384,7 +1387,7 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
         }
 
         window.changeGenrePage = (p) => {
-            if (p < 1) return;
+            if (p < 1 || (p > genrePageState.page && genrePageState.hasNextPage === false)) return;
             genrePageState.page = p;
             window.scrollTo({ top: 0, behavior: 'smooth' });
             loadGenrePageContent();
@@ -1656,7 +1659,7 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
             const meta = document.getElementById('filterResultsMeta');
             if (!content || filterResultsState.loadingMore) return;
             if (reset) {
-                filterResultsState = { items: [], loadingMore: false, page: 0, genrePages: {}, exhausted: false };
+                filterResultsState = { items: [], loadingMore: false, page: 0, genrePages: {}, genreHasMore: {}, exhausted: false, hasMore: true };
                 content.innerHTML = '<div class="loader" style="grid-column:1/-1;"><i class="fas fa-spinner fa-pulse"></i> Завантаження...</div>';
                 if (meta) meta.textContent = '';
             }
@@ -1664,45 +1667,36 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
             try {
                 const effectiveGenres = new Set(filterState.genres);
                 if (filterState.types.has('movie')) effectiveGenres.add('film');
-                const maxTotal = 30;
                 const seen = new Set(filterResultsState.items.map(i => i.url));
-                let found = 0;
                 const matches = (a) => {
                     if (filterState.status !== 'all' && a.status !== filterState.status) return false;
                     if (filterState.types.size && !filterState.types.has(a.type || 'tv')) return false;
                     if (filterState.genres.size && ![...(a.genres || [])].some(g => filterState.genres.has(GENRE_MAP[g] || g))) return false;
                     return true;
                 };
+                const appendMatches = pageItems => pageItems.filter(matches).forEach(item => {
+                    if (!seen.has(item.url)) { filterResultsState.items.push(item); seen.add(item.url); }
+                });
+                const hasNext = pageItems => pageItems.hasNextPage !== undefined ? Boolean(pageItems.hasNextPage) : pageItems.length >= 24;
 
                 if (effectiveGenres.size === 0) {
-                    const maxPages = 6;
-                    while (filterResultsState.page < maxPages && found < maxTotal) {
-                        filterResultsState.page++;
-                        const pageItems = await fetchHikkaMain(filterResultsState.page);
-                        if (!pageItems.length) break;
-                        const matched = pageItems.filter(matches);
-                        for (const m of matched) {
-                            if (!seen.has(m.url)) { filterResultsState.items.push(m); seen.add(m.url); found++; }
-                        }
-                    }
+                    const nextPage = filterResultsState.page + 1;
+                    const pageItems = await fetchHikkaMain(nextPage);
+                    filterResultsState.page = nextPage;
+                    appendMatches(pageItems);
+                    filterResultsState.hasMore = hasNext(pageItems);
                 } else {
                     for (const slug of effectiveGenres) {
-                        if (found >= maxTotal) break;
-                        let fetchedThisRound = 0;
-                        while (fetchedThisRound < 2 && found < maxTotal) {
-                            filterResultsState.genrePages[slug] = (filterResultsState.genrePages[slug] || 0) + 1;
-                            const pageItems = await fetchHikkaByGenre(slug, filterResultsState.genrePages[slug]);
-                            fetchedThisRound++;
-                            if (!pageItems.length) break;
-                            const matched = pageItems.filter(matches);
-                            for (const m of matched) {
-                                if (!seen.has(m.url)) { filterResultsState.items.push(m); seen.add(m.url); found++; }
-                            }
-                        }
+                        if (filterResultsState.genreHasMore[slug] === false) continue;
+                        const nextPage = (filterResultsState.genrePages[slug] || 0) + 1;
+                        const pageItems = await fetchHikkaByGenre(slug, nextPage);
+                        filterResultsState.genrePages[slug] = nextPage;
+                        filterResultsState.genreHasMore[slug] = hasNext(pageItems);
+                        appendMatches(pageItems);
                     }
+                    filterResultsState.hasMore = Object.values(filterResultsState.genreHasMore).some(Boolean);
                 }
-
-                filterResultsState.exhausted = (found === 0);
+                filterResultsState.exhausted = !filterResultsState.hasMore;
 
                 if (!filterResultsState.items.length) {
                     content.innerHTML = '<div class="loader" style="grid-column:1/-1;">Нічого не знайдено за цими фільтрами</div>';

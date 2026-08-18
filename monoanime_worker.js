@@ -1,4 +1,87 @@
 
+const MANGA_IMAGE_ATTRIBUTES = ['data-src', 'data-original', 'data-lazy-src', 'data-image', 'src', 'data-srcset', 'srcset'];
+
+function decodeHtmlAttribute(value = '') {
+  return String(value)
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&#x27;/gi, "'")
+    .replace(/&nbsp;/gi, ' ')
+    .trim();
+}
+
+function readHtmlAttribute(tag, name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = String(tag).match(new RegExp(`\\b${escaped}\\s*=\\s*["']([^"']*)["']`, 'i'));
+  return decodeHtmlAttribute(match?.[1] || '');
+}
+
+function firstSrcsetUrl(value = '') {
+  const candidates = String(value).split(',').map(part => part.trim().split(/\s+/)[0]).filter(Boolean);
+  return candidates[candidates.length - 1] || '';
+}
+
+function candidateFromHtmlTag(tag, baseUrl) {
+  for (const attribute of MANGA_IMAGE_ATTRIBUTES) {
+    let value = readHtmlAttribute(tag, attribute);
+    if (attribute === 'srcset' || attribute === 'data-srcset') value = firstSrcsetUrl(value);
+    if (!value || /^data:image\//i.test(value)) continue;
+    try {
+      const url = new URL(value, baseUrl).href;
+      if (/^https?:$/i.test(new URL(url).protocol)) return url;
+    } catch (_) { /* ignore malformed candidate and continue */ }
+  }
+  return '';
+}
+
+function extractMangaImageCandidates(html, baseUrl) {
+  const source = String(html || '');
+  const images = [];
+  const consumedBlocks = [];
+  const addFirstFromBlock = block => {
+    const tags = [...block.matchAll(/<(?:img|source)\b[^>]*>/gi)].map(match => match[0]);
+    for (const tag of tags) {
+      const value = candidateFromHtmlTag(tag, baseUrl);
+      if (value) { images.push(value); return; }
+    }
+  };
+  for (const match of source.matchAll(/<(?:picture|noscript)\b[^>]*>[\s\S]*?<\/(?:picture|noscript)>/gi)) {
+    consumedBlocks.push(match[0]);
+    addFirstFromBlock(match[0]);
+  }
+  const remainder = consumedBlocks.reduce((value, block) => value.replace(block, ''), source);
+  for (const match of remainder.matchAll(/<(?:img|source)\b[^>]*>/gi)) {
+    const value = candidateFromHtmlTag(match[0], baseUrl);
+    if (value) images.push(value);
+  }
+  return images;
+}
+
+async function fetchWithRetry(input, init = {}, options = {}) {
+  const maxAttempts = Math.max(1, Number(options.maxAttempts) || 3);
+  const timeoutMs = Math.max(1000, Number(options.timeoutMs) || 12000);
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(input, { ...init, signal: controller.signal });
+      clearTimeout(timer);
+      if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 429)) return response;
+      if (attempt === maxAttempts) return response;
+      const retryAfter = Number(response.headers.get('Retry-After'));
+      const delay = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(5000, retryAfter * 1000) : 300 * (2 ** (attempt - 1));
+      await new Promise(resolve => setTimeout(resolve, delay));
+    } catch (error) {
+      clearTimeout(timer);
+      lastError = error;
+      if (attempt === maxAttempts) throw error;
+      await new Promise(resolve => setTimeout(resolve, 300 * (2 ** (attempt - 1))));
+    }
+  }
+  throw lastError || new Error('Upstream request failed');
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -37,10 +120,10 @@ export default {
     // --- VakDab manga-only mode: resolve the chapter list for one manga title ---
     if (url.searchParams.get('manga_chapters') === '1' && targetUrl.hostname === 'manga.in.ua' && targetUrl.pathname.startsWith('/mangas/')) {
       const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
-      const pageResponse = await fetch(targetUrl.href, {
+      const pageResponse = await fetchWithRetry(targetUrl.href, {
         headers: { 'User-Agent': ua, 'Accept-Language': 'uk-UA,uk;q=0.9,en;q=0.8' },
         cf: { cacheTtl: 0, cacheEverything: false },
-      });
+      }, { timeoutMs: 15000 });
       const pageHtml = await pageResponse.text();
       if (!pageResponse.ok) return new Response(JSON.stringify({ error: `manga.in.ua: HTTP ${pageResponse.status}`, chapters: [] }), { status: 502, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' } });
       const linkBlock = pageHtml.match(/<[^>]+id=[\"']linkstocomics[\"'][^>]*>/i)?.[0] || '';
@@ -55,12 +138,12 @@ export default {
       if (!newsId || !userHash) return new Response(JSON.stringify({ error: 'manga.in.ua: session data not found', chapters: [] }), { status: 502, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' } });
       const ajaxUrl = new URL('/engine/ajax/controller.php?mod=load_chapters', targetUrl.origin);
       const body = new URLSearchParams({ action: 'show', news_id: newsId, news_category: newsCategory, this_link: thisLink, user_hash: userHash });
-      const ajaxResponse = await fetch(ajaxUrl.href, {
+      const ajaxResponse = await fetchWithRetry(ajaxUrl.href, {
         method: 'POST',
         body,
         headers: { 'User-Agent': ua, 'Referer': targetUrl.href, 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Cookie': cookieHeader, 'Accept': 'text/html,*/*' },
         cf: { cacheTtl: 0, cacheEverything: false },
-      });
+      }, { timeoutMs: 15000 });
       const ajaxHtml = await ajaxResponse.text();
       const chapters = [...ajaxHtml.matchAll(/<(?:option\b[^>]*value|a\b[^>]*href)=[\"']([^\"']*\/chapters\/[^\"']+)[\"'][^>]*>([\s\S]*?)<\/(?:option|a)>/gi)].map(match => ({
         url: new URL(match[1], targetUrl.origin).href,
@@ -73,7 +156,7 @@ export default {
     // --- VakDab manga-only mode: return page image URLs, not the source site's HTML ---
     if (url.searchParams.get('manga_pages') === '1' && targetUrl.hostname === 'manga.in.ua' && targetUrl.pathname.startsWith('/chapters/')) {
       const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
-      const pageResponse = await fetch(targetUrl.href, { headers: { 'User-Agent': ua, 'Accept-Language': 'uk-UA,uk;q=0.9,en;q=0.8' }, cf: { cacheTtl: 0, cacheEverything: false } });
+      const pageResponse = await fetchWithRetry(targetUrl.href, { headers: { 'User-Agent': ua, 'Accept-Language': 'uk-UA,uk;q=0.9,en;q=0.8' }, cf: { cacheTtl: 0, cacheEverything: false } }, { timeoutMs: 15000 });
       const pageHtml = await pageResponse.text();
       if (!pageResponse.ok) return new Response(JSON.stringify({ error: `manga.in.ua: HTTP ${pageResponse.status}` }), { status: 502, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' } });
       const newsId = pageHtml.match(/<[^>]+id=[\"']comics[\"'][^>]+data-news_id=[\"']?(\d+)[\"']?/i)?.[1] || pageHtml.match(/data-news_id=[\"']?(\d+)[\"']?[^>]+id=[\"']comics[\"']/i)?.[1];
@@ -85,10 +168,22 @@ export default {
       if (!newsId || !userHash) return new Response(JSON.stringify({ error: 'manga.in.ua: session data not found', images: [] }), { status: 502, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' } });
       const ajaxUrl = new URL('/engine/ajax/controller.php', targetUrl.origin);
       ajaxUrl.search = new URLSearchParams({ mod: 'load_chapters_image', news_id: newsId, action: 'show', user_hash: userHash }).toString();
-      const ajaxResponse = await fetch(ajaxUrl.href, { headers: { 'User-Agent': ua, 'Referer': targetUrl.href, 'X-Requested-With': 'XMLHttpRequest', 'Cookie': cookieHeader, 'Accept': 'text/html,*/*' }, cf: { cacheTtl: 0, cacheEverything: false } });
+      const ajaxResponse = await fetchWithRetry(ajaxUrl.href, { headers: { 'User-Agent': ua, 'Referer': targetUrl.href, 'X-Requested-With': 'XMLHttpRequest', 'Cookie': cookieHeader, 'Accept': 'text/html,*/*' }, cf: { cacheTtl: 0, cacheEverything: false } }, { timeoutMs: 20000 });
       const ajaxHtml = await ajaxResponse.text();
-      const images = [...ajaxHtml.matchAll(/(?:data-src|src)=["']([^"']+)["']/gi)].map(m => m[1]).map(value => new URL(value, targetUrl.origin).href).filter(value => /\.(?:jpe?g|png|webp|gif)(?:[?#].*)?$/i.test(value));
-      return new Response(JSON.stringify({ source: 'manga.in.ua', chapterUrl: targetUrl.href, images }), { status: ajaxResponse.ok ? 200 : 502, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
+      const sourceImages = extractMangaImageCandidates(pageHtml, targetUrl.origin);
+      const images = extractMangaImageCandidates(ajaxHtml, targetUrl.origin);
+      const debug = url.searchParams.get('debug') === '1' ? {
+        sourceHtmlLength: pageHtml.length,
+        sourcePagesCount: sourceImages.length,
+        ajaxStatus: ajaxResponse.status,
+        ajaxHtmlLength: ajaxHtml.length,
+        workerExtractedImages: images.length,
+        extractedImages: images.length,
+        firstImage: images[0] || '',
+        lastImage: images[images.length - 1] || ''
+      } : undefined;
+      const payload = { source: 'manga.in.ua', chapterUrl: targetUrl.href, images, ...(debug ? { debug } : {}) };
+      return new Response(JSON.stringify(payload), { status: ajaxResponse.ok && images.length ? 200 : 502, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // --- User-Agent ---
@@ -236,3 +331,5 @@ export default {
     });
   },
 };
+
+export { extractMangaImageCandidates };

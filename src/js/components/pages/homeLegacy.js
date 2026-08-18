@@ -5,9 +5,10 @@ import {
     showToast, showToastProgress, syncLeftdockActive
 } from '../../legacy/app-legacy.js';
 import { getProfile, saveProfile } from './settingsLegacy.js';
-import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
+import { debugLog } from '../../utils/debug.js';
+import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
-import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-chapters-v1';
+import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-chapters-v2';
 
         // ====================================================================
         export let currentTab = 'main',
@@ -706,6 +707,27 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
             };
         }
 
+        async function fetchHoneyHtmlPage(source) {
+            let lastError;
+            for (let attempt = 1; attempt <= 3; attempt += 1) {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 20000);
+                try {
+                    const response = await fetch(getProxyUrl(source, 'desktop'), { credentials: 'omit', cache: 'no-store', signal: controller.signal });
+                    clearTimeout(timer);
+                    if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 429)) return response;
+                    if (attempt === 3) return response;
+                    await new Promise(resolve => setTimeout(resolve, 400 * (2 ** (attempt - 1))));
+                } catch (error) {
+                    clearTimeout(timer);
+                    lastError = error;
+                    if (attempt === 3) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 400 * (2 ** (attempt - 1))));
+                }
+            }
+            throw lastError || new Error('manga.in.ua HTML request failed');
+        }
+
         async function fetchMangaInUaCatalogPage(page = 1) {
             const cacheKey = `manga.in.ua:html:${page}`;
             const cached = honeyMangaHtmlPageCache.get(cacheKey);
@@ -715,7 +737,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                 return cached.items;
             }
             const source = page > 1 ? `${HONEY_WEB}/mangas/page/${page}/` : `${HONEY_WEB}/mangas/`;
-            const response = await fetch(getProxyUrl(source, 'desktop'), { credentials: 'omit', cache: 'no-store' });
+            const response = await fetchHoneyHtmlPage(source);
             if (!response.ok) throw new Error(`manga.in.ua: HTTP ${response.status}`);
             const html = await response.text();
             const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -729,7 +751,12 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
             });
             const hasMore = items.length >= 24 && (!homeCatalogTotal || page * 24 < homeCatalogTotal);
             homeCatalogHasMore = hasMore;
+            Object.defineProperties(items, {
+                total: { value: homeCatalogTotal, enumerable: false, configurable: true },
+                hasNextPage: { value: hasMore, enumerable: false, configurable: true }
+            });
             honeyMangaHtmlPageCache.set(cacheKey, { total: homeCatalogTotal, items, hasMore });
+            debugLog('catalog', 'manga-page', { requestedPage: page, requestedLimit: 24, receivedItems: items.length, uniqueItems: new Set(items.map(item => item.url)).size, total: homeCatalogTotal, hasNextPage: hasMore });
             return items;
         }
 
@@ -737,22 +764,29 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
             if (honeyMangaFullCatalogPromise) return honeyMangaFullCatalogPromise;
             honeyMangaFullCatalogPromise = (async () => {
                 const firstPage = await fetchMangaInUaCatalogPage(1);
-                const pageCount = Math.max(1, Math.ceil((homeCatalogTotal || 4420) / 24));
+                const pageCount = homeCatalogTotal ? Math.ceil(homeCatalogTotal / 24) : Infinity;
                 const allItems = [...firstPage];
                 let nextPage = 2;
+                let stopPage = pageCount;
+                let failedPages = 0;
                 const worker = async () => {
-                    while (nextPage <= pageCount) {
+                    while (nextPage <= stopPage) {
                         const page = nextPage++;
                         try {
-                            allItems.push(...await fetchMangaInUaCatalogPage(page));
+                            const pageItems = await fetchMangaInUaCatalogPage(page);
+                            allItems.push(...pageItems);
+                            if (pageItems.hasNextPage === false || pageItems.length < 24) stopPage = Math.min(stopPage, page);
                         } catch (error) {
+                            failedPages += 1;
                             console.warn(`manga.in.ua page ${page} failed:`, error);
+                            if (failedPages >= 8) stopPage = Math.min(stopPage, page);
                         }
                     }
                 };
                 await Promise.all(Array.from({ length: Math.min(4, Math.max(0, pageCount - 1)) }, worker));
                 const unique = [...new Map(allItems.filter(item => item?.url).map(item => [item.url, item])).values()];
                 homeCatalogAvailableTotal = unique.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
+                debugLog('catalog', 'manga-full-index', { requestedPages: nextPage - 1, receivedItems: allItems.length, uniqueItems: unique.length, total: homeCatalogTotal, hasNextPage: false });
                 return unique;
             })().catch(error => {
                 honeyMangaFullCatalogPromise = null;
@@ -796,14 +830,11 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
         export async function fetchHomeCatalogPage(page) {
             if (homeCatalogMode === 'manga') return fetchHoneyCatalogPage(page);
             const endpoint = homeCatalogMode === 'novel' ? 'novel' : 'anime';
-            const apiUrl = `${HIKKA_API}/${endpoint}?page=${Math.max(1, page)}&size=24`;
             const requestBody = homeCatalogRequestBody();
             if (homeCatalogMode === 'anime' && homeCatalogAdult) requestBody.rating = ['rx'];
-            const response = await hikkaRequest(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
-            if (!response.ok) throw new Error(`Hikka API: HTTP ${response.status}`);
-            const data = await response.json();
-            homeCatalogTotal = Number(data.pagination?.total || data.total || data.count || 0);
-            const items = (data.list || []).map(item => hikkaItem(item, endpoint));
+            const items = await hikkaCatalog(endpoint, page, requestBody);
+            homeCatalogTotal = Number(items.total || items.pagination?.total || 0);
+            homeCatalogHasMore = items.hasNextPage !== undefined ? Boolean(items.hasNextPage) : items.length >= 24;
             return items;
         }
 
@@ -1097,20 +1128,29 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
             try {
                 let nextItems;
                 if (homeCatalogMode === 'manga' && homeCatalogAdult) {
-                    const fullCatalog = await loadHoneyMangaFullCatalog();
-                    homeCatalogFilterResultItems = filterMangaCatalogItems(fullCatalog);
-                    homeCatalogFilterResultOffset = Math.min(24, homeCatalogFilterResultItems.length);
-                    homeCatalogTotal = homeCatalogFilterResultItems.length;
-                    homeCatalogAvailableTotal = homeCatalogFilterResultItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
-                    homeCatalogHasMore = homeCatalogFilterResultOffset < homeCatalogFilterResultItems.length;
-                    nextItems = homeCatalogFilterResultItems.slice(0, homeCatalogFilterResultOffset);
-                    homeCatalogPage = 0;
+                    const firstItems = await fetchHomeCatalogPage(1);
+                    nextItems = filterMangaCatalogItems(firstItems);
+                    homeCatalogPage = 1;
+                    homeCatalogHasMore = true;
+                    // Do not block first paint on all manga pages. The same full
+                    // pagination loader completes the exact 18+ result in background.
+                    loadHoneyMangaFullCatalog().then(fullCatalog => {
+                        if (requestId !== homeCatalogRequestId || homeCatalogMode !== 'manga' || !homeCatalogAdult) return;
+                        homeCatalogFilterResultItems = filterMangaCatalogItems(fullCatalog);
+                        homeCatalogFilterResultOffset = Math.min(24, homeCatalogFilterResultItems.length);
+                        homeCatalogItems = homeCatalogFilterResultItems.slice(0, homeCatalogFilterResultOffset);
+                        homeCatalogTotal = homeCatalogFilterResultItems.length;
+                        homeCatalogAvailableTotal = homeCatalogItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
+                        homeCatalogHasMore = homeCatalogFilterResultOffset < homeCatalogFilterResultItems.length;
+                        renderHomeCatalogGrid();
+                        syncHomeCatalogMoreButton();
+                    }).catch(() => {});
                 } else {
                     nextItems = await fetchHomeCatalogPage(1);
                 }
                 if (requestId !== homeCatalogRequestId) return;
                 homeCatalogItems = nextItems;
-                if (homeCatalogMode === 'manga' && homeCatalogTotal && !homeCatalogFilterResultItems) homeCatalogAvailableTotal = homeCatalogTotal;
+                if (homeCatalogMode === 'manga') homeCatalogAvailableTotal = homeCatalogItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
                 syncHomeCatalogGenreControl();
                 renderHomeCatalogGrid();
                 syncHomeCatalogMoreButton();
@@ -1131,6 +1171,19 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Завантаження...';
             try {
+                if (homeCatalogMode === 'manga' && homeCatalogAdult && !homeCatalogFilterResultItems) {
+                    const fullCatalog = await loadHoneyMangaFullCatalog();
+                    homeCatalogFilterResultItems = filterMangaCatalogItems(fullCatalog);
+                    homeCatalogFilterResultOffset = Math.min(homeCatalogItems.length || 24, homeCatalogFilterResultItems.length);
+                    homeCatalogItems = homeCatalogFilterResultItems.slice(0, homeCatalogFilterResultOffset);
+                    homeCatalogTotal = homeCatalogFilterResultItems.length;
+                    homeCatalogAvailableTotal = homeCatalogItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
+                    homeCatalogHasMore = homeCatalogFilterResultOffset < homeCatalogFilterResultItems.length;
+                    renderHomeCatalogGrid();
+                    if (!homeCatalogHasMore) button.remove();
+                    else { button.disabled = false; button.innerHTML = '<i class="fas fa-plus"></i> Продовжити'; }
+                    return;
+                }
                 if (homeCatalogFilterResultItems) {
                     homeCatalogFilterResultOffset = Math.min(homeCatalogFilterResultOffset + 24, homeCatalogFilterResultItems.length);
                     homeCatalogItems = homeCatalogFilterResultItems.slice(0, homeCatalogFilterResultOffset);
@@ -1145,8 +1198,13 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                 const existing = new Set(homeCatalogItems.map(item => item.url));
                 homeCatalogItems.push(...nextItems.filter(item => item.url && !existing.has(item.url)));
                 homeCatalogPage = nextPage;
+                if (homeCatalogMode === 'manga') homeCatalogAvailableTotal = homeCatalogItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
                 renderHomeCatalogGrid();
-                homeCatalogHasMore = homeCatalogMode === 'manga' ? homeCatalogHasMore : Boolean(nextItems.length) && (!homeCatalogTotal || homeCatalogItems.length < homeCatalogTotal);
+                homeCatalogHasMore = nextItems.hasNextPage !== undefined
+                    ? Boolean(nextItems.hasNextPage)
+                    : homeCatalogMode === 'manga'
+                        ? homeCatalogHasMore
+                        : Boolean(nextItems.length) && (!homeCatalogTotal || homeCatalogItems.length < homeCatalogTotal);
                 if (!homeCatalogHasMore) button.remove();
                 else { button.disabled = false; button.innerHTML = '<i class="fas fa-plus"></i> Продовжити'; }
             } catch (error) {
@@ -1194,7 +1252,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                 });
                 if (requestId !== homeSectionsRequestId) return;
                 homeCatalogItems = catalogItems.filter(item => item?.url);
-                if (homeCatalogMode === 'manga' && homeCatalogTotal) homeCatalogAvailableTotal = homeCatalogTotal;
+                if (homeCatalogMode === 'manga') homeCatalogAvailableTotal = homeCatalogItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
                 const html = buildHomeCatalogSectionHtml(homeCatalogItems);
                 container.innerHTML = html;
                 bindHomeCatalogCards(container);
@@ -1355,7 +1413,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
         // ====================================================================
         //  СТОРІНКА ПОШУКУ
         // ====================================================================
-        export let searchPageState = { query: '', page: 1, list: [], loading: false };
+        export let searchPageState = { query: '', page: 1, list: [], loading: false, hasNextPage: false, total: 0 };
 
         export function renderSearchPage() {
             const container = document.getElementById('searchPageContainer');
@@ -1401,6 +1459,8 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                     } else if (q.length === 0) {
                         searchPageState.query = '';
                         searchPageState.list = [];
+                        searchPageState.hasNextPage = false;
+                        searchPageState.total = 0;
                         const results = document.getElementById('searchResultsContainer');
                         if (results) {
                             results.innerHTML = `
@@ -1436,6 +1496,8 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                         inp.focus();
                         searchPageState.query = '';
                         searchPageState.list = [];
+                        searchPageState.hasNextPage = false;
+                        searchPageState.total = 0;
                         const results = document.getElementById('searchResultsContainer');
                         if (results) {
                             results.innerHTML = `
@@ -1467,6 +1529,8 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
             try {
                 const list = await searchHikka(query, searchPageState.page);
                 searchPageState.list = list;
+                searchPageState.hasNextPage = list.hasNextPage !== undefined ? Boolean(list.hasNextPage) : list.length >= 24;
+                searchPageState.total = Number(list.total || list.pagination?.total || 0);
                 searchPageState.loading = false;
                 if (!list.length) {
                     results.innerHTML = `
@@ -1497,10 +1561,11 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                             .url); });
                 });
                 const prevDisabled = searchPageState.page <= 1 ? 'disabled' : '';
+                const nextDisabled = searchPageState.hasNextPage ? '' : 'disabled';
                 pagination.innerHTML = `
               <button class="btn-outline" onclick="changeSearchPage(${searchPageState.page-1})" ${prevDisabled}><i class="fas fa-chevron-left"></i> Назад</button>
-              <span class="page-indicator">Сторінка ${searchPageState.page}</span>
-              <button class="btn-outline" onclick="changeSearchPage(${searchPageState.page+1})">Вперед <i class="fas fa-chevron-right"></i></button>
+              <span class="page-indicator">Сторінка ${searchPageState.page}${searchPageState.total ? ` · ${searchPageState.total}` : ''}</span>
+              <button class="btn-outline" onclick="changeSearchPage(${searchPageState.page+1})" ${nextDisabled}>Вперед <i class="fas fa-chevron-right"></i></button>
             `;
             } catch (err) {
                 searchPageState.loading = false;
@@ -1515,7 +1580,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
         }
 
         window.changeSearchPage = (p) => {
-            if (p < 1) return;
+            if (p < 1 || (p > searchPageState.page && searchPageState.hasNextPage === false)) return;
             searchPageState.page = p;
             window.scrollTo({ top: 0, behavior: 'smooth' });
             performSearchPage();
@@ -2624,7 +2689,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
         // ====================================================================
         //  СТОРІНКА ЖАНРУ
         // ====================================================================
-        export let genrePageState = { slug: '', name: '', page: 1, list: [] };
+        export let genrePageState = { slug: '', name: '', page: 1, list: [], hasNextPage: false, total: 0 };
 
         export async function renderGenresPage() {
             const container = document.getElementById('genresPageContainer');
@@ -2657,6 +2722,8 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
             genrePageState.slug = slug;
             genrePageState.name = name || slug;
             genrePageState.page = 1;
+            genrePageState.hasNextPage = false;
+            genrePageState.total = 0;
             container.innerHTML = `
             <div class="genre-page-header">
               <h2>${genrePageState.name}</h2>
