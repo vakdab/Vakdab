@@ -1,9 +1,11 @@
 import { getProxyUrl } from '../../utils/image.js';
 
 export const HONEY_API = 'https://data.api.honey-manga.com.ua';
-export const HONEY_WEB = 'https://honey-manga.com.ua';
+export const MANGA_WEB = 'https://manga.in.ua';
+// Backward-compatible export name used by older reader code.
+export const HONEY_WEB = MANGA_WEB;
 export const HONEY_IMAGE = 'https://hmvolumestorage.b-cdn.net/public-resources';
-export const DEFAULT_CHAPTER_URL = '';
+export const DEFAULT_CHAPTER_URL = 'https://manga.in.ua/chapters/64318-hlopjacha-bezodnja-tom-1-rozdil-1.html';
 
 const jsonCache = new Map();
 
@@ -16,9 +18,20 @@ export function safeUrl(value, fallback = '') {
 
 export function parseChapterUrl(value) {
     const url = safeUrl(value, '');
-    const match = url.match(/\/read\/([0-9a-f-]{36})\/([0-9a-f-]{36})/i);
-    if (!match) throw new Error('Неправильне посилання на розділ Honey Manga');
-    return { chapterId: match[1], titleId: match[2], url };
+    const mangaMatch = url.match(/https?:\/\/manga\.in\.ua\/chapters\/(\d+)-[^?#]+\.html(?:[?#].*)?$/i);
+    if (mangaMatch) return { source: 'manga.in.ua', chapterId: mangaMatch[1], titleId: '', url };
+    const honeyMatch = url.match(/\/read\/([0-9a-f-]{36})\/([0-9a-f-]{36})/i);
+    if (honeyMatch) return { source: 'honey-manga.com.ua', chapterId: honeyMatch[1], titleId: honeyMatch[2], url };
+    throw new Error('Неправильне посилання на розділ manga.in.ua');
+}
+
+export function isMangaInUaChapterUrl(value) {
+    return /^https?:\/\/manga\.in\.ua\/chapters\/\d+-[^?#]+\.html(?:[?#].*)?$/i.test(String(value || ''));
+}
+
+export function getProxiedChapterUrl(value) {
+    const url = safeUrl(value, '');
+    return isMangaInUaChapterUrl(url) ? getProxyUrl(url, 'desktop') : url;
 }
 
 export function pageImageUrl(content) {

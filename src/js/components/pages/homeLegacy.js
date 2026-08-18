@@ -402,6 +402,11 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         export const HONEY_API = 'https://data.api.honey-manga.com.ua';
         export const HONEY_SEARCH_API = 'https://search.api.honey-manga.com.ua';
         export const HONEY_WEB = 'https://honey-manga.com.ua';
+        export const MANGA_IN_UA_WEB = 'https://manga.in.ua';
+        const MANGA_IN_UA_READER_MAP = new Map([
+            ['хлопяча безодня', 'https://manga.in.ua/chapters/64318-hlopjacha-bezodnja-tom-1-rozdil-1.html'],
+            ['хлоп\'яча безодня', 'https://manga.in.ua/chapters/64318-hlopjacha-bezodnja-tom-1-rozdil-1.html']
+        ]);
         export const HONEY_IMAGE = 'https://hmvolumestorage.b-cdn.net/public-resources';
         export const honeySearchCache = new Map();
         export const honeyReaderCache = new Map();
@@ -502,6 +507,9 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
 
         export async function resolveHoneyReader(item) {
             if (!item || homeCatalogMode !== 'manga') return item;
+            const mangaTitle = normalizeHoneyMatch(item.title || item.originalTitle || item.title_ua || '');
+            const mangaInUaUrl = MANGA_IN_UA_READER_MAP.get(mangaTitle);
+            if (mangaInUaUrl) return { ...item, readerUrl: mangaInUaUrl, readerSource: 'manga.in.ua' };
             const map = await loadHoneyAvailabilityMap();
             const mapped = map?.byHikka?.[String(item.mal_id)] || map?.byHikka?.[String(item.slug)] || map?.byHoney?.[String(item.honeyTitleId || item.honeyId || '')];
             if (mapped?.id && mapped?.chapterId) {

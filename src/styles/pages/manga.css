@@ -102,3 +102,13 @@
 .manga-reader__notice { position: fixed; left: 50%; bottom: 24px; z-index: 1100; transform: translateX(-50%); padding: 10px 14px; border-radius: 12px; background: var(--text); color: var(--surface); font-size: 13px; }
 .home-catalog-filter-dialog__row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .home-catalog-filter-dialog input[type="number"] { width: 100%; box-sizing: border-box; padding: 11px 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); color: var(--text); font: inherit; }
+
+
+/* Proxied manga.in.ua source reader */
+.manga-reader--source { min-height: 100%; }
+.manga-reader__source-frame { width: 100%; min-height: calc(100vh - 96px); overflow: hidden; background: #fff; }
+.manga-reader__source-frame iframe { display: block; width: 100%; height: calc(100vh - 96px); min-height: 720px; border: 0; background: #fff; }
+@media (max-width: 700px) {
+    .manga-reader__source-frame { min-height: calc(100vh - 72px); }
+    .manga-reader__source-frame iframe { height: calc(100vh - 72px); min-height: 640px; }
+}

@@ -1,10 +1,14 @@
-import { DEFAULT_CHAPTER_URL, HONEY_WEB, getChapterFrames, getReaderBackgroundData, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/honey.js?v=20260818-image-fallback-v1';
+import { DEFAULT_CHAPTER_URL, HONEY_WEB, getChapterFrames, getReaderBackgroundData, getProxiedChapterUrl, isMangaInUaChapterUrl, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/honey.js?v=20260818-image-fallback-v1';
 import { buildPageMarkup, escapeHtml, normalizeChapterName, pageLabel } from './pages.js?v=20260817-manga-pages-v2';
 import { createPagePreloader } from './preload.js';
 
 export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_URL, onNavigate = () => {}) {
     if (!container) return;
     container.innerHTML = `<section class="manga-reader manga-reader--loading"><div class="manga-reader__loader"><i class="fas fa-spinner fa-pulse"></i><p>Завантаження сторінки 1…</p><small>Підготовка першої сторінки</small></div></section>`;
+    if (isMangaInUaChapterUrl(chapterUrl)) {
+        renderMangaInUaSource(container, chapterUrl, onNavigate);
+        return;
+    }
     let ids;
     try { ids = parseChapterUrl(chapterUrl); } catch (error) { showReaderError(container, error, chapterUrl, onNavigate); return; }
     try {
@@ -58,6 +62,15 @@ function renderShell(container, ids, pages, background, chapterUrl, onNavigate) 
         container.querySelectorAll('[data-chapter-url]').forEach(button => button.addEventListener('click', () => { if (button.dataset.chapterUrl) onNavigate(button.dataset.chapterUrl); }));
     }).catch(() => {});
     preloader.preloadAround(0);
+}
+
+function renderMangaInUaSource(container, chapterUrl, onNavigate) {
+    const proxiedUrl = getProxiedChapterUrl(chapterUrl);
+    container.innerHTML = `<section class="manga-reader manga-reader--source" aria-label="Читання манґи">
+        <header class="manga-reader__header"><button class="manga-reader__back" type="button" aria-label="Назад"><i class="fas fa-arrow-left"></i><span>Назад</span></button><div class="manga-reader__heading"><span>VAKDAB · МАНҐА</span><h1>Читання manga.in.ua</h1><p>${escapeHtml(normalizeChapterName(chapterUrl))}</p></div></header>
+        <div class="manga-reader__source-frame"><iframe title="Манґа manga.in.ua" src="${escapeHtml(proxiedUrl)}" loading="eager" referrerpolicy="no-referrer"></iframe></div>
+    </section>`;
+    container.querySelector('.manga-reader__back')?.addEventListener('click', () => onNavigate(null));
 }
 
 export { DEFAULT_CHAPTER_URL };
