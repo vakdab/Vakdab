@@ -635,9 +635,12 @@ import { getProxyUrl } from '../../utils/image.js';
         }
 
         function parseMangaInUaTotal(doc) {
-            const badge = doc.querySelector('.header__nav-link[href="/mangas/"] .badge, a[href="/mangas/"] .badge');
-            const badgeTotal = parseMangaInUaNumber(badge?.textContent || '');
-            if (badgeTotal) return badgeTotal;
+            // The proxy can preserve the source markup with either relative or absolute
+            // links, so do not depend on one exact navigation selector.
+            const badgeValues = [...doc.querySelectorAll('.badge')]
+                .map(node => parseMangaInUaNumber(node.textContent || ''))
+                .filter(value => value >= 100);
+            if (badgeValues.length) return Math.max(...badgeValues);
             const navigation = doc.querySelector('.page-navigation');
             const pages = [...(navigation?.querySelectorAll('a[href*="/mangas/page/"]') || [])]
                 .map(link => Number(link.href.match(/\/page\/(\d+)\/?$/)?.[1] || 0)).filter(Boolean);
@@ -936,6 +939,10 @@ import { getProxyUrl } from '../../utils/image.js';
             updateHomeCatalogModeLabels();
             homeCatalogLoading = true;
             homeCatalogPage = 1;
+            // Do not carry the previous anime/novel page total (usually 24) into manga.
+            homeCatalogTotal = 0;
+            homeCatalogAvailableTotal = 0;
+            homeCatalogHasMore = true;
             grid.innerHTML = '<div class="loader home-catalog-loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження...</div>';
             try {
                 const nextItems = await fetchHomeCatalogPage(1);
