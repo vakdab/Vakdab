@@ -877,6 +877,9 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
             grid.classList.toggle('is-list', homeCatalogView === 'list');
             grid.innerHTML = visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Нічого не знайдено за цими параметрами.</div>';
             bindHomeCatalogCards(grid);
+            if (homeCatalogMode === 'manga' || homeCatalogAdult) {
+                document.getElementById('homeCatalogMoreBtn')?.remove();
+            }
             if (count) count.textContent = homeCatalogCountText(visibleItems.length);
             const label = document.getElementById('homeCatalogResultsLabel');
             if (label) label.textContent = homeCatalogCountText(visibleItems.length);
@@ -983,8 +986,9 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                 syncHomeCatalogGenreControl();
                 renderHomeCatalogGrid();
                 syncHomeCatalogMoreButton();
-                const button = document.getElementById('homeCatalogMoreBtn');
-                if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-plus"></i> Продовжити'; }
+                if (homeCatalogMode === 'manga' || homeCatalogAdult) {
+                    document.getElementById('homeCatalogMoreBtn')?.remove();
+                }
             } catch (error) {
                 if (requestId !== homeCatalogRequestId) return;
                 grid.innerHTML = `<div class="home-catalog-empty">Не вдалося завантажити каталог. Спробуйте ще раз.</div>`;
