@@ -48,8 +48,10 @@ export default {
       const newsCategory = linkBlock.match(/data-news_category=[\"']?([^\"' >]+)/i)?.[1] || '';
       const thisLink = linkBlock.match(/data-this_link=[\"']([^\"']*)/i)?.[1] || '';
       const userHash = pageHtml.match(/(?:site_login_hash|user_hash)\s*[=:]\s*[\"']([^\"']+)[\"']/i)?.[1] || '';
-      const setCookie = pageResponse.headers.get('set-cookie') || '';
-      const cookieHeader = [...setCookie.matchAll(/(?:^|,\s*)([^;,=]+=[^;,]+)/g)].map(m => m[1]).join('; ');
+      const setCookie = typeof pageResponse.headers.getSetCookie === 'function'
+        ? pageResponse.headers.getSetCookie().join(', ')
+        : (pageResponse.headers.get('set-cookie') || '');
+      const cookieHeader = [...setCookie.matchAll(/(?:^|,\s*)([A-Za-z0-9_%-]+=[^;,\s]+)/g)].map(m => m[1]).join('; ');
       if (!newsId || !userHash) return new Response(JSON.stringify({ error: 'manga.in.ua: session data not found', chapters: [] }), { status: 502, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' } });
       const ajaxUrl = new URL('/engine/ajax/controller.php?mod=load_chapters', targetUrl.origin);
       const body = new URLSearchParams({ action: 'show', news_id: newsId, news_category: newsCategory, this_link: thisLink, user_hash: userHash });
@@ -60,9 +62,9 @@ export default {
         cf: { cacheTtl: 0, cacheEverything: false },
       });
       const ajaxHtml = await ajaxResponse.text();
-      const chapters = [...ajaxHtml.matchAll(/<option\b[^>]*value=[\"']([^\"']*\/chapters\/[^\"']+)[\"'][^>]*>([\s\S]*?)<\/option>/gi)].map(match => ({
+      const chapters = [...ajaxHtml.matchAll(/<(?:option\b[^>]*value|a\b[^>]*href)=[\"']([^\"']*\/chapters\/[^\"']+)[\"'][^>]*>([\s\S]*?)<\/(?:option|a)>/gi)].map(match => ({
         url: new URL(match[1], targetUrl.origin).href,
-        title: match[2].replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/\s+/g, ' ').trim(),
+        title: match[2].replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&#0*39;|&#x0*27;/gi, "'").replace(/\s+/g, ' ').trim(),
       })).filter(item => /^https?:\/\/manga\.in\.ua\/chapters\/\d+-[^?#]+\.html/i.test(item.url));
       const title = pageHtml.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1]?.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || '';
       return new Response(JSON.stringify({ source: 'manga.in.ua', mangaUrl: targetUrl.href, title, chapters }), { status: ajaxResponse.ok ? 200 : 502, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
@@ -76,8 +78,10 @@ export default {
       if (!pageResponse.ok) return new Response(JSON.stringify({ error: `manga.in.ua: HTTP ${pageResponse.status}` }), { status: 502, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' } });
       const newsId = pageHtml.match(/<[^>]+id=[\"']comics[\"'][^>]+data-news_id=[\"']?(\d+)[\"']?/i)?.[1] || pageHtml.match(/data-news_id=[\"']?(\d+)[\"']?[^>]+id=[\"']comics[\"']/i)?.[1];
       const userHash = pageHtml.match(/(?:site_login_hash|user_hash)\s*[=:]\s*["']([^"']+)["']/i)?.[1];
-      const setCookie = pageResponse.headers.get('set-cookie') || '';
-      const cookieHeader = [...setCookie.matchAll(/(?:^|,\s*)([^;,=]+=[^;,]+)/g)].map(m => m[1]).join('; ');
+      const setCookie = typeof pageResponse.headers.getSetCookie === 'function'
+        ? pageResponse.headers.getSetCookie().join(', ')
+        : (pageResponse.headers.get('set-cookie') || '');
+      const cookieHeader = [...setCookie.matchAll(/(?:^|,\s*)([A-Za-z0-9_%-]+=[^;,\s]+)/g)].map(m => m[1]).join('; ');
       if (!newsId || !userHash) return new Response(JSON.stringify({ error: 'manga.in.ua: session data not found', images: [] }), { status: 502, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' } });
       const ajaxUrl = new URL('/engine/ajax/controller.php', targetUrl.origin);
       ajaxUrl.search = new URLSearchParams({ mod: 'load_chapters_image', news_id: newsId, action: 'show', user_hash: userHash }).toString();

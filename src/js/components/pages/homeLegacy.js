@@ -408,10 +408,6 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
         export const HONEY_SEARCH_API = 'https://manga.in.ua/search/';
         export const HONEY_WEB = 'https://manga.in.ua';
         export const MANGA_IN_UA_WEB = 'https://manga.in.ua';
-        const MANGA_IN_UA_READER_MAP = new Map([
-            ['хлопяча безодня', 'https://manga.in.ua/chapters/64318-hlopjacha-bezodnja-tom-1-rozdil-1.html'],
-            ['хлоп\'яча безодня', 'https://manga.in.ua/chapters/64318-hlopjacha-bezodnja-tom-1-rozdil-1.html']
-        ]);
         export const HONEY_IMAGE = 'https://manga.in.ua';
         export const honeySearchCache = new Map();
         export const honeyReaderCache = new Map();
@@ -519,9 +515,8 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                     if (chapter) return { ...item, readerUrl: chapter, readerTitle: payload.title || item.title, readerSource: 'manga.in.ua' };
                 } catch (error) { console.warn('manga.in.ua chapter lookup failed:', error); }
             }
-            const mangaTitle = normalizeHoneyMatch(item.title || item.originalTitle || item.title_ua || '');
-            const mangaInUaUrl = MANGA_IN_UA_READER_MAP.get(mangaTitle);
-            if (mangaInUaUrl) return { ...item, readerUrl: mangaInUaUrl, readerTitle: item.title, readerSource: 'manga.in.ua' };
+            // Не використовуємо спільний fallback-розділ: якщо для цього тайтлу
+            // chapter-список не отримано, не можна відкривати чужу манґу.
             return item;
         }
 
