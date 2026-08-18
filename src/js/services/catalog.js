@@ -8,7 +8,7 @@ import {
     playerPageCurrentDub, playerPageCurrentSeason, playerPageCurrentSource,
     buildBottomSheetData, buildEpisodeViews, buildSeasonRow,
     showToast, updateFilterChip, updateSourceChip
-} from './app-legacy.js';
+} from '../legacy/app-legacy.js';
 
         export const CATALOG_POSTER_FALLBACK = './android-chrome-512x512.png';
         export function normalizeAnimeUrl(href = '') {

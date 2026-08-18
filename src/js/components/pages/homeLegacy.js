@@ -1,11 +1,11 @@
-import { HIKKA_API, GENRE_MAP, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../config/constants.js';
+import { HIKKA_API, GENRE_MAP, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js';
 import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from './app-legacy.js';
-import { getProfile, saveProfile } from './settings.js';
-import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from './catalog.js';
+} from '../../legacy/app-legacy.js';
+import { getProfile, saveProfile } from './settingsLegacy.js';
+import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 
         // ====================================================================
         export let currentTab = 'main',

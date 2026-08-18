@@ -4,8 +4,8 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel, renderStickerFaceByKey,
     setCurrentTab, showToast, syncLeftdockActive
-} from './app-legacy.js';
-import { getProfile, getProfileStats } from './settings.js';
+} from '../../legacy/app-legacy.js';
+import { getProfile, getProfileStats } from './settingsLegacy.js';
 
 export function renderProfilePage() {
             const container = document.getElementById('profilePageContainer');

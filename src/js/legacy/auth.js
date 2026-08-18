@@ -4,7 +4,7 @@ import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
 } from './app-legacy.js';
-import { getDefaultProfile } from './settings.js';
+import { getDefaultProfile } from '../components/pages/settingsLegacy.js';
 import { Storage } from './storage.js';
 
         const Auth = {

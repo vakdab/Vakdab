@@ -1,12 +1,12 @@
-import { arrayRemove, arrayUnion, addDoc, collection, deleteDoc, doc, getDoc, limit, onSnapshot, query, serverTimestamp, setDoc, updateDoc } from '../config/firebase.js';
-import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../config/constants.js';
-import { db, initialized as firebaseInitialized } from '../services/firebase/client.js';
+import { arrayRemove, arrayUnion, addDoc, collection, deleteDoc, doc, getDoc, limit, onSnapshot, query, serverTimestamp, setDoc, updateDoc } from '../../config/firebase.js';
+import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js';
+import { db, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import {
     ACHIEVEMENTS, Auth, DailyStats, Router, Storage, calcTotalXP, escapeHtml,
     getLevel, isGifUrl, openPlayerPage, showToast
-} from './app-legacy.js';
-import { getProfile } from './settings.js';
-import { loadHikkaDetail, searchHikka } from './catalog.js';
+} from '../../legacy/app-legacy.js';
+import { getProfile } from '../pages/settingsLegacy.js';
+import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
 
         function _renderReplyBanner() {
             const wrap = document.getElementById('comReplyBannerWrap');
