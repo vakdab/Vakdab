@@ -9,7 +9,7 @@ import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
 import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260818-honey-type-filter-v1';
-import { fetchRanobeCatalogPage, resolveRanobeReader } from '../../services/api/novel.js?v=20260818-ranobe-v2';
+import { fetchRanobeCatalogPage, resolveRanobeReader } from '../../services/api/novel.js?v=20260818-ranobe-v4';
 
         // ====================================================================
         export let currentTab = 'main',
@@ -715,7 +715,14 @@ import { fetchRanobeCatalogPage, resolveRanobeReader } from '../../services/api/
 
         export async function fetchHomeCatalogPage(page) {
             if (homeCatalogMode === 'manga') return fetchHoneyCatalogPage(page);
-            if (homeCatalogMode === 'novel') return fetchRanobeCatalogPage(page, homeCatalogQuery);
+            if (homeCatalogMode === 'novel') {
+                const items = await fetchRanobeCatalogPage(page, homeCatalogQuery);
+                // RanobeLib's API exposes a next link but not a reliable total count.
+                // Keep the UI count honest as pages are loaded progressively.
+                homeCatalogTotal = Math.max(Number(items.total) || 0, Number(page || 1) * Math.max(items.length, 60));
+                homeCatalogHasMore = items.hasNextPage !== false && items.length > 0;
+                return items;
+            }
             const endpoint = 'anime';
             const requestBody = homeCatalogRequestBody();
             if (homeCatalogMode === 'anime' && homeCatalogAdult) requestBody.rating = ['rx'];
@@ -771,6 +778,7 @@ import { fetchRanobeCatalogPage, resolveRanobeReader } from '../../services/api/
                 const suffix = isFilteredManga && !homeCatalogFilterIndexReady ? '' : ` із ${formatHomeCatalogNumber(total)}`;
                 return `Доступно для читання: ${formatHomeCatalogNumber(available)}${suffix} манґи`;
             }
+            if (homeCatalogMode === 'novel' && homeCatalogHasMore) return `Показано ${formatHomeCatalogNumber(total)}+ результатів`;
             return `Знайдено ${formatHomeCatalogNumber(total)} результатів`;
         }
 
@@ -821,7 +829,17 @@ import { fetchRanobeCatalogPage, resolveRanobeReader } from '../../services/api/
                         return;
                     }
                     if (homeCatalogMode === 'novel') {
-                        showToast('Для цього тайтлу RanobeLib не повернув розділ');
+                        card.setAttribute('aria-busy', 'true');
+                        try {
+                            const item = homeCatalogItems.find(entry => String(entry.url || '') === String(card.dataset.url)) || { url: card.dataset.url, title: cardTitle, originalTitle: cardTitle };
+                            const resolved = await resolveRanobeReader(item);
+                            if (resolved.readerUrl) {
+                                const poster = item?.images?.jpg?.large_image_url || item?.poster || '';
+                                Router.goTo('novel', { url: resolved.readerUrl, title: cardTitle, poster });
+                                return;
+                            }
+                        } finally { card.removeAttribute('aria-busy'); }
+                        showToast('Для цього тайтлу RanobeLib ще не повернув доступний розділ');
                         return;
                     }
                     if (homeCatalogMode !== 'anime') { showToast('Розділи цього тайтлу ще не готові'); return; }
@@ -1104,6 +1122,7 @@ import { fetchRanobeCatalogPage, resolveRanobeReader } from '../../services/api/
                 const existing = new Set(homeCatalogItems.map(item => item.url));
                 homeCatalogItems.push(...nextItems.filter(item => item.url && !existing.has(item.url)));
                 homeCatalogPage = nextPage;
+                if (homeCatalogMode === 'novel') homeCatalogTotal = Math.max(homeCatalogTotal, homeCatalogItems.length + (nextItems.hasNextPage !== false ? 60 : 0));
                 if (homeCatalogMode === 'manga') homeCatalogAvailableTotal = homeCatalogItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
                 renderHomeCatalogGrid();
                 homeCatalogHasMore = nextItems.hasNextPage !== undefined

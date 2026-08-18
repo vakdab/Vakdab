@@ -1,5 +1,7 @@
 const RANOBELIB_ORIGIN = 'https://ranobelib.me';
 const RANOBELIB_PROXY = 'https://corsproxy.io/?url=';
+const RANOBELIB_API = 'https://api.cdnlibs.org/api/manga';
+const RANOBELIB_SITE_ID = 3;
 const TRANSLATE_ENDPOINT = 'https://translate.googleapis.com/translate_a/single';
 const translationCache = new Map();
 const htmlCache = new Map();
@@ -221,6 +223,68 @@ export async function translateNovelParagraphs(paragraphs, options = {}) {
     return result;
 }
 
+function ranobeApiBookUrl(item) {
+    const slug = item?.slug_url || (item?.id ? `${item.id}--${item.slug || ''}` : '');
+    return slug ? `${RANOBELIB_ORIGIN}/ru/book/${slug}` : '';
+}
+
+function ranobeApiPoster(item) {
+    return item?.cover?.default || item?.cover?.md || item?.cover?.thumbnail || '';
+}
+
+function ranobeStatusUa(value) {
+    const key = normalizeNovelText(value).toLowerCase();
+    if (/ongoing|онго|выходит|актив/.test(key)) return 'Онґоїнг';
+    if (/finished|completed|заверш/.test(key)) return 'Завершено';
+    if (/paused|приостанов/.test(key)) return 'Призупинено';
+    if (/cancel|прекращ/.test(key)) return 'Скасовано';
+    return value ? normalizeNovelText(value) : '';
+}
+
+function ranobeApiItem(item) {
+    const originalTitle = cleanRanobeCatalogTitle(item?.rus_name || item?.name || item?.eng_name || 'Без назви');
+    const bookUrl = ranobeApiBookUrl(item);
+    const poster = ranobeApiPoster(item);
+    return {
+        title: originalTitle,
+        originalTitle,
+        poster,
+        url: bookUrl,
+        readerUrl: '',
+        readerAvailable: false,
+        ranobeId: item?.id || '',
+        ranobeSlug: item?.slug_url || item?.slug || '',
+        score: Number(item?.rating?.average || 0),
+        year: String(item?.releaseDateString || '').slice(0, 4),
+        status: ranobeStatusUa(item?.status?.label || item?.status || ''),
+        typeLabel: 'Ранобе',
+        synopsis: '',
+        genres: [],
+        source: 'ranobelib'
+    };
+}
+
+function attachRanobeCatalogShape(item) {
+    return {
+        ...item,
+        type: 'novel', typeLabel: item.typeLabel || 'Ранобе', from: 'ranobelib',
+        images: { jpg: { large_image_url: item.poster, image_url: item.poster } }
+    };
+}
+
+async function fetchRanobeApiPage(page = 1, query = '') {
+    const params = new URLSearchParams({ page: String(Math.max(1, Number(page) || 1)), 'site_id[]': String(RANOBELIB_SITE_ID), per_page: '60' });
+    params.append('fields[]', 'rate'); params.append('fields[]', 'rate_avg'); params.append('fields[]', 'userBookmark');
+    if (query) params.set('search', query);
+    const response = await fetch(`${RANOBELIB_API}?${params}`, { mode: 'cors', credentials: 'omit', cache: 'no-cache', headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error(`RanobeLib API: HTTP ${response.status}`);
+    const payload = await response.json();
+    const data = Array.isArray(payload?.data) ? payload.data : [];
+    const parsed = data.map(ranobeApiItem).filter(item => item.url && item.poster);
+    const meta = payload?.meta || {};
+    return { items: parsed, total: Number(meta.total || payload?.total || 0), hasNextPage: Boolean(meta.has_next_page || payload?.links?.next || (meta.current_page && meta.last_page && meta.current_page < meta.last_page)), page: Number(meta.current_page || page), lastPage: Number(meta.last_page || 0) };
+}
+
 function cleanRanobeCatalogTitle(value) {
     return normalizeNovelText(value).replace(/\s+(?:Корея|Китай|Япония|Английский|Авторский|Фанфик)$/i, '').trim();
 }
@@ -255,28 +319,29 @@ function parseRanobeCatalogHtml(html) {
 }
 
 export async function fetchRanobeCatalogPage(page = 1, query = '') {
-    const catalogUrl = query
-        ? `${RANOBELIB_ORIGIN}/ru?section=search&phrase=${encodeURIComponent(query)}`
-        : `${RANOBELIB_ORIGIN}/ru?section=home-updates${Number(page) > 1 ? `&page=${Number(page)}` : ''}`;
-    const source = await fetchRanobeHtml(catalogUrl, { force: Number(page) > 1 });
-    const parsed = isMarkdownPage(source) ? parseRanobeCatalogMarkdown(source) : parseRanobeCatalogHtml(source);
-    const translated = await translateNovelParagraphs(parsed.map(item => item.originalTitle), { maxChars: 900 });
-    const items = parsed.map((item, index) => ({
-        ...item,
-        title: translated[index] || item.originalTitle,
-        type: 'novel', typeLabel: 'Ранобе', from: 'ranobelib',
-        images: { jpg: { large_image_url: item.poster, image_url: item.poster } },
-        synopsis: '', genres: [], year: '', status: ''
-    }));
-    homeCatalogCatalogMeta(items, page, false);
+    let result;
+    try {
+        result = await fetchRanobeApiPage(page, normalizeNovelText(query));
+    } catch (error) {
+        console.warn('RanobeLib API catalog failed, using HTML fallback:', error);
+        const catalogUrl = query
+            ? `${RANOBELIB_ORIGIN}/ru/catalog?search=${encodeURIComponent(query)}`
+            : `${RANOBELIB_ORIGIN}/ru/catalog${Number(page) > 1 ? `?page=${Number(page)}` : ''}`;
+        const source = await fetchRanobeHtml(catalogUrl, { force: true });
+        const parsed = isMarkdownPage(source) ? parseRanobeCatalogMarkdown(source) : parseRanobeCatalogHtml(source);
+        result = { items: parsed, total: parsed.length, hasNextPage: false, page };
+    }
+    const translated = await translateNovelParagraphs(result.items.map(item => item.originalTitle), { maxChars: 900 });
+    const items = result.items.map((item, index) => attachRanobeCatalogShape({ ...item, title: translated[index] || item.originalTitle }));
+    homeCatalogCatalogMeta(items, page, result.hasNextPage, result.total);
     return items;
 }
 
-function homeCatalogCatalogMeta(items, page, hasNextPage) {
+function homeCatalogCatalogMeta(items, page, hasNextPage, total = items.length) {
     Object.defineProperties(items, {
-        total: { value: items.length, enumerable: false },
+        total: { value: Number(total) || items.length, enumerable: false },
         hasNextPage: { value: Boolean(hasNextPage), enumerable: false },
-        pagination: { value: { total: items.length, page: Number(page) || 1, hasNextPage: Boolean(hasNextPage) }, enumerable: false }
+        pagination: { value: { total: Number(total) || items.length, page: Number(page) || 1, hasNextPage: Boolean(hasNextPage) }, enumerable: false }
     });
     return items;
 }
@@ -296,7 +361,21 @@ export async function searchRanobe(query, options = {}) {
     return matches.sort((a, b) => b.score - a.score);
 }
 
+async function resolveChapterFromBookPage(bookUrl) {
+    if (!bookUrl) return '';
+    try {
+        const html = await fetchRanobeHtml(bookUrl);
+        const links = parseRanobeChapterList(html, '');
+        return links[0]?.url || '';
+    } catch { return ''; }
+}
+
 export async function resolveRanobeReader(item = {}) {
+    if (isChapterLink(item.readerUrl)) return { ...item, readerAvailable: true };
+    if (item.url && /\/ru\/book\//i.test(item.url)) {
+        const directChapter = await resolveChapterFromBookPage(item.url);
+        if (directChapter) return { ...item, readerAvailable: true, readerUrl: directChapter, ranobeUrl: item.url };
+    }
     const queries = [item.title, item.title_original, item.title_en, item.originalTitle].filter(Boolean);
     let matches = [];
     for (const query of queries) {
@@ -305,7 +384,8 @@ export async function resolveRanobeReader(item = {}) {
     }
     const best = matches[0];
     if (!best || best.score < 0.35) return { ...item, readerAvailable: false, readerUrl: '' };
-    return { ...item, readerAvailable: true, readerUrl: `${best.url.replace(/\/$/, '')}/read/v1/c1`, ranobeUrl: best.url, ranobeTitle: best.title, ranobeMatchScore: best.score };
+    const directChapter = await resolveChapterFromBookPage(best.url);
+    return { ...item, readerAvailable: Boolean(directChapter), readerUrl: directChapter, ranobeUrl: best.url, ranobeTitle: best.title, ranobeMatchScore: best.score };
 }
 
 export function clearNovelCaches() { htmlCache.clear(); translationCache.clear(); }
