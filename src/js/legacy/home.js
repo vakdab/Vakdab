@@ -360,8 +360,15 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         export let homeCatalogPreset = 'all';
         export let homeCatalogGenre = 'all';
         export let homeCatalogAdult = false;
-        // Kept as a compatibility export for older modules; the catalog UI no longer exposes age categories.
-        export const HOME_MANGA_AGE_OPTIONS = [{ key: 'all', label: 'Усі' }];
+        export let homeCatalogStatus = 'all';
+        export let homeCatalogAvailability = 'all';
+        export let homeCatalogGenres = new Set();
+        export const HOME_MANGA_AGE_OPTIONS = [
+            { key: 'all', label: 'Усі' },
+            { key: 'adult', label: 'Для дорослих' },
+            { key: 'teen', label: 'Для підлітків' },
+            { key: 'children', label: 'Для дітей' }
+        ];
         export const honeyCatalogPageCache = new Map();
         export let honeyAdultCatalogPromise = null;
 
@@ -399,26 +406,9 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         export let honeyCatalogReadableTotalPromise = null;
 
         export async function loadHoneyAvailabilityMap() {
-            if (honeyAvailabilityMap) return honeyAvailabilityMap;
-            if (!honeyAvailabilityMapPromise) {
-                const mapUrl = new URL('src/data/manga-honey-map.json?map-v2', document.baseURI).href;
-                honeyAvailabilityMapPromise = fetch(mapUrl, { cache: 'no-cache' })
-                    .then(response => response.ok ? response.json() : null)
-                    .then(payload => {
-                        honeyAvailabilityMap = payload || { byHikka: {}, byHoney: {}, available: 0, honeyAvailable: 0 };
-                        // Legacy map is keyed by Hikka IDs; native Honey cards use Honey title IDs.
-                        // Build the reverse index so native catalog items receive their reader URL.
-                        if (!honeyAvailabilityMap.byHoney || !Object.keys(honeyAvailabilityMap.byHoney).length) {
-                            honeyAvailabilityMap.byHoney = Object.values(honeyAvailabilityMap.byHikka || {})
-                                .filter(item => item?.id)
-                                .reduce((index, item) => { index[String(item.id)] = item; return index; }, {});
-                        }
-                        honeyAvailabilityMap.honeyAvailable = Number(honeyAvailabilityMap.honeyAvailable || honeyAvailabilityMap.available || Object.keys(honeyAvailabilityMap.byHoney).length);
-                        return honeyAvailabilityMap;
-                    })
-                    .catch(error => { console.warn('Honey availability map failed:', error); honeyAvailabilityMap = { byHikka: {}, byHoney: {}, available: 0, honeyAvailable: 0 }; return honeyAvailabilityMap; });
-            }
-            return honeyAvailabilityMapPromise;
+            // The generated map was removed; availability is resolved lazily through Honey API.
+            if (!honeyAvailabilityMap) honeyAvailabilityMap = { byHikka: {}, byHoney: {}, available: 0, honeyAvailable: 0 };
+            return honeyAvailabilityMap;
         }
 
         export async function loadHoneyCatalogReadableTotal() {
@@ -680,10 +670,8 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 homeCatalogTotal = cached.total;
                 return cached.items.map(item => ({ ...item, images: { ...item.images, jpg: { ...item.images.jpg } }, genres: [...(item.genres || [])] }));
             }
-            const mapPromise = loadHoneyAvailabilityMap();
             if (homeCatalogQuery) {
                 const results = await searchHoneyTitles(homeCatalogQuery);
-                await mapPromise;
                 const items = results.map(honeyCatalogItem);
                 homeCatalogTotal = results.length;
                 honeyCatalogPageCache.set(cacheKey, { total: homeCatalogTotal, items });
@@ -694,7 +682,6 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ page: Math.max(1, page), pageSize: 24, sort: { sortBy: 'lastUpdated', sortOrder: 'DESC' }, filters: [] })
             });
-            await mapPromise;
             homeCatalogTotal = Number(payload?.counter || payload?.total || payload?.data?.length || 0);
             loadHoneyCatalogReadableTotal();
             const items = (Array.isArray(payload?.data) ? payload.data : []).map(honeyCatalogItem);
@@ -724,6 +711,14 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 const selectedGenre = normalizeHoneyMatch(homeCatalogGenre);
                 filtered = filtered.filter(item => (item.genres || []).some(genre => normalizeHoneyMatch(genre) === selectedGenre));
             }
+            if (homeCatalogStatus !== 'all') {
+                filtered = filtered.filter(item => {
+                    const status = String(item.status || item.state || '').toLowerCase();
+                    return homeCatalogStatus === 'ongoing' ? /ongoing|онго|publishing|active/.test(status) : /finished|completed|released|заверш/.test(status);
+                });
+            }
+            if (homeCatalogAvailability === 'available') filtered = filtered.filter(item => item.readerUrl);
+            if (homeCatalogGenres.size) filtered = filtered.filter(item => (item.genres || []).some(genre => homeCatalogGenres.has(normalizeHoneyMatch(typeof genre === 'object' ? genre.name || genre.name_ua : genre))));
             return filtered.sort((a, b) => {
                 const availability = Number(Boolean(b.readerUrl)) - Number(Boolean(a.readerUrl));
                 if (availability) return availability;
@@ -844,6 +839,20 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             if (number) number.textContent = formatHomeCatalogNumber(homeCatalogTotal || visibleItems.length);
         }
 
+        export function openHomeCatalogFilters(root = document) {
+            document.querySelector('#homeCatalogFilterDialog')?.remove();
+            const genres = [...new Set(homeCatalogItems.flatMap(item => (item.genres || []).map(genre => String(typeof genre === 'object' ? genre.name || genre.name_ua || '' : genre).trim()).filter(Boolean)))].sort((a,b) => a.localeCompare(b, 'uk')).slice(0, 80);
+            const dialog = document.createElement('div');
+            dialog.id = 'homeCatalogFilterDialog';
+            dialog.className = 'home-catalog-filter-dialog';
+            dialog.innerHTML = `<div class="home-catalog-filter-dialog__backdrop" data-filter-close></div><section class="home-catalog-filter-dialog__panel" role="dialog" aria-modal="true" aria-labelledby="homeCatalogFilterTitle"><div class="home-catalog-filter-dialog__head"><h3 id="homeCatalogFilterTitle">Фільтри · ${escapeHtml((HOME_CATALOG_MODES.find(x => x.key === homeCatalogMode) || HOME_CATALOG_MODES[0]).label)}</h3><button type="button" data-filter-close aria-label="Закрити"><i class="fas fa-xmark"></i></button></div><label>Статус<select id="homeFilterStatus"><option value="all">Усі</option><option value="ongoing">Онґоїнг</option><option value="finished">Завершені</option></select></label>${homeCatalogMode === 'manga' ? `<label>Доступність<select id="homeFilterAvailability"><option value="all">Усі тайтли</option><option value="available">Є що читати</option></select></label><label>Вікова категорія<select id="homeFilterAge"><option value="all">Усі</option>${HOME_MANGA_AGE_OPTIONS.filter(x => x.key !== 'all').map(x => `<option value="${x.key}">${x.label}</option>`).join('')}</select></label>` : ''}<fieldset><legend>Жанри</legend><div class="home-catalog-filter-dialog__genres">${genres.length ? genres.map(genre => `<label><input type="checkbox" value="${escapeHtml(genre)}"${homeCatalogGenres.has(normalizeHoneyMatch(genre)) ? ' checked' : ''}> ${escapeHtml(genre)}</label>`).join('') : '<small>Жанри з’являться після завантаження каталогу.</small>'}</div></fieldset><div class="home-catalog-filter-dialog__actions"><button type="button" class="btn-outline" data-filter-reset>Скинути</button><button type="button" class="btn-primary" data-filter-apply>Застосувати</button></div></section>`;
+            document.body.appendChild(dialog);
+            const close = () => dialog.remove();
+            dialog.querySelectorAll('[data-filter-close]').forEach(button => button.addEventListener('click', close));
+            dialog.querySelector('[data-filter-reset]')?.addEventListener('click', () => { homeCatalogStatus = 'all'; homeCatalogAvailability = 'all'; homeCatalogGenre = 'all'; homeCatalogGenres = new Set(); renderHomeCatalogGrid(); close(); });
+            dialog.querySelector('[data-filter-apply]')?.addEventListener('click', () => { homeCatalogStatus = dialog.querySelector('#homeFilterStatus')?.value || 'all'; homeCatalogAvailability = dialog.querySelector('#homeFilterAvailability')?.value || 'all'; homeCatalogGenre = dialog.querySelector('#homeFilterAge')?.value || 'all'; homeCatalogGenres = new Set([...dialog.querySelectorAll('.home-catalog-filter-dialog__genres input:checked')].map(input => normalizeHoneyMatch(input.value))); renderHomeCatalogGrid(); close(); });
+        }
+
         export function bindHomeCatalogMenu(root) {
             const tabs = root.querySelectorAll('[data-catalog-mode]');
             tabs.forEach(tab => tab.addEventListener('click', async () => {
@@ -853,6 +862,9 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 homeCatalogQuery = '';
                 homeCatalogPreset = 'all';
                 homeCatalogGenre = 'all';
+                homeCatalogStatus = 'all';
+                homeCatalogAvailability = 'all';
+                homeCatalogGenres = new Set();
                 await reloadHomeCatalog();
             }));
             root.querySelector('#homeCatalogSort')?.addEventListener('change', async event => {
@@ -871,6 +883,9 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 homeCatalogQuery = '';
                 homeCatalogPreset = 'all';
                 homeCatalogGenre = 'all';
+                homeCatalogStatus = 'all';
+                homeCatalogAvailability = 'all';
+                homeCatalogGenres = new Set();
                 await reloadHomeCatalog();
             });
             let searchTimer = null;
@@ -882,10 +897,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             root.querySelector('#homeCatalogScheduleBtn')?.addEventListener('click', () => {
                 Router.goTo('schedule');
             });
-            root.querySelector('#homeCatalogFilterBtn')?.addEventListener('click', () => {
-                Router.goTo('genres');
-                showToast('Розширені фільтри відкрито');
-            });
+            root.querySelector('#homeCatalogFilterBtn')?.addEventListener('click', () => openHomeCatalogFilters(root));
         }
 
         export function updateHomeCatalogModeLabels() {
