@@ -221,6 +221,66 @@ export async function translateNovelParagraphs(paragraphs, options = {}) {
     return result;
 }
 
+function cleanRanobeCatalogTitle(value) {
+    return normalizeNovelText(value).replace(/\s+(?:Корея|Китай|Япония|Английский|Авторский|Фанфик)$/i, '').trim();
+}
+
+function parseRanobeCatalogMarkdown(text) {
+    const source = String(text || ''); const items = [];
+    const blocks = source.split(/(?=\[?!\[[^\]]*\]\(https?:\/\/cover\.cdnlibs\.org)/i);
+    for (const block of blocks) {
+        const poster = block.match(/!?\[[^\]]*\]\((https?:\/\/cover\.cdnlibs\.org[^)]+)\)/i)?.[1] || '';
+        const chapterMatch = block.match(/\[([^\]]*)\]\((https?:\/\/ranobelib\.me\/ru\/[^)]+\/read\/v\d+\/c[^)]+)\)/i);
+        const bookMatch = block.match(/\[([^\]]+)\]\((https?:\/\/ranobelib\.me\/ru\/book\/[^)]+)\)/is);
+        if (!poster || !bookMatch) continue;
+        const title = cleanRanobeCatalogTitle(bookMatch[1].split(/\n+/)[0]);
+        const bookUrl = absoluteUrl(bookMatch[2]); const chapterUrl = chapterMatch ? absoluteUrl(chapterMatch[2]) : '';
+        if (!title || !bookUrl) continue;
+        items.push({ title, originalTitle: title, poster, url: bookUrl, readerUrl: chapterUrl, readerAvailable: Boolean(chapterUrl), source: 'ranobelib' });
+    }
+    return [...new Map(items.map(item => [item.url, item])).values()];
+}
+
+function parseRanobeCatalogHtml(html) {
+    const document = parseDocument(html); const items = []; const seen = new Set();
+    for (const image of document.querySelectorAll('img[src*="cover.cdnlibs.org"],img[data-src*="cover.cdnlibs.org"]')) {
+        const poster = image.getAttribute('src') || image.getAttribute('data-src') || ''; const card = image.closest('article,li,div');
+        const bookAnchor = card?.querySelector('a[href*="/book/"]') || [...document.querySelectorAll('a[href*="/book/"]')].find(anchor => normalizeNovelText(anchor.textContent));
+        if (!bookAnchor) continue;
+        const bookUrl = absoluteUrl(bookAnchor.href); const title = cleanRanobeCatalogTitle(bookAnchor.textContent); if (!bookUrl || !title || seen.has(bookUrl)) continue;
+        seen.add(bookUrl); const chapterAnchor = card?.querySelector('a[href*="/read/v"]');
+        items.push({ title, originalTitle: title, poster, url: bookUrl, readerUrl: chapterAnchor ? absoluteUrl(chapterAnchor.href) : '', readerAvailable: Boolean(chapterAnchor), source: 'ranobelib' });
+    }
+    return items;
+}
+
+export async function fetchRanobeCatalogPage(page = 1, query = '') {
+    const catalogUrl = query
+        ? `${RANOBELIB_ORIGIN}/ru?section=search&phrase=${encodeURIComponent(query)}`
+        : `${RANOBELIB_ORIGIN}/ru?section=home-updates${Number(page) > 1 ? `&page=${Number(page)}` : ''}`;
+    const source = await fetchRanobeHtml(catalogUrl, { force: Number(page) > 1 });
+    const parsed = isMarkdownPage(source) ? parseRanobeCatalogMarkdown(source) : parseRanobeCatalogHtml(source);
+    const translated = await translateNovelParagraphs(parsed.map(item => item.originalTitle), { maxChars: 900 });
+    const items = parsed.map((item, index) => ({
+        ...item,
+        title: translated[index] || item.originalTitle,
+        type: 'novel', typeLabel: 'Ранобе', from: 'ranobelib',
+        images: { jpg: { large_image_url: item.poster, image_url: item.poster } },
+        synopsis: '', genres: [], year: '', status: ''
+    }));
+    homeCatalogCatalogMeta(items, page, false);
+    return items;
+}
+
+function homeCatalogCatalogMeta(items, page, hasNextPage) {
+    Object.defineProperties(items, {
+        total: { value: items.length, enumerable: false },
+        hasNextPage: { value: Boolean(hasNextPage), enumerable: false },
+        pagination: { value: { total: items.length, page: Number(page) || 1, hasNextPage: Boolean(hasNextPage) }, enumerable: false }
+    });
+    return items;
+}
+
 export async function searchRanobe(query, options = {}) {
     const phrase = normalizeNovelText(query);
     if (!phrase) return [];
