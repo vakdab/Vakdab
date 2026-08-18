@@ -218,14 +218,10 @@
       "https://api.themoviedb.org/3",
       "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm",
       "https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js",
-      "https://data.api.honey-manga.com.ua",
       "https://graphql.anilist.co",
-      "https://hmvolumestorage.b-cdn.net/public-resources",
-      "https://honey-manga.com.ua",
       "https://image.tmdb.org/t/p",
       "https://images.mikai.me/avatar/medium/${encodeURIComponent(avatarUid",
       "https://images.mikai.me/poster/small/${posterUid}.webp",
-      "https://search.api.honey-manga.com.ua",
       "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"
     ],
     "domain_signals": {
@@ -237,10 +233,6 @@
       },
       "hikka": {
         "hikka": 115
-      },
-      "honey": {
-        "honey-manga": 3,
-        "hmvolumestorage": 1
       },
       "mikai": {
         "mikai": 62

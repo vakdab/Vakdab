@@ -108,7 +108,7 @@ import {
                 } else if (route === 'stickers') {
                     this.showStickers();
                 } else if (route === 'manga') {
-                    if (params.url) this.showManga(params.url);
+                    if (params.url) this.showManga(params.url, params.title || '');
                     else this.showMain();
                 } else if (route.startsWith('anime/')) {
                     // Deep-link для Telegram: #anime/<Hikka ID>.
@@ -211,15 +211,15 @@ import {
                 syncLeftdockActive();
             },
 
-            showManga(chapterUrl) {
+            showManga(chapterUrl, mangaTitle = '') {
                 const container = document.getElementById('mangaPageContainer');
                 if (!container) return;
                 container.style.display = 'block';
                 container.classList.add('active');
                 loadMangaReader().then(({ renderMangaReader }) => renderMangaReader(container, chapterUrl, nextUrl => {
-                    if (nextUrl) this.goTo('manga', { url: nextUrl });
+                    if (nextUrl) this.goTo('manga', { url: nextUrl, title: mangaTitle });
                     else this.goTo('main');
-                })).catch(error => {
+                }, mangaTitle)).catch(error => {
                     console.error('[VakDab] manga feature failed to load:', error);
                     container.innerHTML = '<div class="loader">Не вдалося завантажити модуль манґи. Спробуйте ще раз.</div>';
                 });

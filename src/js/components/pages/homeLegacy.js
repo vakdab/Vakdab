@@ -367,6 +367,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
         export let homeCatalogAdult = false;
         export let homeCatalogStatus = 'all';
         export let homeCatalogAvailability = 'all';
+        export let homeCatalogAge = 'all';
         export let homeCatalogGenres = new Set();
         export let homeCatalogType = 'all';
         export let homeCatalogYearMin = '';
@@ -512,7 +513,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                 try {
                     const payload = await getMangaChapters(item.url);
                     const chapter = payload.chapters?.[0]?.url || '';
-                    if (chapter) return { ...item, readerUrl: chapter, readerTitle: payload.title || item.title, readerSource: 'manga.in.ua' };
+                    if (chapter) return { ...item, readerUrl: chapter, readerTitle: item.title || payload.title || 'Манґа', readerSource: 'manga.in.ua' };
                 } catch (error) { console.warn('manga.in.ua chapter lookup failed:', error); }
             }
             // Не використовуємо спільний fallback-розділ: якщо для цього тайтлу
@@ -537,8 +538,12 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
         }
 
         export function honeyAgeCategory(item) {
+            const age = String(item?.ageRating || item?.adult || '').trim().toLowerCase();
+            if (/^18\+/.test(age) || item?.isAdultCover === true) return 'adult';
+            if (/^(0|6|12)\+/.test(age)) return 'children';
+            if (/^(14|16)\+/.test(age)) return 'teen';
             const words = normalizeHoneyMatch([...(item?.genres || []), ...(item?.tags || [])].join(' '));
-            if (item?.adult && String(item.adult).toUpperCase() !== 'NONE' || item?.isAdultCover || /(18|adult|ерот|еччі|гарем|порн|для дорослих|хентай)/i.test(words)) return 'adult';
+            if (/(18|adult|ерот|еччі|гарем|порн|для дорослих|хентай)/i.test(words)) return 'adult';
             if (/(кодомо|для дітей|дитяч|сімейн|казк|дошкіль)/i.test(words)) return 'children';
             return 'teen';
         }
@@ -573,7 +578,8 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                 images: { jpg: { large_image_url: poster, image_url: poster } },
                 genres: normalizeGenreList(item.genresAndTags || item.genres || []),
                 tags: normalizeGenreList(item.tags || []),
-                adult: item.adult || 'NONE',
+                ageRating: item.ageRating || item.adult || '',
+                adult: item.ageRating || item.adult || 'NONE',
                 isAdultCover: Boolean(item.isAdultCover),
                 type: 'manga',
                 typeLabel: item.type || 'Манґа',
@@ -581,12 +587,12 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                 synopsis: normalizeSynopsisText(item.description || ''),
                 score: Number(item.rate || item.rateScore || 0),
                 year: item.lastUpdated ? String(item.lastUpdated).slice(0, 4) : '',
-                from: 'honey'
+                from: 'manga.in.ua'
             };
         }
 
         export function isAdultHoneyManga(item) {
-            return String(item?.adult || '').trim() === '18+' || item?.isAdultCover === true;
+            return /^18\+/.test(String(item?.ageRating || item?.adult || '').trim()) || item?.isAdultCover === true;
         }
 
         export async function fetchHoneyAdultCatalog() {
@@ -641,28 +647,57 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
 
         function parseMangaInUaCard(card) {
             const link = card.querySelector('a[href*="/mangas/"]');
-            const href = link?.href || '';
-            const match = href.match(/https?:\/\/manga\.in\.ua\/mangas\/[^/]+\/(\d+-[^?#]+\.html)/i);
-            if (!match) return null;
-            const titleLink = card.querySelector('.card__title a, h2 a, h3 a');
-            const title = (titleLink?.textContent || link?.getAttribute('title') || '').trim() || match[1];
-            const image = card.querySelector('img[data-src], img');
-            const rawPoster = image?.dataset?.src || image?.getAttribute('data-src') || image?.getAttribute('src') || '';
-            const poster = rawPoster.startsWith('http') ? rawPoster : `${HONEY_WEB}${rawPoster.startsWith('/') ? '' : '/'}${rawPoster}`;
-            const genres = [...card.querySelectorAll('.card__category a')].map(node => node.textContent.trim()).filter(Boolean);
-            const labels = [...card.querySelectorAll('.card__list li')].map(node => node.textContent.trim()).filter(Boolean);
+            const rawHref = link?.getAttribute('href') || '';
+            const href = rawHref ? new URL(rawHref, HONEY_WEB).href : '';
+            if (!href || !/^https?:\/\/manga\.in\.ua\/mangas\//i.test(href)) return null;
+
+            // manga.in.ua keeps the localized Ukrainian title in the title attribute.
+            // Never fall back to the URL slug: it leaks transliteration into the UI.
+            const titleLink = card.querySelector('h3.card__title.title > a, .card__title a');
+            const title = String(
+                titleLink?.getAttribute('title') ||
+                link?.getAttribute('title') ||
+                titleLink?.textContent ||
+                ''
+            ).trim() || 'Без назви';
+
+            const image = card.querySelector('figure img[data-src], figure img, img[data-src]');
+            const rawPoster = image?.getAttribute('data-src') || image?.getAttribute('src') || '';
+            const poster = rawPoster && !/poster-bg\.png$/i.test(rawPoster)
+                ? new URL(rawPoster, HONEY_WEB).href
+                : ANIME_CARD_PLACEHOLDER;
+            const genres = [...card.querySelectorAll('div.card__category.info a, .card__category a')]
+                .map(node => node.textContent.trim()).filter(Boolean);
+            const labels = [...card.querySelectorAll('ul.card__list li, .card__list li')]
+                .map(node => node.textContent.trim()).filter(Boolean);
             const progress = card.querySelector('.progress__sm')?.textContent || '';
             const chapterMatch = progress.match(/(\d+)/);
             const score = Number(card.querySelector('.card__short-rate--num')?.textContent || 0);
-            const age = labels.find(label => /\d+\+/.test(label)) || '';
+            const ageRating = (card.querySelector('ul.card__list li[title*="Перегляд від"], .card__list li[title*="Перегляд від"]')?.textContent || labels.find(label => /\d+\+/.test(label)) || '').trim();
             const typeLabel = labels.find(label => !/\d+\+/.test(label)) || 'Манґа';
             return {
-                honeyId: match[1], mal_id: `manga-${match[1]}`, slug: match[1], title, originalTitle: title,
-                url: href, readerUrl: '', readerAvailable: true, chapters: Number(chapterMatch?.[1] || 1),
+                honeyId: href,
+                mal_id: `manga-${href}`,
+                slug: href,
+                title,
+                originalTitle: title,
+                url: href,
+                readerUrl: '',
+                readerAvailable: true,
+                chapters: Number(chapterMatch?.[1] || 1),
                 images: { jpg: { large_image_url: getProxyUrl(poster, 'desktop'), image_url: getProxyUrl(poster, 'desktop') } },
-                genres, tags: [], adult: age || 'NONE', isAdultCover: age === '18+', type: 'manga', typeLabel,
-                status: '', synopsis: card.querySelector('.card__text.desc')?.textContent?.trim() || '',
-                score: Number.isFinite(score) ? score : 0, year: '', from: 'manga.in.ua'
+                genres,
+                tags: [],
+                ageRating,
+                adult: ageRating || 'NONE',
+                isAdultCover: ageRating === '18+',
+                type: 'manga',
+                typeLabel,
+                status: '',
+                synopsis: card.querySelector('.card__text.desc')?.textContent?.trim() || '',
+                score: Number.isFinite(score) ? score : 0,
+                year: '',
+                from: 'manga.in.ua'
             };
         }
 
@@ -725,6 +760,8 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                 });
             }
             if (homeCatalogAvailability === 'available') filtered = filtered.filter(item => item.readerAvailable || item.readerUrl);
+            if (homeCatalogMode === 'manga' && (homeCatalogAdult || homeCatalogAge === 'adult')) filtered = filtered.filter(item => honeyAgeCategory(item) === 'adult');
+            else if (homeCatalogMode === 'manga' && homeCatalogAge !== 'all') filtered = filtered.filter(item => honeyAgeCategory(item) === homeCatalogAge);
             if (homeCatalogMode === 'anime' && homeCatalogType !== 'all') filtered = filtered.filter(item => String(item.type || '').toLowerCase() === homeCatalogType);
             if (homeCatalogMode === 'anime' && homeCatalogYearMin) filtered = filtered.filter(item => Number(item.year || item.start_year || 0) >= Number(homeCatalogYearMin));
             if (homeCatalogMode === 'anime' && homeCatalogYearMax) filtered = filtered.filter(item => Number(item.year || item.start_year || 0) <= Number(homeCatalogYearMax));
@@ -756,11 +793,11 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
             const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
             const title = a.title || 'Без назви';
             const type = a.typeLabel || animeTypeLabel(a.type);
-            const status = homeCatalogAdult && homeCatalogMode === 'manga' ? '18+' : statusLabelUa(a.status);
+            const status = homeCatalogMode === 'manga' ? (a.ageRating || (homeCatalogAdult ? '18+' : '')) : statusLabelUa(a.status);
             const meta = [type, a.year, status].filter(Boolean).join(' · ');
             const honeyId = a.honeyId || a.honeyTitleId || (homeCatalogMode === 'manga' ? String(a.url || '').split('/').filter(Boolean).pop() : '');
             const isMangaCard = homeCatalogMode === 'manga' && Boolean(honeyId);
-            return `<article class="home-catalog-card${a.readerUrl || a.readerAvailable || isMangaCard ? ' home-catalog-card--reader' : ''}" data-url="${escapeHtml(String(a.url || ''))}"${a.readerUrl ? ` data-reader-url="${escapeHtml(a.readerUrl)}"` : ''}${isMangaCard && !a.readerUrl ? ` data-reader-pending="1" data-honey-id="${escapeHtml(String(honeyId))}"` : ''} tabindex="0" role="button" aria-label="${escapeHtml(title)}">
+            return `<article class="home-catalog-card${a.readerUrl || a.readerAvailable || isMangaCard ? ' home-catalog-card--reader' : ''}" data-url="${escapeHtml(String(a.url || ''))}"${a.readerUrl ? ` data-reader-url="${escapeHtml(a.readerUrl)}"` : ''}${isMangaCard && !a.readerUrl ? ` data-reader-pending="1" data-honey-id="${escapeHtml(String(honeyId))}"` : ''} data-reader-title="${escapeHtml(title)}" tabindex="0" role="button" aria-label="${escapeHtml(title)}">
                 <div class="home-catalog-card__poster">
                     <img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" onload="this.classList.add('img--loaded')" onerror="this.onerror=null;this.src='${ANIME_CARD_PLACEHOLDER}'">
                     ${status ? `<span class="home-catalog-card__status">${escapeHtml(status)}</span>` : ''}
@@ -777,7 +814,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                 const open = async () => {
                     if (!card.dataset.url) return;
                     if (card.dataset.readerUrl) {
-                        Router.goTo('manga', { url: card.dataset.readerUrl });
+                        Router.goTo('manga', { url: card.dataset.readerUrl, title: card.dataset.readerTitle || card.getAttribute('aria-label') || 'Манґа' });
                         return;
                     }
                     if (homeCatalogMode === 'manga' && card.dataset.honeyId) {
@@ -785,7 +822,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                         try {
                             const item = homeCatalogItems.find(entry => String(entry.honeyId || entry.honeyTitleId) === String(card.dataset.honeyId)) || { honeyId: card.dataset.honeyId, honeyTitleId: card.dataset.honeyId, title: card.getAttribute('aria-label'), chapters: 1 };
                             const resolved = await resolveHoneyReader({ ...item, honeyTitleId: card.dataset.honeyId, chapters: Math.max(1, Number(item.chapters || 1)) });
-                            if (resolved.readerUrl) { Router.goTo('manga', { url: resolved.readerUrl }); return; }
+                            if (resolved.readerUrl) { Router.goTo('manga', { url: resolved.readerUrl, title: resolved.readerTitle || item.title || card.dataset.readerTitle || 'Манґа' }); return; }
                         } finally { card.removeAttribute('aria-busy'); }
                         showToast('Розділи цього тайтлу ще не готові');
                         return;
@@ -827,7 +864,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
 
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
-                ${homeCatalogAdult ? '' : '<button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>'}
+                ${homeCatalogMode === 'manga' ? '' : '<button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>'}
             </section>`;
         }
 
@@ -856,8 +893,8 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
             document.body.appendChild(dialog);
             const close = () => dialog.remove();
             dialog.querySelectorAll('[data-filter-close]').forEach(button => button.addEventListener('click', close));
-            dialog.querySelector('[data-filter-reset]')?.addEventListener('click', () => { homeCatalogStatus = 'all'; homeCatalogAvailability = 'all'; homeCatalogGenre = 'all'; homeCatalogType = 'all'; homeCatalogYearMin = ''; homeCatalogYearMax = ''; homeCatalogScoreMin = ''; homeCatalogGenres = new Set(); renderHomeCatalogGrid(); close(); });
-            dialog.querySelector('[data-filter-apply]')?.addEventListener('click', () => { homeCatalogStatus = dialog.querySelector('#homeFilterStatus')?.value || 'all'; homeCatalogAvailability = dialog.querySelector('#homeFilterAvailability')?.value || 'all'; homeCatalogGenre = dialog.querySelector('#homeFilterAge')?.value || 'all'; homeCatalogType = dialog.querySelector('#homeFilterType')?.value || 'all'; homeCatalogYearMin = dialog.querySelector('#homeFilterYearMin')?.value || ''; homeCatalogYearMax = dialog.querySelector('#homeFilterYearMax')?.value || ''; homeCatalogScoreMin = dialog.querySelector('#homeFilterScoreMin')?.value || ''; homeCatalogGenres = new Set([...dialog.querySelectorAll('.home-catalog-filter-dialog__genres input:checked')].map(input => normalizeHoneyMatch(input.value))); renderHomeCatalogGrid(); close(); });
+            dialog.querySelector('[data-filter-reset]')?.addEventListener('click', () => { homeCatalogStatus = 'all'; homeCatalogAvailability = 'all'; homeCatalogGenre = 'all'; homeCatalogAge = 'all'; homeCatalogAdult = false; homeCatalogType = 'all'; homeCatalogYearMin = ''; homeCatalogYearMax = ''; homeCatalogScoreMin = ''; homeCatalogGenres = new Set(); renderHomeCatalogGrid(); close(); });
+            dialog.querySelector('[data-filter-apply]')?.addEventListener('click', () => { homeCatalogStatus = dialog.querySelector('#homeFilterStatus')?.value || 'all'; homeCatalogAvailability = dialog.querySelector('#homeFilterAvailability')?.value || 'all'; homeCatalogAge = dialog.querySelector('#homeFilterAge')?.value || 'all'; homeCatalogAdult = homeCatalogMode === 'manga' && homeCatalogAge === 'adult'; homeCatalogGenre = 'all'; homeCatalogType = dialog.querySelector('#homeFilterType')?.value || 'all'; homeCatalogYearMin = dialog.querySelector('#homeFilterYearMin')?.value || ''; homeCatalogYearMax = dialog.querySelector('#homeFilterYearMax')?.value || ''; homeCatalogScoreMin = dialog.querySelector('#homeFilterScoreMin')?.value || ''; homeCatalogGenres = new Set([...dialog.querySelectorAll('.home-catalog-filter-dialog__genres input:checked')].map(input => normalizeHoneyMatch(input.value))); renderHomeCatalogGrid(); close(); });
         }
 
         export function bindHomeCatalogMenu(root) {
@@ -866,6 +903,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                 if (tab.dataset.catalogMode === homeCatalogMode || homeCatalogLoading) return;
                 homeCatalogMode = tab.dataset.catalogMode;
                 homeCatalogAdult = false;
+                homeCatalogAge = 'all';
                 homeCatalogQuery = '';
                 homeCatalogPreset = 'all';
                 homeCatalogGenre = 'all';
@@ -888,6 +926,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
                 if (homeCatalogLoading) return;
                 homeCatalogAdult = !homeCatalogAdult;
                 homeCatalogMode = 'manga';
+                homeCatalogAge = homeCatalogAdult ? 'adult' : 'all';
                 homeCatalogQuery = '';
                 homeCatalogPreset = 'all';
                 homeCatalogGenre = 'all';
@@ -981,7 +1020,7 @@ import { getMangaChapters } from '../../services/api/manga.js?v=20260818-manga-c
         export function syncHomeCatalogMoreButton() {
             const grid = document.getElementById('homeCatalogGrid');
             let button = document.getElementById('homeCatalogMoreBtn');
-            if (homeCatalogAdult) { button?.remove(); return; }
+            if (homeCatalogMode === 'manga' || homeCatalogAdult) { button?.remove(); return; }
             if (!button && grid) {
                 grid.insertAdjacentHTML('afterend', '<button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>');
                 button = document.getElementById('homeCatalogMoreBtn');

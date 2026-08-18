@@ -1,3 +1,3 @@
-import { bootstrap } from './core/bootstrap.js?v=20260818-manga-chapters-v2';
+import { bootstrap } from './core/bootstrap.js?v=20260818-manga-filters-v4';
 
 bootstrap();

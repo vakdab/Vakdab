@@ -2,26 +2,27 @@ import { DEFAULT_CHAPTER_URL, getChapterFrames, getReaderBackgroundData, pageIma
 import { buildPageMarkup, escapeHtml, normalizeChapterName, pageLabel } from './pages.js?v=20260818-manga-pages-v3';
 import { createPagePreloader } from './preload.js';
 
-export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_URL, onNavigate = () => {}) {
+export async function renderMangaReader(container, chapterUrl = DEFAULT_CHAPTER_URL, onNavigate = () => {}, mangaTitle = '') {
     if (!container) return;
     container.innerHTML = `<section class="manga-reader manga-reader--loading"><div class="manga-reader__loader"><i class="fas fa-spinner fa-pulse"></i><p>Завантаження сторінки 1…</p><small>Підготовка першої сторінки</small></div></section>`;
     let ids;
-    try { ids = parseChapterUrl(chapterUrl); } catch (error) { showReaderError(container, error, chapterUrl, onNavigate); return; }
+    try { ids = parseChapterUrl(chapterUrl); } catch (error) { showReaderError(container, error, chapterUrl, onNavigate, mangaTitle); return; }
     try {
         const pages = await getChapterFrames(chapterUrl);
         if (!pages.length) throw new Error('У розділі немає сторінок');
         const background = getReaderBackgroundData(ids.titleId, chapterUrl);
-        renderShell(container, ids, pages, background, chapterUrl, onNavigate);
-    } catch (error) { showReaderError(container, error, chapterUrl, onNavigate); }
+        renderShell(container, ids, pages, background, chapterUrl, onNavigate, mangaTitle);
+    } catch (error) { showReaderError(container, error, chapterUrl, onNavigate, mangaTitle); }
 }
 
-function showReaderError(container, error, chapterUrl, onNavigate) {
+function showReaderError(container, error, chapterUrl, onNavigate, mangaTitle = '') {
     container.innerHTML = `<section class="manga-reader manga-reader--error"><div class="manga-reader__error"><i class="fas fa-triangle-exclamation"></i><h1>Не вдалося завантажити манґу</h1><p>${escapeHtml(error?.message || 'Перевірте з’єднання та спробуйте ще раз.')}</p><button type="button" id="mangaReaderRetry">Спробувати ще раз</button></div></section>`;
-    container.querySelector('#mangaReaderRetry')?.addEventListener('click', () => renderMangaReader(container, chapterUrl, onNavigate));
+    container.querySelector('#mangaReaderRetry')?.addEventListener('click', () => renderMangaReader(container, chapterUrl, onNavigate, mangaTitle));
 }
 
-function renderShell(container, ids, pages, background, chapterUrl, onNavigate) {
-    const titleFallback = decodeURIComponent(String(ids.slug || 'Манґа')).replace(/[-_]+/g, ' ').replace(/\b(tom|розділ|rozdil|chapter)\b.*$/i, '').trim() || 'Манґа';
+function renderShell(container, ids, pages, background, chapterUrl, onNavigate, mangaTitle = '') {
+    const cleanTitle = value => { const text = String(value || '').replace(/\s+/g, ' ').trim(); return text && text !== 'Без назви' && !/^https?:\/\//i.test(text) && !/\/chapters\//i.test(text) && !/^\d+-[a-z0-9-]+(?:\.html)?$/i.test(text) ? text : ''; };
+    const titleFallback = cleanTitle(mangaTitle) || 'Манґа';
     const pageMarkup = buildPageMarkup(pages, pageImageUrl, pageImageFallbackUrl);
     container.innerHTML = `<section class="manga-reader" aria-label="Рідер манґи">
         <header class="manga-reader__header"><button class="manga-reader__back" type="button" aria-label="Назад"><i class="fas fa-arrow-left"></i><span>Назад</span></button><div class="manga-reader__heading"><span>VAKDAB · МАНҐА</span><h1 id="mangaReaderTitle">${titleFallback}</h1><p id="mangaReaderChapter">${escapeHtml(normalizeChapterName(chapterUrl))}</p></div></header>
@@ -50,8 +51,8 @@ function renderShell(container, ids, pages, background, chapterUrl, onNavigate) 
     container.querySelector('.manga-reader__back')?.addEventListener('click', () => onNavigate(null));
     background.then(data => {
         const title = data.title || {}; const chapterList = data.chapterList || [];
-        const sourceTitle = String(title.title || '').trim();
-        const safeTitle = sourceTitle && !/^https?:\/\//i.test(sourceTitle) && !/\/chapters\//i.test(sourceTitle) ? sourceTitle : titleFallback; const currentIndex = chapterList.findIndex(item => String(item.id) === String(ids.chapterId));
+        const sourceTitle = cleanTitle(title.title);
+        const safeTitle = cleanTitle(mangaTitle) || sourceTitle || titleFallback; const currentIndex = chapterList.findIndex(item => String(item.id) === String(ids.chapterId));
         container.querySelector('#mangaReaderTitle').textContent = safeTitle; container.querySelector('#mangaReaderChapter').textContent = normalizeChapterName(data.chapter || chapterUrl); container.querySelector('#mangaReaderDescription').textContent = title.description || 'Опис відсутній.'; document.title = `${safeTitle} — VakDab`;
         const select = container.querySelector('#mangaReaderChapterSelect'); select.innerHTML = chapterList.length ? chapterList.map(item => `<option value="${escapeHtml(String(item.id))}"${String(item.id) === String(ids.chapterId) ? ' selected' : ''}>${escapeHtml(normalizeChapterName(item))}</option>`).join('') : '<option>Розділи недоступні</option>'; select.disabled = !chapterList.length;
         const setChapterButton = (button, item, label) => { if (!item) { button.disabled = true; return; } button.disabled = false; button.dataset.chapterUrl = item.url || item.id || ''; button.textContent = label; };
