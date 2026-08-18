@@ -42,5 +42,22 @@ assert.deepEqual(parsedMarkdown.imageUrls, [
     'https://ranobelib.me/uploads/ranobe/demo/chapters/123/image_3.png'
 ]);
 assert.deepEqual(parsedMarkdown.paragraphs, ['Текст розділу.']);
+
+const noisyMarkdown = `Title: Demo
+URL Source: https://ranobelib.me/ru/demo/read/v1/c1
+Markdown Content:
+# Том 1 Глава 1
+Основний текст розділу.
+
+Назад[Вперед]
+(https://ranobelib.me/ua/demo/read/v1/c1?bid=25644)
+Нові
+Налаштування
+Правила
+Написати коментар...
+[fox1e [Культ Лиса]](https://ranobelib.me/ua/user/5596981)
+✨ Ласкаво просимо до нашої затишної нори!`;
+const parsedNoisy = parseRanobeChapterHtml(noisyMarkdown, 'https://ranobelib.me/ru/demo/read/v1/c1');
+assert.deepEqual(parsedNoisy.paragraphs, ['Основний текст розділу.']);
 assert.equal(RANOBELIB_TOTAL_COUNT, 23598);
 console.log('novel-source.test.mjs: ok');

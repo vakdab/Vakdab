@@ -119,8 +119,7 @@ function parseRanobeMarkdown(text, chapterUrl = '') {
     const headingIndex = content.findIndex(line => /^#{1,3}\s/.test(line));
     const heading = (headingIndex >= 0 ? content[headingIndex] : lines[0] || 'Розділ').replace(/^#{1,3}\s+/, '');
     const body = headingIndex >= 0 ? content.slice(headingIndex + 1) : content;
-    const paragraphs = body.map(line => line.replace(imagePattern, '').replace(/^[-*]\s+/, '').replace(/^\[([^\]]+)\]$/, '$1').trim())
-        .filter(line => line && !/^!\[[^\]]*\]$/.test(line) && !/^\(https?:\/\/.*\)$/.test(line) && !/^\[.*\]\(https?:\/\/.*\)$/.test(line) && !/^(реклама|отключить рекламу|оглавление|назад|вперёд|вперед)$/i.test(line) && !/^Title:|^URL Source:|^Published Time:|^Markdown Content:/i.test(line) && line !== heading);
+    const paragraphs = sanitizeChapterLines(body.map(line => line.replace(imagePattern, '').replace(/^[-*]\s+/, '').replace(/^\[([^\]]+)\]$/, '$1').trim()), heading);
     const links = parseMarkdownLinks(text).filter(item => isChapterLink(item.url));
     return { title: normalizeNovelText(heading), paragraphs, imageUrls: [...new Set(imageUrls)], chapterUrl: absoluteUrl(chapterUrl), prevUrl: links[0]?.url || '', nextUrl: links[1]?.url || '' };
 }
@@ -140,22 +139,48 @@ function isChapterLink(url) {
     return /\/read\/v\d+\/c\d+(?:[/?#]|$)/i.test(url);
 }
 
+const chapterCommentStartPattern = /^(?:комментарии.*|коментарі.*|новые.*|нові.*|настройки.*|налаштування.*|правила.*|написать комментар.*|написати коментар.*|сказать спасибо.*|сказати дякую.*|оценить перевод.*|оцінити переклад.*|поддержать.*|підтримати.*)$/i;
+
+function isChapterNoiseLine(value, heading = '') {
+    const line = normalizeNovelText(value);
+    if (!line || line === normalizeNovelText(heading)) return true;
+    if (line.includes('http://') || line.includes('https://') || line.toLowerCase().includes('www.')) return true;
+    if (line.startsWith('![')) return true;
+    if (/^(?:title|url source|published time|markdown content):/i.test(line)) return true;
+    if (/^(?:реклама|отключить рекламу|оглавление|назад|вперёд|вперед|попередній|наступний)/i.test(line)) return true;
+    return false;
+}
+
+function sanitizeChapterLines(lines, heading = '') {
+    const normalized = (Array.isArray(lines) ? lines : []).map(normalizeNovelText).filter(Boolean);
+    const commentStart = normalized.findIndex(line => chapterCommentStartPattern.test(line));
+    const content = commentStart >= 0 ? normalized.slice(0, commentStart) : normalized;
+    return content.filter(line => !isChapterNoiseLine(line, heading));
+}
+
+function cloneChapterRoot(element) {
+    const clone = element.cloneNode(true);
+    clone.querySelectorAll('script,style,noscript,button,form,nav,aside,footer,[class*="comment"],[class*="comments"],[class*="discussion"],[class*="rating"],[id*="comment"],[id*="comments"],[data-testid*="comment"]').forEach(node => node.remove());
+    return clone;
+}
+
 export function parseRanobeChapterHtml(html, chapterUrl = '') {
     if (isMarkdownPage(html)) return parseRanobeMarkdown(html, chapterUrl);
     const document = parseDocument(html);
     const candidates = [...document.querySelectorAll('main,article,[class*="chapter"],[class*="reader"],[class*="text"]')];
     const root = candidates.sort((a, b) => cleanElementText(b).length - cleanElementText(a).length)[0] || document.body;
-    const heading = root.querySelector('h1,h2,h3')?.textContent || document.title || 'Розділ';
-    const paragraphs = [...root.querySelectorAll('p,blockquote,li')]
+    const cleanRoot = cloneChapterRoot(root);
+    const heading = cleanRoot.querySelector('h1,h2,h3')?.textContent || document.title || 'Розділ';
+    const paragraphs = sanitizeChapterLines([...cleanRoot.querySelectorAll('p,blockquote,li')]
         .map(node => normalizeNovelText(node.textContent))
-        .filter(text => text.length >= 2 && !/^(реклама|отключить рекламу|назад|вперёд|вперед)$/i.test(text));
+        .filter(text => text.length >= 2), heading);
     const uniqueParagraphs = [];
     const seen = new Set();
     for (const paragraph of paragraphs) {
         if (!seen.has(paragraph)) { seen.add(paragraph); uniqueParagraphs.push(paragraph); }
     }
     if (!uniqueParagraphs.length) {
-        const fallback = cleanElementText(root).split(/\n+/).map(normalizeNovelText).filter(Boolean);
+        const fallback = sanitizeChapterLines(cleanElementText(cleanRoot).split(/\n+/), heading);
         uniqueParagraphs.push(...fallback.slice(0, 500));
     }
     const links = [...document.querySelectorAll('a[href]')].map(anchor => ({
@@ -163,7 +188,7 @@ export function parseRanobeChapterHtml(html, chapterUrl = '') {
     })).filter(item => isChapterLink(item.url));
     const prev = links.find(item => /назад|предыдущ/i.test(item.label))?.url || links[0]?.url || '';
     const next = links.find(item => /вперёд|вперед|следующ/i.test(item.label))?.url || links[1]?.url || '';
-    const imageUrls = [...new Set([...root.querySelectorAll('img[src]')].map(node => absoluteUrl(node.getAttribute('src') || node.src)).filter(isRanobeChapterImageUrl))];
+    const imageUrls = [...new Set([...cleanRoot.querySelectorAll('img[src]')].map(node => absoluteUrl(node.getAttribute('src') || node.src)).filter(isRanobeChapterImageUrl))];
     return { title: normalizeNovelText(heading), paragraphs: uniqueParagraphs, imageUrls, chapterUrl: absoluteUrl(chapterUrl), prevUrl: prev, nextUrl: next };
 }
 
@@ -190,10 +215,12 @@ export function parseRanobeChapterList(html, currentUrl = '') {
 export async function fetchRanobeChapter(chapterUrl, options = {}) {
     const chapterHtml = await fetchRanobeHtml(chapterUrl, options);
     const chapter = parseRanobeChapterHtml(chapterHtml, chapterUrl);
-    let chapterList = [];
     const chapterAbsolute = absoluteUrl(chapterUrl);
+    let chapterList = parseRanobeChapterList(chapterHtml, chapterUrl);
     const bookUrl = chapterAbsolute.replace(/\/ru\/([^/]+)\/read\/v\d+\/c\d+(?:[/?#].*)?$/i, '/ru/book/$1');
-    try { chapterList = parseRanobeChapterList(await fetchRanobeHtml(`${bookUrl}?section=chapters`), chapterUrl); } catch { chapterList = parseRanobeChapterList(chapterHtml, chapterUrl); }
+    if (chapterList.length <= 1 && bookUrl) {
+        try { chapterList = parseRanobeChapterList(await fetchRanobeHtml(`${bookUrl}?section=chapters`), chapterUrl); } catch { /* chapter content remains usable without book-page proxy */ }
+    }
     const currentIndex = chapterList.findIndex(item => item.url === absoluteUrl(chapterUrl));
     return {
         ...chapter,
