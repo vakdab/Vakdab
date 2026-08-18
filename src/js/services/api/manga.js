@@ -62,6 +62,39 @@ export function pageImageFallbackUrl(value) {
     return resourceUrl(decodeURIComponent(id), HONEY_CDN_FALLBACK);
 }
 
+function normalizeResourceValue(value) {
+    if (typeof value === 'string' || typeof value === 'number') return String(value);
+    if (!value || typeof value !== 'object') return '';
+    return String(value.resourceId || value.resourceID || value.id || value.uuid || value.url || value.src || value.content || '').trim();
+}
+
+/** Normalize current and legacy Honey frames response shapes into indexed resource IDs. */
+export function extractHoneyResourceIds(payload) {
+    const candidates = [
+        payload?.resourceIds,
+        payload?.data?.resourceIds,
+        payload?.pages,
+        payload?.data?.pages,
+        payload?.resources,
+        payload?.data?.resources
+    ];
+    for (const candidate of candidates) {
+        if (Array.isArray(candidate)) {
+            const entries = candidate.map((value, index) => [String(index), normalizeResourceValue(value)]).filter(([, value]) => value);
+            if (entries.length) return Object.fromEntries(entries);
+        }
+        if (candidate && typeof candidate === 'object') {
+            const entries = Object.entries(candidate).map(([index, value]) => [index, normalizeResourceValue(value)]).filter(([, value]) => value);
+            if (entries.length) return Object.fromEntries(entries);
+        }
+    }
+    return {};
+}
+
+export function hasHoneyPageResources(payload) {
+    return Object.keys(extractHoneyResourceIds(payload)).length > 0;
+}
+
 async function fetchWithRetry(url, options = {}, { timeoutMs = 20000, maxAttempts = 3 } = {}) {
     let lastError;
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -118,10 +151,10 @@ export async function getChapterFrames(chapterUrl) {
             if (error?.status === 403) throw new Error('Цей розділ Honey Manga доступний лише після отримання доступу.');
             throw error;
         }
-        const resourceIds = payload?.resourceIds && typeof payload.resourceIds === 'object' ? payload.resourceIds : {};
+        const resourceIds = extractHoneyResourceIds(payload);
         const pages = Object.entries(resourceIds)
             .sort(([left], [right]) => Number(left) - Number(right))
-            .map(([index, resourceId]) => ({ content: resourceUrl(resourceId), resourceId: String(resourceId), index: Number(index) }));
+            .map(([index, resourceId]) => ({ content: pageImageUrl(resourceId), resourceId: String(resourceId), index: Number(index) }));
         debugLog('manga', 'honey-frame-manifest', { chapterId: ids.chapterId, titleId: ids.titleId, apiResourceCount: Object.keys(resourceIds).length, frontendPages: pages.length });
         if (!pages.length) throw new Error('У цьому розділі Honey Manga немає сторінок.');
         return pages;

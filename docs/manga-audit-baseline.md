@@ -103,3 +103,13 @@ The reported failure was reproduced from the Honey API contract: `resolveHoneyRe
 GitHub Pages build `1159151477` completed with status `built` for merge commit `0432c37d5078b358587051dcfc104b90f743b06c`. The production URL `https://vakdab.github.io/Vakdab/` loaded the current app and the existing Hikka anime catalog successfully before the live Honey mode check. The live Honey manga mode then rendered **30 cards**, displayed `Доступно для читання: 30 із 1 889 манґи`, used Honey CDN poster URLs, and showed age badges only for actual `16+` entries rather than the raw `NONE` API value. The live 18+ toggle completed on the Honey adult dataset with **24 cards**, `Доступно для читання: 24 із 263 манґи`, and every visible card marked `18+`; no ordinary catalog item was present.
 
 The final production reader route for free chapter 9 loaded the complete **10-page** manifest on GitHub Pages, populated all **11** chapter options, displayed the Honey book title and description, and served page images through the nocache Honey CDN. The live reader had no error state.
+
+## Frames-empty regression investigation
+
+The direct Honey frames API for the previously working free chapter returns a non-empty `resourceIds` object. The new parser now also accepts nested and array page/resource shapes. Local app startup after this change remains healthy and the anime route initializes normally before the Honey card test.
+
+Безпосередня причина нового повідомлення — окремі Honey chapters можуть бути позначені як public, але фактично не мати завантажених сторінок. Card resolver тепер перевіряє frames manifest і пропускає такі chapters перед побудовою reader URL.
+
+Local frames-fix smoke reached Honey Manga mode successfully: `30 із 1 889` cards loaded, including the reported first title, after the new parser and chapter probing changes.
+
+The reported first Honey card was clicked in the local browser after the frames fix. The catalog stayed stable while the resolver asynchronously probed candidate chapter manifests before routing, which is expected for skipping chapters without uploaded pages.
