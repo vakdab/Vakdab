@@ -106,7 +106,7 @@
 .home-catalog-filter-dialog input[type="number"] { width: 100%; box-sizing: border-box; padding: 11px 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); color: var(--text); font: inherit; }
 
 
-/* Proxied manga.in.ua source reader */
+/* Honey Manga reader image manifest */
 .manga-reader--source { min-height: 100%; }
 .manga-reader__source-frame { width: 100%; min-height: calc(100vh - 96px); overflow: hidden; background: #fff; }
 .manga-reader__source-frame iframe { display: block; width: 100%; height: calc(100vh - 96px); min-height: 720px; border: 0; background: #fff; }
