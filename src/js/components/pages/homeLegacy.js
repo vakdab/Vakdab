@@ -511,14 +511,14 @@ import { getProxyUrl } from '../../utils/image.js';
             const mangaTitle = normalizeHoneyMatch(item.title || item.originalTitle || item.title_ua || '');
             const mangaInUaUrl = MANGA_IN_UA_READER_MAP.get(mangaTitle);
             if (mangaInUaUrl) return { ...item, readerUrl: mangaInUaUrl, readerSource: 'manga.in.ua' };
-            if (item.url && /^https?:\\/\\/manga\\.in\\.ua\\/mangas\\//i.test(item.url)) {
+            if (item.url && /^https?:\/\/manga\.in\.ua\/mangas\//i.test(item.url)) {
                 try {
                     const response = await fetch(getProxyUrl(item.url, 'desktop'), { credentials: 'omit', cache: 'no-store' });
                     const html = await response.text();
                     const doc = new DOMParser().parseFromString(html, 'text/html');
                     const chapter = [...doc.querySelectorAll('a[href*="/chapters/"], select#linkstocomics option')]
                         .map(node => node.value || node.href || '')
-                        .find(url => /^https?:\\/\\/manga\\.in\\.ua\\/chapters\\/\\d+-[^?#]+\\.html/i.test(url));
+                        .find(url => /^https?:\/\/manga\.in\.ua\/chapters\/\d+-[^?#]+\.html/i.test(url));
                     if (chapter) return { ...item, readerUrl: chapter, readerSource: 'manga.in.ua' };
                 } catch (error) { console.warn('manga.in.ua chapter lookup failed:', error); }
             }
