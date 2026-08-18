@@ -9,7 +9,7 @@ import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
 import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260818-honey-type-filter-v1';
-import { resolveRanobeReader } from '../../services/api/novel.js?v=20260818-ranobe-v1';
+import { fetchRanobeCatalogPage, resolveRanobeReader } from '../../services/api/novel.js?v=20260818-ranobe-v2';
 
         // ====================================================================
         export let currentTab = 'main',
@@ -715,7 +715,8 @@ import { resolveRanobeReader } from '../../services/api/novel.js?v=20260818-rano
 
         export async function fetchHomeCatalogPage(page) {
             if (homeCatalogMode === 'manga') return fetchHoneyCatalogPage(page);
-            const endpoint = homeCatalogMode === 'novel' ? 'novel' : 'anime';
+            if (homeCatalogMode === 'novel') return fetchRanobeCatalogPage(page, homeCatalogQuery);
+            const endpoint = 'anime';
             const requestBody = homeCatalogRequestBody();
             if (homeCatalogMode === 'anime' && homeCatalogAdult) requestBody.rating = ['rx'];
             const items = await hikkaCatalog(endpoint, page, requestBody);
@@ -799,6 +800,12 @@ import { resolveRanobeReader } from '../../services/api/novel.js?v=20260818-rano
                 const open = async () => {
                     if (!card.dataset.url) return;
                     const cardTitle = card.dataset.readerTitle || card.getAttribute('aria-label') || 'Манґа';
+                    if (homeCatalogMode === 'novel' && card.dataset.readerUrl) {
+                        const item = homeCatalogItems.find(entry => String(entry.url || '') === String(card.dataset.url));
+                        const poster = item?.images?.jpg?.large_image_url || item?.poster || '';
+                        Router.goTo('novel', { url: card.dataset.readerUrl, title: cardTitle, poster });
+                        return;
+                    }
                     if (card.dataset.readerUrl) {
                         Router.goTo('manga', { url: card.dataset.readerUrl, title: cardTitle });
                         return;
@@ -814,18 +821,7 @@ import { resolveRanobeReader } from '../../services/api/novel.js?v=20260818-rano
                         return;
                     }
                     if (homeCatalogMode === 'novel') {
-                        card.setAttribute('aria-busy', 'true');
-                        try {
-                            const item = homeCatalogItems.find(entry => String(entry.url || '') === String(card.dataset.url)) || { title: cardTitle, url: card.dataset.url };
-                            const resolved = await resolveRanobeReader({ ...item, title: item.title || cardTitle, originalTitle: item.originalTitle || item.title_original || '' });
-                            if (resolved.readerUrl) {
-                                const poster = item.images?.jpg?.large_image_url || item.image || '';
-                                Router.goTo('novel', { url: resolved.readerUrl, title: cardTitle, poster });
-                                return;
-                            }
-                        } catch (error) { console.warn('[VakDab] RanobeLib match failed:', error); }
-                        finally { card.removeAttribute('aria-busy'); }
-                        showToast('Для цього ранобе не знайдено розділи на RanobeLib');
+                        showToast('Для цього тайтлу RanobeLib не повернув розділ');
                         return;
                     }
                     if (homeCatalogMode !== 'anime') { showToast('Розділи цього тайтлу ще не готові'); return; }
