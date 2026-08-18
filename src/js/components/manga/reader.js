@@ -1,4 +1,4 @@
-import { DEFAULT_CHAPTER_URL, getChapterFrames, getReaderBackgroundData, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/manga.js?v=20260818-honey-manga-v1';
+import { DEFAULT_CHAPTER_URL, getChapterFrames, getReaderBackgroundData, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/manga.js?v=20260818-honey-free-chapter-v2';
 import { buildPageMarkup, escapeHtml, normalizeChapterName, pageLabel } from './pages.js?v=20260818-manga-pages-v5';
 import { debugLog } from '../../utils/debug.js';
 import { createPagePreloader } from './preload.js';

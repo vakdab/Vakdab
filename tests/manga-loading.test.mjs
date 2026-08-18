@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { buildPageMarkup, normalizeChapterName } from '../src/js/components/manga/pages.js';
-import { parseChapterUrl, pageImageFallbackUrl, pageImageUrl } from '../src/js/services/api/manga.js';
+import { parseChapterUrl, pageImageFallbackUrl, pageImageUrl, selectHoneyReaderChapter } from '../src/js/services/api/manga.js';
 
 const chapterUrl = 'https://honey-manga.com.ua/read/db4ed14e-f564-4103-be20-688948370f3d/8c336683-10ca-4912-9666-e18a1689da6e';
 const resource = index => `resource-${index}-uuid`;
@@ -23,6 +23,12 @@ assert.deepEqual(parseChapterUrl(chapterUrl), {
 assert.equal(normalizeChapterName(chapterUrl), 'Розділ Honey Manga');
 assert.match(pageImageUrl('66f4404e-c3f9-42a5-bd5f-88cb8a6e6ccb'), /honeymangastorage-nocache\.b-cdn\.net/);
 assert.match(pageImageFallbackUrl('66f4404e-c3f9-42a5-bd5f-88cb8a6e6ccb'), /hmvolumestorage\.b-cdn\.net/);
+
+const paidLatest = { id: 'paid-latest', isMonetized: true };
+const publicOlder = { id: 'public-older', isMonetized: false };
+assert.equal(selectHoneyReaderChapter([paidLatest, publicOlder]), publicOlder, 'reader prefers a public chapter over a paid latest chapter');
+assert.equal(selectHoneyReaderChapter([paidLatest]), paidLatest, 'reader keeps paid fallback when no public chapter exists');
+assert.equal(selectHoneyReaderChapter([]), null, 'empty chapter lists do not create a reader URL');
 assert.throws(() => parseChapterUrl('https://example.com/old-reader.html'), /Honey Manga/);
 
 console.log('manga-loading fixtures: ok');

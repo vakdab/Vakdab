@@ -39,6 +39,12 @@ export function parseChapterUrl(value) {
     return { source: 'honey-manga.com.ua', chapterId: decodeURIComponent(match[1]), titleId: decodeURIComponent(match[2]), url };
 }
 
+/** Select the newest public chapter, falling back to the newest monetized one. */
+export function selectHoneyReaderChapter(chapters = []) {
+    const list = Array.isArray(chapters) ? chapters.filter(Boolean) : [];
+    return list.find(chapter => chapter.isMonetized !== true) || list[0] || null;
+}
+
 function resourceUrl(resourceId, base = HONEY_CDN) {
     return `${base}/${encodeURIComponent(String(resourceId))}?optimizer=image&quality=85&width=992`;
 }

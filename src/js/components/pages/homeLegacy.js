@@ -8,6 +8,7 @@ import { getProfile, saveProfile } from './settingsLegacy.js';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
+import { selectHoneyReaderChapter } from '../../services/api/manga.js?v=20260818-honey-free-chapter-v2';
 
         // ====================================================================
         export let currentTab = 'main',
@@ -535,9 +536,13 @@ import { getProxyUrl } from '../../utils/image.js';
                 const payload = await fetchHoneyJson('/v2/chapter/cursor-list', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ page: 1, pageSize: 1, mangaId: String(mangaId), sortOrder: 'DESC' })
+                    // Honey returns newest chapters first. The newest chapter can be
+                    // monetized while older chapters remain public, so pageSize: 1
+                    // incorrectly sent users straight to the paywall.
+                    body: JSON.stringify({ page: 1, pageSize: 100, mangaId: String(mangaId), sortOrder: 'DESC' })
                 });
-                const chapter = Array.isArray(payload?.data) ? payload.data[0] : null;
+                const chapters = Array.isArray(payload?.data) ? payload.data : [];
+                const chapter = selectHoneyReaderChapter(chapters);
                 const reader = chapter?.id ? {
                     readerUrl: `${HONEY_WEB}/read/${chapter.id}/${mangaId}`,
                     honeyChapterId: chapter.id,

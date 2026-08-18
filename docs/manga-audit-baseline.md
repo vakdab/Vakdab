@@ -94,6 +94,10 @@ The reader smoke used free chapter 9 of the same Honey book. The route `/#manga?
 
 After leaving the Honey reader and reloading the root route, the standard anime catalog still initialized normally, confirming the new manga route does not break the existing anime/novel route lifecycle. A subsequent switch back to Honey manga also restored the manga search/filter controls and loading state without a runtime error.
 
+## Free-chapter selection regression smoke
+
+The reported failure was reproduced from the Honey API contract: `resolveHoneyReader` requested only the newest chapter (`pageSize: 1`), while the newest item was `isMonetized: true` and an older public chapter was available. The fix now requests up to 100 chapters, selects the newest `isMonetized !== true` chapter, and retains the paid chapter only as a fallback when no public chapter exists. A local catalog restart and switch into Honey Manga mode loaded the updated module graph without startup errors. The first Honey card click also entered the reader loading state, allowing the asynchronous chapter lookup to be checked separately from catalog rendering. The local route resolved to the free chapter `db4ed14e-f564-4103-be20-688948370f3d` rather than paid latest chapter `15b0a375-f0ae-4469-8606-2ddc97f3a61e`; the reader loaded 10 pages and 11 chapter options successfully.
+
 ## Production Pages smoke after Honey merge
 
 GitHub Pages build `1159151477` completed with status `built` for merge commit `0432c37d5078b358587051dcfc104b90f743b06c`. The production URL `https://vakdab.github.io/Vakdab/` loaded the current app and the existing Hikka anime catalog successfully before the live Honey mode check. The live Honey manga mode then rendered **30 cards**, displayed `Доступно для читання: 30 із 1 889 манґи`, used Honey CDN poster URLs, and showed age badges only for actual `16+` entries rather than the raw `NONE` API value. The live 18+ toggle completed on the Honey adult dataset with **24 cards**, `Доступно для читання: 24 із 263 манґи`, and every visible card marked `18+`; no ordinary catalog item was present.
