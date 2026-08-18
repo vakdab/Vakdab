@@ -9,7 +9,7 @@ import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
 import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260818-honey-type-filter-v1';
-import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } from '../../services/api/novel.js?v=20260818-ranobe-v6';
+import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } from '../../services/api/novel.js?v=20260818-ranobe-v7';
 
         // Hikka may remain pending behind corsproxy for 25+ seconds. The catalog
         // shell must stay interactive so users can switch to Honey Manga or
@@ -1079,6 +1079,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             homeCatalogTotal = 0;
             homeCatalogAvailableTotal = 0;
             homeCatalogHasMore = true;
+            document.getElementById('homeCatalogCount')?.replaceChildren(document.createTextNode('Завантаження...'));
+            document.getElementById('homeCatalogResultsLabel')?.replaceChildren(document.createTextNode('Завантаження...'));
             grid.innerHTML = '<div class="loader home-catalog-loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження...</div>';
             try {
                 let nextItems;

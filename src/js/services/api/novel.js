@@ -386,7 +386,10 @@ export async function fetchRanobeCatalogPage(page = 1, query = '') {
     }
     const translated = await translateNovelParagraphs(result.items.map(item => item.originalTitle), { maxChars: 900 });
     const items = result.items.map((item, index) => attachRanobeCatalogShape({ ...item, title: translated[index] || item.originalTitle }));
-    homeCatalogCatalogMeta(items, page, result.hasNextPage, result.total);
+    // The unfiltered catalog boundary is verified and intentionally independent
+    // from the API's missing/inconsistent meta.total field.
+    const catalogTotal = normalizeNovelText(query) ? result.total : RANOBELIB_TOTAL_COUNT;
+    homeCatalogCatalogMeta(items, page, result.hasNextPage, catalogTotal);
     return items;
 }
 
