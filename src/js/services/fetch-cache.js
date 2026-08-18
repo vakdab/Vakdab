@@ -1,35 +1,29 @@
-/** In-flight fetch cache with single-flight, timeout, retry and abort support.
- * Usage:
- *  import { fetchWithCache, abortUrl } from './services/fetch-cache.js'
- *  const res = await fetchWithCache(url, { timeout: 8000, retry: 1, signal });
- */
-const inFlight = new Map(); // url -> { promise, controllers: Set }
+import { debugLog } from '../utils/debug.js';
 
-function makeTimeout(ms) {
-  return new Promise((_, reject) => {
-    const id = setTimeout(() => reject(new Error('Fetch timeout')), ms);
-    // return clear function
-    return () => clearTimeout(id);
-  });
+const inFlight = new Map(); // canonical key -> { promise }
+
+function isRetryableStatus(status) {
+  return status === 408 || status === 425 || status === 429 || status >= 500;
+}
+
+function retryDelay(response, attempt) {
+  const retryAfter = Number(response?.headers?.get?.('Retry-After'));
+  if (Number.isFinite(retryAfter) && retryAfter > 0) return Math.min(8000, retryAfter * 1000);
+  return Math.min(8000, 350 * (2 ** Math.max(0, attempt - 1)));
 }
 
 async function _doFetch(url, options = {}) {
   const controller = new AbortController();
   const { signal: externalSignal, timeout = 10000 } = options;
-  // if externalSignal is aborted already, throw
-  if (externalSignal && externalSignal.aborted) {
-    controller.abort();
-  }
-  const signals = [controller.signal];
+  if (externalSignal?.aborted) controller.abort();
   if (externalSignal) {
-    // when external aborts, abort our controller
     const onAbort = () => controller.abort();
-    externalSignal.addEventListener('abort', onAbort);
-    controller.signal.addEventListener('abort', () => externalSignal.removeEventListener('abort', onAbort));
+    externalSignal.addEventListener('abort', onAbort, { once: true });
+    controller.signal.addEventListener('abort', () => externalSignal.removeEventListener('abort', onAbort), { once: true });
   }
-
   const fetchOptions = { ...options, signal: controller.signal };
-  // create a promise that rejects on timeout
+  delete fetchOptions.retry;
+  delete fetchOptions.cacheKey;
   let timeoutId;
   const timeoutPromise = new Promise((_, reject) => {
     timeoutId = setTimeout(() => {
@@ -37,65 +31,50 @@ async function _doFetch(url, options = {}) {
       reject(new Error('Fetch timeout'));
     }, timeout);
   });
-
   try {
-    const p = fetch(url, fetchOptions);
-    const res = await Promise.race([p, timeoutPromise]);
+    const res = await Promise.race([fetch(url, fetchOptions), timeoutPromise]);
     clearTimeout(timeoutId);
     return res;
-  } catch (err) {
-    // normalize AbortError
-    if (err && err.name === 'AbortError') throw new DOMException('Aborted', 'AbortError');
-    throw err;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error?.name === 'AbortError') throw new DOMException('Aborted', 'AbortError');
+    throw error;
   }
 }
 
 export async function fetchWithCache(url, options = {}) {
-  // canonicalize url for cache key when options.cacheKey provided else use url
   const key = options.cacheKey || url;
-  // reuse in-flight
-  if (inFlight.has(key)) {
-    return inFlight.get(key).promise;
-  }
-
-  let attempt = 0;
-  const maxAttempts = (options.retry || 0) + 1;
-
-  let controllers = new Set();
-
+  if (inFlight.has(key)) return inFlight.get(key).promise;
+  const maxAttempts = Math.max(1, Number(options.retry || 0) + 1);
   const promise = (async () => {
+    let lastError;
     try {
-      while (attempt < maxAttempts) {
-        attempt++;
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         try {
-          const res = await _doFetch(url, options);
-          return res;
-        } catch (err) {
-          // if aborted, rethrow immediately
-          if (err && (err.name === 'AbortError' || err.name === 'DOMException')) throw err;
-          if (attempt >= maxAttempts) throw err;
-          // otherwise retry once
+          const response = await _doFetch(url, options);
+          debugLog('http', 'response', { url, status: response.status, attempt, maxAttempts });
+          if (response.ok || !isRetryableStatus(response.status) || attempt === maxAttempts) return response;
+          await new Promise(resolve => setTimeout(resolve, retryDelay(response, attempt)));
+        } catch (error) {
+          lastError = error;
+          if (error?.name === 'AbortError' || attempt === maxAttempts) throw error;
+          await new Promise(resolve => setTimeout(resolve, Math.min(8000, 350 * (2 ** Math.max(0, attempt - 1)))));
         }
       }
     } finally {
-      // cleanup
       inFlight.delete(key);
-      controllers.clear();
     }
+    throw lastError || new Error('Fetch failed');
   })();
-
-  inFlight.set(key, { promise, controllers });
+  inFlight.set(key, { promise });
   return promise;
 }
 
 export function abortUrl(urlOrKey) {
-  const entry = inFlight.get(urlOrKey);
-  if (!entry) return false;
-  // There is no direct controller stored (we used single controller inside _doFetch per call)
-  // But we can rely on the promise consumer to pass external signal normally. For completeness, we allow
-  // abort by deleting map entry so future calls will not reuse it.
-  inFlight.delete(urlOrKey);
-  return true;
+  // The current abstraction deduplicates in-flight work. Removing the key
+  // prevents future callers from joining a stale request; callers that need
+  // hard cancellation should pass an AbortSignal to fetchWithCache.
+  return inFlight.delete(urlOrKey);
 }
 
 export function clearCache() {
