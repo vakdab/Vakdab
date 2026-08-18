@@ -363,6 +363,10 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
         export let homeCatalogStatus = 'all';
         export let homeCatalogAvailability = 'all';
         export let homeCatalogGenres = new Set();
+        export let homeCatalogType = 'all';
+        export let homeCatalogYearMin = '';
+        export let homeCatalogYearMax = '';
+        export let homeCatalogScoreMin = '';
         export const HOME_MANGA_AGE_OPTIONS = [
             { key: 'all', label: 'Усі' },
             { key: 'adult', label: 'Для дорослих' },
@@ -561,11 +565,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             if (/(кодомо|для дітей|дитяч|сімейн|казк|дошкіль)/i.test(words)) return 'children';
             return 'teen';
         }
-        export function homeCatalogGenreHtml() {
-            const options = getHoneyGenreOptions(homeCatalogItems);
-            return `<div class="home-catalog-genre-rail" role="group" aria-label="Жанри"><button type="button" class="home-catalog-genre-chip${homeCatalogGenre === 'all' ? ' active' : ''}" data-catalog-genre="all">Усі жанри</button>${options.map(genre => `<button type="button" class="home-catalog-genre-chip${normalizeHoneyMatch(genre) === normalizeHoneyMatch(homeCatalogGenre) ? ' active' : ''}" data-catalog-genre="${escapeHtml(genre)}">${escapeHtml(genre)}</button>`).join('')}</div>`;
-        }
-
+        export function homeCatalogGenreHtml() { return ''; }
         export function syncHomeCatalogGenreControl(root = document) {
             const host = root.querySelector('#homeCatalogGenreRailHost');
             if (!host) return;
@@ -718,6 +718,10 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 });
             }
             if (homeCatalogAvailability === 'available') filtered = filtered.filter(item => item.readerUrl);
+            if (homeCatalogMode === 'anime' && homeCatalogType !== 'all') filtered = filtered.filter(item => String(item.type || '').toLowerCase() === homeCatalogType);
+            if (homeCatalogMode === 'anime' && homeCatalogYearMin) filtered = filtered.filter(item => Number(item.year || item.start_year || 0) >= Number(homeCatalogYearMin));
+            if (homeCatalogMode === 'anime' && homeCatalogYearMax) filtered = filtered.filter(item => Number(item.year || item.start_year || 0) <= Number(homeCatalogYearMax));
+            if (homeCatalogMode === 'anime' && homeCatalogScoreMin) filtered = filtered.filter(item => Number(item.score || item.native_score || 0) >= Number(homeCatalogScoreMin));
             if (homeCatalogGenres.size) filtered = filtered.filter(item => (item.genres || []).some(genre => homeCatalogGenres.has(normalizeHoneyMatch(typeof genre === 'object' ? genre.name || genre.name_ua : genre))));
             return filtered.sort((a, b) => {
                 const availability = Number(Boolean(b.readerUrl)) - Number(Boolean(a.readerUrl));
@@ -817,7 +821,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                         <button class="home-catalog-filter-btn home-catalog-adult-btn${homeCatalogAdult ? ' active' : ''}" id="homeCatalogAdultBtn" type="button" aria-pressed="${homeCatalogAdult ? 'true' : 'false'}" aria-label="Манґа 18+"${homeCatalogMode === 'manga' ? '' : ' hidden'}><span>18+</span></button>
                     </div>
                 </div>
-                <div id="homeCatalogGenreRailHost">${homeCatalogGenreHtml()}</div>
+
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
                 ${homeCatalogAdult ? '' : '<button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>'}
@@ -845,12 +849,12 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             const dialog = document.createElement('div');
             dialog.id = 'homeCatalogFilterDialog';
             dialog.className = 'home-catalog-filter-dialog';
-            dialog.innerHTML = `<div class="home-catalog-filter-dialog__backdrop" data-filter-close></div><section class="home-catalog-filter-dialog__panel" role="dialog" aria-modal="true" aria-labelledby="homeCatalogFilterTitle"><div class="home-catalog-filter-dialog__head"><h3 id="homeCatalogFilterTitle">Фільтри · ${escapeHtml((HOME_CATALOG_MODES.find(x => x.key === homeCatalogMode) || HOME_CATALOG_MODES[0]).label)}</h3><button type="button" data-filter-close aria-label="Закрити"><i class="fas fa-xmark"></i></button></div><label>Статус<select id="homeFilterStatus"><option value="all">Усі</option><option value="ongoing">Онґоїнг</option><option value="finished">Завершені</option></select></label>${homeCatalogMode === 'manga' ? `<label>Доступність<select id="homeFilterAvailability"><option value="all">Усі тайтли</option><option value="available">Є що читати</option></select></label><label>Вікова категорія<select id="homeFilterAge"><option value="all">Усі</option>${HOME_MANGA_AGE_OPTIONS.filter(x => x.key !== 'all').map(x => `<option value="${x.key}">${x.label}</option>`).join('')}</select></label>` : ''}<fieldset><legend>Жанри</legend><div class="home-catalog-filter-dialog__genres">${genres.length ? genres.map(genre => `<label><input type="checkbox" value="${escapeHtml(genre)}"${homeCatalogGenres.has(normalizeHoneyMatch(genre)) ? ' checked' : ''}> ${escapeHtml(genre)}</label>`).join('') : '<small>Жанри з’являться після завантаження каталогу.</small>'}</div></fieldset><div class="home-catalog-filter-dialog__actions"><button type="button" class="btn-outline" data-filter-reset>Скинути</button><button type="button" class="btn-primary" data-filter-apply>Застосувати</button></div></section>`;
+            dialog.innerHTML = `<div class="home-catalog-filter-dialog__backdrop" data-filter-close></div><section class="home-catalog-filter-dialog__panel" role="dialog" aria-modal="true" aria-labelledby="homeCatalogFilterTitle"><div class="home-catalog-filter-dialog__head"><h3 id="homeCatalogFilterTitle">Фільтри · ${escapeHtml((HOME_CATALOG_MODES.find(x => x.key === homeCatalogMode) || HOME_CATALOG_MODES[0]).label)}</h3><button type="button" data-filter-close aria-label="Закрити"><i class="fas fa-xmark"></i></button></div><label>Статус<select id="homeFilterStatus"><option value="all">Усі</option><option value="ongoing">Онґоїнг</option><option value="finished">Завершені</option></select></label>${homeCatalogMode === 'anime' ? `<label>Тип<select id="homeFilterType"><option value="all">Усі типи</option><option value="tv">Серіал</option><option value="movie">Фільм</option><option value="ova">OVA / ONA</option></select></label><div class="home-catalog-filter-dialog__row"><label>Рік від<input id="homeFilterYearMin" type="number" min="1960" max="2030" placeholder="від"></label><label>Рік до<input id="homeFilterYearMax" type="number" min="1960" max="2030" placeholder="до"></label></div><label>Мінімальна оцінка<input id="homeFilterScoreMin" type="number" min="0" max="10" step="0.1" placeholder="0–10"></label>` : ''}${homeCatalogMode === 'manga' ? `<label>Доступність<select id="homeFilterAvailability"><option value="all">Усі тайтли</option><option value="available">Є що читати</option></select></label><label>Вікова категорія<select id="homeFilterAge"><option value="all">Усі</option>${HOME_MANGA_AGE_OPTIONS.filter(x => x.key !== 'all').map(x => `<option value="${x.key}">${x.label}</option>`).join('')}</select></label>` : ''}<fieldset><legend>Жанри</legend><div class="home-catalog-filter-dialog__genres">${genres.length ? genres.map(genre => `<label><input type="checkbox" value="${escapeHtml(genre)}"${homeCatalogGenres.has(normalizeHoneyMatch(genre)) ? ' checked' : ''}> ${escapeHtml(genre)}</label>`).join('') : '<small>Жанри з’являться після завантаження каталогу.</small>'}</div></fieldset><div class="home-catalog-filter-dialog__actions"><button type="button" class="btn-outline" data-filter-reset>Скинути</button><button type="button" class="btn-primary" data-filter-apply>Застосувати</button></div></section>`;
             document.body.appendChild(dialog);
             const close = () => dialog.remove();
             dialog.querySelectorAll('[data-filter-close]').forEach(button => button.addEventListener('click', close));
-            dialog.querySelector('[data-filter-reset]')?.addEventListener('click', () => { homeCatalogStatus = 'all'; homeCatalogAvailability = 'all'; homeCatalogGenre = 'all'; homeCatalogGenres = new Set(); renderHomeCatalogGrid(); close(); });
-            dialog.querySelector('[data-filter-apply]')?.addEventListener('click', () => { homeCatalogStatus = dialog.querySelector('#homeFilterStatus')?.value || 'all'; homeCatalogAvailability = dialog.querySelector('#homeFilterAvailability')?.value || 'all'; homeCatalogGenre = dialog.querySelector('#homeFilterAge')?.value || 'all'; homeCatalogGenres = new Set([...dialog.querySelectorAll('.home-catalog-filter-dialog__genres input:checked')].map(input => normalizeHoneyMatch(input.value))); renderHomeCatalogGrid(); close(); });
+            dialog.querySelector('[data-filter-reset]')?.addEventListener('click', () => { homeCatalogStatus = 'all'; homeCatalogAvailability = 'all'; homeCatalogGenre = 'all'; homeCatalogType = 'all'; homeCatalogYearMin = ''; homeCatalogYearMax = ''; homeCatalogScoreMin = ''; homeCatalogGenres = new Set(); renderHomeCatalogGrid(); close(); });
+            dialog.querySelector('[data-filter-apply]')?.addEventListener('click', () => { homeCatalogStatus = dialog.querySelector('#homeFilterStatus')?.value || 'all'; homeCatalogAvailability = dialog.querySelector('#homeFilterAvailability')?.value || 'all'; homeCatalogGenre = dialog.querySelector('#homeFilterAge')?.value || 'all'; homeCatalogType = dialog.querySelector('#homeFilterType')?.value || 'all'; homeCatalogYearMin = dialog.querySelector('#homeFilterYearMin')?.value || ''; homeCatalogYearMax = dialog.querySelector('#homeFilterYearMax')?.value || ''; homeCatalogScoreMin = dialog.querySelector('#homeFilterScoreMin')?.value || ''; homeCatalogGenres = new Set([...dialog.querySelectorAll('.home-catalog-filter-dialog__genres input:checked')].map(input => normalizeHoneyMatch(input.value))); renderHomeCatalogGrid(); close(); });
         }
 
         export function bindHomeCatalogMenu(root) {
@@ -865,6 +869,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 homeCatalogStatus = 'all';
                 homeCatalogAvailability = 'all';
                 homeCatalogGenres = new Set();
+                homeCatalogType = 'all'; homeCatalogYearMin = ''; homeCatalogYearMax = ''; homeCatalogScoreMin = '';
                 await reloadHomeCatalog();
             }));
             root.querySelector('#homeCatalogSort')?.addEventListener('change', async event => {
@@ -886,6 +891,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 homeCatalogStatus = 'all';
                 homeCatalogAvailability = 'all';
                 homeCatalogGenres = new Set();
+                homeCatalogType = 'all'; homeCatalogYearMin = ''; homeCatalogYearMax = ''; homeCatalogScoreMin = '';
                 await reloadHomeCatalog();
             });
             let searchTimer = null;
