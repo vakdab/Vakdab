@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, renderStickerFaceByKey, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js';
+} from '../../legacy/app-legacy.js?v=20260818-manga-filters-v7';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 
