@@ -5,6 +5,7 @@ const RANOBELIB_SITE_ID = 3;
 const TRANSLATE_ENDPOINT = 'https://translate.googleapis.com/translate_a/single';
 const translationCache = new Map();
 const htmlCache = new Map();
+const ranobeTotalCache = new Map();
 
 export const RANOBELIB_HOME = `${RANOBELIB_ORIGIN}/ru?section=home-updates`;
 
@@ -90,16 +91,18 @@ function parseMarkdownLinks(text) {
 }
 
 function parseRanobeMarkdown(text, chapterUrl = '') {
-    const lines = String(text || '').split(/\n+/).map(line => line.trim()).filter(Boolean);
+    const source = String(text || '');
+    const imageUrls = [...source.matchAll(/!\[[^\]]*\]\s*(?:\r?\n\s*)?\((https?:\/\/[^)\s]+)\)/g)].map(match => absoluteUrl(match[1])).filter(Boolean);
+    const lines = source.split(/\n+/).map(line => line.trim()).filter(Boolean);
     const contentStart = Math.max(0, lines.findIndex(line => /^Markdown Content:/i.test(line)) + 1);
     const content = lines.slice(contentStart);
     const headingIndex = content.findIndex(line => /^#{1,3}\s/.test(line));
     const heading = (headingIndex >= 0 ? content[headingIndex] : lines[0] || 'Розділ').replace(/^#{1,3}\s+/, '');
     const body = headingIndex >= 0 ? content.slice(headingIndex + 1) : content;
     const paragraphs = body.map(line => line.replace(/^[-*]\s+/, '').replace(/^\[([^\]]+)\]$/, '$1').trim())
-        .filter(line => line && !/^\[.*\]\(https?:\/\/.*\)$/.test(line) && !/^(реклама|отключить рекламу|оглавление|назад|вперёд|вперед)$/i.test(line) && !/^Title:|^URL Source:|^Published Time:|^Markdown Content:/i.test(line) && line !== heading);
+        .filter(line => line && !/^!\[[^\]]*\]$/.test(line) && !/^\(https?:\/\/.*\)$/.test(line) && !/^\[.*\]\(https?:\/\/.*\)$/.test(line) && !/^(реклама|отключить рекламу|оглавление|назад|вперёд|вперед)$/i.test(line) && !/^Title:|^URL Source:|^Published Time:|^Markdown Content:/i.test(line) && line !== heading);
     const links = parseMarkdownLinks(text).filter(item => isChapterLink(item.url));
-    return { title: normalizeNovelText(heading), paragraphs, chapterUrl: absoluteUrl(chapterUrl), prevUrl: links[0]?.url || '', nextUrl: links[1]?.url || '' };
+    return { title: normalizeNovelText(heading), paragraphs, imageUrls: [...new Set(imageUrls)], chapterUrl: absoluteUrl(chapterUrl), prevUrl: links[0]?.url || '', nextUrl: links[1]?.url || '' };
 }
 
 function parseDocument(html) {
@@ -140,7 +143,8 @@ export function parseRanobeChapterHtml(html, chapterUrl = '') {
     })).filter(item => isChapterLink(item.url));
     const prev = links.find(item => /назад|предыдущ/i.test(item.label))?.url || links[0]?.url || '';
     const next = links.find(item => /вперёд|вперед|следующ/i.test(item.label))?.url || links[1]?.url || '';
-    return { title: normalizeNovelText(heading), paragraphs: uniqueParagraphs, chapterUrl: absoluteUrl(chapterUrl), prevUrl: prev, nextUrl: next };
+    const imageUrls = [...new Set([...root.querySelectorAll('img[src]')].map(node => absoluteUrl(node.getAttribute('src') || node.src)).filter(Boolean))];
+    return { title: normalizeNovelText(heading), paragraphs: uniqueParagraphs, imageUrls, chapterUrl: absoluteUrl(chapterUrl), prevUrl: prev, nextUrl: next };
 }
 
 export function parseRanobeChapterList(html, currentUrl = '') {
@@ -316,6 +320,27 @@ function parseRanobeCatalogHtml(html) {
         items.push({ title, originalTitle: title, poster, url: bookUrl, readerUrl: chapterAnchor ? absoluteUrl(chapterAnchor.href) : '', readerAvailable: Boolean(chapterAnchor), source: 'ranobelib' });
     }
     return items;
+}
+
+export async function fetchRanobeCatalogTotal(query = '', options = {}) {
+    const cacheKey = String(query || '').trim().toLowerCase() || '__all__';
+    const cached = ranobeTotalCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < (options.cacheTtl || 15 * 60 * 1000)) return cached.total;
+    let page = 1;
+    let total = 0;
+    const seen = new Set();
+    const maxPages = Number(options.maxPages || 2000);
+    while (page <= maxPages) {
+        const result = await fetchRanobeApiPage(page, query);
+        const unique = result.items.filter(item => item.url && !seen.has(item.url));
+        unique.forEach(item => seen.add(item.url));
+        total += unique.length;
+        if (!result.hasNextPage || !result.items.length) break;
+        page += 1;
+    }
+    const value = { total, timestamp: Date.now() };
+    ranobeTotalCache.set(cacheKey, value);
+    return total;
 }
 
 export async function fetchRanobeCatalogPage(page = 1, query = '') {
