@@ -1,36 +1,28 @@
 import assert from 'node:assert/strict';
-import { extractMangaImageCandidates } from '../monoanime_worker.js';
-import { buildPageMarkup } from '../src/js/components/manga/pages.js';
+import { buildPageMarkup, normalizeChapterName } from '../src/js/components/manga/pages.js';
+import { parseChapterUrl, pageImageFallbackUrl, pageImageUrl } from '../src/js/services/api/manga.js';
 
-const base = 'https://manga.in.ua/uploads/posts/2026-01/';
-const image = index => `${base}${index}-page`; // intentionally no extension
-
-function makeFixture(count) {
-    const chunks = [];
-    for (let index = 1; index <= count; index += 1) {
-        const url = image(index);
-        if (index % 5 === 0) chunks.push(`<picture><source srcset="${url}-source 480w, ${url}-source-hi 960w"><img src="placeholder-${index}"></picture>`);
-        else if (index % 7 === 0) chunks.push(`<noscript><img data-original="${url}-noscript"></noscript>`);
-        else if (index % 3 === 0) chunks.push(`<img src="placeholder-${index}" data-src="${url}-data">`);
-        else chunks.push(`<img srcset="${url}-small 480w, ${url}-large 960w">`);
-    }
-    chunks.push('<img data-src="https://manga.in.ua/uploads/posts/2026-01/duplicate-page">');
-    chunks.push('<img data-src="https://manga.in.ua/uploads/posts/2026-01/duplicate-page">');
-    return chunks.join('\n');
-}
+const chapterUrl = 'https://honey-manga.com.ua/read/db4ed14e-f564-4103-be20-688948370f3d/8c336683-10ca-4912-9666-e18a1689da6e';
+const resource = index => `resource-${index}-uuid`;
 
 for (const count of [10, 24, 31, 50]) {
-    const urls = extractMangaImageCandidates(makeFixture(count), 'https://manga.in.ua/chapters/test.html');
-    assert.equal(urls.length, count + 2, `parser keeps all ${count} pages plus duplicate page elements`);
-    assert.equal(urls[0].startsWith('https://manga.in.ua/'), true);
-    assert.equal(urls.at(-1), 'https://manga.in.ua/uploads/posts/2026-01/duplicate-page');
-    const markup = buildPageMarkup(urls.map(content => ({ content })), value => value, value => value);
-    assert.equal((markup.match(/class="manga-reader__page"/g) || []).length, count + 2, `markup keeps all ${count} pages`);
+    const pages = Object.entries(Object.fromEntries(Array.from({ length: count }, (_, index) => [String(index), resource(index)])));
+    const manifest = pages.map(([index, content]) => ({ index: Number(index), resourceId: content, content }));
+    const markup = buildPageMarkup(manifest, pageImageUrl, pageImageFallbackUrl);
+    assert.equal((markup.match(/class="manga-reader__page"/g) || []).length, count, `markup keeps all ${count} Honey pages`);
+    assert.match(markup, /honeymangastorage-nocache\.b-cdn\.net\/public-resources/);
+    assert.match(markup, /hmvolumestorage\.b-cdn\.net\/public-resources/);
 }
 
-const fallbackFixture = '<img data-src="/uploads/posts/2026-01/page-without-extension" data-original="/uploads/posts/2026-01/fallback">';
-assert.deepEqual(extractMangaImageCandidates(fallbackFixture, 'https://manga.in.ua/chapters/test.html'), [
-    'https://manga.in.ua/uploads/posts/2026-01/page-without-extension'
-]);
+assert.deepEqual(parseChapterUrl(chapterUrl), {
+    source: 'honey-manga.com.ua',
+    chapterId: 'db4ed14e-f564-4103-be20-688948370f3d',
+    titleId: '8c336683-10ca-4912-9666-e18a1689da6e',
+    url: chapterUrl,
+});
+assert.equal(normalizeChapterName(chapterUrl), 'Розділ Honey Manga');
+assert.match(pageImageUrl('66f4404e-c3f9-42a5-bd5f-88cb8a6e6ccb'), /honeymangastorage-nocache\.b-cdn\.net/);
+assert.match(pageImageFallbackUrl('66f4404e-c3f9-42a5-bd5f-88cb8a6e6ccb'), /hmvolumestorage\.b-cdn\.net/);
+assert.throws(() => parseChapterUrl('https://example.com/old-reader.html'), /Honey Manga/);
 
 console.log('manga-loading fixtures: ok');
