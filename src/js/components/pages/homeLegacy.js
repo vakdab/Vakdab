@@ -508,13 +508,12 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                 const readerUrl = `${HONEY_WEB}/read/${mapped.chapterId}/${mapped.id}`;
                 return { ...item, readerUrl, honeyTitleId: mapped.id, honeyChapterId: mapped.chapterId };
             }
+            const directHoneyId = item.honeyTitleId || item.honeyId || '';
             const rawKeys = [item.title, item.originalTitle, item.title_en, item.title_ja].filter(Boolean);
             const keys = rawKeys.map(normalizeHoneyMatch).filter(Boolean);
-            if (!keys.length) return item;
-            const cacheKey = keys.join('|');
+            const cacheKey = keys.join('|') || `id:${directHoneyId}`;
             if (honeyReaderCache.has(cacheKey)) return { ...item, readerUrl: honeyReaderCache.get(cacheKey) };
-            const directHoneyId = item.honeyTitleId || item.honeyId || '';
-            if (directHoneyId && Number(item.chapters) > 0) {
+            if (directHoneyId) {
                 try {
                     const payload = await fetchHoneyJson('/v2/chapter/cursor-list', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mangaId: directHoneyId, page: 1, pageSize: 100, sort: { sortBy: 'chapterNum', sortOrder: 'ASC' } }) });
                     const chapters = (Array.isArray(payload?.data) ? payload.data : []).filter(chapter => chapter?.id);
@@ -760,7 +759,9 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
             const type = a.typeLabel || animeTypeLabel(a.type);
             const status = homeCatalogAdult && homeCatalogMode === 'manga' ? '18+' : statusLabelUa(a.status);
             const meta = [type, a.year, status].filter(Boolean).join(' · ');
-            return `<article class="home-catalog-card${a.readerUrl || a.readerAvailable ? ' home-catalog-card--reader' : ''}" data-url="${escapeHtml(String(a.url || ''))}"${a.readerUrl ? ` data-reader-url="${escapeHtml(a.readerUrl)}"` : ''}${a.readerAvailable && !a.readerUrl ? ` data-reader-pending="1" data-honey-id="${escapeHtml(String(a.honeyId || a.honeyTitleId || ''))}"` : ''} tabindex="0" role="button" aria-label="${escapeHtml(title)}">
+            const honeyId = a.honeyId || a.honeyTitleId || (homeCatalogMode === 'manga' ? String(a.url || '').split('/').filter(Boolean).pop() : '');
+            const isMangaCard = homeCatalogMode === 'manga' && Boolean(honeyId);
+            return `<article class="home-catalog-card${a.readerUrl || a.readerAvailable || isMangaCard ? ' home-catalog-card--reader' : ''}" data-url="${escapeHtml(String(a.url || ''))}"${a.readerUrl ? ` data-reader-url="${escapeHtml(a.readerUrl)}"` : ''}${isMangaCard && !a.readerUrl ? ` data-reader-pending="1" data-honey-id="${escapeHtml(String(honeyId))}"` : ''} tabindex="0" role="button" aria-label="${escapeHtml(title)}">
                 <div class="home-catalog-card__poster">
                     <img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" onload="this.classList.add('img--loaded')" onerror="this.onerror=null;this.src='${ANIME_CARD_PLACEHOLDER}'">
                     ${status ? `<span class="home-catalog-card__status">${escapeHtml(status)}</span>` : ''}
@@ -780,7 +781,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                         Router.goTo('manga', { url: card.dataset.readerUrl });
                         return;
                     }
-                    if (homeCatalogMode === 'manga' && card.dataset.readerPending && card.dataset.honeyId) {
+                    if (homeCatalogMode === 'manga' && card.dataset.honeyId) {
                         card.setAttribute('aria-busy', 'true');
                         try {
                             const item = homeCatalogItems.find(entry => String(entry.honeyId || entry.honeyTitleId) === String(card.dataset.honeyId)) || { honeyId: card.dataset.honeyId, honeyTitleId: card.dataset.honeyId, title: card.getAttribute('aria-label'), chapters: 1 };
@@ -790,7 +791,7 @@ import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100,
                         showToast('Розділи цього тайтлу ще не готові');
                         return;
                     }
-                    if (homeCatalogMode !== 'anime') { showToast('Для цього тайтлу ще не підключено джерело читання'); return; }
+                    if (homeCatalogMode !== 'anime') { showToast('Розділи цього тайтлу ще не готові'); return; }
                     openPlayerPage(card.dataset.url);
                 };
                 card.addEventListener('click', open);
