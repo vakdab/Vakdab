@@ -21,3 +21,15 @@ Production smoke after commit `5d025ab`: custom Pages workflow `32161314321` com
 Ranobe tab smoke at production: clicking `Ранобе` changes the section title and search placeholder immediately, proving the tab is no longer blocked by Hikka. After the first wait, the grid still shows `Завантаження...`, so the Ranobe page-1 request/runtime chain needs one more network inspection. The heading still shows the previous anime `28 867` total during loading because the mode label/count is not reset visually until the new page resolves; this is separate from the data request.
 
 Extended production smoke: after the Ranobe request completed, the live DOM contained the full Ranobe card list with Ukrainian translated titles, `Ранобе · Завершено/Онґоїнг` metadata, and the `Продовжити` pagination control. The network recorded RanobeLib page-1 API activity and Google Translate calls. The initial 5-second screenshot caught the request mid-flight; this was not a permanent hang.
+
+After v7 deployment `94403e0`, the production shell initially shows a clean `0`/loading state while anime Hikka loads, with all three mode tabs immediately available. This confirms the stale previous total is cleared during mode loading and the UI is not blocked by the unrelated startup request.
+
+Final v7 production assertion: at `https://vakdab.github.io/Vakdab/?v=94403e0`, clicking Ranobe while anime was still loading switched independently; after page 1 resolved the UI showed `Знайдено 23 598 результатів` in both count labels, 60 Ranobe cards, Ukrainian-translated titles/statuses, and `cover.cdnlibs.org` posters. No `60+` remained.
+
+Reader smoke checkpoint: the first card click did not immediately change the route; it entered the async `resolveRanobeReader` path for a book URL. The catalog stayed intact after the first wait, so the next check is whether chapter resolution is pending/failed or the click target was not activated in the browser viewport.
+
+Reader diagnostic: programmatic activation of the first Ranobe card set `aria-busy="true"` while keeping the hash unchanged, confirming the click handler is active and waiting for `resolveRanobeReader` to resolve a chapter from the RanobeLib book page. This is an external chapter-resolution latency check, not a dead card binding.
+
+Reader latency check: after another wait the first card remained in the catalog with no route hash, so the book-to-chapter resolution can exceed the smoke window or fail silently. Catalog/count/posters are verified; reader route still requires a targeted source-level or direct chapter URL smoke test.
+
+Cloudflare diagnosis for the first card: the RanobeLib book page returned HTTP 451 via Jina and Cloudflare HTML through corsproxy; a guessed direct chapter returned HTTP 451 via Jina and HTTP 403 via corsproxy. The current card resolver therefore cannot reliably discover a chapter through server-side text proxies for every title. The UI must fail fast with a readable reader error/retry state rather than leave `aria-busy` indefinitely; direct chapter URLs that are already known remain supported by the reader.

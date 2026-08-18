@@ -9,6 +9,18 @@ const TRANSLATE_ENDPOINT = 'https://translate.googleapis.com/translate_a/single'
 const translationCache = new Map();
 const htmlCache = new Map();
 const ranobeTotalCache = new Map();
+export const RANOBE_FETCH_TIMEOUT_MS = 10000;
+export const RANOBE_RESOLVE_TIMEOUT_MS = 15000;
+
+async function fetchRanobeText(endpoint, options = {}) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), RANOBE_FETCH_TIMEOUT_MS);
+    try {
+        return await fetch(endpoint, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+}
 
 export const RANOBELIB_HOME = `${RANOBELIB_ORIGIN}/ru?section=home-updates`;
 
@@ -74,7 +86,7 @@ async function fetchRanobeHtml(url, options = {}) {
     let lastError;
     for (const endpoint of candidates) {
         try {
-            const response = await fetch(endpoint, { mode: 'cors', credentials: 'omit', cache: 'no-cache', headers: { Accept: 'text/plain,text/html' } });
+            const response = await fetchRanobeText(endpoint, { mode: 'cors', credentials: 'omit', cache: 'no-cache', headers: { Accept: 'text/plain,text/html' } });
             if (!response.ok) throw new Error(`RanobeLib: HTTP ${response.status}`);
             const text = await response.text();
             if (!text || text.length < 200 || /код ошибки 1|\[cloudflare\]|access denied/i.test(text)) throw new Error('RanobeLib повернув сторінку захисту');
@@ -426,7 +438,7 @@ async function resolveChapterFromBookPage(bookUrl) {
     } catch { return ''; }
 }
 
-export async function resolveRanobeReader(item = {}) {
+async function resolveRanobeReaderInternal(item = {}) {
     if (isChapterLink(item.readerUrl)) return { ...item, readerAvailable: true };
     if (item.url && /\/ru\/book\//i.test(item.url)) {
         const directChapter = await resolveChapterFromBookPage(item.url);
@@ -442,6 +454,15 @@ export async function resolveRanobeReader(item = {}) {
     if (!best || best.score < 0.35) return { ...item, readerAvailable: false, readerUrl: '' };
     const directChapter = await resolveChapterFromBookPage(best.url);
     return { ...item, readerAvailable: Boolean(directChapter), readerUrl: directChapter, ranobeUrl: best.url, ranobeTitle: best.title, ranobeMatchScore: best.score };
+}
+
+export async function resolveRanobeReader(item = {}) {
+    if (isChapterLink(item.readerUrl)) return { ...item, readerAvailable: true };
+    const fallback = { ...item, readerAvailable: false, readerUrl: '' };
+    return Promise.race([
+        resolveRanobeReaderInternal(item),
+        new Promise(resolve => setTimeout(() => resolve(fallback), RANOBE_RESOLVE_TIMEOUT_MS))
+    ]);
 }
 
 export function clearNovelCaches() { htmlCache.clear(); translationCache.clear(); }
