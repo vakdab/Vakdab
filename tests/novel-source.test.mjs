@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import {
+    normalizeNovelTitle,
+    scoreNovelTitleMatch,
+    proxiedRanobeUrl,
+    parseRanobeChapterList
+} from '../src/js/services/api/novel.js';
+
+assert.equal(normalizeNovelTitle('Инструкция по эксплуатации Регрессора (Новелла)'), 'instruktsiya po ekspluatatsii regressora');
+assert.equal(scoreNovelTitleMatch('Інструкція по експлуатації Регресора', 'Инструкция по эксплуатации Регрессора (Новелла)') > 0.35, true);
+assert.equal(scoreNovelTitleMatch('Completely Different Title', 'Инструкция по эксплуатации Регрессора') < 0.35, true);
+assert.match(proxiedRanobeUrl('https://ranobelib.me/ru/book/1--demo'), /^https:\/\/corsproxy\.io\/\?url=https%3A%2F%2Franobelib\.me/);
+
+const chapterHtml = `<!doctype html><body>
+    <a href="/ru/novel/read/v1/c0?bid=7">Том 1 Глава 0</a>
+    <a href="/ru/demo/read/v1/c1?bid=7">Том 1 Глава 1</a>
+    <a href="/ru/demo/read/v1/c1?bid=7">duplicate</a>
+    <a href="/ru/book/7--demo">Книга</a>
+</body>`;
+
+if (typeof DOMParser === 'undefined') {
+    globalThis.DOMParser = class {
+        parseFromString() {
+            return { querySelectorAll: () => [
+                { href: 'https://ranobelib.me/ru/demo/read/v1/c0?bid=7', textContent: 'Том 1 Глава 0' },
+                { href: 'https://ranobelib.me/ru/demo/read/v1/c1?bid=7', textContent: 'Том 1 Глава 1' },
+                { href: 'https://ranobelib.me/ru/demo/read/v1/c1?bid=7', textContent: 'duplicate' }
+            ] };
+        }
+    };
+}
+const chapters = parseRanobeChapterList(chapterHtml, 'https://ranobelib.me/ru/demo/read/v1/c1?bid=7');
+assert.equal(chapters.length, 2);
+assert.equal(chapters[1].url, 'https://ranobelib.me/ru/demo/read/v1/c1?bid=7');
+console.log('novel-source.test.mjs: ok');

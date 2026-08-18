@@ -1,5 +1,5 @@
 import { HIKKA_API } from '../config/constants.js';
-import { loadFeature } from '../core/feature-loader.js?v=20260818-image-fallback-v3';
+import { loadFeature } from '../core/feature-loader.js?v=20260818-ranobe-v4';
 import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
     initRatingPage, loadAndDisplayGenreSections, loadMangaReader,
@@ -56,6 +56,8 @@ import {
                 document.getElementById('stickersPageContainer').style.display = 'none';
                 document.getElementById('mangaPageContainer').classList.remove('active');
                 document.getElementById('mangaPageContainer').style.display = 'none';
+                document.getElementById('novelPageContainer')?.classList.remove('active');
+                if (document.getElementById('novelPageContainer')) document.getElementById('novelPageContainer').style.display = 'none';
 
                 const hero = document.getElementById('heroWrapper');
                 const actions = document.getElementById('actionsRow');
@@ -109,6 +111,9 @@ import {
                     this.showStickers();
                 } else if (route === 'manga') {
                     if (params.url) this.showManga(params.url, params.title || '');
+                    else this.showMain();
+                } else if (route === 'novel') {
+                    if (params.url) this.showNovel(params.url, params.title || '', params.poster || '');
                     else this.showMain();
                 } else if (route.startsWith('anime/')) {
                     // Deep-link для Telegram: #anime/<Hikka ID>.
@@ -222,6 +227,20 @@ import {
                 }, mangaTitle)).catch(error => {
                     console.error('[VakDab] manga feature failed to load:', error);
                     container.innerHTML = '<div class="loader">Не вдалося завантажити модуль манґи. Спробуйте ще раз.</div>';
+                });
+            },
+
+            showNovel(chapterUrl, novelTitle = '', poster = '') {
+                const container = document.getElementById('novelPageContainer');
+                if (!container) return;
+                container.style.display = 'block';
+                container.classList.add('active');
+                loadFeature('novel').then(({ renderNovelReader }) => renderNovelReader(container, chapterUrl, nextUrl => {
+                    if (nextUrl) this.goTo('novel', { url: nextUrl, title: novelTitle, poster });
+                    else this.goTo('main');
+                }, novelTitle, poster)).catch(error => {
+                    console.error('[VakDab] novel feature failed to load:', error);
+                    container.innerHTML = '<div class="loader">Не вдалося завантажити модуль ранобе. Спробуйте ще раз.</div>';
                 });
             },
 
