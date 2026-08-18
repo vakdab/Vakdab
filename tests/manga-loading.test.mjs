@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { buildPageMarkup, normalizeChapterName } from '../src/js/components/manga/pages.js';
-import { extractHoneyResourceIds, hasHoneyPageResources, parseChapterUrl, pageImageFallbackUrl, pageImageUrl, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../src/js/services/api/manga.js';
+import { extractHoneyResourceIds, hasHoneyPageResources, isHoneyComicItem, parseChapterUrl, pageImageFallbackUrl, pageImageUrl, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../src/js/services/api/manga.js';
 
 const chapterUrl = 'https://honey-manga.com.ua/read/db4ed14e-f564-4103-be20-688948370f3d/8c336683-10ca-4912-9666-e18a1689da6e';
 const resource = index => `resource-${index}-uuid`;
@@ -34,6 +34,11 @@ const publicOlder = { id: 'public-older', volume: 1, chapterNum: 1, isMonetized:
 assert.equal(selectHoneyReaderChapter([paidLatest, publicOlder]), publicOlder, 'reader prefers a public chapter over a paid latest chapter');
 assert.equal(selectHoneyReaderChapter([paidLatest]), paidLatest, 'reader keeps paid fallback when no public chapter exists');
 assert.equal(selectHoneyReaderChapter([]), null, 'empty chapter lists do not create a reader URL');
+assert.equal(isHoneyComicItem({ type: 'Новела' }), false, 'Honey novels are not manga reader items');
+assert.equal(isHoneyComicItem({ type: 'Ранобе' }), false, 'Honey ranobe are not manga reader items');
+assert.equal(isHoneyComicItem({ type: 'Манхва' }), true, 'manhwa remains a manga reader item');
+assert.equal(isHoneyComicItem({ type: 'Мальопис' }), true, 'comics remain manga reader items');
+assert.equal(isHoneyComicItem({}), true, 'missing type stays backward-compatible');
 assert.deepEqual(extractHoneyResourceIds({ resourceIds: { 0: 'page-a', 1: 'page-b' } }), { 0: 'page-a', 1: 'page-b' });
 assert.deepEqual(extractHoneyResourceIds({ data: { resourceIds: { 0: 'page-a' } } }), { 0: 'page-a' });
 assert.deepEqual(extractHoneyResourceIds({ pages: [{ resourceId: 'page-a' }, { id: 'page-b' }] }), { 0: 'page-a', 1: 'page-b' });

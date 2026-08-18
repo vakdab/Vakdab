@@ -121,3 +121,7 @@ The reported title card was clicked in local Honey Manga mode after applying asc
 
 Honey chapter API for the reported title returns `chapterNum` values in descending order (`80, 79, 78, …, 1`). The resolver has been changed to sort by `volume`, `chapterNum`, and `subChapterNum` ascending before probing frames, so the first public chapter with pages is selected from the beginning of the story rather than chapter 78/80.
 
+Type-filter fix local smoke: the updated static app starts correctly and exposes separate Anime/Manga/Novel tabs. Next verification is the Manga tab, where Honey novel cards such as “Маг Води” must be absent.
+
+Local Honey Manga mode after the type filter loads only image-based comic types: Манхва, Манґа, and Мальопис. The previously reported “Маг Води” (Новела) is absent from the visible cards, and the mode shows 22 readable items among the loaded page. No novel card is routed to the image reader.
+

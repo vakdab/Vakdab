@@ -8,7 +8,7 @@ import { getProfile, saveProfile } from './settingsLegacy.js';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
-import { hasHoneyPageResources, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260818-honey-reading-order-v4';
+import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260818-honey-type-filter-v1';
 
         // ====================================================================
         export let currentTab = 'main',
@@ -493,6 +493,8 @@ import { hasHoneyPageResources, selectHoneyReaderChapter, sortHoneyChaptersForRe
             const mangaId = String(item?.id || '');
             const chapterCount = Number(item?.chapters || 0);
             const adult = String(item?.adult || 'NONE');
+            const comic = isHoneyComicItem(item);
+            const sourceType = String(item?.type || item?.contentType || item?.kind || '').trim();
             return {
                 honeyId: mangaId,
                 mal_id: `honey-${mangaId}`,
@@ -501,7 +503,7 @@ import { hasHoneyPageResources, selectHoneyReaderChapter, sortHoneyChaptersForRe
                 originalTitle: item?.alternativeTitle || item?.title || '',
                 url: mangaId ? `${HONEY_WEB}/book/${mangaId}` : HONEY_WEB,
                 readerUrl: '',
-                readerAvailable: chapterCount > 0,
+                readerAvailable: comic && chapterCount > 0,
                 honeyTitleId: mangaId,
                 honeyChapterId: '',
                 chapters: chapterCount,
@@ -511,8 +513,9 @@ import { hasHoneyPageResources, selectHoneyReaderChapter, sortHoneyChaptersForRe
                 ageRating: adult === 'NONE' ? '' : adult,
                 adult,
                 isAdultCover: Boolean(item?.isAdultCover),
-                type: 'manga',
-                typeLabel: item?.type || 'Манґа',
+                type: comic ? 'manga' : 'novel',
+                typeLabel: sourceType || (comic ? 'Манґа' : 'Ранобе'),
+                honeySourceType: sourceType,
                 status: item?.titleStatus || '',
                 synopsis: normalizeSynopsisText(item?.description || ''),
                 score: Number(item?.rate || item?.rateScore || 0),
@@ -623,14 +626,14 @@ import { hasHoneyPageResources, selectHoneyReaderChapter, sortHoneyChaptersForRe
                 const firstPayload = await makeRequest(1);
                 const total = Number(firstPayload?.counter || 0);
                 const totalPages = Math.max(1, Math.ceil(total / pageSize));
-                const allItems = (Array.isArray(firstPayload?.data) ? firstPayload.data : []).map(honeyCatalogItem);
+                const allItems = (Array.isArray(firstPayload?.data) ? firstPayload.data : []).map(honeyCatalogItem).filter(isHoneyComicItem);
                 let nextPage = 2;
                 const worker = async () => {
                     while (true) {
                         const page = nextPage++;
                         if (page > totalPages) return;
                         const payload = await makeRequest(page);
-                        allItems.push(...(Array.isArray(payload?.data) ? payload.data : []).map(honeyCatalogItem));
+                        allItems.push(...(Array.isArray(payload?.data) ? payload.data : []).map(honeyCatalogItem).filter(isHoneyComicItem));
                     }
                 };
                 await Promise.all(Array.from({ length: Math.min(4, Math.max(0, totalPages - 1)) }, worker));
@@ -663,7 +666,7 @@ import { hasHoneyPageResources, selectHoneyReaderChapter, sortHoneyChaptersForRe
             }
             if (homeCatalogQuery) {
                 const searched = await searchHoneyTitles(homeCatalogQuery);
-                let items = searched.map(honeyCatalogItem);
+                let items = searched.map(honeyCatalogItem).filter(isHoneyComicItem);
                 items = items.filter(item => homeCatalogAdult ? isAdultHoneyManga(item) : !isAdultHoneyManga(item));
                 homeCatalogTotal = items.length;
                 homeCatalogHasMore = false;
@@ -679,7 +682,7 @@ import { hasHoneyPageResources, selectHoneyReaderChapter, sortHoneyChaptersForRe
             });
             homeCatalogTotal = Number(payload?.counter || 0);
             homeCatalogHasMore = Boolean(payload?.cursorNext?.page);
-            let items = (Array.isArray(payload?.data) ? payload.data : []).map(honeyCatalogItem);
+            let items = (Array.isArray(payload?.data) ? payload.data : []).map(honeyCatalogItem).filter(isHoneyComicItem);
             items = await attachHoneyReaders(items);
             Object.defineProperties(items, { total: { value: homeCatalogTotal, enumerable: false }, hasNextPage: { value: homeCatalogHasMore, enumerable: false } });
             honeyCatalogPageCache.set(cacheKey, { total: homeCatalogTotal, items, hasMore: homeCatalogHasMore });

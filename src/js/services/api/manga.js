@@ -32,6 +32,14 @@ export function isHoneyChapterUrl(value) {
 
 export function getProxiedChapterUrl(value) { return safeUrl(value, ''); }
 
+/** Return true only for image-based Honey comic types; novels are text chapters. */
+export function isHoneyComicItem(item = {}) {
+    const rawType = item?.type ?? item?.contentType ?? item?.kind ?? item?.category ?? '';
+    const type = String(rawType || '').trim().toLowerCase();
+    if (!type) return true;
+    return !/(novel|light\s*novel|web\s*novel|раноб|новел)/i.test(type);
+}
+
 export function parseChapterUrl(value) {
     const url = safeUrl(value, '');
     const match = url.match(/\/read\/([^/?#]+)\/([^/?#]+)\/?$/i);
