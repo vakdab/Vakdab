@@ -1514,6 +1514,8 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             renderAllEpisodeViews(getCurrentEpisodes(), null, null);
             const videoContainer = document.getElementById('playerVideoContainer');
             const videoDiv = document.getElementById('playerPageVideo');
+            const previewPlayButton = document.getElementById('playerPreviewPlay');
+            previewPlayButton?.classList.remove('is-hidden');
             videoContainer.classList.add('active');
             videoContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const videoTitleEl = document.getElementById('playerTopbarTitle');
@@ -1549,7 +1551,10 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             playerPageIsPlaying = false;
             const video = playerPagePlayer.videoRef;
             if (video) {
-                const hideFrame = () => hidePlayerFramePoster();
+                const hideFrame = () => {
+                    hidePlayerFramePoster();
+                    document.getElementById('playerPreviewPlay')?.classList.add('is-hidden');
+                };
                 const syncPlaybackClock = () => {
                     if (!playerPageIsPlaying) return;
                     const currentTime = Number(video.currentTime);
@@ -1957,6 +1962,16 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
                 else if (target.querySelector('video')?.webkitEnterFullscreen) target.querySelector('video').webkitEnterFullscreen();
             });
         }
+
+        const previewPlayButton = document.getElementById('playerPreviewPlay');
+        previewPlayButton?.addEventListener('click', () => {
+            if (playerPagePlayer?.videoRef) {
+                playerPagePlayer.togglePlay();
+                return;
+            }
+            const episode = getCurrentEpisodes().find(ep => String(ep.episode) === String(playerPageCurrentEpisodeNum)) || getCurrentEpisodes()[0];
+            if (episode) playEpisode(episode.file, episode.episode);
+        });
 
         const compactEpisodeSelect = document.getElementById('playerEpisodeSelect');
         compactEpisodeSelect?.addEventListener('change', () => {

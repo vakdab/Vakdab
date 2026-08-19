@@ -1162,3 +1162,34 @@ body.player-page-open > .bottom-sheet-overlay {
     #playerPageModal .player-select-chevron { right: 14px; font-size: 22px; }
     #playerPageModal .player-video-container { border-radius: 16px; }
 }
+
+
+#playerPageModal .player-preview-play {
+    position: absolute;
+    z-index: 16;
+    top: 50%;
+    left: 50%;
+    display: grid;
+    width: clamp(64px, 10vw, 86px);
+    height: clamp(64px, 10vw, 86px);
+    place-items: center;
+    transform: translate(-50%, -50%);
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 50%;
+    background: rgba(12,12,12,.72);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 12px 36px rgba(0,0,0,.32), 0 0 0 8px rgba(255,255,255,.08);
+    backdrop-filter: blur(12px);
+    transition: transform .18s ease, background-color .18s ease, opacity .18s ease;
+}
+#playerPageModal .player-preview-play svg { width: 34%; height: 34%; margin-left: 5%; fill: currentColor; }
+#playerPageModal .player-preview-play:hover { transform: translate(-50%, -50%) scale(1.08); background: var(--accent); color: var(--accent-text); }
+#playerPageModal .player-preview-play:active { transform: translate(-50%, -50%) scale(.96); }
+#playerPageModal .player-preview-play.is-hidden { pointer-events: none; opacity: 0; transform: translate(-50%, -50%) scale(.78); }
+@media (max-width: 560px) {
+    #playerPageModal .player-preview-play { width: 68px; height: 68px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #playerPageModal .player-preview-play { transition: none; }
+}
