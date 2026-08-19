@@ -1,3 +1,3 @@
-import { bootstrap } from './core/bootstrap.js?v=20260818-honey-free-chapter-v2';
+import { bootstrap } from './core/bootstrap.js?v=20260819-catalog-clean-v1';
 
 bootstrap();

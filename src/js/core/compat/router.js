@@ -2,11 +2,11 @@ import { HIKKA_API } from '../../config/constants.js';
 import { loadFeature } from '../feature-loader.js?v=20260818-ranobe-v6';
 import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
-    initRatingPage, loadAndDisplayGenreSections, loadMangaReader,
+    initRatingPage, loadAndDisplayGenreSections,
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
     renderGenresPage, renderProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260818-honey-free-chapter-v2';
+} from '../../legacy/app-legacy.js?v=20260819-catalog-clean-v1';
 
         export const Router = {
             currentRoute: 'main',
@@ -54,8 +54,6 @@ import {
                 document.getElementById('schedulePageContainer').style.display = 'none';
                 document.getElementById('stickersPageContainer').classList.remove('active');
                 document.getElementById('stickersPageContainer').style.display = 'none';
-                document.getElementById('mangaPageContainer').classList.remove('active');
-                document.getElementById('mangaPageContainer').style.display = 'none';
                 document.getElementById('novelPageContainer')?.classList.remove('active');
                 if (document.getElementById('novelPageContainer')) document.getElementById('novelPageContainer').style.display = 'none';
 
@@ -109,9 +107,6 @@ import {
                     this.showSchedule();
                 } else if (route === 'stickers') {
                     this.showStickers();
-                } else if (route === 'manga') {
-                    if (params.url) this.showManga(params.url, params.title || '');
-                    else this.showMain();
                 } else if (route === 'novel') {
                     if (params.url) this.showNovel(params.url, params.title || '', params.poster || '');
                     else this.showMain();
@@ -214,20 +209,6 @@ import {
                 }
                 window.renderStickersPage?.();
                 syncLeftdockActive();
-            },
-
-            showManga(chapterUrl, mangaTitle = '') {
-                const container = document.getElementById('mangaPageContainer');
-                if (!container) return;
-                container.style.display = 'block';
-                container.classList.add('active');
-                loadMangaReader().then(({ renderMangaReader }) => renderMangaReader(container, chapterUrl, nextUrl => {
-                    if (nextUrl) this.goTo('manga', { url: nextUrl, title: mangaTitle });
-                    else this.goTo('main');
-                }, mangaTitle)).catch(error => {
-                    console.error('[VakDab] manga feature failed to load:', error);
-                    container.innerHTML = '<div class="loader">Не вдалося завантажити модуль манґи. Спробуйте ще раз.</div>';
-                });
             },
 
             showNovel(chapterUrl, novelTitle = '', poster = '') {

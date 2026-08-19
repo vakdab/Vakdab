@@ -1,5 +1,4 @@
 const loaders = Object.freeze({
-    manga: () => import('../components/manga/reader.js?v=20260818-image-fallback-v3'),
     novel: () => import('../components/novel/reader.js?v=20260818-ranobe-v9'),
     player: () => import('../components/player/animePage.js?v=20260817-player-lazy-v1'),
     community: () => import('../components/community/group.js?v=20260817-community-lazy-v1'),

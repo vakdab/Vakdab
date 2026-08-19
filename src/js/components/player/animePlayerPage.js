@@ -16,7 +16,7 @@ import {
 import { renderProfilePage } from '../pages/profileLegacy.js';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260818-honey-free-chapter-v2';
+} from '../../legacy/app-legacy.js?v=20260819-catalog-clean-v1';
 import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
 
         // ====================================================================

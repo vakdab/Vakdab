@@ -4,7 +4,7 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel, renderStickerFaceByKey,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260818-manga-filters-v7';
+} from '../../legacy/app-legacy.js?v=20260819-catalog-clean-v1';
 import { getProfile, getProfileStats } from './settingsLegacy.js';
 
 export function renderProfilePage() {
