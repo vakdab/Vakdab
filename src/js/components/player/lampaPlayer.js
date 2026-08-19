@@ -585,7 +585,12 @@ export class LampaPlayer {
                         this._refreshQualityMenu();
                         this.state.loading = false;
                         this._spinner.classList.add('hidden');
-                        v.play().catch(() => {});
+                        v.play().catch(() => {
+                            v.muted = true;
+                            this.state.muted = true;
+                            this._updateVolBtn();
+                            v.play().catch(() => {});
+                        });
                     });
                     hls.on(Hls.Events.ERROR, (ev, ed) => {
                         if (ed && ed.fatal) {
@@ -594,7 +599,12 @@ export class LampaPlayer {
                             this.state.loading = false;
                             this._spinner.classList.add('hidden');
                             v.src = proxyUrl; v.load();
+                            v.play().catch(() => {
+                            v.muted = true;
+                            this.state.muted = true;
+                            this._updateVolBtn();
                             v.play().catch(() => {});
+                        });
                         }
                     });
                     v.addEventListener('error', () => this._showPlaybackError('Потік пошкоджений, заблокований або несумісний із цим пристроєм.'), { once: true });
@@ -611,7 +621,12 @@ export class LampaPlayer {
                     v.addEventListener('canplay', () => { this.state.loading = false; this._spinner.classList.add('hidden'); }, { once: true });
                     v.src = proxyUrl;
                     v.load();
-                    v.play().catch(() => {});
+                    v.play().catch(() => {
+                            v.muted = true;
+                            this.state.muted = true;
+                            this._updateVolBtn();
+                            v.play().catch(() => {});
+                        });
                 } else if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                     _startHls();
                 } else if (v.canPlayType('application/vnd.apple.mpegurl') !== '' || v.canPlayType('audio/mpegurl') !== '') {
@@ -619,13 +634,23 @@ export class LampaPlayer {
                     v.addEventListener('error', onNativeError, { once: true });
                     v.addEventListener('canplay', () => { this.state.loading = false; this._spinner.classList.add('hidden'); }, { once: true });
                     v.src = proxyUrl; v.load();
-                    v.play().catch(() => {});
+                    v.play().catch(() => {
+                            v.muted = true;
+                            this.state.muted = true;
+                            this._updateVolBtn();
+                            v.play().catch(() => {});
+                        });
                 } else {
                     const sc = document.createElement('script');
                     sc.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';
                     sc.onload = () => {
                         if (Hls.isSupported()) _startHls();
-                        else { v.src = proxyUrl; v.load(); v.play().catch(() => {}); this.state.loading = false; this._spinner.classList.add('hidden'); }
+                        else { v.src = proxyUrl; v.load(); v.play().catch(() => {
+                            v.muted = true;
+                            this.state.muted = true;
+                            this._updateVolBtn();
+                            v.play().catch(() => {});
+                        }); this.state.loading = false; this._spinner.classList.add('hidden'); }
                     };
                     sc.onerror = () => { v.src = proxyUrl; v.load(); this.state.loading = false; this._spinner.classList.add('hidden'); };
                     document.head.appendChild(sc);
@@ -649,7 +674,12 @@ export class LampaPlayer {
             togglePlay() {
                 if (!this.videoRef) return;
                 const v = this.videoRef;
-                if (v.paused) v.play().catch(() => {}); else v.pause();
+                if (v.paused) v.play().catch(() => {
+                            v.muted = true;
+                            this.state.muted = true;
+                            this._updateVolBtn();
+                            v.play().catch(() => {});
+                        }); else v.pause();
             }
 
             toggleFullscreen() {

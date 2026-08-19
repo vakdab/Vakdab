@@ -449,7 +449,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             const seasons = Object.keys(playerPageAnime?.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
             const dubs = Object.keys(playerPageAnime?.seasons?.[playerPageCurrentSeason] || {}).sort();
             if (episodeSelect) {
-                episodeSelect.innerHTML = episodes.map(ep => `<option value="${escapeHtml(String(ep.episode))}">Серія ${escapeHtml(String(ep.episode))}${ep.title ? ` · ${escapeHtml(String(ep.title))}` : ''}</option>`).join('');
+                episodeSelect.innerHTML = episodes.map(ep => `<option value="${escapeHtml(String(ep.episode))}">Серія ${escapeHtml(String(ep.episode))}</option>`).join('');
                 episodeSelect.value = String(playerPageCurrentEpisodeNum || episodes[0]?.episode || '1');
             }
             if (dubSelect) {
