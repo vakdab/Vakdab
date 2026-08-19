@@ -1,0 +1,286 @@
+import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../services/catalog.js';
+import { openPlayerPage } from '../../legacy/app-legacy.js?v=20260818-honey-free-chapter-v2';
+
+        let heroItems = [],
+            heroPool = [],
+            heroSeenUrls = new Set(),
+            heroCurrentIndex = 0,
+            heroRotationTimer = null,
+            heroJustSwiped = false;
+
+        export async function buildHeroBanner() {
+            const wrapper = document.getElementById('heroWrapper');
+            if (!wrapper) return;
+
+            // Паралельно завантажуємо обидва джерела — не чекаємо одне на одне
+            const [topResult, mainResult] = await Promise.allSettled([
+                fetchHikkaTop100(),
+                fetchHikkaMain(1)
+            ]);
+
+            const topAnime = topResult.status === 'fulfilled' ? (topResult.value || []) : [];
+            const ordinaryAnime = mainResult.status === 'fulfilled' ? (mainResult.value || []) : [];
+
+            heroPool = [...topAnime, ...ordinaryAnime]
+                .filter(item => item?.url && item.images?.jpg?.large_image_url)
+                .filter((item, index, list) => list.findIndex(other => other.url === item.url) === index);
+            heroSeenUrls = new Set();
+            heroItems = takeHeroBatch();
+
+            if (heroItems.length === 0) {
+                console.warn('Hero: no items loaded');
+                wrapper.style.display = 'none';
+                return;
+            }
+            if (Router.currentRoute !== 'main') {
+                wrapper.style.display = 'none';
+                return;
+            }
+
+            wrapper.style.display = 'block';
+            heroCurrentIndex = 0;
+            initHeroSwipe();
+
+            // Показуємо перший слайд ОДРАЗУ з тим що є, не чекаємо деталей
+            renderHeroSlide(heroItems[0]);
+            buildHeroIndicators();
+            startHeroRotation();
+
+            // Деталі завантажуємо у фоні — оновимо слайд коли прийдуть
+            loadHeroItemDetails(0).then(() => {
+                if (heroCurrentIndex === 0) renderHeroSlide(heroItems[0]);
+            }).catch(() => {});
+
+            // Preload деталі наступного слайду у фоні
+            if (heroItems.length > 1) {
+                loadHeroItemDetails(1).catch(() => {});
+            }
+        }
+
+        function takeHeroBatch() {
+            const available = heroPool.filter(item => item?.url && !heroSeenUrls.has(item.url));
+            const batch = [...available].sort(() => Math.random() - 0.5).slice(0, 8);
+            batch.forEach(item => heroSeenUrls.add(item.url));
+            return batch;
+        }
+
+        async function loadNextHeroBatch() {
+            stopHeroRotation();
+            let nextBatch = takeHeroBatch();
+            if (nextBatch.length < 8 && heroSeenUrls.size >= heroPool.length) {
+                heroSeenUrls = new Set();
+                nextBatch = takeHeroBatch();
+            }
+            if (!nextBatch.length) return;
+            heroItems = nextBatch;
+            heroCurrentIndex = 0;
+            renderHeroSlide(heroItems[0]);
+            buildHeroIndicators();
+            startHeroRotation();
+            loadHeroItemDetails(0).then(() => {
+                if (heroCurrentIndex === 0) renderHeroSlide(heroItems[0]);
+            }).catch(() => {});
+            if (heroItems.length > 1) loadHeroItemDetails(1).catch(() => {});
+        }
+
+        async function loadHeroItemDetails(idx) {
+            if (idx < 0 || idx >= heroItems.length) return;
+            const item = heroItems[idx];
+            if (item.detailsLoaded) return;
+            // Timeout 6с щоб не зависати якщо сайт відповідає повільно
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
+            try {
+                const detail = await Promise.race([loadHikkaDetail(item.url), timeoutPromise]);
+                item.genres = detail.genres || [];
+                item.totalEpisodes = detail.totalEpisodes || 0;
+                item.synopsis = detail.synopsis || '';
+                item.year = detail.year || item.year || '';
+                item.detailsLoaded = true;
+                item.rating = (7 + Math.random() * 2.5).toFixed(1);
+            } catch (e) {
+                console.warn('Hero details fallback:', item.title, e.message);
+                item.genres = item.genres || ['Аніме'];
+                item.totalEpisodes = item.totalEpisodes || 0;
+                item.synopsis = item.synopsis || 'Натисніть «Дивитися», щоб перейти до перегляду.';
+                item.rating = item.rating || (7 + Math.random() * 2.5).toFixed(1);
+                item.detailsLoaded = true;
+            }
+        }
+
+        function renderHeroSlide(item) {
+            const container = document.getElementById('heroSlidesContainer');
+            if (!container || !item) return;
+            const poster = item.images?.jpg?.large_image_url || '';
+            const rawTitle = item.title || 'Без назви';
+            const title = rawTitle.length > 38 ? rawTitle.substring(0, 38) + '…' : rawTitle;
+            const genres = item.genres || ['Аніме'];
+            const rating = item.rating || (7 + Math.random() * 2.5).toFixed(1);
+            const year = item.year || '';
+            const episodes = item.totalEpisodes || 0;
+            const synopsis = item.synopsis || '';
+
+            const metaParts = [];
+            if (year) metaParts.push(year);
+            if (episodes > 0) metaParts.push(episodes + ' еп.');
+            const metaHtml = metaParts.length > 0
+                ? `<span class="hero-info-separator">·</span><span class="hero-meta">${metaParts.join(' <span class="hero-meta-dot"></span> ')}</span>`
+                : '';
+
+            const heroSynopsis = synopsis.trim().replace(/\s+/g, ' ');
+            const synopsisHtml = heroSynopsis
+                ? `<div class="hero-slide-desc">${heroSynopsis.substring(0, 170)}${heroSynopsis.length > 170 ? '…' : ''}</div>`
+                : '';
+
+            const slide = document.createElement('div');
+            slide.className = 'hero-slide active';
+            slide.dataset.url = item.url;
+
+            // Fallback poster — якщо зображення не завантажилось
+            const safePoster = poster || '';
+            const bgStyle = safePoster
+                ? `background-image: url('${safePoster}');`
+                : 'background: linear-gradient(135deg, #1a1a1a, #2d2d2d);';
+
+            slide.innerHTML = `
+                <div class="hero-slide-bg" id="heroBg_${Date.now()}" style="${bgStyle}"></div>
+                <div class="hero-slide-overlay"></div>
+                <div class="hero-slide-content">
+                    <div class="hero-slide-title">${title}</div>
+                    ${synopsisHtml}
+                    <div class="hero-slide-tags">
+                        ${genres.slice(0, 3).map(g => `<span class="hero-tag genre-tag">${g}</span>`).join('')}
+                    </div>
+                    <div class="hero-info-pill hero-rating-row hero-rating-row--bottom">
+                        <span class="hero-rating-badge"><span class="star">★</span> ${rating}</span>
+                        ${metaHtml}
+                    </div>
+                </div>
+            `;
+
+            // Preload poster image — якщо не завантажиться, фон лишається градієнтом
+            if (safePoster) {
+                const img = new Image();
+                img.onload = () => {
+                    const bg = slide.querySelector('.hero-slide-bg');
+                    if (bg) bg.style.backgroundImage = `url('${safePoster}')`;
+                };
+                img.onerror = () => {
+                    const bg = slide.querySelector('.hero-slide-bg');
+                    if (bg) bg.style.background = 'linear-gradient(135deg, #1a1a1a, #2d2d2d)';
+                };
+                img.src = safePoster;
+            }
+
+            container.innerHTML = '';
+            container.appendChild(slide);
+
+            // Весь слайд клікабельний — відкриває аніме. Свайп (не тап) перемикає слайди, не відкриваючи сторінку.
+            slide.addEventListener('click', () => {
+                if (heroJustSwiped) { heroJustSwiped = false; return; }
+                if (item.url) openPlayerPage(item.url);
+            });
+        }
+
+        function buildHeroIndicators() {
+            const dotsContainer = document.getElementById('heroDots');
+            if (!dotsContainer) return;
+            dotsContainer.innerHTML = '';
+            heroItems.forEach((_, idx) => {
+                const dot = document.createElement('div');
+                dot.className = 'hero-dot' + (idx === heroCurrentIndex ? ' active' : '');
+                dot.addEventListener('click', () => goToSlide(idx));
+                dotsContainer.appendChild(dot);
+            });
+        }
+
+        function updateHeroIndicators() {
+            const dots = document.querySelectorAll('.hero-dot');
+            dots.forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === heroCurrentIndex);
+            });
+        }
+
+        async function goToSlide(idx) {
+            if (idx < 0 || idx >= heroItems.length) return;
+            if (idx === heroCurrentIndex) return;
+            heroCurrentIndex = idx;
+            // Показуємо слайд одразу — не чекаємо деталей
+            renderHeroSlide(heroItems[idx]);
+            updateHeroIndicators();
+            resetHeroTimer();
+            // Деталі завантажуємо у фоні — оновимо слайд коли прийдуть
+            if (!heroItems[idx].detailsLoaded) {
+                loadHeroItemDetails(idx).then(() => {
+                    if (heroCurrentIndex === idx) renderHeroSlide(heroItems[idx]);
+                }).catch(() => {});
+            }
+            // Preload наступного слайду
+            const nextIdx = (idx + 1) % heroItems.length;
+            if (!heroItems[nextIdx].detailsLoaded) {
+                loadHeroItemDetails(nextIdx).catch(() => {});
+            }
+        }
+
+        function nextSlide() {
+            if (heroCurrentIndex >= heroItems.length - 1) {
+                loadNextHeroBatch().catch(() => {});
+                return;
+            }
+            goToSlide(heroCurrentIndex + 1);
+        }
+
+        function prevSlide() {
+            goToSlide((heroCurrentIndex - 1 + heroItems.length) % heroItems.length);
+        }
+
+        // Гортання пальцем замість стрілок — свайп вліво/вправо перемикає слайди
+        function initHeroSwipe() {
+            const wrapper = document.getElementById('heroWrapper');
+            if (!wrapper || wrapper.dataset.swipeInit) return;
+            wrapper.dataset.swipeInit = '1';
+            let startX = 0, startY = 0, tracking = false;
+            wrapper.addEventListener('touchstart', (e) => {
+                if (!e.touches.length) return;
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                tracking = true;
+            }, { passive: true });
+            wrapper.addEventListener('touchend', (e) => {
+                if (!tracking || !e.changedTouches.length) return;
+                tracking = false;
+                const dx = e.changedTouches[0].clientX - startX;
+                const dy = e.changedTouches[0].clientY - startY;
+                if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+                    heroJustSwiped = true;
+                    if (dx < 0) nextSlide(); else prevSlide();
+                }
+            }, { passive: true });
+        }
+
+        let heroProgressInterval = null;
+        const HERO_SLIDE_DURATION = 6000;
+
+        function startHeroRotation() {
+            stopHeroRotation();
+            if (heroItems.length < 2) return;
+            const fill = document.getElementById('heroProgressFill');
+            let elapsed = 0;
+            if (fill) fill.style.width = '0%';
+            heroProgressInterval = setInterval(() => {
+                elapsed += 50;
+                if (fill) fill.style.width = (elapsed / HERO_SLIDE_DURATION * 100) + '%';
+            }, 50);
+            heroRotationTimer = setTimeout(nextSlide, HERO_SLIDE_DURATION);
+        }
+
+        function stopHeroRotation() {
+            if (heroRotationTimer) { clearTimeout(heroRotationTimer); heroRotationTimer = null; }
+            if (heroProgressInterval) { clearInterval(heroProgressInterval); heroProgressInterval = null; }
+            const fill = document.getElementById('heroProgressFill');
+            if (fill) fill.style.width = '0%';
+        }
+
+        function resetHeroTimer() {
+            stopHeroRotation();
+            startHeroRotation();
+        }
