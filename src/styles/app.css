@@ -38,6 +38,7 @@
 @import url('./community/modern.css?v=20260817-community-features-v1');
 @import url('./pages/main.css');
 @import url('./player/player-polish.css');
+@import url('./pages/design-polish.css?v=20260819-vakdab-polish-v1');
 
 /* Community hierarchy priority overrides */
 .modern-community-category-grid { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 12px !important; margin: 0 0 20px !important; }

@@ -1,0 +1,298 @@
+/* Vakdab Design Polish
+ * UI/UX Pro Max principles applied to the existing monochrome glass style.
+ * Keep this layer last so it improves presentation without changing application logic.
+ */
+
+:root {
+    --vp-surface-raised: color-mix(in srgb, var(--surface) 96%, var(--accent) 4%);
+    --vp-surface-soft: color-mix(in srgb, var(--surface) 92%, var(--accent) 8%);
+    --vp-ink-strong: var(--text);
+    --vp-ink-soft: var(--text-secondary);
+    --vp-line-strong: color-mix(in srgb, var(--border) 72%, var(--text) 28%);
+    --vp-focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+    --vp-card-radius: clamp(14px, 1.8vw, 22px);
+}
+
+/* Global rhythm and accessible interaction states. */
+body {
+    background:
+        radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 4%, transparent), transparent 30rem),
+        var(--bg);
+}
+
+button,
+a,
+[role="button"],
+select,
+input {
+    -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+select:focus-visible,
+input:focus-visible {
+    outline: 0;
+    box-shadow: var(--vp-focus-ring);
+}
+
+/* Header: clearer brand anchor and a calmer glass surface. */
+.site-header,
+header.header,
+#header {
+    isolation: isolate;
+}
+
+.logo,
+.header-logo,
+.site-logo {
+    letter-spacing: -0.055em;
+    text-wrap: balance;
+}
+
+/* Hero: editorial hierarchy without changing the existing artwork. */
+.hero,
+.home-hero,
+.hero-section {
+    border-radius: var(--vp-card-radius);
+    box-shadow: var(--shadow-md);
+}
+
+.hero h1,
+.home-hero h1,
+.hero-section h1 {
+    max-width: 13ch;
+    letter-spacing: -0.065em;
+    text-wrap: balance;
+}
+
+.hero p,
+.home-hero p,
+.hero-section p {
+    max-width: 48ch;
+    color: var(--vp-ink-soft);
+}
+
+/* Home catalog: content-first shell with more intentional spacing. */
+.home-catalog-section {
+    position: relative;
+    overflow: clip;
+    border-color: var(--vp-line-strong);
+    border-radius: clamp(18px, 2.5vw, 28px);
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--surface) 97%, var(--accent) 3%), var(--vp-surface-raised));
+    box-shadow: var(--shadow-md);
+}
+
+.home-catalog-section::before {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+    background: var(--accent-gradient);
+    content: "";
+    opacity: .9;
+}
+
+.home-catalog-heading {
+    position: relative;
+    padding-top: .25rem;
+}
+
+.home-catalog-heading h2 {
+    font-size: clamp(1.35rem, 3.4vw, 2rem);
+    letter-spacing: -.06em;
+}
+
+.home-catalog-kicker {
+    display: block;
+    margin-bottom: .3rem;
+    color: var(--text-muted);
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+}
+
+.home-catalog-tabs,
+.home-catalog-controls,
+.home-catalog-presets,
+.home-catalog-genre-rail {
+    position: relative;
+}
+
+.home-catalog-tab,
+.home-catalog-search,
+.home-catalog-sort,
+.home-catalog-view-toggle,
+.home-catalog-filter-btn,
+.home-catalog-preset,
+.home-catalog-genre-chip {
+    border-color: var(--vp-line-strong);
+    transition: transform 220ms cubic-bezier(.2, .8, .2, 1), background 220ms ease, border-color 220ms ease, box-shadow 220ms ease, color 220ms ease;
+}
+
+.home-catalog-tab:hover,
+.home-catalog-preset:hover,
+.home-catalog-genre-chip:hover,
+.home-catalog-filter-btn:hover {
+    border-color: var(--text);
+    box-shadow: var(--shadow-sm);
+}
+
+.home-catalog-tab.active,
+.home-catalog-tab.active:hover,
+.home-catalog-tab.active:focus-visible {
+    background: var(--accent-gradient);
+    color: var(--accent-text);
+    border-color: var(--accent);
+    box-shadow: 0 8px 20px var(--accent-glow);
+}
+
+.home-catalog-search {
+    min-height: 3.5rem;
+    background: var(--vp-surface-raised);
+}
+
+.home-catalog-search:focus-within {
+    border-color: var(--text);
+    box-shadow: var(--vp-focus-ring), var(--shadow-sm);
+}
+
+.home-catalog-card {
+    border: 1px solid transparent;
+    border-radius: var(--vp-card-radius);
+    padding: .28rem;
+    background: transparent;
+}
+
+.home-catalog-card:hover,
+.home-catalog-card:focus-visible {
+    border-color: var(--vp-line-strong);
+    background: var(--vp-surface-raised);
+    box-shadow: var(--shadow-sm);
+}
+
+.home-catalog-card__poster {
+    border-color: var(--vp-line-strong);
+    border-radius: calc(var(--vp-card-radius) - 3px);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.home-catalog-card__title {
+    padding-inline: .1rem;
+    font-weight: 800;
+    letter-spacing: -.025em;
+}
+
+.home-catalog-card__meta {
+    padding-inline: .1rem;
+}
+
+.home-catalog-card__play {
+    width: 2.15rem;
+    height: 2.15rem;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, .25);
+}
+
+.home-catalog-more {
+    min-height: 2.9rem;
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-text);
+    box-shadow: 0 8px 20px var(--accent-glow);
+}
+
+.home-catalog-more:hover:not(:disabled) {
+    background: var(--accent-hover);
+    color: var(--accent-text);
+    box-shadow: 0 12px 26px var(--accent-glow);
+}
+
+/* Shared cards and carousels: consistent lift and poster treatment. */
+.anime-card,
+.popular-card,
+.wide-card__frame,
+.genre-section,
+.genre-carousel .anime-card {
+    border-color: var(--vp-line-strong);
+}
+
+.anime-card,
+.popular-card,
+.genre-section {
+    transition: transform 220ms cubic-bezier(.2, .8, .2, 1), box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.anime-card:hover,
+.popular-card:hover,
+.genre-section:hover {
+    box-shadow: var(--shadow-md);
+}
+
+/* Bottom navigation: retain the familiar dock while improving readability. */
+.bottom-nav,
+#bottomNav,
+.mobile-bottom-nav {
+    border: 1px solid var(--vp-line-strong);
+    box-shadow: 0 -8px 30px color-mix(in srgb, var(--text) 10%, transparent);
+    backdrop-filter: blur(18px) saturate(130%);
+    -webkit-backdrop-filter: blur(18px) saturate(130%);
+}
+
+/* Mobile-first spacing and touch targets. */
+@media (max-width: 600px) {
+    .home-catalog-section {
+        margin-inline: 0;
+        padding: 1rem .7rem 1.2rem;
+    }
+
+    .home-catalog-heading {
+        gap: .65rem;
+    }
+
+    .home-catalog-heading h2 {
+        font-size: 1.3rem;
+    }
+
+    .home-catalog-tab,
+    .home-catalog-preset,
+    .home-catalog-genre-chip,
+    .home-catalog-filter-btn,
+    .home-catalog-view {
+        min-height: 2.75rem;
+    }
+
+    .home-catalog-card {
+        padding: .18rem;
+    }
+
+    .home-catalog-card__poster {
+        border-radius: 12px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+    }
+}
+
+.dark-mode body,
+body.dark-mode {
+    background:
+        radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 30rem),
+        var(--bg);
+}
+
+.dark-mode .home-catalog-card:hover,
+.dark-mode .home-catalog-card:focus-visible,
+body.dark-mode .home-catalog-card:hover,
+body.dark-mode .home-catalog-card:focus-visible {
+    background: color-mix(in srgb, var(--surface) 94%, var(--accent) 6%);
+}
