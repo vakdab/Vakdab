@@ -929,3 +929,118 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
 @media (max-width: 479px) {
     .home-catalog-filter-btn { min-width: 2.9rem; min-height: 2.7rem; }
 }
+
+/* ===== Сучасний рестайл панелі каталогу (таби / пошук / сортування / фільтри) ===== */
+.home-catalog-tabs {
+    display: flex;
+    gap: .3rem;
+    padding: .32rem;
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .06), inset 0 1px 0 color-mix(in srgb, #fff 6%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+.home-catalog-tab {
+    flex: 1 1 0;
+    border-radius: 14px;
+    padding: .72rem .55rem;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    transition: color .22s ease, background .22s ease, transform .22s ease, box-shadow .22s ease;
+}
+.home-catalog-tab:hover { background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); transform: translateY(-1px); }
+.home-catalog-tab.active {
+    background: var(--accent) !important;
+    border-color: transparent !important;
+    color: var(--accent-text) !important;
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 38%, transparent) !important;
+    transform: translateY(-1px);
+}
+.home-catalog-tab.active i,
+.home-catalog-tab.active span { color: var(--accent-text) !important; }
+
+.home-catalog-search {
+    min-height: 3.1rem;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .03);
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.home-catalog-search:focus-within {
+    border-color: color-mix(in srgb, var(--accent) 65%, var(--border));
+    background: var(--surface);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.home-catalog-search:focus-within i { color: var(--accent); }
+
+.home-catalog-sort,
+.home-catalog-view-toggle,
+.home-catalog-filter-btn {
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .04);
+    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease, color .2s ease;
+}
+.home-catalog-sort:hover,
+.home-catalog-view-toggle:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.home-catalog-view {
+    border-radius: 11px;
+    transition: background .2s ease, color .2s ease, transform .15s ease;
+}
+.home-catalog-view:hover { color: var(--text); }
+.home-catalog-view.active,
+.home-catalog-view.active:hover,
+.home-catalog-view.active:focus-visible {
+    background: var(--accent) !important;
+    color: var(--accent-text) !important;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.home-catalog-view.active i { color: var(--accent-text) !important; }
+
+.home-catalog-filter-btn {
+    font-weight: 750;
+}
+.home-catalog-filter-btn:hover {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+    color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .07);
+}
+.home-catalog-filter-btn:active { transform: translateY(0) scale(.97); }
+#homeCatalogFilterBtn {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    color: var(--accent);
+}
+#homeCatalogFilterBtn i { color: var(--accent); }
+
+.home-catalog-genre-chip {
+    transition: background .2s ease, color .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.home-catalog-genre-chip:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, .06); }
+.home-catalog-genre-chip.active {
+    border-color: var(--accent) !important;
+    background: var(--accent) !important;
+    color: var(--accent-text) !important;
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+@media (max-width: 479px) {
+    .home-catalog-tabs { border-radius: 15px; padding: .26rem; }
+    .home-catalog-tab { padding: .6rem .3rem; }
+    .home-catalog-search { border-radius: 13px; }
+    .home-catalog-sort, .home-catalog-view-toggle, .home-catalog-filter-btn { border-radius: 12px; }
+}
+
+.dark-mode .home-catalog-tabs,
+.dark-mode .home-catalog-search,
+.dark-mode .home-catalog-sort,
+.dark-mode .home-catalog-view-toggle,
+.dark-mode .home-catalog-filter-btn {
+    background: color-mix(in srgb, var(--surface) 88%, #000 12%);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .22);
+}
