@@ -1,6 +1,6 @@
 import { loadFeature } from '../../core/feature-loader.js';
 import { Router } from '../../core/compat/router.js';
-import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260819-catalog-clean-v1';
+import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260818-honey-free-chapter-v2';
 
 export function initBottomNav() {
 

@@ -3,7 +3,7 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260819-catalog-clean-v1';
+} from '../../legacy/app-legacy.js?v=20260818-honey-free-chapter-v2';
 import { getDefaultProfile } from '../../components/pages/settingsLegacy.js';
 import { Storage } from './storage.js';
 

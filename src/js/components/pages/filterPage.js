@@ -1,7 +1,7 @@
 import { GENRE_MAP } from '../../config/constants.js';
 import { Router } from '../../core/compat/router.js';
 import { fetchHikkaByGenre, fetchHikkaMain } from '../../services/catalog.js';
-import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CARD_PLACEHOLDER } from '../../legacy/app-legacy.js?v=20260819-catalog-clean-v1';
+import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CARD_PLACEHOLDER } from '../../legacy/app-legacy.js?v=20260818-honey-free-chapter-v2';
 
         const FILTER_STATUS_OPTIONS = [
             { key: 'anons', label: 'Анонс' },

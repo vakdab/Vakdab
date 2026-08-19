@@ -1,5 +1,5 @@
 import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../services/catalog.js';
-import { openPlayerPage } from '../../legacy/app-legacy.js?v=20260819-catalog-clean-v1';
+import { openPlayerPage } from '../../legacy/app-legacy.js?v=20260818-honey-free-chapter-v2';
 
         let heroItems = [],
             heroPool = [],
