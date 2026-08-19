@@ -1,5 +1,21 @@
 import { Auth } from '../../core/compat/auth.js';
 import { Storage } from '../../core/compat/storage.js';
+import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
+import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
+
+function getProfile() {
+    const profile = Storage.getProfile() || {};
+    return {
+        nickname: typeof profile.nickname === 'string' && profile.nickname.trim() ? profile.nickname.trim() : 'Гість',
+        avatar: typeof profile.avatar === 'string' ? profile.avatar : ''
+    };
+}
+
+function isGifUrl(url) {
+    if (typeof url !== 'string' || !url) return false;
+    const lower = url.toLowerCase();
+    return lower.endsWith('.gif') || lower.includes('.gif?') || lower.includes('.gif/');
+}
 
         // ====================================================================
         //  XP / LEVEL SYSTEM
@@ -376,11 +392,19 @@ import { Storage } from '../../core/compat/storage.js';
                         document.body.classList.add('community-active');
                         const nav = document.getElementById('bottomNav');
                         if (nav) nav.classList.add('hidden-nav');
-                        initCommunity();
-                        setTimeout(() => {
-                            const msgs = document.getElementById('comMessages');
-                            if (msgs) msgs.scrollTop = msgs.scrollHeight;
-                        }, 500);
+                        import('../community/legacyCommunity.js')
+                            .then(({ initCommunity }) => {
+                                initCommunity();
+                                setTimeout(() => {
+                                    const msgs = document.getElementById('comMessages');
+                                    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+                                }, 500);
+                            })
+                            .catch(error => {
+                                console.warn('Community initialization failed:', error);
+                                const panel = document.getElementById('rgPanelCommunity');
+                                if (panel) panel.innerHTML = '<div class="modern-community-empty"><div class="modern-community-empty-icon">✦</div><h3>Спільнота тимчасово недоступна</h3><p>Спробуйте оновити сторінку ще раз.</p></div>';
+                            });
                     }
                     if (btn.dataset.panel === 'rating') {
                         document.body.classList.remove('community-active');

@@ -30,7 +30,7 @@ import { renderSchedulePage } from '../components/pages/schedule.js';
 import { renderFilterPage, applyFilters } from '../components/pages/filterPage.js';
 import { buildHeroBanner } from '../components/home/heroBanner.js';
 import { renderProfilePage } from '../components/pages/profileLegacy.js';
-import { calcTotalXP, getLevel, DailyStats, ACHIEVEMENTS, getUserRankInfo, initRatingPage, calculateBaseXP, getXPForLevel, getXPProgress, loadRatingPage, loadRatingList } from '../components/rating/ratingSystem.js';
+import { calcTotalXP, getLevel, DailyStats, ACHIEVEMENTS, getUserRankInfo, initRatingPage, calculateBaseXP, getXPForLevel, getXPProgress, loadRatingPage, loadRatingList } from '../components/rating/ratingSystem.js?v=20260819-rating-community-fix1';
 import {
     playerPageAnime, playerPageAnimeuaSeasons, externalSourceCache, playerPageCurrentSeason, playerPageCurrentDub, playerPageCurrentSource, playerPageIsOpen,
     setPlayerPageAnimeuaSeasons, setPlayerPageAnime, setPlayerPageCurrentSeason, setPlayerPageCurrentDub, setPlayerPageCurrentSource,
