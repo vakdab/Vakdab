@@ -558,22 +558,44 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             };
         }
 
+        const HONEY_PROMO_MARKERS = Object.freeze([
+            'наша команда покидає',
+            'group 17 october',
+            'не будемо публікуватися',
+            'більше не публікується',
+            'повний переклад вже доступний на інших платформах',
+            'продовжить публікуватися лише на сайтах',
+            'публікуватися на цьому сайті',
+            'лише на сайтах',
+            'шукайте нас в телеграм',
+            'шукайте нас у телеграм',
+            'слідкувати за оновленнями',
+            'honey manga test',
+            'це тестовий проєкт створений адміністрацією honey manga'
+        ]);
+
+        function honeyPromoTextMatches(value = '') {
+            const haystack = normalizeHoneyMatch(value);
+            return Boolean(haystack) && HONEY_PROMO_MARKERS.some(marker => haystack.includes(normalizeHoneyMatch(marker)));
+        }
+
+        // Run this against the raw API record before honeyCatalogItem() drops
+        // source-only fields such as description, lowTitle, and posterId.
+        export function isHoneyPromoItemRaw(item = {}) {
+            return honeyPromoTextMatches([
+                item?.title, item?.lowTitle, item?.alternativeTitle, item?.description,
+                item?.slug, item?.posterUrl, item?.posterId
+            ].filter(Boolean).join(' '));
+        }
+
+        // Keep a second check after normalization for search responses and
+        // already-normalized callers. Do not match generic "honey manga":
+        // ordinary licensed titles may mention the source in their synopsis.
         export function isHoneyPromoItem(item = {}) {
-            const haystack = normalizeHoneyMatch([
+            return honeyPromoTextMatches([
                 item?.title, item?.lowTitle, item?.alternativeTitle, item?.description,
                 item?.synopsis, item?.slug, item?.posterUrl, item?.posterId
             ].filter(Boolean).join(' '));
-            const promoMarkers = [
-                'наша команда покидає',
-                'honey manga',
-                'group 17 october',
-                'не будемо публікуватися',
-                'публікуватися на цьому сайті',
-                'шукайте нас в телеграм',
-                'шукайте нас у телеграм',
-                'слідкувати за оновленнями'
-            ];
-            return promoMarkers.some(marker => haystack.includes(normalizeHoneyMatch(marker)));
         }
 
         export function isAdultHoneyManga(item) {
@@ -677,14 +699,14 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 const firstPayload = await makeRequest(1);
                 const total = Number(firstPayload?.counter || 0);
                 const totalPages = Math.max(1, Math.ceil(total / pageSize));
-                const allItems = (Array.isArray(firstPayload?.data) ? firstPayload.data : []).map(honeyCatalogItem).filter(item => !isHoneyPromoItem(item)).filter(isHoneyComicItem);
+                const allItems = (Array.isArray(firstPayload?.data) ? firstPayload.data : []).filter(item => !isHoneyPromoItemRaw(item)).map(honeyCatalogItem).filter(item => !isHoneyPromoItem(item)).filter(isHoneyComicItem);
                 let nextPage = 2;
                 const worker = async () => {
                     while (true) {
                         const page = nextPage++;
                         if (page > totalPages) return;
                         const payload = await makeRequest(page);
-                        allItems.push(...(Array.isArray(payload?.data) ? payload.data : []).map(honeyCatalogItem).filter(item => !isHoneyPromoItem(item)).filter(isHoneyComicItem));
+                        allItems.push(...(Array.isArray(payload?.data) ? payload.data : []).filter(item => !isHoneyPromoItemRaw(item)).map(honeyCatalogItem).filter(item => !isHoneyPromoItem(item)).filter(isHoneyComicItem));
                     }
                 };
                 await Promise.all(Array.from({ length: Math.min(4, Math.max(0, totalPages - 1)) }, worker));
@@ -717,7 +739,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             }
             if (homeCatalogQuery) {
                 const searched = await searchHoneyTitles(homeCatalogQuery);
-                let items = searched.map(honeyCatalogItem).filter(item => !isHoneyPromoItem(item)).filter(isHoneyComicItem);
+                let items = searched.filter(item => !isHoneyPromoItemRaw(item)).map(honeyCatalogItem).filter(item => !isHoneyPromoItem(item)).filter(isHoneyComicItem);
                 items = items.filter(item => homeCatalogAdult ? isAdultHoneyManga(item) : !isAdultHoneyManga(item));
                 homeCatalogTotal = items.length;
                 homeCatalogHasMore = false;
@@ -733,7 +755,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             });
             homeCatalogTotal = Number(payload?.counter || 0);
             homeCatalogHasMore = Boolean(payload?.cursorNext?.page);
-            let items = (Array.isArray(payload?.data) ? payload.data : []).map(honeyCatalogItem).filter(item => !isHoneyPromoItem(item)).filter(isHoneyComicItem);
+            let items = (Array.isArray(payload?.data) ? payload.data : []).filter(item => !isHoneyPromoItemRaw(item)).map(honeyCatalogItem).filter(item => !isHoneyPromoItem(item)).filter(isHoneyComicItem);
             items = await attachHoneyReaders(items);
             Object.defineProperties(items, { total: { value: homeCatalogTotal, enumerable: false }, hasNextPage: { value: homeCatalogHasMore, enumerable: false } });
             honeyCatalogPageCache.set(cacheKey, { total: homeCatalogTotal, items, hasMore: homeCatalogHasMore });
