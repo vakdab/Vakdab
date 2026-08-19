@@ -605,11 +605,22 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             return Boolean(haystack) && HONEY_PROMO_MARKERS.some(marker => haystack.includes(normalizeHoneyMatch(marker)));
         }
 
+        function honeyPromoPosterMatches(item = {}) {
+            const posterValues = [
+                item?.posterId,
+                item?.posterUrl,
+                item?.images?.jpg?.large_image_url,
+                item?.images?.jpg?.image_url
+            ].filter(Boolean).map(value => String(value).trim());
+            return posterValues.some(value => HONEY_PROMO_POSTER_IDS.has(value)
+                || [...HONEY_PROMO_POSTER_IDS].some(posterId => value.includes(posterId)));
+        }
+
         // Run this against the raw API record before honeyCatalogItem() drops
         // source-only fields such as description, lowTitle, and posterId.
         export function isHoneyPromoItemRaw(item = {}) {
             const posterId = String(item?.posterUrl || item?.posterId || '').trim();
-            return HONEY_PROMO_POSTER_IDS.has(posterId) || honeyPromoTextMatches([
+            return HONEY_PROMO_POSTER_IDS.has(posterId) || honeyPromoPosterMatches(item) || honeyPromoTextMatches([
                 item?.title, item?.lowTitle, item?.alternativeTitle, item?.description,
                 item?.slug, item?.posterUrl, item?.posterId
             ].filter(Boolean).join(' '));
@@ -619,7 +630,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         // already-normalized callers. Do not match generic "honey manga":
         // ordinary licensed titles may mention the source in their synopsis.
         export function isHoneyPromoItem(item = {}) {
-            return honeyPromoTextMatches([
+            return honeyPromoPosterMatches(item) || honeyPromoTextMatches([
                 item?.title, item?.lowTitle, item?.alternativeTitle, item?.description,
                 item?.synopsis, item?.slug, item?.posterUrl, item?.posterId
             ].filter(Boolean).join(' '));
@@ -791,7 +802,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         }
 
         function filterMangaCatalogItems(items) {
-            let filtered = [...items];
+            let filtered = [...items].filter(item => !isHoneyPromoItem(item));
             const query = normalizeHoneyMatch(homeCatalogQuery);
             if (query) filtered = filtered.filter(item => normalizeHoneyMatch(item.title).includes(query));
             if (homeCatalogAvailability === 'available') filtered = filtered.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0);
