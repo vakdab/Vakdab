@@ -441,6 +441,33 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             return `<span class="dub-logo" aria-hidden="true"><img src="${escapeHtml(logoUrl)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'"><span class="dub-logo-fallback" style="display:none">${fallback}</span></span>`;
         }
 
+        function renderCompactPlayerSelectors() {
+            const episodeSelect = document.getElementById('playerEpisodeSelect');
+            const dubSelect = document.getElementById('playerDubSelect');
+            const seasonSelect = document.getElementById('playerSeasonSelect');
+            const episodes = getCurrentEpisodes();
+            const seasons = Object.keys(playerPageAnime?.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
+            const dubs = Object.keys(playerPageAnime?.seasons?.[playerPageCurrentSeason] || {}).sort();
+            if (episodeSelect) {
+                episodeSelect.innerHTML = episodes.map(ep => `<option value="${escapeHtml(String(ep.episode))}">Серія ${escapeHtml(String(ep.episode))}${ep.title ? ` · ${escapeHtml(String(ep.title))}` : ''}</option>`).join('');
+                episodeSelect.value = String(playerPageCurrentEpisodeNum || episodes[0]?.episode || '1');
+            }
+            if (dubSelect) {
+                dubSelect.innerHTML = dubs.map(d => `<option value="${escapeHtml(String(d))}">${escapeHtml(String(d))}</option>`).join('');
+                dubSelect.value = String(playerPageCurrentDub || dubs[0] || '');
+            }
+            if (seasonSelect) {
+                seasonSelect.innerHTML = seasons.map(s => `<option value="${escapeHtml(String(s))}">Сезон ${escapeHtml(String(s))}</option>`).join('');
+                seasonSelect.value = String(playerPageCurrentSeason || seasons[0] || '1');
+            }
+            const currentIndex = episodes.findIndex(ep => String(ep.episode) === String(playerPageCurrentEpisodeNum));
+            document.getElementById('playerPrevEpisode')?.toggleAttribute('disabled', currentIndex <= 0 || !episodes.length);
+            document.getElementById('playerNextEpisode')?.toggleAttribute('disabled', currentIndex < 0 || currentIndex >= episodes.length - 1);
+            const logo = playerPageAnime?.dubLogos?.[playerPageCurrentDub] || dubs.flatMap(d => playerPageAnime?.seasons?.[playerPageCurrentSeason]?.[d] || []).find(ep => ep?.teamLogo)?.teamLogo || '';
+            const logoEl = document.getElementById('playerCompactDubLogo');
+            if (logoEl) logoEl.innerHTML = logo ? `<img src="${escapeHtml(logo)}" alt="" loading="lazy">` : escapeHtml(String(playerPageCurrentDub || 'О').trim().slice(0, 1).toUpperCase());
+        }
+
         export function updateFilterChip() {
             const chip = document.getElementById('playerFilterChip');
             if (chip) chip.textContent = `Сезон ${playerPageCurrentSeason} · ${playerPageCurrentDub}`;
@@ -459,6 +486,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
                 });
             });
             renderSeasonTabs();
+            renderCompactPlayerSelectors();
         }
 
         function renderSeasonTabs() {
@@ -1929,6 +1957,26 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
                 else if (target.querySelector('video')?.webkitEnterFullscreen) target.querySelector('video').webkitEnterFullscreen();
             });
         }
+
+        const compactEpisodeSelect = document.getElementById('playerEpisodeSelect');
+        compactEpisodeSelect?.addEventListener('change', () => {
+            const episode = getCurrentEpisodes().find(ep => String(ep.episode) === String(compactEpisodeSelect.value));
+            if (episode) playEpisode(episode.file, episode.episode);
+        });
+        document.getElementById('playerDubSelect')?.addEventListener('change', event => selectDubFromSheet(event.target.value));
+        document.getElementById('playerSeasonSelect')?.addEventListener('change', event => selectSeasonFromSheet(event.target.value));
+        document.getElementById('playerPrevEpisode')?.addEventListener('click', () => {
+            const episodes = getCurrentEpisodes();
+            const index = episodes.findIndex(ep => String(ep.episode) === String(playerPageCurrentEpisodeNum));
+            const episode = episodes[index - 1];
+            if (episode) playEpisode(episode.file, episode.episode);
+        });
+        document.getElementById('playerNextEpisode')?.addEventListener('click', () => {
+            const episodes = getCurrentEpisodes();
+            const index = episodes.findIndex(ep => String(ep.episode) === String(playerPageCurrentEpisodeNum));
+            const episode = episodes[index + 1];
+            if (episode) playEpisode(episode.file, episode.episode);
+        });
 
         document.getElementById('playerSourceChip').addEventListener('click', () => {
             openBottomSheet('source');

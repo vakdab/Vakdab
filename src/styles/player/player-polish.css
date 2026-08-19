@@ -1039,3 +1039,126 @@ body.player-page-open > .bottom-sheet-overlay {
     #playerPageModal .player-episode-btn,
     #playerPageModal .action-icon { transition: none; }
 }
+
+
+/* Compact player controls inspired by the supplied reference, adapted to Vakdab */
+#playerPageModal .player-compact-controls {
+    display: grid;
+    gap: 10px;
+    margin: 0 auto 14px;
+    width: min(100%, 920px);
+}
+#playerPageModal .player-select-line {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr) 58px;
+    gap: 10px;
+    align-items: stretch;
+}
+#playerPageModal .player-select-wrap {
+    position: relative;
+    display: flex;
+    min-height: 58px;
+    align-items: center;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--text) 12%, var(--border));
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 6%, transparent), inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
+    transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+#playerPageModal .player-select-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent), 0 8px 24px color-mix(in srgb, var(--text) 8%, transparent);
+}
+#playerPageModal .player-select-wrap select {
+    width: 100%;
+    min-height: 58px;
+    appearance: none;
+    border: 0;
+    outline: 0;
+    padding: 0 48px 0 20px;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    font: inherit;
+    font-size: clamp(16px, 2.2vw, 22px);
+    font-weight: 700;
+}
+#playerPageModal .player-select-wrap select option { background: var(--surface); color: var(--text); }
+#playerPageModal .player-select-chevron {
+    position: absolute;
+    right: 18px;
+    pointer-events: none;
+    color: var(--text-muted);
+    font-size: 25px;
+    line-height: 1;
+    transform: translateY(-3px);
+}
+#playerPageModal .player-nav-btn {
+    min-height: 58px;
+    border: 1px solid color-mix(in srgb, var(--text) 12%, var(--border));
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 40px;
+    font-weight: 300;
+    line-height: 1;
+    transition: transform .16s ease, background-color .16s ease, border-color .16s ease;
+}
+#playerPageModal .player-nav-btn:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
+#playerPageModal .player-nav-btn:active:not(:disabled) { transform: scale(.96); }
+#playerPageModal .player-nav-btn:disabled { cursor: not-allowed; opacity: .35; }
+#playerPageModal .player-dub-select-wrap,
+#playerPageModal .player-season-select-wrap-compact { min-height: 54px; }
+#playerPageModal .player-dub-select-wrap select,
+#playerPageModal .player-season-select-wrap-compact select { min-height: 54px; padding-left: 62px; font-size: 17px; }
+#playerPageModal .player-select-leading {
+    position: absolute;
+    z-index: 1;
+    left: 16px;
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--text) 12%, var(--border));
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 900;
+}
+#playerPageModal .player-select-leading img { width: 100%; height: 100%; object-fit: cover; }
+#playerPageModal .player-season-mark { border-radius: 10px; background: var(--accent); color: var(--accent-text); }
+#playerPageModal .player-video-container {
+    position: relative;
+    overflow: hidden;
+    width: min(100%, 920px);
+    margin: 0 auto;
+    aspect-ratio: 16 / 9;
+    background: #090909;
+}
+#playerPageModal .player-frame-poster { transition: opacity .25s ease, filter .25s ease; }
+#playerPageModal .lampa-player-container video { display: block; width: 100%; height: 100%; object-fit: contain; }
+#playerPageModal .player-video-container .lp-center-play,
+#playerPageModal .player-video-container .lampa-center-play { transform: translate(-50%, -50%) scale(1.08); }
+#playerPageModal .player-controls { display: none; }
+@media (min-width: 720px) {
+    #playerPageModal .player-compact-controls { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, .8fr); align-items: center; }
+    #playerPageModal .player-episode-select-line { grid-column: 1 / 2; }
+    #playerPageModal .player-dub-select-wrap { grid-column: 2 / 3; }
+    #playerPageModal .player-season-select-wrap-compact { grid-column: 3 / 4; }
+}
+@media (max-width: 560px) {
+    #playerPageModal .player-select-line { grid-template-columns: 46px minmax(0, 1fr) 46px; gap: 7px; }
+    #playerPageModal .player-nav-btn { min-height: 52px; border-radius: 15px; font-size: 34px; }
+    #playerPageModal .player-select-wrap { min-height: 52px; border-radius: 15px; }
+    #playerPageModal .player-select-wrap select { min-height: 52px; padding-right: 40px; padding-left: 16px; font-size: 16px; }
+    #playerPageModal .player-dub-select-wrap select,
+    #playerPageModal .player-season-select-wrap-compact select { min-height: 50px; padding-left: 56px; }
+    #playerPageModal .player-select-leading { left: 13px; width: 29px; height: 29px; }
+    #playerPageModal .player-select-chevron { right: 14px; font-size: 22px; }
+    #playerPageModal .player-video-container { border-radius: 16px; }
+}

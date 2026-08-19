@@ -164,6 +164,29 @@
 
             <!-- VIDEO PLAYER + CONTROLS -->
             <section class="player-section" aria-label="Плеєр">
+                <div class="player-compact-controls" id="playerCompactControls">
+                    <div class="player-select-line player-episode-select-line">
+                        <button type="button" class="player-nav-btn" id="playerPrevEpisode" aria-label="Попередня серія">‹</button>
+                        <label class="player-select-wrap player-episode-select-wrap">
+                            <span class="sr-only">Серія</span>
+                            <select id="playerEpisodeSelect" aria-label="Вибір серії"></select>
+                            <span class="player-select-chevron" aria-hidden="true">⌄</span>
+                        </label>
+                        <button type="button" class="player-nav-btn" id="playerNextEpisode" aria-label="Наступна серія">›</button>
+                    </div>
+                    <label class="player-select-wrap player-dub-select-wrap">
+                        <span class="player-select-leading" id="playerCompactDubLogo" aria-hidden="true"></span>
+                        <span class="sr-only">Озвучка</span>
+                        <select id="playerDubSelect" aria-label="Вибір озвучки"></select>
+                        <span class="player-select-chevron" aria-hidden="true">⌄</span>
+                    </label>
+                    <label class="player-select-wrap player-season-select-wrap-compact">
+                        <span class="player-select-leading player-season-mark" aria-hidden="true">S</span>
+                        <span class="sr-only">Сезон</span>
+                        <select id="playerSeasonSelect" aria-label="Вибір сезону"></select>
+                        <span class="player-select-chevron" aria-hidden="true">⌄</span>
+                    </label>
+                </div>
                 <div class="player-video-container" id="playerVideoContainer">
                     <div class="video-overlay-topbar">
                         <div class="video-overlay-left">
