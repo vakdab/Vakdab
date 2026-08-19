@@ -1,10 +1,10 @@
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, signInAnonymously, sendPasswordResetEmail, deleteUser, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot } from '../config/firebase.js';
-import { auth, db, initialized as firebaseInitialized } from '../services/firebase/client.js';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, signInAnonymously, sendPasswordResetEmail, deleteUser, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot } from '../../config/firebase.js';
+import { auth, db, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from './app-legacy.js?v=20260818-honey-free-chapter-v2';
-import { getDefaultProfile } from '../components/pages/settingsLegacy.js';
+} from '../../legacy/app-legacy.js?v=20260818-honey-free-chapter-v2';
+import { getDefaultProfile } from '../../components/pages/settingsLegacy.js';
 import { Storage } from './storage.js';
 
         const Auth = {

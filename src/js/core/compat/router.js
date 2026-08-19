@@ -1,12 +1,12 @@
-import { HIKKA_API } from '../config/constants.js';
-import { loadFeature } from '../core/feature-loader.js?v=20260818-ranobe-v6';
+import { HIKKA_API } from '../../config/constants.js';
+import { loadFeature } from '../feature-loader.js?v=20260818-ranobe-v6';
 import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
     initRatingPage, loadAndDisplayGenreSections, loadMangaReader,
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
     renderGenresPage, renderProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from './app-legacy.js?v=20260818-honey-free-chapter-v2';
+} from '../../legacy/app-legacy.js?v=20260818-honey-free-chapter-v2';
 
         export const Router = {
             currentRoute: 'main',

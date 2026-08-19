@@ -21,9 +21,9 @@ export const PROFILE_STICKER_SLOTS = 8;
         // ====================================================================
         //  СИСТЕМА АВТОРИЗАЦІЇ
         // ====================================================================
-import { Auth } from './auth.js';
-import { Storage } from './storage.js';
-import { Router } from './router.js';
+import { Auth } from '../core/compat/auth.js';
+import { Storage } from '../core/compat/storage.js';
+import { Router } from '../core/compat/router.js';
 import { LampaPlayer } from '../components/player/lampaPlayer.js';
 import { initCommunity } from '../components/community/legacyCommunity.js';
 import { renderSchedulePage } from '../components/pages/schedule.js';
