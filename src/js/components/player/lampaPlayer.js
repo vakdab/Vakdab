@@ -542,6 +542,14 @@ export class LampaPlayer {
                 }
 
                 if (!this.videoRef) this._init();
+                // Mobile Safari/iOS needs an explicit inline media mode and a mobile UA at the source proxy.
+                const media = this.videoRef;
+                if (media) {
+                    media.playsInline = true;
+                    media.setAttribute('playsinline', '');
+                    media.setAttribute('webkit-playsinline', '');
+                    media.preload = 'metadata';
+                }
                 // Ensure https
                 if (src && src.startsWith('http://')) src = 'https://' + src.slice(7);
                 this.state.src = src;
@@ -556,7 +564,10 @@ export class LampaPlayer {
                 v.pause();
                 if (!src) { this.state.loading = false; return; }
 
-                const proxyUrl = (typeof getProxyUrl === 'function' && !src.startsWith(PROXY_URL)) ? getProxyUrl(src) : src;
+                const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+                const proxyUrl = (typeof getProxyUrl === 'function' && !src.startsWith(PROXY_URL))
+                    ? getProxyUrl(src, isMobileDevice ? 'mobile' : 'desktop')
+                    : src;
                 const isHlsSource = /\.m3u8(?:[?#]|$)/i.test(src);
 
                 const _startHls = () => {
@@ -591,16 +602,23 @@ export class LampaPlayer {
 
                 if (!isHlsSource) {
                     // MP4 та інші browser-native формати не треба проганяти через HLS.js.
+                    // Attach listeners before load(): Safari can emit error synchronously for a bad source.
+                    const onNativeError = () => {
+                        const detail = v.error?.code ? ` (код ${v.error.code})` : '';
+                        this._showPlaybackError(`Відеофайл не вдалося відкрити на цьому пристрої${detail}.`);
+                    };
+                    v.addEventListener('error', onNativeError, { once: true });
+                    v.addEventListener('canplay', () => { this.state.loading = false; this._spinner.classList.add('hidden'); }, { once: true });
                     v.src = proxyUrl;
                     v.load();
-                    v.addEventListener('canplay', () => { this.state.loading = false; this._spinner.classList.add('hidden'); }, { once: true });
-                    v.addEventListener('error', () => this._showPlaybackError('Відеофайл не вдалося відкрити на цьому пристрої.'), { once: true });
                     v.play().catch(() => {});
                 } else if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                     _startHls();
                 } else if (v.canPlayType('application/vnd.apple.mpegurl') !== '' || v.canPlayType('audio/mpegurl') !== '') {
-                    v.src = proxyUrl; v.load();
+                    const onNativeError = () => this._showPlaybackError('HLS-потік не вдалося відкрити на цьому пристрої.');
+                    v.addEventListener('error', onNativeError, { once: true });
                     v.addEventListener('canplay', () => { this.state.loading = false; this._spinner.classList.add('hidden'); }, { once: true });
+                    v.src = proxyUrl; v.load();
                     v.play().catch(() => {});
                 } else {
                     const sc = document.createElement('script');

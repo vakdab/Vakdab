@@ -315,10 +315,15 @@ import {
             const cached = ashdiPlaybackCache.get(ashdiPageUrl);
             if (cached) return cached;
             const html = await fetchMikaiHtml(ashdiPageUrl);
-            const matches = String(html).replace(/\\u002F/g, '/').match(/https?:\/\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?/gi) || [];
+            const normalizedHtml = String(html)
+                .replace(/\\u002F/g, '/')
+                .replace(/\\\//g, '/')
+                .replace(/&amp;/gi, '&');
+            const matches = normalizedHtml.match(/https?:\/\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?/gi) || [];
             const manifest = matches.find(url => /ashdi\.vip|video\d+/i.test(url)) || matches[0];
             if (!manifest) throw new Error('ASHDI m3u8 manifest не знайдено');
-            const proxiedManifest = getProxyUrl(manifest, 'desktop');
+            const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+            const proxiedManifest = getProxyUrl(manifest, isMobileDevice ? 'mobile' : 'desktop');
             ashdiPlaybackCache.set(ashdiPageUrl, proxiedManifest);
             return proxiedManifest;
         }

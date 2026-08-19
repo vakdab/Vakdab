@@ -938,3 +938,104 @@ body.player-page-open > .bottom-sheet-overlay {
     min-width: 96px;
   }
 }
+
+
+/* ============== Player experience refinement ============== */
+#playerPageModal .player-section {
+    padding: clamp(12px, 2vw, 22px) clamp(12px, 3vw, 28px) 0;
+}
+#playerPageModal .player-video-container {
+    border-color: color-mix(in srgb, var(--text) 14%, var(--border));
+    border-radius: clamp(16px, 2.4vw, 24px);
+    box-shadow: 0 18px 54px color-mix(in srgb, var(--text) 13%, transparent), 0 0 0 1px color-mix(in srgb, var(--text) 5%, transparent);
+}
+#playerPageModal .player-video-container::before {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -34px 60px rgba(0,0,0,.16);
+}
+#playerPageModal .player-video-container:has(.lp-error) .player-frame-poster { opacity: .3; filter: grayscale(1); }
+#playerPageModal .lp-error,
+#playerPageModal .player-video-error {
+    position: absolute;
+    z-index: 12;
+    inset: 50% auto auto 50%;
+    display: flex;
+    width: min(88%, 430px);
+    transform: translate(-50%, -50%);
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 24px 22px;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 20px;
+    background: rgba(12,12,12,.86);
+    color: #fff;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    backdrop-filter: blur(18px);
+}
+#playerPageModal .lp-error strong,
+#playerPageModal .player-video-error span { font-size: clamp(16px, 3vw, 21px); font-weight: 800; }
+#playerPageModal .lp-error span { color: rgba(255,255,255,.72); font-size: 13px; line-height: 1.55; }
+#playerPageModal .lp-error::before,
+#playerPageModal .player-video-error i { color: var(--accent); font-size: 24px; }
+#playerPageModal .player-controls,
+#playerPageModal .player-dub-controls,
+#playerPageModal .episode-panel,
+#playerPageModal .season-panel {
+    border: 1px solid color-mix(in srgb, var(--text) 8%, var(--border));
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    box-shadow: 0 10px 32px color-mix(in srgb, var(--text) 6%, transparent);
+}
+#playerPageModal .player-dub-controls,
+#playerPageModal .season-panel,
+#playerPageModal .episode-panel { margin: 12px clamp(12px, 3vw, 28px) 0; padding: 16px; }
+#playerPageModal .player-dub-controls h3,
+#playerPageModal .season-panel h3,
+#playerPageModal .episode-panel h3,
+#playerPageModal .section-label {
+    margin: 0 0 12px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+#playerPageModal .player-episode-btn {
+    min-height: 52px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 3px 12px color-mix(in srgb, var(--text) 4%, transparent);
+    transition: transform .16s ease, border-color .16s ease, background-color .16s ease, box-shadow .16s ease;
+}
+#playerPageModal .player-episode-btn:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 48%, var(--border)); box-shadow: 0 8px 20px color-mix(in srgb, var(--text) 9%, transparent); }
+#playerPageModal .player-episode-btn.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 28%, transparent); }
+#playerPageModal .player-episode-number { font-size: 16px; font-weight: 800; }
+#playerPageModal .player-episode-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; }
+#playerPageModal .player-episode-progress { height: 3px; border-radius: 99px; background: color-mix(in srgb, currentColor 35%, transparent); }
+#playerPageModal .player-dub-controls .format-pill,
+#playerPageModal .season-panel button,
+#playerPageModal .episode-panel button { min-height: 44px; border-radius: 12px; font-weight: 700; }
+@media (max-width: 560px) {
+    #playerPageModal .hero-img { height: 300px; }
+    #playerPageModal .topbar { top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; }
+    #playerPageModal .content-top { padding: 18px 14px 4px; }
+    #playerPageModal .player-video-container { min-height: 0; }
+    #playerPageModal .lp-controls { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+    #playerPageModal .player-dub-controls,
+    #playerPageModal .season-panel,
+    #playerPageModal .episode-panel { margin-right: 12px; margin-left: 12px; padding: 14px; border-radius: 18px; }
+    #playerPageModal .player-episode-btn { min-height: 50px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #playerPageModal .player-episode-btn,
+    #playerPageModal .action-icon { transition: none; }
+}
