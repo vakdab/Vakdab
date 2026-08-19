@@ -561,11 +561,19 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         export function isHoneyPromoItem(item = {}) {
             const haystack = normalizeHoneyMatch([
                 item?.title, item?.lowTitle, item?.alternativeTitle, item?.description,
-                item?.slug, item?.posterUrl, item?.posterId
+                item?.synopsis, item?.slug, item?.posterUrl, item?.posterId
             ].filter(Boolean).join(' '));
-            return haystack.includes('наша команда покидає')
-                || haystack.includes('honey manga')
-                || haystack.includes('group 17 october');
+            const promoMarkers = [
+                'наша команда покидає',
+                'honey manga',
+                'group 17 october',
+                'не будемо публікуватися',
+                'публікуватися на цьому сайті',
+                'шукайте нас в телеграм',
+                'шукайте нас у телеграм',
+                'слідкувати за оновленнями'
+            ];
+            return promoMarkers.some(marker => haystack.includes(normalizeHoneyMatch(marker)));
         }
 
         export function isAdultHoneyManga(item) {
