@@ -218,12 +218,14 @@
             min-height: 0;
             flex: 0 1 auto;
             overflow-wrap: anywhere;
-            max-height: calc(1.45em * 3 + 22px);
+            max-height: calc(1.45em * 2 + 22px);
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
             box-sizing: border-box;
             text-align: left;
             text-shadow: 0 1px 8px rgba(0,0,0,0.6);
             display: -webkit-box;
-            -webkit-line-clamp: 3;
+            -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
             margin: 0;
@@ -232,8 +234,9 @@
             .hero-slide-content { padding: 42px 22px calc(78px + env(safe-area-inset-bottom)); gap: 11px; }
             .hero-slide-desc {
                 max-width: 100%;
-                max-height: calc(1.45em * 3 + 22px);
-                -webkit-line-clamp: 3;
+                max-height: calc(1.45em * 2 + 22px);
+                -webkit-line-clamp: 2;
+                line-clamp: 2;
             }
         }
         @media (max-width: 480px) {

@@ -1045,3 +1045,35 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     background: color-mix(in srgb, var(--surface) 88%, #000 12%);
     box-shadow: 0 8px 20px rgba(0, 0, 0, .22);
 }
+
+
+/* Final light-theme mapping for catalog controls. Keep active controls white in the light UI. */
+.home-catalog-tab.active,
+.home-catalog-tab.active:hover,
+.home-catalog-tab.active:focus-visible,
+.home-catalog-view.active,
+.home-catalog-view.active:hover,
+.home-catalog-view.active:focus-visible {
+    background: #ffffff !important;
+    border-color: #0b0b0b !important;
+    color: #0b0b0b !important;
+    -webkit-text-fill-color: #0b0b0b !important;
+    box-shadow: 0 8px 20px rgba(11, 11, 11, .12) !important;
+}
+.home-catalog-tab.active i,
+.home-catalog-tab.active span,
+.home-catalog-view.active i { color: #0b0b0b !important; }
+.dark-mode .home-catalog-tab.active,
+.dark-mode .home-catalog-tab.active:hover,
+.dark-mode .home-catalog-tab.active:focus-visible,
+.dark-mode .home-catalog-view.active,
+.dark-mode .home-catalog-view.active:hover,
+.dark-mode .home-catalog-view.active:focus-visible {
+    background: #0b0b0b !important;
+    border-color: #ffffff !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+.dark-mode .home-catalog-tab.active i,
+.dark-mode .home-catalog-tab.active span,
+.dark-mode .home-catalog-view.active i { color: #ffffff !important; }
