@@ -296,6 +296,11 @@ function ranobeApiItem(item) {
     const originalTitle = cleanRanobeCatalogTitle(item?.rus_name || item?.name || item?.eng_name || 'Без назви');
     const bookUrl = ranobeApiBookUrl(item);
     const poster = ranobeApiPoster(item);
+    const rawGenres = item?.genres || item?.genre || item?.tags || item?.categories || [];
+    const genres = (Array.isArray(rawGenres) ? rawGenres : [rawGenres]).map(genre => {
+        if (typeof genre === 'string') return normalizeNovelText(genre);
+        return normalizeNovelText(genre?.name_ua || genre?.name || genre?.label || '');
+    }).filter(Boolean);
     return {
         title: originalTitle,
         originalTitle,
@@ -312,7 +317,7 @@ function ranobeApiItem(item) {
         originLabel: item?.type?.label || item?.type?.name || '',
         typeLabel: 'Ранобе',
         synopsis: '',
-        genres: [],
+        genres: [...new Set(genres)],
         source: 'ranobelib'
     };
 }

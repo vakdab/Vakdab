@@ -749,8 +749,23 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             return mangaFilterGenres(items);
         }
 
+        const RANOBE_GENRE_OPTIONS = Object.freeze([
+            'Екшен', 'Пригоди', 'Фентезі', 'Фантастика', 'Романтика', 'Комедія',
+            'Драма', 'Містика', 'Трилер', 'Детектив', 'Психологія', 'Надприродне',
+            'Ісайкай', 'Гарем', 'Повсякденність', 'Культивація', 'Східна фентезі',
+            'ЛітРПГ', 'Веб-новела', 'Шьонен', 'Шьоджьо', 'Джосей'
+        ]);
+
         function ranobeFilterOrigins(items = homeCatalogItems) {
             return [...new Set(items.map(item => String(item?.originLabel || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'uk'));
+        }
+
+        function ranobeFilterGenres(items = homeCatalogItems) {
+            const sourceGenres = items.flatMap(item => (item?.genres || []).map(genre => {
+                const value = String(typeof genre === 'object' ? genre.name || genre.name_ua || '' : genre).trim();
+                return value;
+            }).filter(Boolean));
+            return [...new Set([...RANOBE_GENRE_OPTIONS, ...sourceGenres])].sort((a, b) => a.localeCompare(b, 'uk'));
         }
 
         function ranobeFilterAges() {
@@ -966,7 +981,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
         export function openHomeCatalogFilters(root = document) {
             document.querySelector('#homeCatalogFilterDialog')?.remove();
-            const initialGenres = catalogFilterGenres(homeCatalogItems);
+            const initialGenres = homeCatalogMode === 'novel'
+                ? ranobeFilterGenres(homeCatalogItems)
+                : catalogFilterGenres(homeCatalogItems);
             const dialog = document.createElement('div');
             dialog.id = 'homeCatalogFilterDialog';
             dialog.className = 'home-catalog-filter-dialog';
@@ -975,7 +992,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 : '<small>Жанри для цього каталогу ще не надані джерелом.</small>';
             const selected = (value, expected) => value === expected ? ' selected' : '';
             const modeFilterMarkup = homeCatalogMode === 'anime' ? `<label>Статус<select id="homeFilterStatus"><option value="all">Усі статуси</option><option value="ongoing"${selected(homeCatalogStatus, 'ongoing')}>Онґоїнг</option><option value="finished"${selected(homeCatalogStatus, 'finished')}>Завершені</option></select></label><label>Формат<select id="homeFilterType"><option value="all">Усі формати</option><option value="tv"${selected(homeCatalogType, 'tv')}>Серіал</option><option value="movie"${selected(homeCatalogType, 'movie')}>Фільм</option><option value="ova"${selected(homeCatalogType, 'ova')}>OVA / ONA</option></select></label><div class="home-catalog-filter-dialog__row"><label>Рік від<input id="homeFilterYearMin" type="number" min="1960" max="2030" value="${escapeHtml(homeCatalogYearMin)}" placeholder="від"></label><label>Рік до<input id="homeFilterYearMax" type="number" min="1960" max="2030" value="${escapeHtml(homeCatalogYearMax)}" placeholder="до"></label></div><label>Мінімальна оцінка<input id="homeFilterScoreMin" type="number" min="0" max="10" step="0.1" value="${escapeHtml(homeCatalogScoreMin)}" placeholder="0–10"></label>` : homeCatalogMode === 'manga' ? `<label>Доступність<select id="homeFilterAvailability"><option value="all">Усі тайтли</option><option value="available"${selected(homeCatalogAvailability, 'available')}>Є що читати</option></select></label><label>Вікова категорія<select id="homeFilterAge"><option value="all">Усі вікові категорії</option>${HOME_MANGA_AGE_OPTIONS.filter(x => x.key !== 'all').map(x => `<option value="${x.key}"${selected(homeCatalogAge, x.key)}>${x.label}</option>`).join('')}</select></label>` : `<label>Статус<select id="homeFilterStatus"><option value="all">Усі статуси</option><option value="ongoing"${selected(homeCatalogStatus, 'ongoing')}>Онґоїнг</option><option value="finished"${selected(homeCatalogStatus, 'finished')}>Завершені</option></select></label><label>Доступність<select id="homeFilterAvailability"><option value="all">Усі тайтли</option><option value="available"${selected(homeCatalogAvailability, 'available')}>Є доступний розділ</option></select></label><label>Вікова категорія<select id="homeFilterAge">${ranobeFilterAges().map(option => `<option value="${option.key}"${selected(homeCatalogAge, option.key)}>${option.label}</option>`).join('')}</select></label><label>Походження<select id="homeFilterOrigin"><option value="all">Усі країни та типи</option>${ranobeFilterOrigins().map(origin => `<option value="${escapeHtml(origin)}"${selected(homeCatalogOrigin, origin)}>${escapeHtml(origin)}</option>`).join('')}</select></label><div class="home-catalog-filter-dialog__row"><label>Рік від<input id="homeFilterYearMin" type="number" min="1900" max="2030" value="${escapeHtml(homeCatalogYearMin)}" placeholder="від"></label><label>Рік до<input id="homeFilterYearMax" type="number" min="1900" max="2030" value="${escapeHtml(homeCatalogYearMax)}" placeholder="до"></label></div><label>Мінімальна оцінка<input id="homeFilterScoreMin" type="number" min="0" max="10" step="0.1" value="${escapeHtml(homeCatalogScoreMin)}" placeholder="0–10"></label>`;
-            dialog.innerHTML = `<div class="home-catalog-filter-dialog__backdrop" data-filter-close></div><section class="home-catalog-filter-dialog__panel" role="dialog" aria-modal="true" aria-labelledby="homeCatalogFilterTitle"><div class="home-catalog-filter-dialog__head"><div><span class="home-catalog-filter-dialog__eyebrow">Налаштування каталогу</span><h3 id="homeCatalogFilterTitle">Фільтри · ${escapeHtml((HOME_CATALOG_MODES.find(x => x.key === homeCatalogMode) || HOME_CATALOG_MODES[0]).label)}</h3></div><button type="button" data-filter-close aria-label="Закрити"><i class="fas fa-xmark"></i></button></div><p id="homeFilterDataStatus" class="home-catalog-filter-dialog__status">${homeCatalogMode === 'manga' ? 'Завантажуємо повний каталог для точного фільтра…' : homeCatalogMode === 'novel' ? 'Фільтри застосовуються до завантажених результатів RanobeLib.' : 'Оберіть потрібні параметри каталогу.'}</p>${modeFilterMarkup}<fieldset><legend>Жанри</legend><div class="home-catalog-filter-dialog__genres">${genreMarkup(initialGenres)}</div></fieldset><div class="home-catalog-filter-dialog__actions"><button type="button" class="btn-outline" data-filter-reset>Скинути</button><button type="button" class="btn-primary" data-filter-apply>Застосувати</button></div></section>`;
+            dialog.innerHTML = `<div class="home-catalog-filter-dialog__backdrop" data-filter-close></div><section class="home-catalog-filter-dialog__panel" role="dialog" aria-modal="true" aria-labelledby="homeCatalogFilterTitle"><div class="home-catalog-filter-dialog__head"><div><span class="home-catalog-filter-dialog__eyebrow">Налаштування каталогу</span><h3 id="homeCatalogFilterTitle">Фільтри · ${escapeHtml((HOME_CATALOG_MODES.find(x => x.key === homeCatalogMode) || HOME_CATALOG_MODES[0]).label)}</h3></div><button type="button" data-filter-close aria-label="Закрити"><i class="fas fa-xmark"></i></button></div><p id="homeFilterDataStatus" class="home-catalog-filter-dialog__status">${homeCatalogMode === 'manga' ? 'Завантажуємо повний каталог для точного фільтра…' : 'Оберіть потрібні параметри каталогу.'}</p>${modeFilterMarkup}<fieldset><legend>Жанри</legend><div class="home-catalog-filter-dialog__genres">${genreMarkup(initialGenres)}</div></fieldset><div class="home-catalog-filter-dialog__actions"><button type="button" class="btn-outline" data-filter-reset>Скинути</button><button type="button" class="btn-primary" data-filter-apply>Застосувати</button></div></section>`;
             document.body.appendChild(dialog);
             const close = () => dialog.remove();
             dialog.querySelectorAll('[data-filter-close]').forEach(button => button.addEventListener('click', close));
