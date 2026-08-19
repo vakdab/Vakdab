@@ -107,17 +107,35 @@ import { openPlayerPage } from '../../legacy/app-legacy.js?v=20260818-honey-free
             }
         }
 
+        function escapeHeroText(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function cleanHeroSynopsis(value) {
+            return String(value ?? '')
+                .replace(/<[^>]*>/g, ' ')
+                .replace(/[\r\n\t]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
         function renderHeroSlide(item) {
             const container = document.getElementById('heroSlidesContainer');
             if (!container || !item) return;
             const poster = item.images?.jpg?.large_image_url || '';
-            const rawTitle = item.title || 'Без назви';
-            const title = rawTitle.length > 38 ? rawTitle.substring(0, 38) + '…' : rawTitle;
-            const genres = item.genres || ['Аніме'];
+            const rawTitle = String(item.title || 'Без назви').trim();
+            const title = rawTitle.length > 38 ? rawTitle.substring(0, 38).trimEnd() + '…' : rawTitle;
+            const genres = Array.isArray(item.genres) && item.genres.length ? item.genres : ['Аніме'];
             const rating = item.rating || (7 + Math.random() * 2.5).toFixed(1);
             const year = item.year || '';
             const episodes = item.totalEpisodes || 0;
-            const synopsis = item.synopsis || '';
+            const synopsis = cleanHeroSynopsis(item.synopsis);
 
             const metaParts = [];
             if (year) metaParts.push(year);
@@ -126,9 +144,8 @@ import { openPlayerPage } from '../../legacy/app-legacy.js?v=20260818-honey-free
                 ? `<span class="hero-info-separator">·</span><span class="hero-meta">${metaParts.join(' <span class="hero-meta-dot"></span> ')}</span>`
                 : '';
 
-            const heroSynopsis = synopsis.trim().replace(/\s+/g, ' ');
-            const synopsisHtml = heroSynopsis
-                ? `<div class="hero-slide-desc">${heroSynopsis.substring(0, 170)}${heroSynopsis.length > 170 ? '…' : ''}</div>`
+            const synopsisHtml = synopsis
+                ? `<div class="hero-slide-desc">${escapeHeroText(synopsis)}</div>`
                 : '';
 
             const slide = document.createElement('div');
@@ -145,10 +162,10 @@ import { openPlayerPage } from '../../legacy/app-legacy.js?v=20260818-honey-free
                 <div class="hero-slide-bg" id="heroBg_${Date.now()}" style="${bgStyle}"></div>
                 <div class="hero-slide-overlay"></div>
                 <div class="hero-slide-content">
-                    <div class="hero-slide-title">${title}</div>
+                    <div class="hero-slide-title">${escapeHeroText(title)}</div>
                     ${synopsisHtml}
                     <div class="hero-slide-tags">
-                        ${genres.slice(0, 3).map(g => `<span class="hero-tag genre-tag">${g}</span>`).join('')}
+                        ${genres.slice(0, 3).map(g => `<span class="hero-tag genre-tag">${escapeHeroText(g)}</span>`).join('')}
                     </div>
                     <div class="hero-info-pill hero-rating-row hero-rating-row--bottom">
                         <span class="hero-rating-badge"><span class="star">★</span> ${rating}</span>

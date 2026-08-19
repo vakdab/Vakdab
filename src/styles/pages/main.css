@@ -238,21 +238,22 @@
 @media (max-width: 479px) {
     .app-container { padding-left: .65rem; padding-right: .65rem; }
     .actions-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: .55rem;
+        display: flex;
+        flex-direction: column;
+        gap: .7rem;
         margin-top: .85rem;
         margin-bottom: 1.15rem;
     }
     .action-pill {
         width: 100%;
+        min-height: 3.25rem;
         justify-content: center;
-        padding-inline: .45rem;
-        font-size: .72rem;
+        padding-inline: .75rem;
+        font-size: .86rem;
     }
     .hero-wrapper {
-        min-height: 310px;
-        max-height: 430px;
+        min-height: 360px;
+        max-height: 420px;
     }
 }
 

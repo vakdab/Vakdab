@@ -12,17 +12,15 @@
             overflow: hidden;
             box-shadow: none;
             background: #0a0a0a;
-            height: 62vh;
-            height: 62svh;
+            height: clamp(420px, 62svh, 620px);
             min-height: 420px;
             max-height: 620px;
         }
         @media (max-width: 768px) {
             .hero-wrapper {
-                height: 52vh;
-                height: 52svh;
-                min-height: 340px;
-                max-height: 480px;
+                height: clamp(360px, 68svh, 520px);
+                min-height: 360px;
+                max-height: 520px;
                 width: 100vw;
                 margin-left: calc(50% - 50vw);
                 margin-right: calc(50% - 50vw);
@@ -31,9 +29,8 @@
         }
         @media (max-width: 480px) {
             .hero-wrapper {
-                height: 48vh;
-                height: 48svh;
-                min-height: 300px;
+                height: clamp(360px, 112vw, 420px);
+                min-height: 360px;
                 max-height: 420px;
                 width: 100vw;
                 margin-left: calc(50% - 50vw);
@@ -124,8 +121,9 @@
             align-items: flex-start;
             text-align: left;
             gap: clamp(8px, 1.4vh, 18px);
-            padding: 50px 20px 82px;
+            padding: clamp(44px, 7vw, 64px) clamp(20px, 4vw, 48px) calc(78px + env(safe-area-inset-bottom));
             height: 100%;
+            min-height: 0;
             box-sizing: border-box;
             background: transparent;
             overflow: hidden;
@@ -216,8 +214,10 @@
             -webkit-backdrop-filter: blur(18px) saturate(120%);
             line-height: 1.45;
             width: min(100%, 680px);
-            max-width: 62%;
+            max-width: min(100%, 680px);
             min-height: 0;
+            flex: 0 1 auto;
+            overflow-wrap: anywhere;
             max-height: calc(1.45em * 3 + 22px);
             box-sizing: border-box;
             text-align: left;
@@ -229,7 +229,7 @@
             margin: 0;
         }
         @media (max-width: 768px) {
-            .hero-slide-content { padding: 38px 22px 78px; gap: 11px; }
+            .hero-slide-content { padding: 42px 22px calc(78px + env(safe-area-inset-bottom)); gap: 11px; }
             .hero-slide-desc {
                 max-width: 100%;
                 max-height: calc(1.45em * 3 + 22px);
@@ -247,6 +247,7 @@
                 padding: 10px 14px;
                 max-height: calc(1.45em * 2 + 20px);
                 -webkit-line-clamp: 2;
+                line-clamp: 2;
             }
         }
 
@@ -255,6 +256,7 @@
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
+            flex-shrink: 0;
             text-align: left;
         }
         .hero-tag {
@@ -286,6 +288,7 @@
            The whole slide is tap-to-open, so this reads as info, not a control. */
         .hero-rating-row--bottom {
             margin-top: 4px;
+            flex-shrink: 0;
         }
         .hero-info-pill {
             display: inline-flex;
@@ -365,10 +368,10 @@
         }
         @media (max-width: 480px) {
             .hero-slide-content {
-                padding: 34px 16px 72px;
+                padding: 34px 16px calc(72px + env(safe-area-inset-bottom));
                 gap: 9px;
             }
-            .hero-dots { bottom: 20px; gap: 6px; }
+            .hero-dots { bottom: calc(20px + env(safe-area-inset-bottom)); gap: 6px; }
             .hero-dot { width: 16px; height: 2px; }
             .hero-dot.active { width: 26px; }
         }
