@@ -574,6 +574,32 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             'це тестовий проєкт створений адміністрацією honey manga'
         ]);
 
+        // Some QR promo cards use ordinary titles/descriptions and differ only
+        // by their poster record. These IDs were obtained from the live API and
+        // verified to resolve to the same QR announcement image as the visible
+        // "ми більше не будемо публікуватися" cards.
+        const HONEY_PROMO_POSTER_IDS = new Set([
+            '3e0744af-b2df-4b30-88ff-b7eebac6040a',
+            '6a651260-ba1f-4ddc-a329-f4816eedce66',
+            '597ce558-0b8e-4770-bfd0-245e5f560253',
+            '8500522d-977e-414a-bd54-a96b97724a6b',
+            '5e2e6f20-30e0-4c3e-942c-67319481ec5f',
+            'b2b40eb4-a98a-4012-9152-b476d56724e4',
+            '76a4d92d-6009-42aa-b479-b42a57bcf880',
+            '9c5e401f-e289-4933-9bad-d254e9452c8d',
+            'defc7451-92f7-4f5e-b08e-622ffda621c9',
+            'ea9d0b02-df08-419e-9fcc-e880b8046075',
+            'ea7bfd2a-fbf4-48a4-b081-2e5b483e96df',
+            'ac818eaf-a24b-43dc-9be9-f20686b10dc3',
+            'f4047b8f-466f-458f-99dd-7b4cf716e643',
+            '1e0749b9-a3ff-437d-b3e4-096c61f991d3',
+            '745a8a95-02d0-4424-ab89-52bc768bdeb5',
+            '68fcb44c-f5c6-4d0a-b204-90a768d5f3e4',
+            'd47f4001-4623-4c24-949c-3614e1b6c9eb',
+            'cf0aa010-9ca1-456a-b4c6-9635bf647681',
+            '85847872-a303-41b5-9a37-4a010f048e84'
+        ]);
+
         function honeyPromoTextMatches(value = '') {
             const haystack = normalizeHoneyMatch(value);
             return Boolean(haystack) && HONEY_PROMO_MARKERS.some(marker => haystack.includes(normalizeHoneyMatch(marker)));
@@ -582,7 +608,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         // Run this against the raw API record before honeyCatalogItem() drops
         // source-only fields such as description, lowTitle, and posterId.
         export function isHoneyPromoItemRaw(item = {}) {
-            return honeyPromoTextMatches([
+            const posterId = String(item?.posterUrl || item?.posterId || '').trim();
+            return HONEY_PROMO_POSTER_IDS.has(posterId) || honeyPromoTextMatches([
                 item?.title, item?.lowTitle, item?.alternativeTitle, item?.description,
                 item?.slug, item?.posterUrl, item?.posterId
             ].filter(Boolean).join(' '));
