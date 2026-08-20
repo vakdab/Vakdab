@@ -3,7 +3,7 @@ import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/co
 import { db, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import {
     ACHIEVEMENTS, Auth, DailyStats, Router, Storage, calcTotalXP, escapeHtml,
-    getLevel, isGifUrl, openPlayerPage, showToast
+    getLevel, isGifUrl, openPlayerPage, profileMediaMarkup, renderStickerFaceByKey, showToast
 } from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix4';
 import { getProfile } from '../pages/settingsLegacy.js';
 import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
@@ -108,12 +108,78 @@ import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
                 return date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', year: date.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
             } catch (_) { return 'Щойно'; }
         }
+        const modernCommunityAuthorProfiles = new Map();
+        let modernCommunityAuthorProfilesLoaded = false;
+
+        function compactNickStickerData(stickers) {
+            const data = stickers || {};
+            const key = typeof data.nickBadge === 'string' ? data.nickBadge : null;
+            return {
+                nickBadge: key,
+                colors: key && data.colors?.[key] ? { [key]: data.colors[key] } : {},
+                singles: key?.startsWith('img:') ? (data.singles || []).filter(item => `img:${item.id}` === key) : []
+            };
+        }
+
+        function modernCommunityIdentity(post) {
+            const remote = modernCommunityAuthorProfiles.get(post.uid) || {};
+            return {
+                nickname: post.authorName || remote.nickname || 'Аніме ентузіаст',
+                avatar: post.authorPhoto || remote.avatar || '',
+                avatarVideo: post.authorAvatarVideo || remote.avatarVideo || '',
+                avatarVideoSettings: post.authorAvatarVideoSettings || remote.avatarVideoSettings || {},
+                stickers: post.authorStickers || remote.stickers || {}
+            };
+        }
+
+        function modernCommunityAvatarMarkup(identity) {
+            const active = identity.avatarVideo || identity.avatar || '';
+            if (active) {
+                const gifClass = isGifUrl(active) ? ' is-gif' : '';
+                return profileMediaMarkup(active, `modern-community-avatar-media${gifClass}`, 'avatar', identity.avatarVideoSettings);
+            }
+            return `<span>${escapeHtml((identity.nickname || '?').slice(0, 1).toUpperCase())}</span>`;
+        }
+
+        function modernCommunityStickerMarkup(identity) {
+            const key = identity.stickers?.nickBadge;
+            if (!key) return '';
+            const visual = renderStickerFaceByKey(identity.stickers, key);
+            return visual ? `<span class="modern-community-nick-badge" title="Наліпка профілю">${visual}</span>` : '';
+        }
+
         function modernCommunityAuthor(post) {
-            const name = post.authorName || 'Аніме ентузіаст';
-            const photo = post.authorPhoto || '';
-            return photo
-                ? `<img src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.style.display='none'">`
-                : `<span>${escapeHtml(name.slice(0, 1).toUpperCase())}</span>`;
+            return modernCommunityAvatarMarkup(modernCommunityIdentity(post));
+        }
+
+        function modernCommunityAuthorName(post) {
+            const identity = modernCommunityIdentity(post);
+            return `<div class="modern-community-author-name"><b>${escapeHtml(identity.nickname)}</b>${modernCommunityStickerMarkup(identity)}</div>`;
+        }
+
+        async function loadModernCommunityAuthorProfiles(posts) {
+            if (modernCommunityAuthorProfilesLoaded || !firebaseInitialized || !db) return;
+            const uids = new Set((posts || []).map(post => post.uid).filter(Boolean));
+            if (!uids.size) return;
+            try {
+                const { collection, getDocs, limit, query } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js');
+                const snapshot = await getDocs(query(collection(db, 'users'), limit(500)));
+                snapshot.forEach(item => {
+                    const data = item.data() || {};
+                    const profile = data.profile || {};
+                    modernCommunityAuthorProfiles.set(item.id, {
+                        nickname: profile.nickname || profile.name || '',
+                        avatar: profile.avatar || '',
+                        avatarVideo: profile.avatarVideo || '',
+                        avatarVideoSettings: profile.avatarVideoSettings || {},
+                        stickers: data.stickers || {}
+                    });
+                });
+                modernCommunityAuthorProfilesLoaded = true;
+                renderModernCommunityFeed();
+            } catch (error) {
+                console.warn('Community author profile enrichment failed:', error);
+            }
         }
         function modernCommunityPostCard(post) {
             const kind = post.communityCategory || (post.animeData ? 'recommend' : 'discussion');
@@ -125,7 +191,7 @@ import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
             const reply = post.replyTo?.text ? `<div class="modern-community-reply-quote"><b>Відповідь ${escapeHtml(post.replyTo.authorName || 'учаснику')}</b><span>${escapeHtml(post.replyTo.text)}</span></div>` : '';
             const text = post.text ? `<p>${escapeHtml(post.text).replace(/\n/g, '<br>')}</p>` : '';
             const reactions = Object.entries(post.reactions || {}).filter(([, uids]) => Array.isArray(uids) && uids.length).map(([emoji, uids]) => `<button type="button" class="modern-community-reaction${Auth.isAuthenticated() && uids.includes(Auth._user?.uid) ? ' is-mine' : ''}" data-community-action="reaction" data-emoji="${escapeHtml(emoji)}" data-post-id="${escapeHtml(post.id)}">${emoji} <span>${uids.length}</span></button>`).join('');
-            return `<article class="modern-community-post"><div class="modern-community-post-top"><div class="modern-community-avatar">${modernCommunityAuthor(post)}</div><div class="modern-community-author"><b>${escapeHtml(post.authorName || 'Аніме ентузіаст')}</b><span>${modernCommunityDate(post.createdAt)}</span></div><span class="modern-community-tag">${escapeHtml(topicLabel)}</span></div>${reply}${text}${media}${anime}<div class="modern-community-post-actions"><button type="button" class="modern-community-action" data-community-action="reaction" data-emoji="♡" data-post-id="${escapeHtml(post.id)}">♡ Реакція</button><button type="button" class="modern-community-action" data-community-action="reply" data-post-id="${escapeHtml(post.id)}">↩ Відповісти</button>${reactions}</div></article>`;
+            return `<article class="modern-community-post"><div class="modern-community-post-top"><div class="modern-community-avatar">${modernCommunityAuthor(post)}</div><div class="modern-community-author">${modernCommunityAuthorName(post)}<span>${modernCommunityDate(post.createdAt)}</span></div><span class="modern-community-tag">${escapeHtml(topicLabel)}</span></div>${reply}${text}${media}${anime}<div class="modern-community-post-actions"><button type="button" class="modern-community-action" data-community-action="reaction" data-emoji="♡" data-post-id="${escapeHtml(post.id)}">♡ Реакція</button><button type="button" class="modern-community-action" data-community-action="reply" data-post-id="${escapeHtml(post.id)}">↩ Відповісти</button>${reactions}</div></article>`;
         }
         function renderModernCommunityFeed() {
             const feed = document.getElementById('modernCommunityFeed');
@@ -165,7 +231,7 @@ import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
             const user = Auth.isAuthenticated() ? Auth._user : null;
             const profile = getProfile();
             const topicOptions = MODERN_COMMUNITY_CATEGORIES.flatMap(category => category.topics.map(topic => `<option value="${category.id}:${topic.id}">${category.title} · ${topic.title}</option>`)).join('');
-            panel.innerHTML = `<section class="modern-community-page"><div class="modern-community-hero"><div><span class="modern-community-eyebrow">VAKDAB COMMUNITY</span><h1>Місце, де аніме оживає в розмовах</h1><p>Обирай категорію, заходь у свою тему та спілкуйся в окремій групі без зайвого шуму.</p><button type="button" class="modern-community-categories-button" data-community-view="categories">⌘ Категорії <span>Переглянути всі розділи</span></button></div><div class="modern-community-hero-art"><span>✦</span><span>◈</span><span>✧</span></div></div>${user ? `<form class="modern-community-composer" id="modernCommunityForm"><div class="modern-community-avatar">${profile.avatar ? `<img src="${escapeHtml(profile.avatar)}" alt="">` : `<span>${escapeHtml((profile.nickname || 'К').slice(0, 1).toUpperCase())}</span>`}</div><div class="modern-community-composer-main"><div id="modernCommunityReplyBanner" class="modern-community-reply-banner" hidden></div><textarea id="modernCommunityComposer" maxlength="1000" rows="2" placeholder="Поділись думкою у вибраній темі..."></textarea><div id="modernCommunityAnimeFields" class="modern-community-anime-fields" hidden><input id="modernCommunityAnimeTitle" type="text" maxlength="120" placeholder="Назва аніме"><input id="modernCommunityAnimeUrl" type="url" placeholder="Посилання на аніме (необов’язково)"><input id="modernCommunityAnimePoster" type="url" placeholder="URL постера (необов’язково)"></div><div id="modernCommunityMediaPreview" class="modern-community-media-preview"></div><div class="modern-community-composer-bottom"><select id="modernCommunityTopicSelect" aria-label="Тема публікації">${topicOptions}</select><div class="modern-community-composer-tools"><button type="button" class="modern-community-tool" data-community-mode="recommend">Рекомендувати аніме</button><label class="modern-community-tool">Фото/відео<input id="modernCommunityMediaInput" type="file" accept="image/*,video/*" multiple hidden></label><button type="submit">Опублікувати</button></div></div></div></form>` : `<div class="modern-community-login"><div><b>Приєднуйся до розмови</b><span>Увійди, щоб створювати публікації та зберігати улюблені обговорення.</span></div><button type="button" id="modernCommunityLogin">Увійти</button></div>`}<div id="modernCommunityHeading" class="modern-community-section-heading"></div><div id="modernCommunityNav"></div><div class="modern-community-feed-heading"><span class="modern-community-eyebrow">TOPIC FEED</span><span class="modern-community-count" id="modernCommunityCount">0 публікацій</span></div><div id="modernCommunityFeed" class="modern-community-feed"><div class="modern-community-empty"><div class="modern-community-empty-icon">◌</div><p>Завантажую стрічку...</p></div></div></section>`;
+            panel.innerHTML = `<section class="modern-community-page"><div class="modern-community-hero"><div><span class="modern-community-eyebrow">VAKDAB COMMUNITY</span><h1>Місце, де аніме оживає в розмовах</h1><p>Обирай категорію, заходь у свою тему та спілкуйся в окремій групі без зайвого шуму.</p><button type="button" class="modern-community-categories-button" data-community-view="categories">⌘ Категорії <span>Переглянути всі розділи</span></button></div><div class="modern-community-hero-art"><span>✦</span><span>◈</span><span>✧</span></div></div>${user ? `<form class="modern-community-composer" id="modernCommunityForm"><div class="modern-community-avatar">${modernCommunityAvatarMarkup({ ...profile, nickname: profile.nickname || user.displayName || 'К', stickers: Storage.getStickers() })}</div><div class="modern-community-composer-main"><div id="modernCommunityReplyBanner" class="modern-community-reply-banner" hidden></div><textarea id="modernCommunityComposer" maxlength="1000" rows="2" placeholder="Поділись думкою у вибраній темі..."></textarea><div id="modernCommunityAnimeFields" class="modern-community-anime-fields" hidden><input id="modernCommunityAnimeTitle" type="text" maxlength="120" placeholder="Назва аніме"><input id="modernCommunityAnimeUrl" type="url" placeholder="Посилання на аніме (необов’язково)"><input id="modernCommunityAnimePoster" type="url" placeholder="URL постера (необов’язково)"></div><div id="modernCommunityMediaPreview" class="modern-community-media-preview"></div><div class="modern-community-composer-bottom"><select id="modernCommunityTopicSelect" aria-label="Тема публікації">${topicOptions}</select><div class="modern-community-composer-tools"><button type="button" class="modern-community-tool" data-community-mode="recommend">Рекомендувати аніме</button><label class="modern-community-tool">Фото/відео<input id="modernCommunityMediaInput" type="file" accept="image/*,video/*" multiple hidden></label><button type="submit">Опублікувати</button></div></div></div></form>` : `<div class="modern-community-login"><div><b>Приєднуйся до розмови</b><span>Увійди, щоб створювати публікації та зберігати улюблені обговорення.</span></div><button type="button" id="modernCommunityLogin">Увійти</button></div>`}<div id="modernCommunityHeading" class="modern-community-section-heading"></div><div id="modernCommunityNav"></div><div class="modern-community-feed-heading"><span class="modern-community-eyebrow">TOPIC FEED</span><span class="modern-community-count" id="modernCommunityCount">0 публікацій</span></div><div id="modernCommunityFeed" class="modern-community-feed"><div class="modern-community-empty"><div class="modern-community-empty-icon">◌</div><p>Завантажую стрічку...</p></div></div></section>`;
             renderModernCommunityNavigation();
             panel.addEventListener('click', event => {
                 const categoryButton = event.target.closest('[data-community-category]');
@@ -179,9 +245,9 @@ import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
             document.querySelectorAll('[data-community-mode]').forEach(button => button.addEventListener('click', () => { modernCommunityComposerMode = modernCommunityComposerMode === 'recommend' ? 'text' : 'recommend'; const fields = document.getElementById('modernCommunityAnimeFields'); if (fields) fields.hidden = modernCommunityComposerMode !== 'recommend'; button.classList.toggle('is-active', modernCommunityComposerMode === 'recommend'); }));
             document.getElementById('modernCommunityMediaInput')?.addEventListener('change', event => { modernCommunityMediaFiles = Array.from(event.target.files || []).slice(0, 4); const preview = document.getElementById('modernCommunityMediaPreview'); if (preview) preview.innerHTML = modernCommunityMediaFiles.map(file => `<span>${file.type.startsWith('video/') ? 'Відео' : 'Фото'}: ${escapeHtml(file.name)}</span>`).join(''); });
             document.getElementById('modernCommunityReplyBanner')?.addEventListener('click', event => { if (event.target.closest('[data-community-cancel-reply]')) { modernCommunityReplyTo = null; event.currentTarget.hidden = true; event.currentTarget.innerHTML = ''; } });
-            document.getElementById('modernCommunityForm')?.addEventListener('submit', async event => { event.preventDefault(); const textarea = document.getElementById('modernCommunityComposer'); const text = textarea?.value.trim(); const selected = document.getElementById('modernCommunityTopicSelect')?.value || 'anime:episodes'; const [communityCategoryId, communityTopicId] = selected.split(':'); const animeTitle = document.getElementById('modernCommunityAnimeTitle')?.value.trim(); const animeUrl = document.getElementById('modernCommunityAnimeUrl')?.value.trim(); const animePoster = document.getElementById('modernCommunityAnimePoster')?.value.trim(); if ((!text && !animeTitle && !modernCommunityMediaFiles.length) || !firebaseInitialized || !db) return showToast('Додай текст, рекомендацію або медіа'); const button = event.currentTarget.querySelector('button[type="submit"]'); button.disabled = true; try { const { addDoc, collection, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js'); const media = []; for (const file of modernCommunityMediaFiles) { const formData = new FormData(); formData.append('file', file); formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET); const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${file.type.startsWith('video/') ? 'video' : 'image'}/upload`, { method: 'POST', body: formData }); const result = await response.json(); if (result.secure_url) media.push({ url: result.secure_url, type: file.type.startsWith('video/') ? 'video' : 'image' }); } const data = { uid: user.uid, authorName: profile.nickname || user.displayName || 'Аніме ентузіаст', authorPhoto: profile.avatar || user.photoURL || '', text, type: modernCommunityComposerMode === 'recommend' ? 'anime' : media.length ? 'media' : 'text', communityCategory: modernCommunityComposerMode === 'recommend' ? 'recommend' : 'discussion', communityCategoryId, communityTopicId, media, createdAt: serverTimestamp() }; if (animeTitle) data.animeData = { title: animeTitle, url: animeUrl, poster: animePoster, synopsis: '' }; if (modernCommunityReplyTo) data.replyTo = { id: modernCommunityReplyTo.id, authorName: modernCommunityReplyTo.authorName, text: modernCommunityReplyTo.text }; await addDoc(collection(db, 'community_posts'), data); textarea.value = ''; modernCommunityMediaFiles = []; modernCommunityReplyTo = null; modernCommunityComposerMode = 'text'; document.getElementById('modernCommunityMediaInput').value = ''; document.getElementById('modernCommunityMediaPreview').innerHTML = ''; document.getElementById('modernCommunityAnimeFields').hidden = true; document.getElementById('modernCommunityAnimeTitle').value = ''; document.getElementById('modernCommunityAnimeUrl').value = ''; document.getElementById('modernCommunityAnimePoster').value = ''; document.getElementById('modernCommunityReplyBanner').hidden = true; showToast('Публікацію додано'); } catch (error) { console.error('Modern community post failed:', error); showToast('Не вдалося опублікувати'); } finally { button.disabled = false; } });
+            document.getElementById('modernCommunityForm')?.addEventListener('submit', async event => { event.preventDefault(); const textarea = document.getElementById('modernCommunityComposer'); const text = textarea?.value.trim(); const selected = document.getElementById('modernCommunityTopicSelect')?.value || 'anime:episodes'; const [communityCategoryId, communityTopicId] = selected.split(':'); const animeTitle = document.getElementById('modernCommunityAnimeTitle')?.value.trim(); const animeUrl = document.getElementById('modernCommunityAnimeUrl')?.value.trim(); const animePoster = document.getElementById('modernCommunityAnimePoster')?.value.trim(); if ((!text && !animeTitle && !modernCommunityMediaFiles.length) || !firebaseInitialized || !db) return showToast('Додай текст, рекомендацію або медіа'); const button = event.currentTarget.querySelector('button[type="submit"]'); button.disabled = true; try { const { addDoc, collection, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js'); const media = []; for (const file of modernCommunityMediaFiles) { const formData = new FormData(); formData.append('file', file); formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET); const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${file.type.startsWith('video/') ? 'video' : 'image'}/upload`, { method: 'POST', body: formData }); const result = await response.json(); if (result.secure_url) media.push({ url: result.secure_url, type: file.type.startsWith('video/') ? 'video' : 'image' }); } const data = { uid: user.uid, authorName: profile.nickname || user.displayName || 'Аніме ентузіаст', authorPhoto: profile.avatar || user.photoURL || '', authorAvatarVideo: profile.avatarVideo || '', authorAvatarVideoSettings: profile.avatarVideoSettings || {}, authorStickers: compactNickStickerData(Storage.getStickers()), text, type: modernCommunityComposerMode === 'recommend' ? 'anime' : media.length ? 'media' : 'text', communityCategory: modernCommunityComposerMode === 'recommend' ? 'recommend' : 'discussion', communityCategoryId, communityTopicId, media, createdAt: serverTimestamp() }; if (animeTitle) data.animeData = { title: animeTitle, url: animeUrl, poster: animePoster, synopsis: '' }; if (modernCommunityReplyTo) data.replyTo = { id: modernCommunityReplyTo.id, authorName: modernCommunityReplyTo.authorName, text: modernCommunityReplyTo.text }; await addDoc(collection(db, 'community_posts'), data); textarea.value = ''; modernCommunityMediaFiles = []; modernCommunityReplyTo = null; modernCommunityComposerMode = 'text'; document.getElementById('modernCommunityMediaInput').value = ''; document.getElementById('modernCommunityMediaPreview').innerHTML = ''; document.getElementById('modernCommunityAnimeFields').hidden = true; document.getElementById('modernCommunityAnimeTitle').value = ''; document.getElementById('modernCommunityAnimeUrl').value = ''; document.getElementById('modernCommunityAnimePoster').value = ''; document.getElementById('modernCommunityReplyBanner').hidden = true; showToast('Публікацію додано'); } catch (error) { console.error('Modern community post failed:', error); showToast('Не вдалося опублікувати'); } finally { button.disabled = false; } });
             if (modernCommunityUnsub) modernCommunityUnsub();
-            try { const q = query(collection(db, 'community_posts'), limit(60)); modernCommunityUnsub = onSnapshot(q, snapshot => { modernCommunityPosts = snapshot.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)); renderModernCommunityFeed(); }, () => { const feed = document.getElementById('modernCommunityFeed'); if (feed) feed.innerHTML = `<div class="modern-community-empty"><div class="modern-community-empty-icon">✦</div><h3>Спільнота тільки починається</h3><p>Поки тут тихо. Увійди та створи перше обговорення про своє улюблене аніме.</p></div>`; }); } catch (error) { console.warn('Modern community subscription failed:', error); renderModernCommunityFeed(); }
+            try { const q = query(collection(db, 'community_posts'), limit(60)); modernCommunityUnsub = onSnapshot(q, snapshot => { modernCommunityPosts = snapshot.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)); renderModernCommunityFeed(); void loadModernCommunityAuthorProfiles(modernCommunityPosts); }, () => { const feed = document.getElementById('modernCommunityFeed'); if (feed) feed.innerHTML = `<div class="modern-community-empty"><div class="modern-community-empty-icon">✦</div><h3>Спільнота тільки починається</h3><p>Поки тут тихо. Увійди та створи перше обговорення про своє улюблене аніме.</p></div>`; }); } catch (error) { console.warn('Modern community subscription failed:', error); renderModernCommunityFeed(); }
         }
         export function initCommunity() {
             initModernCommunity();
@@ -530,6 +596,9 @@ import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
                     uid: user.uid,
                     authorName: p.nickname || user.displayName || user.email?.split('@')[0] || 'Аніматор',
                     authorPhoto: p.avatar || user.photoURL || '',
+                    authorAvatarVideo: p.avatarVideo || '',
+                    authorAvatarVideoSettings: p.avatarVideoSettings || {},
+                    authorStickers: compactNickStickerData(Storage.getStickers()),
                     watermark: (p.nickname || user.displayName || user.email?.split('@')[0] || 'VakDab'),
                     createdAt: serverTimestamp()
                 };
@@ -631,10 +700,21 @@ import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
                     }
                 }
 
-                const gifCls = isGifUrl(m.authorPhoto) ? ' class="is-gif"' : '';
-                const av = m.authorPhoto
-                    ? `<img src="${m.authorPhoto}" alt=""${gifCls} onerror="this.style.display='none'">`
-                    : `<span>${(m.authorName || '?')[0].toUpperCase()}</span>`;
+                const identity = {
+                    nickname: m.authorName || 'Аніматор',
+                    avatar: m.authorPhoto || '',
+                    avatarVideo: m.authorAvatarVideo || '',
+                    avatarVideoSettings: m.authorAvatarVideoSettings || {},
+                    stickers: m.authorStickers || {}
+                };
+                const activeAvatar = identity.avatarVideo || identity.avatar;
+                const av = activeAvatar
+                    ? profileMediaMarkup(activeAvatar, `com-msg-avatar-media${isGifUrl(activeAvatar) ? ' is-gif' : ''}`, 'avatar', identity.avatarVideoSettings)
+                    : `<span>${(identity.nickname || '?')[0].toUpperCase()}</span>`;
+                const nickBadge = identity.stickers?.nickBadge
+                    ? renderStickerFaceByKey(identity.stickers, identity.stickers.nickBadge)
+                    : '';
+                const nameHtml = `<span>${escapeHtml(identity.nickname)}</span>${nickBadge ? `<span class="com-msg-nick-badge" title="Наліпка профілю">${nickBadge}</span>` : ''}`;
                 const timeStr = date ? date.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '';
                 const typeTag = m.type && COM_TYPE_LABELS[m.type]
                     ? `<div class="com-msg-type">${COM_TYPE_ICONS[m.type] || ''}${COM_TYPE_LABELS[m.type]}</div>`
@@ -717,7 +797,7 @@ import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
                 html += `<div class="com-msg ${isMe ? 'mine' : ''}" data-id="${m.id}">
                     <div class="com-msg-avatar">${av}</div>
                     <div class="com-msg-col">
-                        <div class="com-msg-name">${m.authorName || 'Аніматор'}</div>
+                        <div class="com-msg-name">${nameHtml}</div>
                         <div class="com-msg-bubble">
                             ${bodyHtml}
                         </div>

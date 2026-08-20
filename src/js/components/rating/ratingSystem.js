@@ -2,12 +2,45 @@ import { Auth } from '../../core/compat/auth.js';
 import { Storage } from '../../core/compat/storage.js';
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
+import { renderStickerFaceByKey } from '../pages/stickersLegacy.js?v=20260820-profile-media-v3';
+
+function escapeRatingHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+}
+
+function isVideoUrl(url) {
+    return typeof url === 'string' && (/\/video\/upload\//i.test(url) || /\.(mp4|webm|mov|m4v|ogv)(?:[?#]|$)/i.test(url));
+}
+
+function ratingProfileMediaMarkup(profile, className) {
+    const url = profile.avatarVideo || profile.avatar || '';
+    if (!url) return `<span>${escapeRatingHtml((profile.nickname || '?').slice(0, 1).toUpperCase())}</span>`;
+    const safeUrl = escapeRatingHtml(url);
+    if (isVideoUrl(url)) return `<video class="${className}" src="${safeUrl}" autoplay muted loop playsinline preload="metadata" aria-label="Аватарка"></video>`;
+    const gifClass = isGifUrl(url) ? ' is-gif' : '';
+    return `<img class="${className}${gifClass}" src="${safeUrl}" alt="" loading="lazy">`;
+}
+
+function ratingStickerMarkup(profile) {
+    const stickers = profile.stickers || {};
+    const key = typeof stickers.nickBadge === 'string' ? stickers.nickBadge : '';
+    if (!key) return '';
+    const visual = renderStickerFaceByKey(stickers, key);
+    return visual ? `<span class="rg-nick-badge" title="Наліпка профілю">${visual}</span>` : '';
+}
+
+function ratingNameMarkup(profile, suffix = '') {
+    return `<span class="rg-profile-name-row"><span>${escapeRatingHtml(profile.nickname || 'Гість')}</span>${ratingStickerMarkup(profile)}${suffix}</span>`;
+}
 
 function getProfile() {
     const profile = Storage.getProfile() || {};
     return {
         nickname: typeof profile.nickname === 'string' && profile.nickname.trim() ? profile.nickname.trim() : 'Гість',
-        avatar: typeof profile.avatar === 'string' ? profile.avatar : ''
+        avatar: typeof profile.avatar === 'string' ? profile.avatar : '',
+        avatarVideo: typeof profile.avatarVideo === 'string' ? profile.avatarVideo : '',
+        avatarVideoSettings: profile.avatarVideoSettings || {},
+        stickers: Storage.getStickers() || {}
     };
 }
 
@@ -392,7 +425,7 @@ function isGifUrl(url) {
                         document.body.classList.add('community-active');
                         const nav = document.getElementById('bottomNav');
                         if (nav) nav.classList.add('hidden-nav');
-                        import('../community/legacyCommunity.js')
+                        import('../community/legacyCommunity.js?v=20260820-profile-media-v3')
                             .then(({ initCommunity }) => {
                                 initCommunity();
                                 setTimeout(() => {
@@ -451,17 +484,14 @@ function isGifUrl(url) {
             const earnedIds  = new Set(ACHIEVEMENTS.filter(a => achStats[a.field] >= a.need).map(a => a.id));
             const xpProg     = getXPProgress(totalXP);
 
-            const avatarGifClass = isGifUrl(profile.avatar) ? ' class="is-gif"' : '';
-            const avHtml = profile.avatar
-                ? `<img src="${profile.avatar}" alt=""${avatarGifClass}>`
-                : `<span>${(profile.nickname || '?')[0].toUpperCase()}</span>`;
+            const avHtml = ratingProfileMediaMarkup(profile, 'rg-stats-avatar-media');
 
             statsEl.innerHTML = `
                 <div class="rg-my-stats">
                     <div class="rg-stats-top">
                         <div class="rg-stats-avatar">${avHtml}</div>
                         <div>
-                            <div class="rg-stats-name">${profile.nickname || 'Гість'}</div>
+                            <div class="rg-stats-name">${ratingNameMarkup(profile)}</div>
                             <div class="rg-stats-rank-badge" style="background:var(--accent);color:var(--accent-text);">${rankInfo.icon || ''}${rankInfo.label} · Lv.${xpProg.level}</div>
                         </div>
                     </div>
@@ -519,15 +549,14 @@ function isGifUrl(url) {
                 const profile = getProfile();
                 const xp = calcTotalXP();
                 const lv = getLevel(xp);
-                const gifCls = isGifUrl(profile.avatar) ? ' class="is-gif"' : '';
-                const av = profile.avatar ? `<img src="${profile.avatar}" alt=""${gifCls}>` : `<span>${(profile.nickname||'?')[0].toUpperCase()}</span>`;
+                const av = ratingProfileMediaMarkup(profile, 'rg-lb-avatar-media');
                 lb.innerHTML = `
                     <div class="rg-lb-list">
                         <div class="rg-lb-item is-me">
                             <div class="rg-lb-num" style="color:var(--accent);font-weight:800;">#1</div>
                             <div class="rg-lb-avatar">${av}</div>
                             <div class="rg-lb-info">
-                                <div class="rg-lb-name">${profile.nickname||'Ти'} <span style="font-size:9px;color:var(--accent);font-weight:700;">YOU</span></div>
+                                <div class="rg-lb-name">${ratingNameMarkup(profile, '<span class="rg-you-badge">YOU</span>')}</div>
                                 <div class="rg-lb-rank">Lv.${lv}</div>
                             </div>
                             <div class="rg-lb-score">${xp} <span class="unit">XP</span></div>
@@ -581,8 +610,11 @@ function isGifUrl(url) {
                         const data = d.data();
                         arr.push({
                             uid: d.id,
-                            name: data.profile?.nickname || data.profile?.name || 'Аніматор',
+                            nickname: data.profile?.nickname || data.profile?.name || 'Аніматор',
                             avatar: data.profile?.avatar || '',
+                            avatarVideo: data.profile?.avatarVideo || '',
+                            avatarVideoSettings: data.profile?.avatarVideoSettings || {},
+                            stickers: data.stickers || {},
                             episodes: Array.isArray(data.history) ? data.history.length : 0,
                             minutes: Math.floor((data.watchTime || 0) / 60),
                             bookmarks: Array.isArray(data.bookmarks) ? data.bookmarks.length : 0,
@@ -629,12 +661,11 @@ function isGifUrl(url) {
                 const cls    = ['p2', 'p1', 'p3'];
                 html += '<div class="rg-podium">';
                 order.forEach((u, i) => {
-                    const gifCls = isGifUrl(u.avatar) ? ' class="is-gif"' : '';
-                    const av = u.avatar ? `<img src="${u.avatar}" alt=""${gifCls}>` : `<span>${u.name[0].toUpperCase()}</span>`;
+                    const av = ratingProfileMediaMarkup(u, 'rg-podium-avatar-media');
                     html += `<div class="rg-podium-item ${cls[i]}" style="animation-delay:${i*0.08}s">
                         <img class="rg-podium-badge" src="${TOP_BADGES[cls[i]]}" alt="Топ ${cls[i] === 'p1' ? '1' : cls[i] === 'p2' ? '2' : '3'}" loading="lazy">
                         <div class="rg-podium-avatar">${av}</div>
-                        <div class="rg-podium-name">${u.name}</div>
+                        <div class="rg-podium-name">${ratingNameMarkup(u)}</div>
                         <div class="rg-podium-score">${cfg.getVal(u)} ${cfg.unit}</div>
                         <div class="rg-podium-bar"></div>
                     </div>`;
@@ -645,14 +676,13 @@ function isGifUrl(url) {
             html += '<div class="rg-lb-list">';
             sorted.slice(3).forEach((u, i) => {
                 const isMe = u.uid === myUid;
-                const gifCls = isGifUrl(u.avatar) ? ' class="is-gif"' : '';
-                const av   = u.avatar ? `<img src="${u.avatar}" alt=""${gifCls}>` : `<span>${u.name[0].toUpperCase()}</span>`;
+                const av   = ratingProfileMediaMarkup(u, 'rg-lb-avatar-media');
                 const ri   = getUserRankInfo(u.episodes, u.minutes);
                 html += `<div class="rg-lb-item ${isMe ? 'is-me' : ''}" style="animation-delay:${Math.min(i*0.02, 0.4)}s">
                     <div class="rg-lb-num">${i + 4}</div>
                     <div class="rg-lb-avatar">${av}</div>
                     <div class="rg-lb-info">
-                        <div class="rg-lb-name">${u.name}${isMe ? ' <span style="font-size:9px;color:var(--accent);font-weight:700;">YOU</span>' : ''}</div>
+                        <div class="rg-lb-name">${ratingNameMarkup(u, isMe ? '<span class="rg-you-badge">YOU</span>' : '')}</div>
                         <div class="rg-lb-rank" style="color:${ri.color}">Lv.${u.level} · ${ri.label}</div>
                     </div>
                     <div class="rg-lb-score">${cfg.getVal(u)} <span class="unit">${cfg.unit}</span></div>

@@ -23,14 +23,14 @@ import { Auth } from '../core/compat/auth.js';
 import { Storage } from '../core/compat/storage.js';
 import { Router } from '../core/compat/router.js';
 import { LampaPlayer } from '../components/player/lampaPlayer.js';
-import { initCommunity } from '../components/community/legacyCommunity.js';
+import { initCommunity } from '../components/community/legacyCommunity.js?v=20260820-profile-media-v3';
 import { initBottomNav } from '../components/navigation/bottomNav.js';
 import { renderStickerFaceByKey } from '../components/pages/stickersLegacy.js';
 import { renderSchedulePage } from '../components/pages/schedule.js';
 import { renderFilterPage, applyFilters } from '../components/pages/filterPage.js';
 import { buildHeroBanner } from '../components/home/heroBanner.js';
 import { renderProfilePage } from '../components/pages/profileLegacy.js';
-import { calcTotalXP, getLevel, DailyStats, ACHIEVEMENTS, getUserRankInfo, initRatingPage, calculateBaseXP, getXPForLevel, getXPProgress, loadRatingPage, loadRatingList } from '../components/rating/ratingSystem.js?v=20260819-rating-community-fix1';
+import { calcTotalXP, getLevel, DailyStats, ACHIEVEMENTS, getUserRankInfo, initRatingPage, calculateBaseXP, getXPForLevel, getXPProgress, loadRatingPage, loadRatingList } from '../components/rating/ratingSystem.js?v=20260820-profile-media-v3';
 import {
     playerPageAnime, playerPageAnimeuaSeasons, externalSourceCache, playerPageCurrentSeason, playerPageCurrentDub, playerPageCurrentSource, playerPageIsOpen,
     setPlayerPageAnimeuaSeasons, setPlayerPageAnime, setPlayerPageCurrentSeason, setPlayerPageCurrentDub, setPlayerPageCurrentSource,
