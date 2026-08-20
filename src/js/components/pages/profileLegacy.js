@@ -4,8 +4,8 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-banner-mobile-v3';
-import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260820-banner-mobile-v3';
+} from '../../legacy/app-legacy.js?v=20260820-banner-mobile-v4';
+import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260820-banner-mobile-v4';
 
 export function renderProfilePage() {
             const container = document.getElementById('profilePageContainer');
