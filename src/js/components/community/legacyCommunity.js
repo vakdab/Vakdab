@@ -5,7 +5,7 @@ import {
     ACHIEVEMENTS, Auth, DailyStats, Router, calcTotalXP, escapeHtml,
     getLevel, isGifUrl, openPlayerPage, profileMediaMarkup, showToast
 } from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix4';
-import { getProfile } from '../pages/settingsLegacy.js?v=20260820-appearance-cleanup-v1';
+import { getProfile } from '../pages/settingsLegacy.js?v=20260820-banner-original-v1';
 import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
 
         function _renderReplyBanner() {

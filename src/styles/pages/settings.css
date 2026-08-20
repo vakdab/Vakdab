@@ -756,31 +756,26 @@
             height: 100%;
             object-fit: cover;
             background: transparent;
-            opacity: 0.6;
+            opacity: 1;
             filter: none;
             transition: opacity .3s ease, filter .3s ease;
         }
         .profile-banner:hover img,
         .profile-banner:hover video {
-            opacity: 0.75;
+            opacity: 1;
         }
         /* GIF autoplay: no grayscale on GIF banners */
         .profile-banner.is-gif img,
         .profile-banner.is-gif video {
             filter: none;
-            opacity: 0.65;
+            opacity: 1;
         }
         .profile-banner.is-gif:hover img,
         .profile-banner.is-gif:hover video {
-            opacity: 0.85;
+            opacity: 1;
         }
         .profile-banner-media,
         .profile-avatar-media { transform-origin: center center; will-change: transform; }
-        .profile-banner-overlay {
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.2) 0%, rgba(var(--accent-rgb), 0.7) 100%);
-        }
         .profile-banner-edit {
             position: absolute;
             top: 10px;

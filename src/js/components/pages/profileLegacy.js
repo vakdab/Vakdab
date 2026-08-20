@@ -5,7 +5,7 @@ import {
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
 } from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix4';
-import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260820-appearance-cleanup-v1';
+import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260820-banner-original-v1';
 
 export function renderProfilePage() {
             const container = document.getElementById('profilePageContainer');
@@ -35,7 +35,6 @@ export function renderProfilePage() {
                 ${profile.bannerVideo ? profileMediaMarkup(profile.bannerVideo, 'profile-banner-media', 'video banner', profile.bannerVideoSettings) : (profile.banner ? `<img class="profile-banner-media" src="${escapeHtml(profile.banner)}" alt="banner" onerror="this.style.display='none'">` : '')}
                 ${profile.atmosphere && profile.atmosphere !== 'none' ? `<div class="atmosphere-${profile.atmosphere}"></div>` : ''}
                 ${profile.effect && profile.effect !== 'none' ? buildEffectOverlayHtml(profile.effect) : ''}
-                <div class="profile-banner-overlay"></div>
               </div>
               <div class="profile-info">
                 <div class="profile-avatar-wrap${decorationClass}">

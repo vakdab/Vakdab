@@ -65,7 +65,6 @@ import {
                   ${profile.bannerVideo ? profileMediaMarkup(profile.bannerVideo, 'preview-banner-img', 'video banner', profile.bannerVideoSettings) : (profile.banner ? profileMediaMarkup(profile.banner, 'preview-banner-img', 'banner') : '')}
                   ${profile.atmosphere && profile.atmosphere !== 'none' ? `<div class="atmosphere-${profile.atmosphere}"></div>` : ''}
                   ${profile.effect && profile.effect !== 'none' ? buildEffectOverlayHtml(profile.effect) : ''}
-                  <div class="profile-banner-overlay"></div>
                 </div>
                 <div class="settings-preview-info">
                   <div class="settings-preview-avatar-wrap${decorationClass}"><div class="profile-avatar">${avatarMarkup}</div></div>
