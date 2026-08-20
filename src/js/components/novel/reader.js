@@ -1,4 +1,4 @@
-import { fetchRanobeChapter, translateNovelParagraphs } from '../../services/api/novel.js?v=20260818-ranobe-v9';
+import { fetchRanobeChapter, translateNovelParagraphs } from '../../services/api/novel.js?v=20260820-ranobe-prefetch-v10';
 
 const escapeHtml = value => String(value ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

@@ -1086,3 +1086,42 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     .home-catalog-card:hover .home-catalog-card__poster img { transform: none; filter: none; }
     .home-catalog-card:hover .home-catalog-card__play { opacity: 0; transform: translateY(4px); }
 }
+
+
+/* One-tap reader opening state for manga and ranobe cards. */
+.home-catalog-card[aria-busy="true"] {
+    cursor: progress;
+    pointer-events: none;
+    transform: none;
+}
+.home-catalog-card[aria-busy="true"] .home-catalog-card__poster::before {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(8, 9, 14, .12), rgba(8, 9, 14, .7));
+}
+.home-catalog-card[aria-busy="true"] .home-catalog-card__poster::after {
+    content: "";
+    position: absolute;
+    z-index: 3;
+    top: 50%;
+    left: 50%;
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid rgba(255, 255, 255, .3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 5px 18px rgba(0, 0, 0, .35);
+    transform: translate(-50%, -50%);
+    animation: homeCatalogReaderSpin .75s linear infinite;
+}
+.home-catalog-card[aria-busy="true"] .home-catalog-card__play {
+    opacity: 0;
+}
+@keyframes homeCatalogReaderSpin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .home-catalog-card[aria-busy="true"] .home-catalog-card__poster::after { animation-duration: 1.5s; }
+}

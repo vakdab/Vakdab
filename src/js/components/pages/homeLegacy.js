@@ -9,7 +9,7 @@ import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
 import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260818-honey-type-filter-v1';
-import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } from '../../services/api/novel.js?v=20260818-ranobe-v9';
+import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } from '../../services/api/novel.js?v=20260820-ranobe-prefetch-v10';
 
         // Hikka may remain pending behind corsproxy for 25+ seconds. The catalog
         // shell must stay interactive so users can switch to Honey Manga or
@@ -452,6 +452,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         export const HONEY_SEARCH_PATTERN = '/v2/manga/pattern?query=';
         export const honeySearchCache = new Map();
         export const honeyReaderCache = new Map();
+        const honeyReaderPendingCache = new Map();
         export let honeyAvailabilityMap = null;
         export let honeyAvailabilityMapPromise = null;
         export const HONEY_CATALOG_READABLE_FALLBACK = 0;
@@ -646,43 +647,55 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (!mangaId || Number(item.chapters || 0) <= 0) return item;
             const cacheKey = String(mangaId);
             if (honeyReaderCache.has(cacheKey)) return { ...item, ...honeyReaderCache.get(cacheKey) };
-            try {
-                const payload = await fetchHoneyJson('/v2/chapter/cursor-list', {
+            if (honeyReaderPendingCache.has(cacheKey)) {
+                const pendingReader = await honeyReaderPendingCache.get(cacheKey);
+                return { ...item, ...pendingReader };
+            }
+            const pendingReader = (async () => {
+                try {
+                    const payload = await fetchHoneyJson('/v2/chapter/cursor-list', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     // Honey returns newest chapters first. The newest chapter can be
                     // monetized while older chapters remain public, so pageSize: 1
                     // incorrectly sent users straight to the paywall.
                     body: JSON.stringify({ page: 1, pageSize: 100, mangaId: String(mangaId), sortOrder: 'DESC' })
-                });
-                const chapters = Array.isArray(payload?.data) ? payload.data : [];
-                const readingOrder = sortHoneyChaptersForReading(chapters);
-                const publicFirst = [
-                    ...readingOrder.filter(entry => entry && entry.isMonetized !== true),
-                    ...readingOrder.filter(entry => entry && entry.isMonetized === true)
-                ];
-                let chapter = null;
-                // A chapter may be marked public but still have no uploaded pages.
-                // Probe the frames manifest and skip empty chapters before routing.
-                for (const candidate of publicFirst.slice(0, 12)) {
-                    if (!candidate?.id) continue;
-                    try {
-                        const frames = await fetchHoneyJson(`/v2/chapter/frames/${encodeURIComponent(candidate.id)}/${encodeURIComponent(mangaId)}`);
-                        if (hasHoneyPageResources(frames)) { chapter = candidate; break; }
-                    } catch { /* Try the next chapter; the reader will report paywall only after all candidates fail. */ }
+                    });
+                    const chapters = Array.isArray(payload?.data) ? payload.data : [];
+                    const readingOrder = sortHoneyChaptersForReading(chapters);
+                    const publicFirst = [
+                        ...readingOrder.filter(entry => entry && entry.isMonetized !== true),
+                        ...readingOrder.filter(entry => entry && entry.isMonetized === true)
+                    ];
+                    let chapter = null;
+                    // A chapter may be marked public but still have no uploaded pages.
+                    // Probe the frames manifest and skip empty chapters before routing.
+                    for (const candidate of publicFirst.slice(0, 12)) {
+                        if (!candidate?.id) continue;
+                        try {
+                            const frames = await fetchHoneyJson(`/v2/chapter/frames/${encodeURIComponent(candidate.id)}/${encodeURIComponent(mangaId)}`);
+                            if (hasHoneyPageResources(frames)) { chapter = candidate; break; }
+                        } catch { /* Try the next chapter; the reader will report paywall only after all candidates fail. */ }
+                    }
+                    chapter ||= selectHoneyReaderChapter(chapters);
+                    return chapter?.id ? {
+                        readerUrl: `${HONEY_WEB}/read/${chapter.id}/${mangaId}`,
+                        honeyChapterId: chapter.id,
+                        readerTitle: item.title || 'Манґа',
+                        readerSource: 'honey-manga.com.ua'
+                    } : { readerUrl: '', honeyChapterId: '' };
+                } catch (error) {
+                    console.warn('Honey Manga chapter lookup failed:', error);
+                    return { readerUrl: '', honeyChapterId: '' };
                 }
-                chapter ||= selectHoneyReaderChapter(chapters);
-                const reader = chapter?.id ? {
-                    readerUrl: `${HONEY_WEB}/read/${chapter.id}/${mangaId}`,
-                    honeyChapterId: chapter.id,
-                    readerTitle: item.title || 'Манґа',
-                    readerSource: 'honey-manga.com.ua'
-                } : { readerUrl: '', honeyChapterId: '' };
+            })();
+            honeyReaderPendingCache.set(cacheKey, pendingReader);
+            try {
+                const reader = await pendingReader;
                 honeyReaderCache.set(cacheKey, reader);
                 return { ...item, ...reader };
-            } catch (error) {
-                console.warn('Honey Manga chapter lookup failed:', error);
-                return item;
+            } finally {
+                honeyReaderPendingCache.delete(cacheKey);
             }
         }
 
@@ -970,7 +983,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 card.dataset.bound = '1';
                 if (!card.dataset.readerTitle) card.dataset.readerTitle = card.getAttribute('aria-label') || '';
                 const open = async () => {
-                    if (!card.dataset.url) return;
+                    if (!card.dataset.url || card.dataset.opening === '1') return;
                     const cardTitle = card.dataset.readerTitle || card.getAttribute('aria-label') || 'Манґа';
                     if (homeCatalogMode === 'novel' && card.dataset.readerUrl) {
                         const item = homeCatalogItems.find(entry => String(entry.url || '') === String(card.dataset.url));
@@ -983,26 +996,39 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                         return;
                     }
                     if (homeCatalogMode === 'manga' && card.dataset.honeyId) {
+                        card.dataset.opening = '1';
                         card.setAttribute('aria-busy', 'true');
                         try {
                             const item = homeCatalogItems.find(entry => String(entry.honeyId || entry.honeyTitleId) === String(card.dataset.honeyId)) || { honeyId: card.dataset.honeyId, honeyTitleId: card.dataset.honeyId, title: cardTitle, chapters: 1 };
                             const resolved = await resolveHoneyReader({ ...item, honeyTitleId: card.dataset.honeyId, chapters: Math.max(1, Number(item.chapters || 1)) });
-                            if (resolved.readerUrl) { Router.goTo('manga', { url: resolved.readerUrl, title: cardTitle }); return; }
-                        } finally { card.removeAttribute('aria-busy'); }
+                            if (resolved.readerUrl) {
+                                card.dataset.readerUrl = resolved.readerUrl;
+                                Router.goTo('manga', { url: resolved.readerUrl, title: cardTitle });
+                                return;
+                            }
+                        } finally {
+                            card.removeAttribute('aria-busy');
+                            delete card.dataset.opening;
+                        }
                         showToast('Розділи цього тайтлу ще не готові');
                         return;
                     }
                     if (homeCatalogMode === 'novel') {
+                        card.dataset.opening = '1';
                         card.setAttribute('aria-busy', 'true');
                         try {
                             const item = homeCatalogItems.find(entry => String(entry.url || '') === String(card.dataset.url)) || { url: card.dataset.url, title: cardTitle, originalTitle: cardTitle };
                             const resolved = await resolveRanobeReader(item);
                             if (resolved.readerUrl) {
+                                card.dataset.readerUrl = resolved.readerUrl;
                                 const poster = item?.images?.jpg?.large_image_url || item?.poster || '';
                                 Router.goTo('novel', { url: resolved.readerUrl, title: cardTitle, poster });
                                 return;
                             }
-                        } finally { card.removeAttribute('aria-busy'); }
+                        } finally {
+                            card.removeAttribute('aria-busy');
+                            delete card.dataset.opening;
+                        }
                         showToast('Для цього тайтлу RanobeLib ще не повернув доступний розділ');
                         return;
                     }
@@ -1063,6 +1089,40 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             </section>`;
         }
 
+        function prefetchHomeCatalogReaderUrls(root) {
+            if (!root || !['manga', 'novel'].includes(homeCatalogMode)) return;
+            const mode = homeCatalogMode;
+            const selector = mode === 'manga'
+                ? '.home-catalog-card[data-honey-id]:not([data-reader-url])'
+                : '.home-catalog-card[data-url]:not([data-reader-url])';
+            const cards = [...root.querySelectorAll(selector)];
+            if (!cards.length) return;
+            let cursor = 0;
+            const worker = async () => {
+                while (cursor < cards.length) {
+                    const card = cards[cursor++];
+                    if (card.dataset.readerUrl) continue;
+                    try {
+                        let resolved;
+                        if (mode === 'manga') {
+                            const honeyId = card.dataset.honeyId;
+                            const item = homeCatalogItems.find(entry => String(entry.honeyId || entry.honeyTitleId) === String(honeyId))
+                                || { honeyId, honeyTitleId: honeyId, title: card.dataset.readerTitle, chapters: 1 };
+                            resolved = await resolveHoneyReader({ ...item, honeyTitleId: honeyId, chapters: Math.max(1, Number(item.chapters || 1)) });
+                        } else {
+                            const url = card.dataset.url;
+                            const item = homeCatalogItems.find(entry => String(entry.url || '') === String(url))
+                                || { url, title: card.dataset.readerTitle, originalTitle: card.dataset.readerTitle };
+                            resolved = await resolveRanobeReader(item);
+                        }
+                        if (resolved?.readerUrl && card.isConnected && homeCatalogMode === mode) card.dataset.readerUrl = resolved.readerUrl;
+                    } catch { /* A later tap can retry unavailable catalog entries. */ }
+                }
+            };
+            const start = () => { void Promise.all(Array.from({ length: Math.min(3, cards.length) }, worker)); };
+            if (typeof window !== 'undefined' && 'requestIdleCallback' in window) window.requestIdleCallback(start, { timeout: 1200 });
+            else setTimeout(start, 0);
+        }
         export function renderHomeCatalogGrid() {
             const grid = document.getElementById('homeCatalogGrid');
             const count = document.getElementById('homeCatalogCount');
@@ -1072,6 +1132,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             grid.classList.toggle('is-list', homeCatalogView === 'list');
             grid.innerHTML = visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Нічого не знайдено за цими параметрами.</div>';
             bindHomeCatalogCards(grid);
+            prefetchHomeCatalogReaderUrls(grid);
             if (!homeCatalogHasMore) {
                 document.getElementById('homeCatalogMoreBtn')?.remove();
             }

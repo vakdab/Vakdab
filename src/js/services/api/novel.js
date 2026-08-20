@@ -9,6 +9,9 @@ const TRANSLATE_ENDPOINT = 'https://translate.googleapis.com/translate_a/single'
 const translationCache = new Map();
 const htmlCache = new Map();
 const ranobeTotalCache = new Map();
+// Keep the in-flight resolver alive after a UI timeout so a background prefetch
+// can finish and make the next card activation immediate.
+const ranobeReaderPendingCache = new Map();
 export const RANOBE_FETCH_TIMEOUT_MS = 10000;
 export const RANOBE_RESOLVE_TIMEOUT_MS = 15000;
 
@@ -492,9 +495,18 @@ async function resolveRanobeReaderInternal(item = {}) {
 
 export async function resolveRanobeReader(item = {}) {
     if (isChapterLink(item.readerUrl)) return { ...item, readerAvailable: true };
+    const cacheKey = [item.url, item.title, item.title_original, item.title_en, item.originalTitle].filter(Boolean).join('|');
     const fallback = { ...item, readerAvailable: false, readerUrl: '' };
+    let pending = ranobeReaderPendingCache.get(cacheKey);
+    if (!pending) {
+        pending = resolveRanobeReaderInternal(item).catch(() => fallback);
+        ranobeReaderPendingCache.set(cacheKey, pending);
+        pending.finally(() => {
+            if (ranobeReaderPendingCache.get(cacheKey) === pending) ranobeReaderPendingCache.delete(cacheKey);
+        });
+    }
     return Promise.race([
-        resolveRanobeReaderInternal(item),
+        pending,
         new Promise(resolve => setTimeout(() => resolve(fallback), RANOBE_RESOLVE_TIMEOUT_MS))
     ]);
 }
