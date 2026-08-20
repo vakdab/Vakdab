@@ -38,6 +38,7 @@
 @import url('./community/modern.css?v=20260817-community-features-v1');
 @import url('./pages/main.css');
 @import url('./player/player-polish.css?v=20260820-player-modern-v1');
+@import url('./player/video-overlay.css?v=20260820-player-video-v1');
 @import url('./pages/design-polish.css?v=20260819-vakdab-polish-v1');
 
 /* Community hierarchy priority overrides */

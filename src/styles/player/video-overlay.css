@@ -1,0 +1,908 @@
+/*
+ * VakDab video block and in-video overlay styles.
+ *
+ * This file intentionally contains only the video frame, poster, top overlay,
+ * playback controls, progress, center play, loading/error states and their
+ * responsive rules. Modal shell, episode selectors and anime information live
+ * in their own player CSS files.
+ */
+
+/* ============== Video and its native custom controls ============== */
+#playerPageModal .player-section { padding: 12px 20px 0; }
+#playerPageModal .player-video-container {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: 220px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: #000;
+    box-shadow: var(--shadow-lg);
+}
+#playerPageModal .player-video-container.active { display: block; }
+#playerPageModal .player-frame-poster {
+    position: absolute;
+    z-index: 3;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #080808;
+    opacity: 1;
+    transition: opacity .22s ease;
+    pointer-events: none;
+}
+#playerPageModal .player-frame-poster.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+#playerPageModal #playerPageVideo,
+#playerPageModal .lampa-player-container { position: absolute; inset: 0; width: 100%; height: 100%; }
+#playerPageModal .lampa-player-container { overflow: hidden; background: #000; }
+#playerPageModal .lampa-player-container video { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
+
+/* topbar над відео — назва аніме, завжди біла з темним підкладом,
+   бо лежить поверх відео (а не поверх фону сайту) */
+#playerPageModal .video-overlay-topbar {
+    position: absolute;
+    z-index: 8;
+    inset: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(0,0,0,.6), transparent);
+    opacity: 1;
+    transition: opacity .25s ease;
+}
+#playerPageModal .video-overlay-topbar .icon-btn {
+    pointer-events: auto;
+    width: 34px;
+    height: 34px;
+    color: #fff;
+    background: rgba(255,255,255,.1);
+    border-color: rgba(255,255,255,.25);
+    backdrop-filter: blur(10px);
+    transition: transform .18s cubic-bezier(.34,1.56,.64,1), background-color .15s ease, border-color .15s ease;
+}
+#playerPageModal .video-overlay-topbar .icon-btn:hover { background: rgba(255,255,255,.2); border-color: rgba(255,255,255,.45); transform: scale(1.08); }
+#playerPageModal .video-overlay-topbar .icon-btn:active { transform: scale(.9); }
+#playerPageModal .video-overlay-left { display: flex; flex-direction: column; gap: 4px; max-width: 72%; }
+#playerPageModal .video-overlay-title {
+    overflow: hidden;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-shadow: 0 1px 6px rgba(0,0,0,.65), 0 0 2px rgba(0,0,0,.5);
+}
+#playerPageModal .video-overlay-episode,
+#playerPageModal .video-overlay-season {
+    padding: 8px 13px;
+    border-radius: 7px;
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.22);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    backdrop-filter: blur(10px);
+}
+#playerPageModal .video-overlay-episode:empty,
+#playerPageModal .video-overlay-season:empty { display: none; }
+#playerPageModal .video-overlay-season { max-width: 28%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+#playerPageModal .video-dub-row {
+    position: absolute;
+    z-index: 8;
+    top: 58px;
+    left: 12px;
+    display: flex !important;
+    gap: 6px;
+    max-width: calc(100% - 24px);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+#playerPageModal .video-dub-row::-webkit-scrollbar { display: none; }
+#playerPageModal .video-dub-row:empty { display: none !important; }
+#playerPageModal .video-dub-row .format-pill {
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 8px;
+    background: rgba(255,255,255,.1);
+    color: #fff;
+    backdrop-filter: blur(8px);
+    transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
+}
+#playerPageModal .video-dub-row .format-pill:hover { background: rgba(255,255,255,.22); transform: translateY(-1px); }
+#playerPageModal .video-dub-row .format-pill.active-format { background: var(--accent); color: #000; border-color: var(--accent); }
+
+/* нижня панель керування — без затемнюючого градієнта поверх відео,
+   іконки/текст завжди білі (лежать на самому відео) */
+#playerPageModal .lp-controls {
+    position: absolute;
+    z-index: 5;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 14px 12px 10px;
+    color: #fff;
+    background: none;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity .25s ease, transform .25s ease;
+}
+#playerPageModal .player-video-container.controls-hidden .lp-controls,
+#playerPageModal .player-video-container.controls-hidden .video-overlay-topbar {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(6px);
+}
+
+#playerPageModal .lp-progress-wrap {
+    position: relative;
+    height: 4px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: rgba(255,255,255,.25);
+    cursor: pointer;
+    transition: height .15s ease;
+}
+#playerPageModal .lp-progress-wrap:hover { height: 7px; }
+#playerPageModal .lp-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    position: relative;
+    transition: width .12s linear;
+}
+#playerPageModal .lp-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -5px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+    transform: translateY(-50%) scale(0);
+    transition: transform .15s ease;
+}
+#playerPageModal .lp-progress-wrap:hover .lp-progress-fill::after { transform: translateY(-50%) scale(1); }
+
+#playerPageModal .lp-bottom-row { display: flex; align-items: center; gap: 6px; }
+#playerPageModal .lp-btn {
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color .15s ease, transform .15s cubic-bezier(.34,1.56,.64,1);
+}
+#playerPageModal .lp-btn:hover { background: rgba(255,255,255,.16); transform: scale(1.1); }
+#playerPageModal .lp-btn:active { transform: scale(.88); }
+#playerPageModal .lp-time { color: rgba(255,255,255,.82); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#playerPageModal .lp-spacer { flex: 1; }
+
+/* volume slider — visible, with hover-expand */
+/* volume slider removed — mute toggle only, per design */
+#playerPageModal .lp-spinner {
+    position: absolute;
+    z-index: 6;
+    top: 50%;
+    left: 50%;
+    width: 34px;
+    height: 34px;
+    border: 3px solid rgba(255,255,255,.25);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    transform: translate(-50%,-50%);
+    animation: playerSpin .8s linear infinite;
+}
+#playerPageModal .lp-spinner.hidden { display: none; }
+#playerPageModal .lp-center-play { position: absolute; z-index: 4; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+#playerPageModal .lp-center-play-btn {
+    display: grid;
+    width: 72px;
+    height: 72px;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(0,0,0,.4);
+    border: 1px solid rgba(255,255,255,.3);
+    color: #fff;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 30px rgba(0,0,0,.4);
+    transition: transform .22s cubic-bezier(.34,1.56,.64,1), background-color .18s ease;
+}
+#playerPageModal .lp-center-play-btn:hover { background: var(--accent); color: #000; transform: translate(-50%,-50%) scale(1.08); }
+@keyframes playerSpin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+/* ===== Мобільна адаптація плеєра ===== */
+@media (max-width: 620px) {
+    #playerPageModal .modal-content { width: 100%; height: 100vh; height: 100dvh; margin: 0; border-radius: 0; border: none; }
+
+    #playerPageModal .player-video-container { aspect-ratio: 16 / 9; min-height: 180px; border-radius: 0; border-left: none; border-right: none; }
+
+    #playerPageModal .lp-controls { padding: 8px 6px 6px; }
+    #playerPageModal .lp-btn { width: 28px; height: 28px; }
+    #playerPageModal .lp-time { font-size: 10px; }
+
+    #playerPageModal .video-overlay-topbar { padding: 6px 8px; }
+    #playerPageModal .video-overlay-topbar .icon-btn { width: 28px; height: 28px; }
+    #playerPageModal .video-overlay-title { font-size: 11px; }
+
+    #playerPageModal .lp-center-play-btn { width: 52px; height: 52px; }
+
+    #playerPageModal .player-controls { grid-template-columns: 1fr; gap: 8px; padding: 10px 12px 4px; }
+    #playerPageModal .player-control-block:last-child { grid-column: 1 / -1; }
+}
+
+/* Дуже маленькі екрани */
+@media (max-width: 380px) {
+    #playerPageModal .player-video-container { min-height: 160px; }
+    #playerPageModal .lp-bottom-row { gap: 4px; }
+    #playerPageModal .lp-time { font-size: 9px; }
+}
+/* Final player cleanup: one visible video and one selector panel. */
+#playerPageModal #playerFormatRow,
+#playerPageModal #playerVideoDubRow,
+#playerPageModal #videoBackBtn,
+#playerPageModal #playerVideoEpisodeOverlay,
+#playerPageModal #playerVideoSeasonOverlay,
+#playerPageModal #playerPlayFab { display: none !important; }
+#playerPageModal .player-video-container { display: block !important; visibility: visible !important; opacity: 1 !important; }
+/* ============== Player experience refinement ============== */
+#playerPageModal .player-section {
+    padding: clamp(12px, 2vw, 22px) clamp(12px, 3vw, 28px) 0;
+}
+#playerPageModal .player-video-container {
+    border-color: color-mix(in srgb, var(--text) 14%, var(--border));
+    border-radius: clamp(16px, 2.4vw, 24px);
+    box-shadow: 0 18px 54px color-mix(in srgb, var(--text) 13%, transparent), 0 0 0 1px color-mix(in srgb, var(--text) 5%, transparent);
+}
+#playerPageModal .player-video-container::before {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -34px 60px rgba(0,0,0,.16);
+}
+#playerPageModal .player-video-container:has(.lp-error) .player-frame-poster { opacity: .3; filter: grayscale(1); }
+#playerPageModal .lp-error,
+#playerPageModal .player-video-error {
+    position: absolute;
+    z-index: 12;
+    inset: 50% auto auto 50%;
+    display: flex;
+    width: min(88%, 430px);
+    transform: translate(-50%, -50%);
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 24px 22px;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 20px;
+    background: rgba(12,12,12,.86);
+    color: #fff;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    backdrop-filter: blur(18px);
+}
+#playerPageModal .lp-error strong,
+#playerPageModal .player-video-error span { font-size: clamp(16px, 3vw, 21px); font-weight: 800; }
+#playerPageModal .lp-error span { color: rgba(255,255,255,.72); font-size: 13px; line-height: 1.55; }
+#playerPageModal .lp-error::before,
+#playerPageModal .player-video-container {
+    position: relative;
+    overflow: hidden;
+    width: min(100%, 920px);
+    margin: 0 auto;
+    aspect-ratio: 16 / 9;
+    background: #090909;
+}
+#playerPageModal .player-frame-poster { transition: opacity .25s ease, filter .25s ease; }
+#playerPageModal .lampa-player-container video { display: block; width: 100%; height: 100%; object-fit: contain; }
+#playerPageModal .player-video-container .lp-center-play,
+#playerPageModal .player-video-container .lampa-center-play { transform: translate(-50%, -50%) scale(1.08); }
+#playerPageModal .player-controls { display: none; }
+@media (min-width: 720px) {
+    #playerPageModal .player-compact-controls { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, .8fr); align-items: center; }
+    #playerPageModal .player-episode-select-line { grid-column: 1 / 2; }
+    #playerPageModal .player-dub-select-wrap { grid-column: 2 / 3; }
+    #playerPageModal .player-season-select-wrap-compact { grid-column: 3 / 4; }
+}
+@media (max-width: 560px) {
+    #playerPageModal .player-select-line { grid-template-columns: 46px minmax(0, 1fr) 46px; gap: 7px; }
+    #playerPageModal .player-nav-btn { min-height: 52px; border-radius: 15px; font-size: 34px; }
+    #playerPageModal .player-select-wrap { min-height: 52px; border-radius: 15px; }
+    #playerPageModal .player-select-wrap select { min-height: 52px; padding-right: 40px; padding-left: 16px; font-size: 16px; }
+    #playerPageModal .player-dub-select-wrap select,
+    #playerPageModal .player-season-select-wrap-compact select { min-height: 50px; padding-left: 56px; }
+    #playerPageModal .player-select-leading { left: 13px; width: 29px; height: 29px; }
+    #playerPageModal .player-select-chevron { right: 14px; font-size: 22px; }
+    #playerPageModal .player-video-container { border-radius: 16px; }
+}
+
+
+#playerPageModal .player-preview-play {
+    position: absolute;
+    z-index: 16;
+    top: 50%;
+    left: 50%;
+    display: grid;
+    width: clamp(64px, 10vw, 86px);
+    height: clamp(64px, 10vw, 86px);
+    place-items: center;
+    transform: translate(-50%, -50%);
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 50%;
+    background: rgba(12,12,12,.72);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 12px 36px rgba(0,0,0,.32), 0 0 0 8px rgba(255,255,255,.08);
+    backdrop-filter: blur(12px);
+    transition: transform .18s ease, background-color .18s ease, opacity .18s ease;
+}
+#playerPageModal .player-preview-play svg { width: 34%; height: 34%; margin-left: 5%; fill: currentColor; }
+#playerPageModal .player-preview-play:hover { transform: translate(-50%, -50%) scale(1.08); background: var(--accent); color: var(--accent-text); }
+#playerPageModal .player-preview-play:active { transform: translate(-50%, -50%) scale(.96); }
+#playerPageModal .player-preview-play.is-hidden { pointer-events: none; opacity: 0; transform: translate(-50%, -50%) scale(.78); }
+@media (max-width: 560px) {
+    #playerPageModal .player-preview-play { width: 68px; height: 68px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #playerPageModal .player-preview-play { transition: none; }
+}
+/* ════════════════════════════════════════════════════════════════
+   Modern player overlay v1 — VakDab
+   A focused, dark glass control system that stays readable over any frame.
+   ════════════════════════════════════════════════════════════════ */
+#playerPageModal .player-video-container {
+    isolation: isolate;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 20px;
+    background: #070910;
+    box-shadow: 0 24px 70px rgba(0,0,0,.32), 0 0 0 1px rgba(255,255,255,.04);
+}
+#playerPageModal .player-video-container::before {
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(5,7,14,.62) 0%, transparent 24%, transparent 58%, rgba(5,7,14,.72) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+}
+#playerPageModal .player-video-container::after {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at 50% 42%, transparent 0 32%, rgba(0,0,0,.12) 100%);
+}
+#playerPageModal #playerPageVideo,
+#playerPageModal .lampa-player-container { z-index: 0; }
+#playerPageModal .player-frame-poster { z-index: 3; }
+
+/* Top information rail */
+#playerPageModal .modal-content .video-overlay-topbar {
+    z-index: 12;
+    min-height: 68px;
+    padding: 13px 15px 20px;
+    align-items: flex-start;
+    background: linear-gradient(180deg, rgba(4,6,12,.84), rgba(4,6,12,.25) 72%, transparent);
+    opacity: 1;
+    transform: none;
+}
+#playerPageModal .modal-content .video-overlay-left {
+    min-width: 0;
+    gap: 3px;
+}
+#playerPageModal .modal-content .video-overlay-left::before {
+    content: 'ЗАРАЗ ВІДТВОРЮЄТЬСЯ';
+    color: rgba(255,255,255,.62);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .13em;
+}
+#playerPageModal .modal-content .video-overlay-title {
+    max-width: min(72vw, 560px);
+    color: #fff !important;
+    font-size: clamp(13px, 1.6vw, 16px);
+    font-weight: 750;
+    line-height: 1.25;
+    text-shadow: 0 2px 14px rgba(0,0,0,.82);
+}
+#playerPageModal .modal-content .video-overlay-topbar .icon-btn {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 12px;
+    background: rgba(10,12,20,.52);
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(0,0,0,.18);
+}
+#playerPageModal .modal-content .video-overlay-topbar .icon-btn:hover,
+#playerPageModal .modal-content .video-overlay-topbar .icon-btn:focus-visible {
+    border-color: color-mix(in srgb, var(--accent) 70%, white);
+    background: color-mix(in srgb, var(--accent) 30%, rgba(10,12,20,.72));
+    outline: none;
+}
+
+/* Floating bottom control dock */
+#playerPageModal .modal-content .lp-controls {
+    z-index: 14;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    gap: 9px;
+    padding: 10px 12px 11px;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 17px;
+    background: linear-gradient(135deg, rgba(20,23,34,.94), rgba(9,11,18,.88));
+    color: #fff;
+    box-shadow: 0 14px 34px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.08);
+    backdrop-filter: blur(22px) saturate(1.35);
+    -webkit-backdrop-filter: blur(22px) saturate(1.35);
+    transition: opacity .22s ease, transform .22s cubic-bezier(.23,1,.32,1);
+}
+#playerPageModal .modal-content .lp-controls.hidden,
+#playerPageModal .modal-content .lampa-player-container.controls-hidden .lp-controls {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px) scale(.985);
+}
+#playerPageModal .modal-content .lp-progress-wrap {
+    height: 5px !important;
+    margin: 0 1px 2px;
+    overflow: visible;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255,255,255,.2) !important;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.3);
+}
+#playerPageModal .modal-content .lp-progress-wrap:hover { height: 7px !important; }
+#playerPageModal .modal-content .lp-progress-fill {
+    min-width: 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 75%, #fff), var(--accent)) !important;
+    box-shadow: 0 0 13px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+#playerPageModal .modal-content .lp-progress-fill::after {
+    width: 13px;
+    height: 13px;
+    background: #fff !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 60%, transparent), 0 2px 7px rgba(0,0,0,.38);
+}
+#playerPageModal .modal-content .lp-bottom-row { min-height: 36px; gap: 5px; }
+#playerPageModal .modal-content .lp-btn {
+    width: 34px;
+    height: 34px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    color: rgba(255,255,255,.86);
+    background: transparent;
+    transition: color .16s ease, background .16s ease, border-color .16s ease, transform .16s ease;
+}
+#playerPageModal .modal-content .lp-btn svg { width: 19px; height: 19px; fill: currentColor; }
+#playerPageModal .modal-content .lp-btn:hover,
+#playerPageModal .modal-content .lp-btn:focus-visible {
+    border-color: rgba(255,255,255,.14);
+    background: rgba(255,255,255,.1);
+    color: #fff;
+    outline: none;
+}
+#playerPageModal .modal-content .lp-btn:active { transform: scale(.92); }
+#playerPageModal .modal-content .lp-main-btn {
+    width: 38px;
+    height: 38px;
+    border-color: color-mix(in srgb, var(--accent) 48%, transparent);
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--accent) 22%, rgba(255,255,255,.06));
+    color: #fff;
+}
+#playerPageModal .modal-content .lp-main-btn:hover,
+#playerPageModal .modal-content .lp-main-btn:focus-visible {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-text, #080910);
+}
+#playerPageModal .modal-content .lp-skip-btn svg { width: 22px; height: 22px; }
+#playerPageModal .modal-content .lp-time {
+    margin-left: 3px;
+    color: rgba(255,255,255,.68);
+    font-size: 11px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .01em;
+}
+#playerPageModal .modal-content .lp-settings-wrap { gap: 6px; }
+#playerPageModal .modal-content .lp-control-pill {
+    height: 32px;
+    min-width: 46px;
+    padding: 0 9px;
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 10px;
+    background: rgba(255,255,255,.075);
+    color: rgba(255,255,255,.9);
+    font-size: 11px;
+    font-weight: 750;
+}
+#playerPageModal .modal-content .lp-control-pill:hover,
+#playerPageModal .modal-content .lp-control-pill:focus-visible,
+#playerPageModal .modal-content .lp-control-pill.is-open {
+    border-color: color-mix(in srgb, var(--accent) 55%, rgba(255,255,255,.18));
+    background: color-mix(in srgb, var(--accent) 18%, rgba(255,255,255,.1));
+    outline: none;
+}
+#playerPageModal .modal-content .lp-chevron { color: currentColor; }
+#playerPageModal .modal-content .lp-volume-group { display: flex; align-items: center; gap: 3px; }
+#playerPageModal .modal-content .lp-volume {
+    width: 70px;
+    height: 4px;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+#playerPageModal .modal-content .lp-volume::-webkit-slider-runnable-track { height: 4px; border-radius: 999px; background: rgba(255,255,255,.2); }
+#playerPageModal .modal-content .lp-volume::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -4px; border: 2px solid #fff; border-radius: 50%; background: var(--accent); appearance: none; }
+#playerPageModal .modal-content .lp-volume::-moz-range-track { height: 4px; border-radius: 999px; background: rgba(255,255,255,.2); }
+#playerPageModal .modal-content .lp-volume::-moz-range-thumb { width: 10px; height: 10px; border: 2px solid #fff; border-radius: 50%; background: var(--accent); }
+
+/* Menus stay attached to their control pills and use the same glass language. */
+#playerPageModal .modal-content .lp-popover {
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 13px;
+    background: rgba(16,19,29,.97);
+    color: #fff;
+    box-shadow: 0 16px 34px rgba(0,0,0,.4);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+#playerPageModal .modal-content .lp-popover-label { color: rgba(255,255,255,.5); }
+#playerPageModal .modal-content .lp-popover button { color: rgba(255,255,255,.82); }
+#playerPageModal .modal-content .lp-popover button:hover,
+#playerPageModal .modal-content .lp-popover button.is-active { background: color-mix(in srgb, var(--accent) 22%, transparent); color: #fff; }
+
+/* Center play button and the pre-play poster action share one visual language. */
+#playerPageModal .modal-content .lp-center-play { z-index: 10; }
+#playerPageModal .modal-content .lp-center-play-btn,
+#playerPageModal .modal-content .player-preview-play {
+    width: 82px;
+    height: 82px;
+    border: 1px solid rgba(255,255,255,.34);
+    border-radius: 50%;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 82%, #fff), var(--accent));
+    color: var(--accent-text, #080910);
+    box-shadow: 0 15px 38px rgba(0,0,0,.42), 0 0 0 10px rgba(255,255,255,.07), 0 0 34px color-mix(in srgb, var(--accent) 38%, transparent);
+    backdrop-filter: blur(12px);
+    transition: opacity .22s ease, transform .22s cubic-bezier(.23,1,.32,1), box-shadow .22s ease, filter .22s ease;
+}
+#playerPageModal .modal-content .lp-center-play-btn.show { transform: scale(1); }
+#playerPageModal .modal-content .lp-center-play-btn:hover,
+#playerPageModal .modal-content .player-preview-play:hover {
+    transform: translate(-50%, -50%) scale(1.08);
+    filter: brightness(1.08);
+    box-shadow: 0 18px 44px rgba(0,0,0,.48), 0 0 0 12px rgba(255,255,255,.08), 0 0 42px color-mix(in srgb, var(--accent) 52%, transparent);
+}
+#playerPageModal .modal-content .lp-center-play-btn svg { width: 31px; height: 31px; fill: currentColor; }
+#playerPageModal .modal-content .player-preview-play { z-index: 16; display: grid; place-items: center; transform: translate(-50%, -50%); }
+#playerPageModal .modal-content .player-preview-play svg { width: 30px; height: 30px; margin-left: 4px; fill: currentColor; }
+#playerPageModal .modal-content .player-preview-play.is-hidden { transform: translate(-50%, -50%) scale(.78); }
+
+@media (max-width: 620px) {
+    #playerPageModal .player-video-container { border-radius: 0; border-right: 0; border-left: 0; }
+    #playerPageModal .modal-content .video-overlay-topbar { min-height: 58px; padding: 10px 10px 16px; }
+    #playerPageModal .modal-content .video-overlay-left::before { font-size: 8px; }
+    #playerPageModal .modal-content .video-overlay-title { font-size: 12px; }
+    #playerPageModal .modal-content .video-overlay-topbar .icon-btn { width: 34px; height: 34px; flex-basis: 34px; border-radius: 10px; }
+    #playerPageModal .modal-content .lp-controls { right: 8px; bottom: 8px; left: 8px; padding: 8px 9px 9px; border-radius: 15px; }
+    #playerPageModal .modal-content .lp-volume { width: 52px; }
+    #playerPageModal .modal-content .lp-time { font-size: 10px; }
+    #playerPageModal .modal-content .lp-center-play-btn,
+    #playerPageModal .modal-content .player-preview-play { width: 68px; height: 68px; }
+}
+@media (max-width: 430px) {
+    #playerPageModal .modal-content .lp-bottom-row { gap: 2px; }
+    #playerPageModal .modal-content .lp-settings-wrap { gap: 2px; }
+    #playerPageModal .modal-content .lp-control-pill { min-width: 40px; padding: 0 6px; }
+    #playerPageModal .modal-content .lp-volume { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #playerPageModal .modal-content .lp-controls,
+    #playerPageModal .modal-content .lp-btn,
+    #playerPageModal .modal-content .player-preview-play,
+    #playerPageModal .modal-content .lp-center-play-btn { transition: none; }
+}
+
+/* Legacy overlay compatibility rules consolidated from player-polish.css. */
+/* ════════════════════════════════════════════════════════════════
+   Video player overlay controls — modern WHITE glass style.
+   A single floating light control bar sits above the bottom edge
+   of the video (not edge-to-edge), with dark icons/text for
+   contrast against any video frame. Independent of site theme —
+   this stays white/light by design, like iOS/Apple TV overlays.
+   ════════════════════════════════════════════════════════════════ */
+
+/* Topbar — keep minimal: just the title + the single fullscreen button */
+#playerPageModal .modal-content .video-overlay-topbar {
+  min-height: 48px;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .55), transparent);
+}
+
+#playerPageModal .modal-content .video-overlay-title {
+  color: #fff !important;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  line-height: 1.35;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, .7);
+}
+
+/* Floating white control bar — replaces the old full-width dark gradient */
+#playerPageModal .modal-content .lp-controls {
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  padding: 10px 12px 11px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .28), 0 0 0 1px rgba(0, 0, 0, .04);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+
+/* Play/pause + mute icon buttons — dark on white */
+#playerPageModal .modal-content .lp-btn {
+  color: #17181c;
+}
+
+#playerPageModal .modal-content .lp-btn svg {
+  fill: #17181c;
+}
+
+#playerPageModal .modal-content .lp-btn:hover {
+  background: rgba(0, 0, 0, .07);
+}
+
+#playerPageModal .modal-content .lp-btn:active {
+  background: rgba(0, 0, 0, .12);
+}
+
+/* Time label — dark, muted */
+#playerPageModal .modal-content .lp-time {
+  color: rgba(23, 24, 28, .62);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Progress bar — light track, dark fill */
+#playerPageModal .modal-content .lp-progress-wrap {
+  height: 4px !important;
+  border: none;
+  background: rgba(23, 24, 28, .14) !important;
+  box-shadow: none;
+  border-radius: 99px;
+  margin-bottom: 8px;
+}
+
+#playerPageModal .modal-content .lp-progress-wrap:hover {
+  height: 6px !important;
+}
+
+#playerPageModal .modal-content .lp-progress-fill {
+  background: #17181c !important;
+  box-shadow: none;
+  border-radius: 99px;
+}
+
+#playerPageModal .modal-content .lp-progress-fill::after {
+  width: 12px;
+  height: 12px;
+  background: #17181c !important;
+  box-shadow: 0 0 0 3px rgba(23, 24, 28, .12), 0 2px 6px rgba(0, 0, 0, .2);
+}
+
+/* Settings row (speed + quality) */
+#playerPageModal .modal-content .lp-settings-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#playerPageModal .modal-content .lp-menu-wrap {
+  position: relative;
+}
+
+/* Control pill — light gray, dark text, chevron */
+#playerPageModal .modal-content .lp-control-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 42px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(23, 24, 28, .1);
+  border-radius: 8px;
+  background: rgba(23, 24, 28, .06);
+  color: #17181c;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease, transform .15s ease;
+}
+
+#playerPageModal .modal-content .lp-control-pill:hover,
+#playerPageModal .modal-content .lp-control-pill:focus-visible {
+  background: rgba(23, 24, 28, .1);
+  border-color: rgba(23, 24, 28, .2);
+  outline: none;
+}
+
+#playerPageModal .modal-content .lp-control-pill:active {
+  transform: scale(.95);
+}
+
+#playerPageModal .modal-content .lp-control-pill.is-open {
+  background: rgba(23, 24, 28, .12);
+  border-color: rgba(23, 24, 28, .24);
+}
+
+#playerPageModal .modal-content .lp-pill-label {
+  white-space: nowrap;
+}
+
+#playerPageModal .modal-content .lp-chevron {
+  color: #17181c;
+  opacity: .55;
+  transition: transform .25s cubic-bezier(.4, 0, .2, 1), opacity .2s ease;
+}
+
+#playerPageModal .modal-content .lp-control-pill.is-open .lp-chevron {
+  transform: rotate(180deg);
+  opacity: .9;
+}
+
+#playerPageModal .modal-content .lp-quality-pill {
+  min-width: 52px;
+}
+
+/* Popover menu — white card, smooth slide-up animation */
+#playerPageModal .modal-content .lp-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 80;
+  min-width: 112px;
+  padding: 6px;
+  border: 1px solid rgba(23, 24, 28, .08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .98);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .22), 0 0 0 1px rgba(0, 0, 0, .03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px) scale(.96);
+  transform-origin: bottom right;
+  transition: opacity .2s ease, transform .22s cubic-bezier(.16, 1, .3, 1), visibility .2s;
+  pointer-events: none;
+}
+
+#playerPageModal .modal-content .lp-popover.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Hide old [hidden]-based visibility (legacy compat) */
+#playerPageModal .modal-content .lp-popover[hidden] {
+  display: none;
+}
+
+#playerPageModal .modal-content .lp-popover-label {
+  padding: 4px 10px 6px;
+  color: rgba(23, 24, 28, .45);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+/* Menu option row — label + checkmark, dark on white */
+#playerPageModal .modal-content .lp-popover button {
+  display: flex;
+  width: 100%;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(23, 24, 28, .72);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+
+#playerPageModal .modal-content .lp-popover button span {
+  flex: 1;
+}
+
+#playerPageModal .modal-content .lp-popover button .lp-check {
+  opacity: 0;
+  transform: scale(.7);
+  color: #17181c;
+  transition: opacity .2s ease, transform .2s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+#playerPageModal .modal-content .lp-popover button:hover,
+#playerPageModal .modal-content .lp-popover button:focus-visible {
+  background: rgba(23, 24, 28, .07);
+  color: #17181c;
+  outline: none;
+}
+
+/* Active option — dark text + visible checkmark */
+#playerPageModal .modal-content .lp-popover button.is-active {
+  color: #17181c;
+  background: rgba(23, 24, 28, .05);
+}
+
+#playerPageModal .modal-content .lp-popover button.is-active .lp-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  #playerPageModal .modal-content .video-overlay-title {
+    font-size: 12px;
+  }
+  #playerPageModal .modal-content .lp-controls {
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    padding: 8px 10px 10px !important;
+    border-radius: 14px;
+  }
+  #playerPageModal .modal-content .lp-settings-wrap {
+    gap: 4px;
+  }
+  #playerPageModal .modal-content .lp-control-pill {
+    min-width: 38px;
+    height: 28px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+  #playerPageModal .modal-content .lp-quality-pill {
+    min-width: 46px;
+  }
+  #playerPageModal .modal-content .lp-popover {
+    min-width: 96px;
+  }
+}
+
+#playerPageModal .player-video-container:fullscreen { width: 100vw; height: 100vh; border-radius: 0; }
+#playerPageModal .player-video-error i { color: var(--accent); font-size: 24px; }
+@media (max-width: 560px) { #playerPageModal .player-video-container { min-height: 0; } #playerPageModal .lp-controls { padding-bottom: max(12px, env(safe-area-inset-bottom)); } }
