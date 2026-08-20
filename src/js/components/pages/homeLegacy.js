@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-gif-avatar-v1';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260820-gif-avatar-v1';
+} from '../../legacy/app-legacy.js?v=20260820-gif-video-v2';
+import { getProfile, saveProfile } from './settingsLegacy.js?v=20260820-gif-video-v2';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -1899,6 +1899,10 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (isVideoUrl(url)) {
                 return `<video class="${className}" src="${safeUrl}"${styleAttr} autoplay muted loop playsinline preload="metadata" aria-label="${escapeHtml(alt || '')}"></video>`;
             }
+            if (isGifUrl(url)) {
+                const gifClass = `${className || ''}${className ? ' ' : ''}is-gif`;
+                return `<img class="${gifClass}" src="${safeUrl}"${styleAttr} alt="${escapeHtml(alt || '')}" loading="lazy">`;
+            }
             return `<img class="${className}" src="${safeUrl}"${styleAttr} alt="${escapeHtml(alt || '')}" loading="lazy">`;
         }
 
@@ -1910,7 +1914,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         // ====================================================================
         //  IMAGE EDITOR — fullscreen crop/position tool for avatar & banner
         //  (Telegram/Instagram-style for avatar; YouTube-style device safe-zone
-        //  guide for banner). GIFs bypass this entirely to keep animation.
+        //  guide for banner). Animated media keeps its original frames and stores
+        //  only the crop/zoom transform settings.
         // ====================================================================
         export function _imgeditClamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
@@ -1919,7 +1924,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const normalizedBannerFormat = mode === 'banner' && initialBannerFormat === 'wide' ? 'wide' : 'narrow';
             const objectUrl = URL.createObjectURL(file);
             const isVideo = isVideoFile(file);
-            const isPng = !isVideo && (file.type === 'image/png' || String(file.name || '').toLowerCase().endsWith('.png'));
+            const isGif = !isVideo && (file.type === 'image/gif' || /\.gif$/i.test(file.name || ''));
+            const isAnimated = isVideo || isGif;
+            const isPng = !isAnimated && (file.type === 'image/png' || String(file.name || '').toLowerCase().endsWith('.png'));
             const previousBodyOverflow = document.body.style.overflow;
             const overlay = document.createElement('div');
             overlay.className = `imgedit-overlay${mode === 'banner' ? ' imgedit-banner-overlay' : ' imgedit-avatar-overlay'}`;
@@ -1932,7 +1939,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     <button class="imgedit-save" id="imgeditSave">Зберегти</button>
                 </div>
                 <div class="imgedit-stage" id="imgeditStage">
-                    ${isVideo ? `<video class="imgedit-img" id="imgeditImg" src="${objectUrl}" muted autoplay loop playsinline preload="metadata"></video>` : `<img class="imgedit-img" id="imgeditImg" src="${objectUrl}" alt="">`}
+                    ${isVideo ? `<video class="imgedit-img" id="imgeditImg" src="${objectUrl}" muted autoplay loop playsinline preload="metadata"></video>` : `<img class="imgedit-img${isGif ? ' imgedit-animated-gif' : ''}" id="imgeditImg" src="${objectUrl}" alt="">`}
                     <div class="imgedit-frame" id="imgeditFrame"></div>
                     <div id="imgeditGuides"></div>
                 </div>
@@ -1957,7 +1964,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                         <input type="range" class="imgedit-zoom-slider" id="imgeditZoom" min="100" max="300" value="100">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/><line x1="10" y1="7" x2="10" y2="13"/></svg>
                     </div>
-                    ${mode === 'banner' ? `<div class="imgedit-caption">Виберіть формат банера. Вузький показує банер тонкою смугою, широкий — вищим і з більшою видимою областю.</div>` : `<div class="imgedit-caption">Перемістіть і масштабуйте ${isVideo ? 'відео' : 'фото'}, щоб обрати область для аватарки.</div>`}
+                    ${mode === 'banner' ? `<div class="imgedit-caption">Виберіть формат банера. Вузький показує банер тонкою смугою, широкий — вищим і з більшою видимою областю.</div>` : `<div class="imgedit-caption">Перемістіть і масштабуйте ${isVideo ? 'відео' : (isGif ? 'GIF' : 'фото')}, щоб обрати область для аватарки.</div>`}
                 </div>`;
             document.body.appendChild(overlay);
             requestAnimationFrame(() => overlay.classList.add('open'));
@@ -2134,7 +2141,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 saveBtn.disabled = true;
                 saveBtn.textContent = '...';
                 try {
-                    if (isVideo) {
+                    if (isAnimated) {
                         const centeredTx = frameX + (frameW - natW * scale) / 2;
                         const centeredTy = frameY + (frameH - natH * scale) / 2;
                         const zoom = _imgeditClamp(scale / Math.max(minScale, 0.0001), 1, 3);
@@ -2242,21 +2249,28 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
         export async function editExistingProfileVideo(url, mode) {
             if (!url) return;
-            showToast('Підготовка редактора відео...');
+            showToast(isGifUrl(url) ? 'Підготовка редактора GIF...' : 'Підготовка редактора відео...');
             try {
                 const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
                 if (!response.ok) throw new Error('Не вдалося завантажити відео');
                 const blob = await response.blob();
-                const file = new File([blob], `${mode}.mp4`, { type: blob.type || 'video/mp4' });
+                const isGif = String(blob.type || '').toLowerCase() === 'image/gif' || isGifUrl(url);
+                const file = new File([blob], `${mode}.${isGif ? 'gif' : 'mp4'}`, { type: isGif ? 'image/gif' : (blob.type || 'video/mp4') });
                 const currentProfile = getProfile();
                 openImageEditor(file, mode, (settings) => {
                     const profile = getProfile();
+                    const videoKey = mode === 'avatar' ? 'avatarVideo' : 'bannerVideo';
+                    const imageKey = mode === 'avatar' ? 'avatar' : 'banner';
+                    if (isGif && !profile[videoKey] && profile[imageKey] === url) {
+                        profile[videoKey] = url;
+                        profile[imageKey] = '';
+                    }
                     profile[mode === 'avatar' ? 'avatarVideoSettings' : 'bannerVideoSettings'] = settings;
                     if (mode === 'banner') profile.bannerFormat = settings?.bannerFormat === 'wide' ? 'wide' : (currentProfile.bannerFormat === 'wide' ? 'wide' : 'narrow');
                     saveProfile(profile);
                     if (Router.currentRoute === 'profile') renderProfilePage();
                     if (Router.currentRoute === 'settings') renderSettingsPage();
-                    showToast(mode === 'avatar' ? 'Відео-аватарку оновлено' : 'Відео-банер оновлено');
+                    showToast(isGif ? (mode === 'avatar' ? 'GIF-аватарку оновлено' : 'GIF-банер оновлено') : (mode === 'avatar' ? 'Відео-аватарку оновлено' : 'Відео-банер оновлено'));
                 }, mode === 'banner' ? currentProfile.bannerFormat : 'narrow');
             } catch (err) {
                 console.error('Existing profile video editor error:', err);
@@ -2699,11 +2713,13 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (file.size > maxSize) { showToast(isVideo ? 'Відео занадто велике (максимум 50 МБ)' : (isGif ? 'GIF занадто великий (максимум 50 МБ) — вибери коротший' : 'Файл занадто великий (максимум 15 МБ)')); e.target.value = ''; return; }
 
             const doUpload = async (blobOrFile, raw, mediaType = 'image', mediaSettings = null) => {
-                showToast(mediaType === 'video' ? 'Завантаження відео-аватарки...' : (isGif ? 'Завантаження GIF-аватарки...' : 'Завантаження аватарки...'));
+                showToast(mediaType === 'video' ? 'Завантаження відео-аватарки...' : (mediaType === 'gif' ? 'Завантаження GIF-аватарки...' : 'Завантаження аватарки...'));
                 try {
-                    const imageUrl = mediaType === 'video' ? await uploadVideoToCloudinary(blobOrFile, 'avatar.mp4') : (raw ? await uploadRawToCloudinary(blobOrFile, 'avatar.gif') : await uploadBlobToCloudinary(blobOrFile, 'avatar.jpg'));
+                    const imageUrl = mediaType === 'video'
+                        ? await uploadVideoToCloudinary(blobOrFile, 'avatar.mp4')
+                        : (mediaType === 'gif' ? await uploadRawToCloudinary(blobOrFile, 'avatar.gif', 'image') : (raw ? await uploadRawToCloudinary(blobOrFile, 'avatar.gif') : await uploadBlobToCloudinary(blobOrFile, 'avatar.jpg')));
                     const profile = getProfile();
-                    if (mediaType === 'video') { profile.avatarVideo = imageUrl; profile.avatar = ''; profile.avatarVideoSettings = mediaSettings || null; }
+                    if (mediaType === 'video' || mediaType === 'gif') { profile.avatarVideo = imageUrl; profile.avatar = ''; profile.avatarVideoSettings = mediaSettings || null; }
                     else { profile.avatar = imageUrl; profile.avatarVideo = ''; profile.avatarVideoSettings = null; }
                     saveProfile(profile);
                     if (Router.currentRoute === 'profile') renderProfilePage();
@@ -2718,9 +2734,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (isVideo) {
                 openImageEditor(file, 'avatar', (settings) => doUpload(file, true, 'video', settings));
             } else if (isGif) {
-                // GIFs skip the cropper — canvas cropping would flatten the animation to 1 frame.
-                showToast('GIF без кадрування — щоб зберегти анімацію');
-                await doUpload(file, true);
+                openImageEditor(file, 'avatar', (settings) => doUpload(file, true, 'gif', settings));
             } else {
                 openImageEditor(file, 'avatar', (blob) => doUpload(blob, false));
             }
@@ -2870,11 +2884,13 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (file.size > maxSize) { showToast(isVideo ? 'Відео занадто велике (максимум 50 МБ)' : (isGif ? 'GIF занадто великий (максимум 50 МБ) — вибери коротший' : 'Файл занадто великий (максимум 15 МБ)')); e.target.value = ''; return; }
 
             const doUpload = async (blobOrFile, raw, mediaType = 'image', mediaSettings = null, format = 'narrow') => {
-                showToast(mediaType === 'video' ? 'Завантаження відео-банера...' : (isGif ? 'Завантаження GIF-банера...' : 'Завантаження банера...'));
+                showToast(mediaType === 'video' ? 'Завантаження відео-банера...' : (mediaType === 'gif' ? 'Завантаження GIF-банера...' : 'Завантаження банера...'));
                 try {
-                    const imageUrl = mediaType === 'video' ? await uploadVideoToCloudinary(blobOrFile, 'banner.mp4') : (raw ? await uploadRawToCloudinary(blobOrFile, 'banner.gif') : await uploadBlobToCloudinary(blobOrFile, 'banner.jpg'));
+                    const imageUrl = mediaType === 'video'
+                        ? await uploadVideoToCloudinary(blobOrFile, 'banner.mp4')
+                        : (mediaType === 'gif' ? await uploadRawToCloudinary(blobOrFile, 'banner.gif', 'image') : (raw ? await uploadRawToCloudinary(blobOrFile, 'banner.gif') : await uploadBlobToCloudinary(blobOrFile, 'banner.jpg')));
                     const profile = getProfile();
-                    if (mediaType === 'video') { profile.bannerVideo = imageUrl; profile.banner = ''; profile.bannerVideoSettings = mediaSettings || null; }
+                    if (mediaType === 'video' || mediaType === 'gif') { profile.bannerVideo = imageUrl; profile.banner = ''; profile.bannerVideoSettings = mediaSettings || null; }
                     else { profile.banner = imageUrl; profile.bannerVideo = ''; profile.bannerVideoSettings = null; }
                     profile.bannerFormat = mediaSettings?.bannerFormat === 'wide' || format === 'wide' ? 'wide' : 'narrow';
                     saveProfile(profile);
@@ -2887,11 +2903,11 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 }
             };
 
+            const currentProfile = getProfile();
             if (isVideo) {
-                openImageEditor(file, 'banner', (settings) => doUpload(file, true, 'video', settings, settings?.bannerFormat));
+                openImageEditor(file, 'banner', (settings) => doUpload(file, true, 'video', settings, settings?.bannerFormat), currentProfile.bannerFormat || 'narrow');
             } else if (isGif) {
-                showToast('GIF без кадрування — щоб зберегти анімацію');
-                await doUpload(file, true);
+                openImageEditor(file, 'banner', (settings) => doUpload(file, true, 'gif', settings, settings?.bannerFormat), currentProfile.bannerFormat || 'narrow');
             } else {
                 openImageEditor(file, 'banner', (blob, editorState) => doUpload(blob, false, 'image', null, editorState?.bannerFormat));
             }

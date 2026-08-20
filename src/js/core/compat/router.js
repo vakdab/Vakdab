@@ -6,7 +6,7 @@ import {
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
     renderGenresPage, renderProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-gif-avatar-v1';
+} from '../../legacy/app-legacy.js?v=20260820-gif-video-v2';
 
         export const Router = {
             currentRoute: 'main',

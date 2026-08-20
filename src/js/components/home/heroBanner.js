@@ -1,5 +1,5 @@
 import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../services/catalog.js';
-import { openPlayerPage } from '../../legacy/app-legacy.js?v=20260820-gif-avatar-v1';
+import { openPlayerPage } from '../../legacy/app-legacy.js?v=20260820-gif-video-v2';
 
         let heroItems = [],
             heroPool = [],

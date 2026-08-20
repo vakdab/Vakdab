@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260820-gif-avatar-v1';
+} from '../../legacy/app-legacy.js?v=20260820-gif-video-v2';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 
@@ -314,7 +314,7 @@ import {
               </div>
               <div class="settings-media-actions" aria-label="Керування банером">
                 <button class="settings-media-btn" id="settingsBannerUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
-                ${bannerVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsBannerEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : (bannerSrc && !isGifUrl(bannerSrc) ? `<button class="settings-media-btn settings-media-edit-image" id="settingsBannerEditImageBtn"><i class="fas fa-crop-simple"></i> Редагувати банер</button>` : '')}
+                ${bannerVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsBannerEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : (bannerSrc ? (isGifUrl(bannerSrc) ? `<button class="settings-media-btn settings-media-edit-video" id="settingsBannerEditGifBtn"><i class="fas fa-sliders"></i> Редагувати GIF</button>` : `<button class="settings-media-btn settings-media-edit-image" id="settingsBannerEditImageBtn"><i class="fas fa-crop-simple"></i> Редагувати банер</button>`) : '')}
                 ${(bannerSrc || bannerVideoSrc) ? `<button class="settings-media-delete" id="settingsBannerRemoveBtn" title="Видалити банер"><i class="fas fa-trash"></i></button>` : ''}
               </div>
             </div>
@@ -326,7 +326,7 @@ import {
               <div class="settings-media-preview--avatar" id="settingsAvatarPreview">${avatarVideoSrc ? profileMediaMarkup(avatarVideoSrc, '', 'video avatar', profile.avatarVideoSettings) : (avatarSrc ? profileMediaMarkup(avatarSrc, '', 'avatar') : '<i class="fas fa-user"></i>')}</div>
               <div class="settings-media-actions">
                 <button class="settings-media-btn" id="settingsAvatarUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
-                ${avatarVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsAvatarEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : (avatarSrc && !isGifUrl(avatarSrc) ? `<button class="settings-media-btn settings-media-edit-image" id="settingsAvatarEditImageBtn"><i class="fas fa-crop-simple"></i> Редагувати аватарку</button>` : '')}
+                ${avatarVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsAvatarEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : (avatarSrc ? (isGifUrl(avatarSrc) ? `<button class="settings-media-btn settings-media-edit-video" id="settingsAvatarEditGifBtn"><i class="fas fa-sliders"></i> Редагувати GIF</button>` : `<button class="settings-media-btn settings-media-edit-image" id="settingsAvatarEditImageBtn"><i class="fas fa-crop-simple"></i> Редагувати аватарку</button>`) : '')}
                 ${(avatarSrc || avatarVideoSrc) ? `<button class="settings-media-delete" id="settingsAvatarRemoveBtn" title="Видалити аватар"><i class="fas fa-trash"></i></button>` : ''}
               </div>
             </div>
@@ -523,6 +523,14 @@ import {
             document.getElementById('settingsAvatarEditVideoBtn')?.addEventListener('click', () => {
                 const p = getProfile();
                 editExistingProfileVideo(p.avatarVideo, 'avatar');
+            });
+            document.getElementById('settingsBannerEditGifBtn')?.addEventListener('click', () => {
+                const p = getProfile();
+                editExistingProfileVideo(p.banner, 'banner');
+            });
+            document.getElementById('settingsAvatarEditGifBtn')?.addEventListener('click', () => {
+                const p = getProfile();
+                editExistingProfileVideo(p.avatar, 'avatar');
             });
             document.getElementById('settingsBannerEditImageBtn')?.addEventListener('click', () => {
                 const p = getProfile();

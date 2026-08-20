@@ -12,11 +12,11 @@ import {
 } from '../../services/catalog.js';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
-} from '../pages/homeLegacy.js?v=20260820-gif-avatar-v1';
-import { renderProfilePage } from '../pages/profileLegacy.js?v=20260820-gif-avatar-v1';
+} from '../pages/homeLegacy.js?v=20260820-gif-video-v2';
+import { renderProfilePage } from '../pages/profileLegacy.js?v=20260820-gif-video-v2';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260820-gif-avatar-v1';
+} from '../../legacy/app-legacy.js?v=20260820-gif-video-v2';
 import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
 
         // ====================================================================
