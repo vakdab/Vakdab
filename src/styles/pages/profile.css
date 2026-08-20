@@ -99,6 +99,17 @@
             padding: 0.55rem 1.2rem max(1.3rem, env(safe-area-inset-bottom));
             display: flex; flex-direction: column; align-items: center; gap: 0.55rem;
         }
+        /* Banner controls stay close to the crop frame while preserving iOS home-indicator space. */
+        .imgedit-banner-overlay .imgedit-format-row,
+        .imgedit-banner-overlay .imgedit-bottombar {
+            position: relative;
+            top: -2.25rem;
+        }
+        .imgedit-banner-overlay .imgedit-bottombar {
+            padding-top: 0.25rem;
+            padding-bottom: max(2.75rem, calc(env(safe-area-inset-bottom) + 1.35rem));
+            gap: 0.42rem;
+        }
 
         .imgedit-tools-row {
             display: flex; align-items: center; gap: 0.5rem;

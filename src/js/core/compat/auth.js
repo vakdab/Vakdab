@@ -3,8 +3,8 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260820-banner-format-v1';
-import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260820-banner-format-v1';
+} from '../../legacy/app-legacy.js?v=20260820-banner-mobile-v3';
+import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260820-banner-mobile-v3';
 import { Storage } from './storage.js';
 
         const Auth = {

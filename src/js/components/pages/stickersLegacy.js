@@ -1,8 +1,8 @@
 import { Storage } from '../../core/compat/storage.js?v=20260820-appearance-cleanup-v1';
 import { db } from '../../services/firebase/client.js';
 import { Router } from '../../core/compat/router.js';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260820-banner-format-v1';
-import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260820-banner-format-v1';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260820-banner-mobile-v3';
+import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260820-banner-mobile-v3';
 
         function stickerFaceSvg(variant) {
             const s = 'stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"';

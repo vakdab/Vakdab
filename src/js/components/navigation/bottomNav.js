@@ -1,6 +1,6 @@
 import { loadFeature } from '../../core/feature-loader.js';
 import { Router } from '../../core/compat/router.js';
-import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260820-banner-format-v1';
+import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260820-banner-mobile-v3';
 
 export function initBottomNav() {
 

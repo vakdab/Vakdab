@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-banner-format-v1';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260820-banner-format-v1';
+} from '../../legacy/app-legacy.js?v=20260820-banner-mobile-v3';
+import { getProfile, saveProfile } from './settingsLegacy.js?v=20260820-banner-mobile-v3';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -1922,7 +1922,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const isPng = !isVideo && (file.type === 'image/png' || String(file.name || '').toLowerCase().endsWith('.png'));
             const previousBodyOverflow = document.body.style.overflow;
             const overlay = document.createElement('div');
-            overlay.className = 'imgedit-overlay';
+            overlay.className = `imgedit-overlay${mode === 'banner' ? ' imgedit-banner-overlay' : ''}`;
             document.body.style.overflow = 'hidden';
             overlay.innerHTML = `
                 <div class="imgedit-topbar">
@@ -1991,8 +1991,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     frameW = size; frameH = size;
                 } else {
                     frameW = stageRect.width * 0.92;
-                    const formatRatio = bannerFormat === 'wide' ? 0.5 : 0.24;
-                    frameH = Math.min(stageRect.height * (bannerFormat === 'wide' ? 0.62 : 0.55), frameW * formatRatio);
+                    const formatRatio = bannerFormat === 'wide' ? (9 / 16) : 0.24;
+                    frameH = Math.min(stageRect.height * (bannerFormat === 'wide' ? 0.82 : 0.55), frameW * formatRatio);
                 }
                 frameX = (stageRect.width - frameW) / 2;
                 frameY = (stageRect.height - frameH) / 2;
