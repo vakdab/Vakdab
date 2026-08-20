@@ -4,8 +4,37 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-gif-video-v3';
-import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260820-gif-video-v3';
+} from '../../legacy/app-legacy.js?v=20260820-gif-video-v4';
+import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260820-gif-video-v4';
+
+function primeProfileMediaPlayback(container) {
+    if (!container) return;
+    const playVideos = () => {
+        container.querySelectorAll('video.is-animated-media').forEach(video => {
+            video.muted = true;
+            video.defaultMuted = true;
+            video.setAttribute('muted', '');
+            const attemptPlay = () => {
+                const promise = video.play();
+                if (promise && typeof promise.catch === 'function') promise.catch(() => {});
+            };
+            if (video.readyState >= 1) attemptPlay();
+            else video.addEventListener('loadedmetadata', attemptPlay, { once: true });
+            video.addEventListener('canplay', attemptPlay, { once: true });
+        });
+    };
+    playVideos();
+    if (!window.__vakdabProfileMediaPlaybackBound) {
+        const resume = () => document.querySelectorAll('#profilePageContainer video.is-animated-media').forEach(video => {
+            video.muted = true;
+            video.play().catch(() => {});
+        });
+        document.addEventListener('visibilitychange', resume, { passive: true });
+        window.addEventListener('pageshow', resume, { passive: true });
+        document.addEventListener('pointerdown', resume, { passive: true, once: true });
+        window.__vakdabProfileMediaPlaybackBound = true;
+    }
+}
 
 export function renderProfilePage() {
             const container = document.getElementById('profilePageContainer');
@@ -33,14 +62,14 @@ export function renderProfilePage() {
             container.innerHTML = `
             <div class="profile-wrapper">
               <div class="${bannerClass}">
-                ${profile.bannerVideo ? profileMediaMarkup(profile.bannerVideo, 'profile-banner-media', 'video banner', profile.bannerVideoSettings) : (profile.banner ? `<img class="profile-banner-media" src="${escapeHtml(profile.banner)}" alt="banner" onerror="this.style.display='none'">` : '')}
+                ${profile.bannerVideo ? profileMediaMarkup(profile.bannerVideo, 'profile-banner-media', 'video banner', profile.bannerVideoSettings) : (profile.banner ? profileMediaMarkup(profile.banner, 'profile-banner-media', 'banner') : '')}
                 ${profile.atmosphere && profile.atmosphere !== 'none' ? `<div class="atmosphere-${profile.atmosphere}"></div>` : ''}
                 ${profile.effect && profile.effect !== 'none' ? buildEffectOverlayHtml(profile.effect) : ''}
               </div>
               <div class="profile-info">
                 <div class="profile-avatar-wrap${decorationClass}">
                   <div class="${avatarClass}">
-                    ${profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, 'profile-avatar-media', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? `<img class="profile-avatar-media" src="${escapeHtml(profile.avatar)}" alt="avatar" onerror="this.style.display='none'; this.parentElement.querySelector('.avatar-placeholder').style.display='flex'">` : '')}
+                    ${profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, 'profile-avatar-media', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, 'profile-avatar-media', 'avatar') : '')}
                     <span class="avatar-placeholder" style="display:none;">${escapeHtml(profile.nickname.charAt(0).toUpperCase())}</span>
                   </div>
                 </div>
@@ -95,6 +124,7 @@ export function renderProfilePage() {
               </div>
             </div>
           `;
+            primeProfileMediaPlayback(container);
             document.querySelectorAll('#profilePageContainer .profile-avatar-media').forEach(media => {
                 media.addEventListener('error', () => {
                     media.style.display = 'none';

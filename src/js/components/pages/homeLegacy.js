@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-gif-video-v3';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260820-gif-video-v3';
+} from '../../legacy/app-legacy.js?v=20260820-gif-video-v4';
+import { getProfile, saveProfile } from './settingsLegacy.js?v=20260820-gif-video-v4';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -1970,17 +1970,37 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             return `transform:translate(${x}%, ${y}%) scale(${(zoom * mirrorX).toFixed(4)}, ${(zoom * mirrorY).toFixed(4)});transform-origin:center center;`;
         }
 
+        function animatedMediaSources(url) {
+            if (!url || typeof url !== 'string') return { mp4: '', webm: '', original: url || '' };
+            const cleanUrl = url.split('#')[0];
+            const query = url.slice(cleanUrl.length);
+            const extensionMatch = cleanUrl.match(/\.(gif|webm|mp4|mov|m4v|ogv)$/i);
+            if (!extensionMatch) return { mp4: '', webm: '', original: url };
+            const baseUrl = cleanUrl.slice(0, -extensionMatch[0].length);
+            const extension = extensionMatch[1].toLowerCase();
+            const mp4 = `${baseUrl}.mp4${query}`;
+            const webm = `${baseUrl}.webm${query}`;
+            return {
+                mp4: extension === 'mp4' ? url : mp4,
+                webm: extension === 'webm' ? url : webm,
+                original: url
+            };
+        }
+
         export function profileMediaMarkup(url, className, alt, settings) {
             if (!url) return '';
             const safeUrl = escapeHtml(url);
             const style = escapeHtml(profileMediaTransformStyle(settings));
             const styleAttr = style ? ` style="${style}"` : '';
-            if (isVideoUrl(url)) {
-                return `<video class="${className}" src="${safeUrl}"${styleAttr} autoplay muted loop playsinline preload="metadata" aria-label="${escapeHtml(alt || '')}"></video>`;
-            }
-            if (isGifUrl(url)) {
-                const gifClass = `${className || ''}${className ? ' ' : ''}is-gif`;
-                return `<img class="${gifClass}" src="${safeUrl}"${styleAttr} alt="${escapeHtml(alt || '')}" loading="lazy">`;
+            const animated = isVideoUrl(url) || isGifUrl(url);
+            if (animated) {
+                const sources = animatedMediaSources(url);
+                const safeMp4 = escapeHtml(sources.mp4);
+                const safeWebm = escapeHtml(sources.webm);
+                const safeOriginal = escapeHtml(sources.original);
+                const animatedClass = `${className || ''}${className ? ' ' : ''}is-animated-media`;
+                const sourceMarkup = `${safeMp4 ? `<source src="${safeMp4}" type="video/mp4">` : ''}${safeWebm && safeWebm !== safeMp4 ? `<source src="${safeWebm}" type="video/webm">` : ''}`;
+                return `<video class="${animatedClass}"${styleAttr} autoplay muted loop playsinline webkit-playsinline="true" preload="auto" aria-label="${escapeHtml(alt || '')}">${sourceMarkup}<img src="${safeOriginal}" alt="${escapeHtml(alt || '')}"></video>`;
             }
             return `<img class="${className}" src="${safeUrl}"${styleAttr} alt="${escapeHtml(alt || '')}" loading="lazy">`;
         }
