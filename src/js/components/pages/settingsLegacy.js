@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, renderStickerFaceByKey, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix3';
+} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix4';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 

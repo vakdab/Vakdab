@@ -1077,3 +1077,12 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
 .dark-mode .home-catalog-tab.active i,
 .dark-mode .home-catalog-tab.active span,
 .dark-mode .home-catalog-view.active i { color: #ffffff !important; }
+
+/* Touch devices must activate cards on the first tap; do not turn hover into a
+   tap-only intermediate state on iOS Safari. */
+.home-catalog-card { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+@media (hover: none), (pointer: coarse) {
+    .home-catalog-card:hover { transform: none; }
+    .home-catalog-card:hover .home-catalog-card__poster img { transform: none; filter: none; }
+    .home-catalog-card:hover .home-catalog-card__play { opacity: 0; transform: translateY(4px); }
+}

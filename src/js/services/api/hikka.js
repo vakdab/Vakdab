@@ -1,4 +1,4 @@
-import { HIKKA_API } from '../../config/constants.js?v=20260820-hikka-proxy-fix3';
+import { HIKKA_API } from '../../config/constants.js?v=20260820-hikka-proxy-fix4';
 import { getJson } from '../api.js';
 
 export const HIKKA_ENDPOINTS = Object.freeze({

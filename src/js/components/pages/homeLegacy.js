@@ -1,9 +1,9 @@
-import { HIKKA_API, GENRE_MAP, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js?v=20260820-hikka-proxy-fix3';
+import { HIKKA_API, GENRE_MAP, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js?v=20260820-hikka-proxy-fix4';
 import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix3';
+} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix4';
 import { getProfile, saveProfile } from './settingsLegacy.js';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
@@ -1009,7 +1009,23 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     if (homeCatalogMode !== 'anime') { showToast('Розділи цього тайтлу ще не готові'); return; }
                     openPlayerPage(card.dataset.url);
                 };
-                card.addEventListener('click', open);
+                // On iOS Safari, a non-native clickable card with :hover styles can
+                // consume the first tap to activate the hover state. Handle the
+                // touch/pointer activation directly and ignore the synthetic click
+                // Safari dispatches immediately afterwards.
+                let lastTouchActivation = 0;
+                const activateCard = event => {
+                    if (event.type === 'pointerup' && event.pointerType !== 'mouse') {
+                        lastTouchActivation = Date.now();
+                        event.preventDefault();
+                        open();
+                        return;
+                    }
+                    if (event.type === 'click' && Date.now() - lastTouchActivation < 700) return;
+                    open();
+                };
+                card.addEventListener('pointerup', activateCard, { passive: false });
+                card.addEventListener('click', activateCard);
                 card.addEventListener('keydown', event => {
                     if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
                 });

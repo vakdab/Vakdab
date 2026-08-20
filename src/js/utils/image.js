@@ -1,4 +1,4 @@
-import { PROXY_URL } from '../config/constants.js?v=20260820-hikka-proxy-fix3';
+import { PROXY_URL } from '../config/constants.js?v=20260820-hikka-proxy-fix4';
 
 export function getProxyUrl(url, forceUA = 'desktop') {
     if (!url) return null;
