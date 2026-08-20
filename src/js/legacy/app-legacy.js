@@ -1,6 +1,6 @@
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, signInAnonymously, sendPasswordResetEmail, deleteUser, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot } from '../config/firebase.js';
 import { auth, db, initialized as firebaseInitialized } from '../services/firebase/client.js';
-import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_PROXY_URL, MIKAI_BASE, GENRE_MAP } from '../config/constants.js?v=20260820-hikka-proxy-fix2';
+import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_PROXY_URL, MIKAI_BASE, GENRE_MAP } from '../config/constants.js?v=20260820-hikka-proxy-fix3';
 import { safeQuery, safeQueryAll } from '../utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from '../utils/image.js';
 import { loadFeature } from '../core/feature-loader.js?v=20260818-ranobe-v6';

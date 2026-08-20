@@ -1,6 +1,6 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
-import { GENRE_MAP } from '../../config/constants.js?v=20260820-hikka-proxy-fix2';
+import { GENRE_MAP } from '../../config/constants.js?v=20260820-hikka-proxy-fix3';
 import { Router } from '../../core/compat/router.js';
 import { Storage } from '../../core/compat/storage.js';
 import { LampaPlayer } from './lampaPlayer.js';
@@ -16,7 +16,7 @@ import {
 import { renderProfilePage } from '../pages/profileLegacy.js';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix2';
+} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix3';
 import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
 
         // ====================================================================

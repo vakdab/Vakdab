@@ -1,4 +1,4 @@
-import { PROXY_URL } from '../../config/constants.js?v=20260820-hikka-proxy-fix2';
+import { PROXY_URL } from '../../config/constants.js?v=20260820-hikka-proxy-fix3';
 import { getProxyUrl, isEmbedUrl } from '../../utils/image.js';
 import { normalizePosterUrl } from '../../services/catalog.js';
 

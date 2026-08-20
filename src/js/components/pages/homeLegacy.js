@@ -1,9 +1,9 @@
-import { HIKKA_API, GENRE_MAP, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js?v=20260820-hikka-proxy-fix2';
+import { HIKKA_API, GENRE_MAP, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js?v=20260820-hikka-proxy-fix3';
 import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix2';
+} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix3';
 import { getProfile, saveProfile } from './settingsLegacy.js';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
