@@ -195,6 +195,9 @@ export class LampaPlayer {
                 this.containerRef = null;
                 this._controlsTimer = null;
                 this._centerTimer = null;
+                this._sourceRequestId = 0;
+                this._lastSourceRequest = null;
+                this._onFullscreenChange = null;
                 this._init();
             }
 
@@ -456,7 +459,7 @@ export class LampaPlayer {
                 // Fullscreen — single button lives in the video topbar (works for both
                 // the custom player and iframe-based sources).
 
-                const syncFullscreenState = () => {
+                this._onFullscreenChange = () => {
                     this.state.fullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
                     const pageFs = document.getElementById('playerFullscreenBtn');
                     if (pageFs) {
@@ -466,8 +469,8 @@ export class LampaPlayer {
                         pageFs.classList.toggle('is-fullscreen', this.state.fullscreen);
                     }
                 };
-                document.addEventListener('fullscreenchange', syncFullscreenState);
-                document.addEventListener('webkitfullscreenchange', syncFullscreenState);
+                document.addEventListener('fullscreenchange', this._onFullscreenChange);
+                document.addEventListener('webkitfullscreenchange', this._onFullscreenChange);
 
                 // Keyboard
                 this._onKeyDown = e => {
@@ -568,6 +571,8 @@ export class LampaPlayer {
             }
 
             loadSource(src, animeTitle, episodeTitle) {
+                const requestId = ++this._sourceRequestId;
+                this._lastSourceRequest = { src, animeTitle, episodeTitle };
                 if (isEmbedUrl(src)) {
                     this.container.innerHTML = '';
                     const iframe = document.createElement('iframe');
@@ -579,11 +584,13 @@ export class LampaPlayer {
                     wrap.className = 'lampa-player-container';
                     wrap.style.cssText = 'width:100%;aspect-ratio:16/9;background:#000;position:relative;border-radius:12px;overflow:hidden;';
                     wrap.appendChild(iframe);
+                    wrap.classList.add('is-loading');
                     this.container.appendChild(wrap);
                     this.containerRef = wrap;
                     if (this.hls) { this.hls.destroy(); this.hls = null; }
                     this.videoRef = null;
                     this.state.loading = false;
+                    window.setTimeout(() => { if (requestId === this._sourceRequestId) wrap.classList.remove('is-loading'); }, 120);
                     return;
                 }
 
@@ -615,6 +622,23 @@ export class LampaPlayer {
                     ? getProxyUrl(src, isMobileDevice ? 'mobile' : 'desktop')
                     : src;
                 const isHlsSource = /\.m3u8(?:[?#]|$)/i.test(src);
+                const isCurrentRequest = () => requestId === this._sourceRequestId && this.videoRef === v;
+                const hideLoading = () => {
+                    if (!isCurrentRequest()) return;
+                    this.state.loading = false;
+                    this._spinner?.classList.add('hidden');
+                    this.containerRef?.classList.remove('is-loading');
+                };
+                const safePlay = () => {
+                    if (!isCurrentRequest()) return;
+                    v.play().catch(() => {
+                        if (!isCurrentRequest()) return;
+                        v.muted = true;
+                        this.state.muted = true;
+                        this._updateVolBtn();
+                        v.play().catch(() => {});
+                    });
+                };
 
                 const _startHls = () => {
                     const hls = new Hls({
@@ -628,32 +652,22 @@ export class LampaPlayer {
                     hls.loadSource(proxyUrl);
                     hls.attachMedia(v);
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        if (!isCurrentRequest()) return;
                         this._refreshQualityMenu();
-                        this.state.loading = false;
-                        this._spinner.classList.add('hidden');
-                        v.play().catch(() => {
-                            v.muted = true;
-                            this.state.muted = true;
-                            this._updateVolBtn();
-                            v.play().catch(() => {});
-                        });
+                        hideLoading();
+                        safePlay();
                     });
                     hls.on(Hls.Events.ERROR, (ev, ed) => {
                         if (ed && ed.fatal) {
                             console.warn('[HLS fatal]', ed.type, ed.details);
+                            if (!isCurrentRequest()) return;
                             hls.destroy(); this.hls = null;
-                            this.state.loading = false;
-                            this._spinner.classList.add('hidden');
+                            hideLoading();
                             v.src = proxyUrl; v.load();
-                            v.play().catch(() => {
-                            v.muted = true;
-                            this.state.muted = true;
-                            this._updateVolBtn();
-                            v.play().catch(() => {});
-                        });
+                            safePlay();
                         }
                     });
-                    v.addEventListener('error', () => this._showPlaybackError('Потік пошкоджений, заблокований або несумісний із цим пристроєм.'), { once: true });
+                    v.addEventListener('error', () => { if (isCurrentRequest()) this._showPlaybackError('Потік пошкоджений, заблокований або несумісний із цим пристроєм.'); }, { once: true });
                 };
 
                 if (!isHlsSource) {
@@ -664,41 +678,27 @@ export class LampaPlayer {
                         this._showPlaybackError(`Відеофайл не вдалося відкрити на цьому пристрої${detail}.`);
                     };
                     v.addEventListener('error', onNativeError, { once: true });
-                    v.addEventListener('canplay', () => { this.state.loading = false; this._spinner.classList.add('hidden'); }, { once: true });
+                    v.addEventListener('canplay', hideLoading, { once: true });
                     v.src = proxyUrl;
                     v.load();
-                    v.play().catch(() => {
-                            v.muted = true;
-                            this.state.muted = true;
-                            this._updateVolBtn();
-                            v.play().catch(() => {});
-                        });
+                    safePlay();
                 } else if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                     _startHls();
                 } else if (v.canPlayType('application/vnd.apple.mpegurl') !== '' || v.canPlayType('audio/mpegurl') !== '') {
                     const onNativeError = () => this._showPlaybackError('HLS-потік не вдалося відкрити на цьому пристрої.');
                     v.addEventListener('error', onNativeError, { once: true });
-                    v.addEventListener('canplay', () => { this.state.loading = false; this._spinner.classList.add('hidden'); }, { once: true });
+                    v.addEventListener('canplay', hideLoading, { once: true });
                     v.src = proxyUrl; v.load();
-                    v.play().catch(() => {
-                            v.muted = true;
-                            this.state.muted = true;
-                            this._updateVolBtn();
-                            v.play().catch(() => {});
-                        });
+                    safePlay();
                 } else {
                     const sc = document.createElement('script');
                     sc.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';
                     sc.onload = () => {
+                        if (!isCurrentRequest()) return;
                         if (Hls.isSupported()) _startHls();
-                        else { v.src = proxyUrl; v.load(); v.play().catch(() => {
-                            v.muted = true;
-                            this.state.muted = true;
-                            this._updateVolBtn();
-                            v.play().catch(() => {});
-                        }); this.state.loading = false; this._spinner.classList.add('hidden'); }
+                        else { v.src = proxyUrl; v.load(); hideLoading(); safePlay(); }
                     };
-                    sc.onerror = () => { v.src = proxyUrl; v.load(); this.state.loading = false; this._spinner.classList.add('hidden'); };
+                    sc.onerror = () => { if (!isCurrentRequest()) return; v.src = proxyUrl; v.load(); hideLoading(); safePlay(); };
                     document.head.appendChild(sc);
                 }
             }
@@ -713,7 +713,12 @@ export class LampaPlayer {
                 if (!this.containerRef || this.containerRef.querySelector('.lp-error')) return;
                 const error = document.createElement('div');
                 error.className = 'lp-error';
-                error.innerHTML = `<strong>Не вдалося запустити відео</strong><span>${message}</span>`;
+                error.innerHTML = `<strong>Не вдалося запустити відео</strong><span>${message}</span><button type="button" class="lp-error-retry"><i class="fas fa-rotate-right"></i> Спробувати ще раз</button>`;
+                error.querySelector('.lp-error-retry')?.addEventListener('click', event => {
+                    event.stopPropagation();
+                    const last = this._lastSourceRequest;
+                    if (last?.src) this.loadSource(last.src, last.animeTitle, last.episodeTitle);
+                });
                 this.containerRef.appendChild(error);
             }
 
@@ -744,7 +749,13 @@ export class LampaPlayer {
 
             destroy() {
                 clearTimeout(this._controlsTimer);
+                this._sourceRequestId += 1;
                 if (this._onKeyDown) document.removeEventListener('keydown', this._onKeyDown);
+                if (this._onFullscreenChange) {
+                    document.removeEventListener('fullscreenchange', this._onFullscreenChange);
+                    document.removeEventListener('webkitfullscreenchange', this._onFullscreenChange);
+                    this._onFullscreenChange = null;
+                }
                 if (this._closePlayerMenus) document.removeEventListener('click', this._closePlayerMenus);
                 clearTimeout(this._centerTimer);
                 if (this.hls) { this.hls.destroy(); this.hls = null; }
