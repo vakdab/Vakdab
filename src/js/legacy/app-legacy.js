@@ -22,7 +22,7 @@ export const PROFILE_STICKER_SLOTS = 8;
 import { Auth } from '../core/compat/auth.js';
 import { Storage } from '../core/compat/storage.js';
 import { Router } from '../core/compat/router.js';
-import { LampaPlayer } from '../components/player/lampaPlayer.js';
+import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260820-player-modern-v1';
 import { initCommunity } from '../components/community/legacyCommunity.js?v=20260820-profile-media-v3';
 import { initBottomNav } from '../components/navigation/bottomNav.js';
 import { renderStickerFaceByKey } from '../components/pages/stickersLegacy.js?v=20260820-menu-pages-fix1';

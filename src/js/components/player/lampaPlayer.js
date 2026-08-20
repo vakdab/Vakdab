@@ -171,7 +171,9 @@ import { normalizePosterUrl } from '../../services/catalog.js';
             volOn: `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`,
             volOff: `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>`,
             fsEnter: `<svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>`,
-            fsExit: `<svg viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>`
+            fsExit: `<svg viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>`,
+            skipBack: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 1 1 2.3 7.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 4v6h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><text x="9" y="14.2" font-size="6.4" font-family="Arial,sans-serif" font-weight="700" fill="currentColor">10</text></svg>`,
+            skipForward: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10a8 8 0 1 0-2.3 7.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M20 4v6h-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><text x="5.4" y="14.2" font-size="6.4" font-family="Arial,sans-serif" font-weight="700" fill="currentColor">10</text></svg>`
         };
 
         function lpFmtTime(sec) {
@@ -237,7 +239,9 @@ export class LampaPlayer {
                         <div class="lp-progress-fill" id="lpProgressFill" style="width:0%"></div>
                     </div>
                     <div class="lp-bottom-row">
-                        <button class="lp-btn" id="lpPlayBtn" title="Play/Pause">${LP_ICONS.play}</button>
+                        <button class="lp-btn lp-main-btn" id="lpPlayBtn" title="Відтворити / Пауза" aria-label="Відтворити">${LP_ICONS.play}</button>
+                        <button class="lp-btn lp-skip-btn" id="lpSkipBackBtn" title="Назад на 10 секунд" aria-label="Назад на 10 секунд">${LP_ICONS.skipBack}</button>
+                        <button class="lp-btn lp-skip-btn" id="lpSkipForwardBtn" title="Вперед на 10 секунд" aria-label="Вперед на 10 секунд">${LP_ICONS.skipForward}</button>
                         <span class="lp-time" id="lpTime">0:00 / 0:00</span>
                         <div class="lp-spacer"></div>
                         <div class="lp-settings-wrap">
@@ -261,7 +265,10 @@ export class LampaPlayer {
                                 <div class="lp-popover lp-quality-menu" id="lpQualityMenu" role="menu" aria-hidden="true"></div>
                             </div>
                         </div>
-                        <button class="lp-btn" id="lpVolBtn" title="Mute">${LP_ICONS.volOn}</button>
+                        <div class="lp-volume-group">
+                            <button class="lp-btn" id="lpVolBtn" title="Вимкнути звук" aria-label="Вимкнути звук">${LP_ICONS.volOn}</button>
+                            <input class="lp-volume" id="lpVolume" type="range" min="0" max="1" step="0.05" value="0.8" aria-label="Гучність">
+                        </div>
                     </div>
                 `;
                 this._controls = controls;
@@ -317,13 +324,13 @@ export class LampaPlayer {
 
                 // Click on wrap — toggle play, show controls
                 wrap.addEventListener('click', e => {
-                    if (e.target.closest('.lp-controls')) return;
+                    if (e.target.closest('.lp-controls, .video-overlay-topbar, .player-preview-play')) return;
                     this._flashCenter();
                     this.togglePlay();
                     this._showControls();
                 });
                 wrap.addEventListener('dblclick', e => {
-                    if (e.target.closest('.lp-controls')) return;
+                    if (e.target.closest('.lp-controls, .video-overlay-topbar, .player-preview-play')) return;
                     this.toggleFullscreen();
                 });
                 wrap.addEventListener('mousemove', () => this._showControls());
@@ -349,15 +356,36 @@ export class LampaPlayer {
                     progress.addEventListener('touchmove', e => { seek(e.touches[0]); }, { passive: true });
                 }
 
-                // Volume — mute/unmute toggle only (no slider)
+                // Volume — mute toggle plus a compact range slider.
                 const volBtn = wrap.querySelector('#lpVolBtn');
-                v.volume = this.state.volume ?? 1;
+                const volumeSlider = wrap.querySelector('#lpVolume');
+                v.volume = this.state.volume ?? 0.8;
                 if (volBtn) volBtn.addEventListener('click', e => {
                     e.stopPropagation();
                     v.muted = !v.muted;
                     this.state.muted = v.muted;
                     this._updateVolBtn();
                 });
+                if (volumeSlider) volumeSlider.addEventListener('input', e => {
+                    e.stopPropagation();
+                    const value = Math.max(0, Math.min(1, Number(e.target.value)));
+                    v.volume = value;
+                    v.muted = value === 0;
+                    this.state.volume = value;
+                    this.state.muted = v.muted;
+                    this._updateVolBtn();
+                });
+                v.addEventListener('volumechange', () => this._updateVolBtn());
+
+                const skipBy = seconds => {
+                    if (!Number.isFinite(v.duration)) return;
+                    v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + seconds));
+                    this._showControls();
+                };
+                const skipBackBtn = wrap.querySelector('#lpSkipBackBtn');
+                const skipForwardBtn = wrap.querySelector('#lpSkipForwardBtn');
+                skipBackBtn?.addEventListener('click', e => { e.stopPropagation(); skipBy(-10); });
+                skipForwardBtn?.addEventListener('click', e => { e.stopPropagation(); skipBy(10); });
 
                 // Playback speed and quality menus — class-based, animated.
                 const speedBtn = wrap.querySelector('#lpSpeedBtn');
@@ -481,13 +509,27 @@ export class LampaPlayer {
 
             _updatePlayBtn() {
                 const btn = this.containerRef?.querySelector('#lpPlayBtn');
-                if (btn) btn.innerHTML = this.state.playing ? LP_ICONS.pause : LP_ICONS.play;
+                if (btn) {
+                    btn.innerHTML = this.state.playing ? LP_ICONS.pause : LP_ICONS.play;
+                    btn.title = this.state.playing ? 'Пауза' : 'Відтворити';
+                    btn.setAttribute('aria-label', this.state.playing ? 'Пауза' : 'Відтворити');
+                }
             }
 
             _updateVolBtn() {
                 const btn = this.containerRef?.querySelector('#lpVolBtn');
+                const slider = this.containerRef?.querySelector('#lpVolume');
                 const v = this.videoRef;
-                if (btn) btn.innerHTML = (v && (v.muted || v.volume === 0)) ? LP_ICONS.volOff : LP_ICONS.volOn;
+                const isMuted = !!(v && (v.muted || v.volume === 0));
+                if (btn) {
+                    btn.innerHTML = isMuted ? LP_ICONS.volOff : LP_ICONS.volOn;
+                    btn.title = isMuted ? 'Увімкнути звук' : 'Вимкнути звук';
+                    btn.setAttribute('aria-label', btn.title);
+                }
+                if (slider && v) {
+                    slider.value = String(v.volume ?? 0);
+                    slider.setAttribute('aria-valuenow', String(Math.round((v.volume ?? 0) * 100)));
+                }
             }
 
             _updateProgress() {
@@ -506,9 +548,13 @@ export class LampaPlayer {
                 const c = this._controls;
                 if (!c) return;
                 c.classList.remove('hidden');
+                this.containerRef?.classList.remove('controls-hidden');
                 clearTimeout(this._controlsTimer);
                 if (this.state.playing) {
-                    this._controlsTimer = setTimeout(() => c.classList.add('hidden'), 3000);
+                    this._controlsTimer = setTimeout(() => {
+                        c.classList.add('hidden');
+                        this.containerRef?.classList.add('controls-hidden');
+                    }, 3200);
                 }
             }
 

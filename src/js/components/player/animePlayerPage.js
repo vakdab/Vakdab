@@ -3,7 +3,7 @@ import { auth, db } from '../../services/firebase/client.js';
 import { GENRE_MAP } from '../../config/constants.js?v=20260820-hikka-proxy-fix4';
 import { Router } from '../../core/compat/router.js';
 import { Storage } from '../../core/compat/storage.js';
-import { LampaPlayer } from './lampaPlayer.js';
+import { LampaPlayer } from './lampaPlayer.js?v=20260820-player-modern-v1';
 import { DailyStats } from '../rating/ratingSystem.js?v=20260820-profile-media-v3';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,

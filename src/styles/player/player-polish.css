@@ -1193,3 +1193,264 @@ body.player-page-open > .bottom-sheet-overlay {
 @media (prefers-reduced-motion: reduce) {
     #playerPageModal .player-preview-play { transition: none; }
 }
+
+
+/* ════════════════════════════════════════════════════════════════
+   Modern player overlay v1 — VakDab
+   A focused, dark glass control system that stays readable over any frame.
+   ════════════════════════════════════════════════════════════════ */
+#playerPageModal .player-video-container {
+    isolation: isolate;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 20px;
+    background: #070910;
+    box-shadow: 0 24px 70px rgba(0,0,0,.32), 0 0 0 1px rgba(255,255,255,.04);
+}
+#playerPageModal .player-video-container::before {
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(5,7,14,.62) 0%, transparent 24%, transparent 58%, rgba(5,7,14,.72) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+}
+#playerPageModal .player-video-container::after {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at 50% 42%, transparent 0 32%, rgba(0,0,0,.12) 100%);
+}
+#playerPageModal #playerPageVideo,
+#playerPageModal .lampa-player-container { z-index: 0; }
+#playerPageModal .player-frame-poster { z-index: 3; }
+
+/* Top information rail */
+#playerPageModal .modal-content .video-overlay-topbar {
+    z-index: 12;
+    min-height: 68px;
+    padding: 13px 15px 20px;
+    align-items: flex-start;
+    background: linear-gradient(180deg, rgba(4,6,12,.84), rgba(4,6,12,.25) 72%, transparent);
+    opacity: 1;
+    transform: none;
+}
+#playerPageModal .modal-content .video-overlay-left {
+    min-width: 0;
+    gap: 3px;
+}
+#playerPageModal .modal-content .video-overlay-left::before {
+    content: 'ЗАРАЗ ВІДТВОРЮЄТЬСЯ';
+    color: rgba(255,255,255,.62);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .13em;
+}
+#playerPageModal .modal-content .video-overlay-title {
+    max-width: min(72vw, 560px);
+    color: #fff !important;
+    font-size: clamp(13px, 1.6vw, 16px);
+    font-weight: 750;
+    line-height: 1.25;
+    text-shadow: 0 2px 14px rgba(0,0,0,.82);
+}
+#playerPageModal .modal-content .video-overlay-topbar .icon-btn {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 12px;
+    background: rgba(10,12,20,.52);
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(0,0,0,.18);
+}
+#playerPageModal .modal-content .video-overlay-topbar .icon-btn:hover,
+#playerPageModal .modal-content .video-overlay-topbar .icon-btn:focus-visible {
+    border-color: color-mix(in srgb, var(--accent) 70%, white);
+    background: color-mix(in srgb, var(--accent) 30%, rgba(10,12,20,.72));
+    outline: none;
+}
+
+/* Floating bottom control dock */
+#playerPageModal .modal-content .lp-controls {
+    z-index: 14;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    gap: 9px;
+    padding: 10px 12px 11px;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 17px;
+    background: linear-gradient(135deg, rgba(20,23,34,.94), rgba(9,11,18,.88));
+    color: #fff;
+    box-shadow: 0 14px 34px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.08);
+    backdrop-filter: blur(22px) saturate(1.35);
+    -webkit-backdrop-filter: blur(22px) saturate(1.35);
+    transition: opacity .22s ease, transform .22s cubic-bezier(.23,1,.32,1);
+}
+#playerPageModal .modal-content .lp-controls.hidden,
+#playerPageModal .modal-content .lampa-player-container.controls-hidden .lp-controls {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px) scale(.985);
+}
+#playerPageModal .modal-content .lp-progress-wrap {
+    height: 5px !important;
+    margin: 0 1px 2px;
+    overflow: visible;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255,255,255,.2) !important;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.3);
+}
+#playerPageModal .modal-content .lp-progress-wrap:hover { height: 7px !important; }
+#playerPageModal .modal-content .lp-progress-fill {
+    min-width: 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 75%, #fff), var(--accent)) !important;
+    box-shadow: 0 0 13px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+#playerPageModal .modal-content .lp-progress-fill::after {
+    width: 13px;
+    height: 13px;
+    background: #fff !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 60%, transparent), 0 2px 7px rgba(0,0,0,.38);
+}
+#playerPageModal .modal-content .lp-bottom-row { min-height: 36px; gap: 5px; }
+#playerPageModal .modal-content .lp-btn {
+    width: 34px;
+    height: 34px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    color: rgba(255,255,255,.86);
+    background: transparent;
+    transition: color .16s ease, background .16s ease, border-color .16s ease, transform .16s ease;
+}
+#playerPageModal .modal-content .lp-btn svg { width: 19px; height: 19px; fill: currentColor; }
+#playerPageModal .modal-content .lp-btn:hover,
+#playerPageModal .modal-content .lp-btn:focus-visible {
+    border-color: rgba(255,255,255,.14);
+    background: rgba(255,255,255,.1);
+    color: #fff;
+    outline: none;
+}
+#playerPageModal .modal-content .lp-btn:active { transform: scale(.92); }
+#playerPageModal .modal-content .lp-main-btn {
+    width: 38px;
+    height: 38px;
+    border-color: color-mix(in srgb, var(--accent) 48%, transparent);
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--accent) 22%, rgba(255,255,255,.06));
+    color: #fff;
+}
+#playerPageModal .modal-content .lp-main-btn:hover,
+#playerPageModal .modal-content .lp-main-btn:focus-visible {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-text, #080910);
+}
+#playerPageModal .modal-content .lp-skip-btn svg { width: 22px; height: 22px; }
+#playerPageModal .modal-content .lp-time {
+    margin-left: 3px;
+    color: rgba(255,255,255,.68);
+    font-size: 11px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .01em;
+}
+#playerPageModal .modal-content .lp-settings-wrap { gap: 6px; }
+#playerPageModal .modal-content .lp-control-pill {
+    height: 32px;
+    min-width: 46px;
+    padding: 0 9px;
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 10px;
+    background: rgba(255,255,255,.075);
+    color: rgba(255,255,255,.9);
+    font-size: 11px;
+    font-weight: 750;
+}
+#playerPageModal .modal-content .lp-control-pill:hover,
+#playerPageModal .modal-content .lp-control-pill:focus-visible,
+#playerPageModal .modal-content .lp-control-pill.is-open {
+    border-color: color-mix(in srgb, var(--accent) 55%, rgba(255,255,255,.18));
+    background: color-mix(in srgb, var(--accent) 18%, rgba(255,255,255,.1));
+    outline: none;
+}
+#playerPageModal .modal-content .lp-chevron { color: currentColor; }
+#playerPageModal .modal-content .lp-volume-group { display: flex; align-items: center; gap: 3px; }
+#playerPageModal .modal-content .lp-volume {
+    width: 70px;
+    height: 4px;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+#playerPageModal .modal-content .lp-volume::-webkit-slider-runnable-track { height: 4px; border-radius: 999px; background: rgba(255,255,255,.2); }
+#playerPageModal .modal-content .lp-volume::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -4px; border: 2px solid #fff; border-radius: 50%; background: var(--accent); appearance: none; }
+#playerPageModal .modal-content .lp-volume::-moz-range-track { height: 4px; border-radius: 999px; background: rgba(255,255,255,.2); }
+#playerPageModal .modal-content .lp-volume::-moz-range-thumb { width: 10px; height: 10px; border: 2px solid #fff; border-radius: 50%; background: var(--accent); }
+
+/* Menus stay attached to their control pills and use the same glass language. */
+#playerPageModal .modal-content .lp-popover {
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 13px;
+    background: rgba(16,19,29,.97);
+    color: #fff;
+    box-shadow: 0 16px 34px rgba(0,0,0,.4);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+#playerPageModal .modal-content .lp-popover-label { color: rgba(255,255,255,.5); }
+#playerPageModal .modal-content .lp-popover button { color: rgba(255,255,255,.82); }
+#playerPageModal .modal-content .lp-popover button:hover,
+#playerPageModal .modal-content .lp-popover button.is-active { background: color-mix(in srgb, var(--accent) 22%, transparent); color: #fff; }
+
+/* Center play button and the pre-play poster action share one visual language. */
+#playerPageModal .modal-content .lp-center-play { z-index: 10; }
+#playerPageModal .modal-content .lp-center-play-btn,
+#playerPageModal .modal-content .player-preview-play {
+    width: 82px;
+    height: 82px;
+    border: 1px solid rgba(255,255,255,.34);
+    border-radius: 50%;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 82%, #fff), var(--accent));
+    color: var(--accent-text, #080910);
+    box-shadow: 0 15px 38px rgba(0,0,0,.42), 0 0 0 10px rgba(255,255,255,.07), 0 0 34px color-mix(in srgb, var(--accent) 38%, transparent);
+    backdrop-filter: blur(12px);
+    transition: opacity .22s ease, transform .22s cubic-bezier(.23,1,.32,1), box-shadow .22s ease, filter .22s ease;
+}
+#playerPageModal .modal-content .lp-center-play-btn.show { transform: scale(1); }
+#playerPageModal .modal-content .lp-center-play-btn:hover,
+#playerPageModal .modal-content .player-preview-play:hover {
+    transform: translate(-50%, -50%) scale(1.08);
+    filter: brightness(1.08);
+    box-shadow: 0 18px 44px rgba(0,0,0,.48), 0 0 0 12px rgba(255,255,255,.08), 0 0 42px color-mix(in srgb, var(--accent) 52%, transparent);
+}
+#playerPageModal .modal-content .lp-center-play-btn svg { width: 31px; height: 31px; fill: currentColor; }
+#playerPageModal .modal-content .player-preview-play { z-index: 16; display: grid; place-items: center; transform: translate(-50%, -50%); }
+#playerPageModal .modal-content .player-preview-play svg { width: 30px; height: 30px; margin-left: 4px; fill: currentColor; }
+#playerPageModal .modal-content .player-preview-play.is-hidden { transform: translate(-50%, -50%) scale(.78); }
+
+@media (max-width: 620px) {
+    #playerPageModal .player-video-container { border-radius: 0; border-right: 0; border-left: 0; }
+    #playerPageModal .modal-content .video-overlay-topbar { min-height: 58px; padding: 10px 10px 16px; }
+    #playerPageModal .modal-content .video-overlay-left::before { font-size: 8px; }
+    #playerPageModal .modal-content .video-overlay-title { font-size: 12px; }
+    #playerPageModal .modal-content .video-overlay-topbar .icon-btn { width: 34px; height: 34px; flex-basis: 34px; border-radius: 10px; }
+    #playerPageModal .modal-content .lp-controls { right: 8px; bottom: 8px; left: 8px; padding: 8px 9px 9px; border-radius: 15px; }
+    #playerPageModal .modal-content .lp-volume { width: 52px; }
+    #playerPageModal .modal-content .lp-time { font-size: 10px; }
+    #playerPageModal .modal-content .lp-center-play-btn,
+    #playerPageModal .modal-content .player-preview-play { width: 68px; height: 68px; }
+}
+@media (max-width: 430px) {
+    #playerPageModal .modal-content .lp-bottom-row { gap: 2px; }
+    #playerPageModal .modal-content .lp-settings-wrap { gap: 2px; }
+    #playerPageModal .modal-content .lp-control-pill { min-width: 40px; padding: 0 6px; }
+    #playerPageModal .modal-content .lp-volume { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #playerPageModal .modal-content .lp-controls,
+    #playerPageModal .modal-content .lp-btn,
+    #playerPageModal .modal-content .player-preview-play,
+    #playerPageModal .modal-content .lp-center-play-btn { transition: none; }
+}
