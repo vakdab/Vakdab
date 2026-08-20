@@ -1,4 +1,4 @@
-import { HIKKA_API, HIKKA_CORS_PROXY, PROXY_URL } from '../config/constants.js';
+import { HIKKA_API, HIKKA_PROXY_URL } from '../config/constants.js';
 import { safeQueryAll } from '../utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from '../utils/image.js';
 import { debugLog } from '../utils/debug.js';
@@ -70,7 +70,7 @@ import {
                 synopsis:normalizeSynopsisText(item.synopsis_ua || item.synopsis_en || ''), from:'hikka' };
         }
         export function hikkaRequest(url, options = {}) {
-            return fetch(`${HIKKA_CORS_PROXY}${encodeURIComponent(url)}`, {
+            return fetch(`${HIKKA_PROXY_URL}/?url=${encodeURIComponent(url)}`, {
                 ...options,
                 headers: { Accept: 'application/json', ...(options.headers || {}) }
             });
