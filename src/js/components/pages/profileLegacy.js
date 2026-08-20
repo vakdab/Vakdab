@@ -4,8 +4,8 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-gif-video-v2';
-import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260820-gif-video-v2';
+} from '../../legacy/app-legacy.js?v=20260820-gif-video-v3';
+import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260820-gif-video-v3';
 
 export function renderProfilePage() {
             const container = document.getElementById('profilePageContainer');

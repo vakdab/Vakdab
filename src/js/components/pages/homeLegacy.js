@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-gif-video-v2';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260820-gif-video-v2';
+} from '../../legacy/app-legacy.js?v=20260820-gif-video-v3';
+import { getProfile, saveProfile } from './settingsLegacy.js?v=20260820-gif-video-v3';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -1858,11 +1858,90 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const resp = await fetch(uploadUrl, { method: 'POST', body: formData, mode: 'cors', credentials: 'omit' });
             if (!resp.ok) {
                 const errText = await resp.text().catch(() => '');
-                throw new Error('Cloudinary upload failed: ' + resp.status + ' ' + errText.substring(0, 100));
+                throw new Error('Cloudinary upload failed: ' + resp.status + ' ' + errText.substring(0, 180));
             }
             const data = await resp.json();
             if (!data.secure_url) throw new Error('Cloudinary: no secure_url in response');
             return data.secure_url;
+        }
+
+        const CLOUDINARY_IMAGE_FILE_LIMIT = 10 * 1024 * 1024;
+        const LARGE_GIF_CAPTURE_MS = 12000;
+
+        // A free Cloudinary environment accepts images/GIFs only up to 10 MB, while
+        // video uploads have a much larger limit. Capture an oversized animated GIF
+        // as a browser video without drawing it to a still-image canvas. The GIF's
+        // frames continue to advance while MediaRecorder records the canvas stream.
+        export async function convertLargeGifToVideo(file) {
+            if (!file || file.size <= CLOUDINARY_IMAGE_FILE_LIMIT) return file;
+            if (typeof MediaRecorder === 'undefined' || typeof HTMLCanvasElement === 'undefined' || !HTMLCanvasElement.prototype.captureStream) {
+                throw new Error('GIF понад 10 МБ потребує браузер із підтримкою відеозапису');
+            }
+
+            const objectUrl = URL.createObjectURL(file);
+            try {
+                const image = new Image();
+                image.src = objectUrl;
+                await new Promise((resolve, reject) => {
+                    image.onload = resolve;
+                    image.onerror = () => reject(new Error('Не вдалося прочитати GIF для конвертації'));
+                });
+
+                const maxDimension = 1280;
+                const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth || 1, image.naturalHeight || 1));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(2, Math.round((image.naturalWidth || 2) * scale));
+                canvas.height = Math.max(2, Math.round((image.naturalHeight || 2) * scale));
+                const context = canvas.getContext('2d', { alpha: false });
+                if (!context) throw new Error('Браузер не підтримує підготовку GIF-відео');
+
+                const mimeType = [
+                    'video/webm;codecs=vp9',
+                    'video/webm;codecs=vp8',
+                    'video/webm',
+                    'video/mp4'
+                ].find((type) => MediaRecorder.isTypeSupported(type));
+                if (!mimeType) throw new Error('Браузер не підтримує формат відео для великого GIF');
+
+                const stream = canvas.captureStream(30);
+                const chunks = [];
+                const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2500000 });
+                const recordingFinished = new Promise((resolve, reject) => {
+                    recorder.ondataavailable = (event) => {
+                        if (event.data && event.data.size) chunks.push(event.data);
+                    };
+                    recorder.onerror = () => reject(new Error('Не вдалося записати великий GIF як відео'));
+                    recorder.onstop = () => resolve();
+                });
+
+                const drawFrame = () => {
+                    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                };
+                const frameTimer = window.setInterval(drawFrame, 1000 / 30);
+                drawFrame();
+                recorder.start(250);
+                await new Promise((resolve) => window.setTimeout(resolve, LARGE_GIF_CAPTURE_MS));
+                window.clearInterval(frameTimer);
+                recorder.stop();
+                await recordingFinished;
+                stream.getTracks().forEach((track) => track.stop());
+
+                const outputType = mimeType.startsWith('video/mp4') ? 'video/mp4' : 'video/webm';
+                const outputExtension = outputType === 'video/mp4' ? 'mp4' : 'webm';
+                const outputBlob = new Blob(chunks, { type: outputType });
+                if (!outputBlob.size) throw new Error('Великий GIF не вдалося перетворити у відео');
+                return new File([outputBlob], String(file.name || 'upload.gif').replace(/\.gif$/i, `.${outputExtension}`), { type: outputType });
+            } finally {
+                URL.revokeObjectURL(objectUrl);
+            }
+        }
+
+        export async function uploadGifToCloudinary(file, filename = 'profile.gif') {
+            if (!file || file.size <= CLOUDINARY_IMAGE_FILE_LIMIT) {
+                return uploadRawToCloudinary(file, filename, 'image');
+            }
+            const videoFile = await convertLargeGifToVideo(file);
+            return uploadRawToCloudinary(videoFile, videoFile.name || filename.replace(/\.gif$/i, '.webm'), 'video');
         }
 
         export async function uploadVideoToCloudinary(file, filename) {
@@ -2713,11 +2792,11 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (file.size > maxSize) { showToast(isVideo ? 'Відео занадто велике (максимум 50 МБ)' : (isGif ? 'GIF занадто великий (максимум 50 МБ) — вибери коротший' : 'Файл занадто великий (максимум 15 МБ)')); e.target.value = ''; return; }
 
             const doUpload = async (blobOrFile, raw, mediaType = 'image', mediaSettings = null) => {
-                showToast(mediaType === 'video' ? 'Завантаження відео-аватарки...' : (mediaType === 'gif' ? 'Завантаження GIF-аватарки...' : 'Завантаження аватарки...'));
+                showToast(mediaType === 'video' ? 'Завантаження відео-аватарки...' : (mediaType === 'gif' && blobOrFile?.size > CLOUDINARY_IMAGE_FILE_LIMIT ? 'Перетворення великого GIF аватарки у відео...' : (mediaType === 'gif' ? 'Завантаження GIF-аватарки...' : 'Завантаження аватарки...')));
                 try {
                     const imageUrl = mediaType === 'video'
                         ? await uploadVideoToCloudinary(blobOrFile, 'avatar.mp4')
-                        : (mediaType === 'gif' ? await uploadRawToCloudinary(blobOrFile, 'avatar.gif', 'image') : (raw ? await uploadRawToCloudinary(blobOrFile, 'avatar.gif') : await uploadBlobToCloudinary(blobOrFile, 'avatar.jpg')));
+                        : (mediaType === 'gif' ? await uploadGifToCloudinary(blobOrFile, 'avatar.gif') : (raw ? await uploadRawToCloudinary(blobOrFile, 'avatar.gif') : await uploadBlobToCloudinary(blobOrFile, 'avatar.jpg')));
                     const profile = getProfile();
                     if (mediaType === 'video' || mediaType === 'gif') { profile.avatarVideo = imageUrl; profile.avatar = ''; profile.avatarVideoSettings = mediaSettings || null; }
                     else { profile.avatar = imageUrl; profile.avatarVideo = ''; profile.avatarVideoSettings = null; }
@@ -2884,11 +2963,11 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (file.size > maxSize) { showToast(isVideo ? 'Відео занадто велике (максимум 50 МБ)' : (isGif ? 'GIF занадто великий (максимум 50 МБ) — вибери коротший' : 'Файл занадто великий (максимум 15 МБ)')); e.target.value = ''; return; }
 
             const doUpload = async (blobOrFile, raw, mediaType = 'image', mediaSettings = null, format = 'narrow') => {
-                showToast(mediaType === 'video' ? 'Завантаження відео-банера...' : (mediaType === 'gif' ? 'Завантаження GIF-банера...' : 'Завантаження банера...'));
+                showToast(mediaType === 'video' ? 'Завантаження відео-банера...' : (mediaType === 'gif' && blobOrFile?.size > CLOUDINARY_IMAGE_FILE_LIMIT ? 'Перетворення великого GIF банера у відео...' : (mediaType === 'gif' ? 'Завантаження GIF-банера...' : 'Завантаження банера...')));
                 try {
                     const imageUrl = mediaType === 'video'
                         ? await uploadVideoToCloudinary(blobOrFile, 'banner.mp4')
-                        : (mediaType === 'gif' ? await uploadRawToCloudinary(blobOrFile, 'banner.gif', 'image') : (raw ? await uploadRawToCloudinary(blobOrFile, 'banner.gif') : await uploadBlobToCloudinary(blobOrFile, 'banner.jpg')));
+                        : (mediaType === 'gif' ? await uploadGifToCloudinary(blobOrFile, 'banner.gif') : (raw ? await uploadRawToCloudinary(blobOrFile, 'banner.gif') : await uploadBlobToCloudinary(blobOrFile, 'banner.jpg')));
                     const profile = getProfile();
                     if (mediaType === 'video' || mediaType === 'gif') { profile.bannerVideo = imageUrl; profile.banner = ''; profile.bannerVideoSettings = mediaSettings || null; }
                     else { profile.banner = imageUrl; profile.bannerVideo = ''; profile.bannerVideoSettings = null; }
