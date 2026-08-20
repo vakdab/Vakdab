@@ -76,11 +76,11 @@ body.vakdab-entry-open { overflow: hidden; }
 
 @media (max-width: 620px) {
     .vakdab-entry { padding: 18px; }
-    .vakdab-entry__center { margin-top: -16px; }
-    .vakdab-entry__logo-wrap { width: min(75vw, 340px); min-width: 0; }
+    .vakdab-entry__center { margin-top: 44px; }
+    .vakdab-entry__logo-wrap { width: min(61vw, 260px); min-width: 0; }
     .vakdab-entry__kicker { max-width: 220px; justify-content: center; text-align: center; line-height: 1.55; }
-    .vakdab-entry__footer { align-items: flex-end; }
-    .vakdab-entry__load { grid-template-columns: 1fr auto; gap: 9px; width: min(56vw, 220px); }
+    .vakdab-entry__footer { align-self: end; align-items: flex-end; justify-content: center; width: 100%; margin-bottom: 52px; }
+    .vakdab-entry__load { grid-template-columns: 1fr auto; gap: 9px; width: min(70vw, 260px); }
     .vakdab-entry__load > span:nth-child(2) { grid-column: 1 / -1; order: 3; font-size: 8px; }
     .vakdab-entry__orbit--outer { width: 132vw; }
     .vakdab-entry__orbit--middle { width: 106vw; }
