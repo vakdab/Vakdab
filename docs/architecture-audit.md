@@ -30,12 +30,10 @@ The code is partially migrated, not fully rewritten. The legacy layer is now a s
 Removed confirmed-unreachable leftovers from the previous migration:
 
 - unused `core/auth.js`, `core/constants.js`, `core/state.js`, and `core/storage.js` facades;
-- unused root `services/api.js` and `services/fetch-cache.js` HTTP facade;
-- unused `services/api/hikka.js` facade;
 - unused `services/firebase/firestore.js` facade;
 - unused `services/manga-reader-v2.js` reader re-export.
 
-`utils/string.js` was retained because `legacy/app-legacy.js` imports it for its `String.prototype.hashCode` compatibility behavior.
+`services/api.js` and `services/fetch-cache.js` remain active dependencies of the Hikka API facade. `utils/string.js` was retained because `legacy/app-legacy.js` imports it for its `String.prototype.hashCode` compatibility behavior.
 
 ## Current limitation
 
