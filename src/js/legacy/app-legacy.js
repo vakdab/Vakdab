@@ -20,17 +20,16 @@ export const PROFILE_STICKER_SLOTS = 8;
         //  СИСТЕМА АВТОРИЗАЦІЇ
         // ====================================================================
 import { Auth } from '../core/compat/auth.js';
-import { Storage } from '../core/compat/storage.js';
+import { Storage } from '../core/compat/storage.js?v=20260820-appearance-cleanup-v1';
 import { Router } from '../core/compat/router.js';
 import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260820-player-modern-v1';
-import { initCommunity } from '../components/community/legacyCommunity.js?v=20260820-profile-media-v3';
+import { initCommunity } from '../components/community/legacyCommunity.js?v=20260820-appearance-cleanup-v1';
 import { initBottomNav } from '../components/navigation/bottomNav.js';
-import { renderStickerFaceByKey } from '../components/pages/stickersLegacy.js?v=20260820-menu-pages-fix1';
 import { renderSchedulePage } from '../components/pages/schedule.js';
 import { renderFilterPage, applyFilters } from '../components/pages/filterPage.js';
 import { buildHeroBanner } from '../components/home/heroBanner.js';
-import { renderProfilePage } from '../components/pages/profileLegacy.js';
-import { calcTotalXP, getLevel, DailyStats, ACHIEVEMENTS, getUserRankInfo, initRatingPage, calculateBaseXP, getXPForLevel, getXPProgress, loadRatingPage, loadRatingList } from '../components/rating/ratingSystem.js?v=20260820-profile-media-v3';
+import { renderProfilePage } from '../components/pages/profileLegacy.js?v=20260820-appearance-cleanup-v1';
+import { calcTotalXP, getLevel, DailyStats, ACHIEVEMENTS, getUserRankInfo, initRatingPage, calculateBaseXP, getXPForLevel, getXPProgress, loadRatingPage, loadRatingList } from '../components/rating/ratingSystem.js?v=20260820-appearance-cleanup-v1';
 import {
     playerPageAnime, playerPageAnimeuaSeasons, externalSourceCache, playerPageCurrentSeason, playerPageCurrentDub, playerPageCurrentSource, playerPageIsOpen,
     setPlayerPageAnimeuaSeasons, setPlayerPageAnime, setPlayerPageCurrentSeason, setPlayerPageCurrentDub, setPlayerPageCurrentSource,
@@ -39,7 +38,7 @@ import {
     fetchTmdbCardInfo
 } from '../components/player/animePlayerPage.js';
 
-import { getProfile, renderSettingsPage } from '../components/pages/settingsLegacy.js';
+import { getProfile, renderSettingsPage } from '../components/pages/settingsLegacy.js?v=20260820-appearance-cleanup-v1';
 import {
     currentTab, currentPage, currentSearchQuery, currentCategory, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, fetchContent, showSkeleton, loadContent, popularRenderGen, renderPopularCards, loadPopularCardDetails, ANIME_CARD_PLACEHOLDER, animeCardDataMap, registerAnimeCardData, TMDB_ENRICH_CONCURRENCY, tmdbEnrichActive, tmdbEnrichQueue, queueTmdbEnrich, pumpTmdbEnrichQueue, runTmdbEnrichJob, animeCardObserver, getAnimeCardObserver, observeAnimeCardsForTmdb, renderCards, renderPagination, showTop100, openRandomAnime, genreList, homeSectionsRequestId, homeCatalogRequestId, preloadHomepageTmdbGroups, homeCatalogPage, homeCatalogItems, homeCatalogLoading, homeCatalogTotal, homeCatalogMode, homeCatalogQuery, homeCatalogSort, homeCatalogView, homeCatalogPreset, homeCatalogGenre, HOME_MANGA_AGE_OPTIONS, honeyCatalogPageCache, HOME_CATALOG_MODES, HOME_CATALOG_PRESETS, homeCatalogRequestBody, HONEY_API, HONEY_SEARCH_API, HONEY_WEB, HONEY_IMAGE, honeySearchCache, honeyReaderCache, honeyAvailabilityMap, honeyAvailabilityMapPromise, loadHoneyAvailabilityMap, normalizeHoneyMatch, fetchHoneyJson, honeyNamesMatch, searchHoneyTitles, resolveHoneyReader, attachHoneyReaders, getHoneyGenreOptions, honeyAgeCategory, homeCatalogGenreHtml, syncHomeCatalogGenreControl, honeyCatalogItem, isHoneyPromoItemRaw, isHoneyPromoItem, fetchHoneyCatalogPage, fetchHomeCatalogPage, getHomeCatalogVisibleItems, formatHomeCatalogNumber, homeCatalogCountText, homeCatalogCardHtml, bindHomeCatalogCards, buildHomeCatalogSectionHtml, renderHomeCatalogGrid, bindHomeCatalogMenu, updateHomeCatalogModeLabels, reloadHomeCatalog, loadHomeCatalogMore, loadAndDisplayGenreSections, statusLabelUa, buildAnimeCarouselSectionHtml, buildPopularVerticalSectionHtml, buildHistoryCarouselSectionHtml, openScheduleItemInPlayer, searchPageState, renderSearchPage, performSearchPage, uploadToCloudinary, isGifUrl, applyGifClass, uploadRawToCloudinary, uploadVideoToCloudinary, isVideoFile, isVideoUrl, profileMediaTransformStyle, profileMediaMarkup, uploadBlobToCloudinary, _imgeditClamp, openImageEditor, editExistingProfileImage, editExistingProfileVideo, compressImage, renderAuthPage, renderHistoryPanel, renderBookmarksPanel, renderAchievementsPanel, profileEditNick, profileEditBio, removeFlatStickerBackground, stickerBackgroundRemoverPromise, removeStickerBackground, genrePageState, renderGenresPage, renderGenrePage
 } from '../components/pages/homeLegacy.js?v=20260820-manga-novel-tap-fix3';
@@ -48,7 +47,6 @@ import {
 } from '../services/catalog.js';
 
 export { Auth, Router, Storage, renderProfilePage, renderSettingsPage };
-export { renderStickerFaceByKey };
 export { renderFilterPage, applyFilters };
 export { buildHeroBanner };
 export { calcTotalXP, getLevel, DailyStats, ACHIEVEMENTS, getUserRankInfo, initRatingPage, loadRatingPage, loadRatingList };
@@ -66,7 +64,7 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
         //  СХОВИЩЕ
         // ====================================================================
         export function getDefaultStickers() {
-            return { singles: [], sets: [], nickBadge: null, medals: [], colors: {} };
+            return { singles: [], sets: [], medals: [], colors: {} };
         }
 
         // ====================================================================
@@ -94,16 +92,6 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
             if (Router.currentRoute === 'settings') {
                 renderSettingsPage();
             }
-        }
-
-        // Колір теми (Налаштування → Зовнішній вигляд) — монохромні варіанти акценту
-        export function applyThemeVariant(profile) {
-            document.body.classList.remove('theme-variant-graphite', 'theme-variant-white', 'theme-variant-lavender', 'theme-variant-ocean');
-            const v = profile?.themeVariant;
-            if (v === 'graphite') document.body.classList.add('theme-variant-graphite');
-            else if (v === 'white') document.body.classList.add('theme-variant-white');
-            else if (v === 'lavender') document.body.classList.add('theme-variant-lavender');
-            else if (v === 'ocean') document.body.classList.add('theme-variant-ocean');
         }
 
         // Генерує накладні частинки для "Ефектів профілю" (дощ / сніг / іскри)
@@ -549,7 +537,6 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
         async function init() {
             moveEpisodesBeforeReviews();
             applyTheme(Storage.getTheme());
-            applyThemeVariant(getProfile());
             /* leftdock removed */
             startClock();
             updateBackToTop();

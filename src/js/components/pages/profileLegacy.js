@@ -1,11 +1,11 @@
 import {
-    Auth, PROFILE_STICKER_SLOTS, Router, Storage, buildEffectOverlayHtml,
+    Auth, PROFILE_STICKER_SLOTS, Router, buildEffectOverlayHtml,
     escapeHtml, isGifUrl, openPlayerPage,
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
-    renderBookmarksPanel, renderHistoryPanel, renderStickerFaceByKey,
+    renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
 } from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix4';
-import { getProfile, getProfileStats } from './settingsLegacy.js';
+import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260820-appearance-cleanup-v1';
 
 export function renderProfilePage() {
             const container = document.getElementById('profilePageContainer');
@@ -24,13 +24,11 @@ export function renderProfilePage() {
             const isGifAvatar = isGifUrl(activeAvatar);
             const bannerEffectClass = (profile.bannerEffect && profile.bannerEffect !== 'none') ? ` banner-effect-${profile.bannerEffect}` : '';
             const decorationClass = (profile.avatarDecoration && profile.avatarDecoration !== 'none') ? ` avatar-decoration-${profile.avatarDecoration}` : '';
-            const tabsStyleClass = (profile.tabStyle && profile.tabStyle !== 'underline' && profile.tabStyle !== 'none') ? ` profile-tabs--${profile.tabStyle}` : '';
             const bannerClass = (isGifBanner ? 'profile-banner is-gif' : 'profile-banner') + bannerEffectClass;
             const avatarClass = isGifAvatar ? 'profile-avatar is-gif' : 'profile-avatar';
             const profileNickname = escapeHtml(profile.nickname);
             const profileHandle = escapeHtml('@' + profile.nickname.toLowerCase().replace(/\s/g, '_'));
             const profileBioText = escapeHtml(profile.bio);
-            const stickerData = Storage.getStickers();
             container.innerHTML = `
             <div class="profile-wrapper">
               <div class="${bannerClass}">
@@ -48,7 +46,6 @@ export function renderProfilePage() {
                 </div>
                 <div class="profile-nick-row">
                   <span class="profile-nick" id="profileNickText">${profileNickname}</span>
-                  ${stickerData.nickBadge !== null ? `<span class="profile-nick-badge" title="Наліпка профілю">${renderStickerFaceByKey(stickerData, stickerData.nickBadge)}</span>` : ''}
                 </div>
                 <div class="profile-meta">
                   <span>${profileHandle}</span>
@@ -72,7 +69,7 @@ export function renderProfilePage() {
                 </div>
               </div>
             </div>
-            <div class="profile-tabs${tabsStyleClass}" id="profileTabs">
+            <div class="profile-tabs" id="profileTabs">
               <button class="profile-tab active" data-tab="history">
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
                 Історія

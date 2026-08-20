@@ -1,8 +1,8 @@
 import {
-    ACHIEVEMENTS, Auth, DailyStats, Router, Storage, applyThemeVariant,
+    ACHIEVEMENTS, Auth, DailyStats, Router, Storage,
     buildEffectOverlayHtml, calcTotalXP, detectDeviceInfo, editExistingProfileImage,
     editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
-    profileMediaMarkup, renderProfilePage, renderStickerFaceByKey, showToast,
+    profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
 } from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix4';
 
@@ -32,13 +32,6 @@ import {
             { id: 'halo', label: 'Гало', icon: 'fa-sun' },
             { id: 'diamond', label: 'Діамант', icon: 'fa-gem' }
         ];
-        const TAB_STYLE_OPTIONS = [
-            { id: 'none', label: 'Немає', icon: 'fa-ban' },
-            { id: 'underline', label: 'Підкреслення', icon: 'fa-minus' },
-            { id: 'pills', label: 'Пігулки', icon: 'fa-capsules' },
-            { id: 'neon', label: 'Неон', icon: 'fa-bolt' },
-            { id: 'glass', label: 'Скло', icon: 'fa-gem' }
-        ];
         const BANNER_EFFECTS = [
             { id: 'none', label: 'Оригінал', icon: 'fa-image' },
             { id: 'grayscale', label: 'Чорно-біле', icon: 'fa-circle-half-stroke' },
@@ -50,15 +43,6 @@ import {
             { id: 'grain', label: 'Гранж', icon: 'fa-braille' },
             { id: 'fog', label: 'Дим', icon: 'fa-smog' }
         ];
-        const THEME_VARIANTS = [
-            { id: 'none', label: 'Немає', color: 'transparent' },
-            { id: 'default', label: 'Чорний', color: '#0b0b0b' },
-            { id: 'graphite', label: 'Графіт', color: '#4a4a4a' },
-            { id: 'white', label: 'Білий', color: '#ffffff' },
-            { id: 'lavender', label: 'Лавандовий', color: '#8d5bd1' },
-            { id: 'ocean', label: 'Океан', color: '#277fa8' }
-        ];
-
         function buildOptionGridHtml(groupName, options, current) {
             return '<div class="settings-option-grid">' +
                 options.map(o => `
@@ -68,25 +52,12 @@ import {
                 '</div>';
         }
 
-        function buildThemeSwatchesHtml(current) {
-            return '<div class="settings-swatch-row">' +
-                THEME_VARIANTS.map(v => `
-                  <div class="settings-swatch${v.id === current ? ' active' : ''}" data-group="themeVariant" data-value="${v.id}">
-                    <span class="settings-swatch-check"><i class="fas fa-check-circle"></i></span>
-                    <span class="settings-swatch-dot" style="background:${v.color};"></span>
-                    <span class="settings-swatch-bar" style="background:${v.color};"></span>
-                    <span class="settings-swatch-label">${v.label}</span>
-                  </div>`).join('') +
-                '</div>';
-        }
 
         function renderSettingsPreviewPanel(profile) {
             const panel = document.getElementById('settingsPreviewPanel');
             if (!panel) return;
             const bannerEffectClass = (profile.bannerEffect && profile.bannerEffect !== 'none') ? ` banner-effect-${profile.bannerEffect}` : '';
             const decorationClass = (profile.avatarDecoration && profile.avatarDecoration !== 'none') ? ` avatar-decoration-${profile.avatarDecoration}` : '';
-            const stickerData = Storage.getStickers();
-            const nickBadge = stickerData.nickBadge ? `<span class="settings-preview-nick-badge">${renderStickerFaceByKey(stickerData, stickerData.nickBadge)}</span>` : '';
             const avatarMarkup = profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, '', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, '', 'avatar') : `<span class="settings-preview-avatar-fallback">${escapeHtml((profile.nickname || 'К').charAt(0).toUpperCase())}</span>`);
             panel.innerHTML = `
               <div class="settings-preview-profile">
@@ -98,11 +69,11 @@ import {
                 </div>
                 <div class="settings-preview-info">
                   <div class="settings-preview-avatar-wrap${decorationClass}"><div class="profile-avatar">${avatarMarkup}</div></div>
-                  <div class="settings-preview-nick-row"><strong>${escapeHtml(profile.nickname || 'Користувач')}</strong>${nickBadge}</div>
+                  <div class="settings-preview-nick-row"><strong>${escapeHtml(profile.nickname || 'Користувач')}</strong></div>
                   <div class="settings-preview-handle">@${escapeHtml((profile.nickname || 'user').toLowerCase().replace(/\s/g, '_'))}</div>
                   <div class="settings-preview-bio${profile.bioBold ? ' is-bold' : ''}">${escapeHtml(profile.bio || 'Опис профілю не додано')}</div>
                   <button type="button" class="settings-preview-bio-btn"><i class="fas fa-align-left"></i> Опис профілю</button>
-                  <div class="settings-preview-tabs profile-tabs profile-tabs--${profile.tabStyle || 'underline'}"><span class="profile-tab active">Профіль</span><span class="profile-tab">Статистика</span><span class="profile-tab">Досягнення</span></div>
+                  <div class="settings-preview-tabs profile-tabs"><span class="profile-tab active">Профіль</span><span class="profile-tab">Статистика</span><span class="profile-tab">Досягнення</span></div>
                 </div>
               </div>
             `;
@@ -314,20 +285,6 @@ import {
                 </button>`).join('') + '</div>';
         }
 
-        function buildStickerSummaryHtml() {
-            const s = Storage.getStickers();
-            return `
-            <div class="settings-sticker-summary">
-              <div class="settings-sticker-summary-row">
-                <span class="settings-sticker-summary-label">Наліпка біля ніку</span>
-                ${s.nickBadge !== null ? `<span class="settings-sticker-mini">${renderStickerFaceByKey(s, s.nickBadge)}</span>` : `<span class="settings-sticker-summary-empty">Не встановлено</span>`}
-              </div>
-              <button class="settings-media-btn" id="settingsOpenStickersBtn" style="margin-top:0.9rem;width:100%;justify-content:center;">
-                <i class="fas fa-icons"></i> Керувати наліпкою біля ніку
-              </button>
-            </div>`;
-        }
-
         function buildAppearanceTabHtml(profile) {
             const bannerSrc = profile.banner || '';
             const bannerVideoSrc = profile.bannerVideo || '';
@@ -336,7 +293,7 @@ import {
             return `
             <div class="appearance-intro">
               <div class="appearance-intro-icon"><i class="fas fa-palette"></i></div>
-              <div><h3>Налаштуйте свій профіль</h3><p>Змініть банер, аватар, кольори та ефекти. Усі зміни зберігаються автоматично.</p></div>
+              <div><h3>Налаштуйте свій профіль</h3><p>Змініть банер, аватар та ефекти. Усі зміни зберігаються автоматично.</p></div>
             </div>
             <div class="appearance-section-card">
             <div class="settings-section-title">Опис профілю</div>
@@ -387,9 +344,6 @@ import {
             </div>
 
             <div class="appearance-section-card">
-            <div class="settings-section-title">Наліпка біля ніку</div>
-            ${buildStickerSummaryHtml()}
-
             <div class="settings-section-title">Фільтр банера</div>
             <div class="settings-hint-text" style="margin-top:-0.5rem;">Свій колір, чорно-біле чи будь-який інший стиль — оберіть, як показувати ваш банер.</div>
             ${buildBannerFilterStripHtml(profile)}
@@ -403,11 +357,6 @@ import {
             <div class="settings-section-title">Декорація аватара</div>
             ${buildOptionGridHtml('avatarDecoration', AVATAR_DECORATIONS, profile.avatarDecoration)}
 
-            <div class="settings-section-title">Колір теми</div>
-            ${buildThemeSwatchesHtml(profile.themeVariant)}
-
-            <div class="settings-section-title">Стиль табів</div>
-            ${buildOptionGridHtml('tabStyle', TAB_STYLE_OPTIONS, profile.tabStyle)}
             </div>
           `;
         }
@@ -607,10 +556,6 @@ import {
                 if (Router.currentRoute === 'profile') renderProfilePage();
             });
 
-            document.getElementById('settingsOpenStickersBtn')?.addEventListener('click', () => {
-                Router.goTo('stickers');
-            });
-
             const previewBtn = document.getElementById('settingsPreviewToggleBtn');
             if (previewBtn) previewBtn.addEventListener('click', () => {
                 settingsState.previewOpen = !settingsState.previewOpen;
@@ -635,18 +580,6 @@ import {
                         .classList.toggle('active', b.dataset.value === value));
                     if (settingsState.previewOpen) renderSettingsPreviewPanel(p);
                     if (Router.currentRoute === 'profile') renderProfilePage();
-                });
-            });
-
-            document.querySelectorAll('.settings-swatch[data-group="themeVariant"]').forEach(sw => {
-                sw.addEventListener('click', () => {
-                    const value = sw.dataset.value;
-                    const p = getProfile();
-                    p.themeVariant = value;
-                    saveProfile(p);
-                    applyThemeVariant(p);
-                    document.querySelectorAll('.settings-swatch[data-group="themeVariant"]').forEach(s => s
-                        .classList.toggle('active', s.dataset.value === value));
                 });
             });
         }
@@ -717,8 +650,6 @@ import {
                 effect: 'none',
                 atmosphere: 'none',
                 avatarDecoration: 'none',
-                themeVariant: 'default',
-                tabStyle: 'underline',
                 bannerEffect: 'none'
             };
         }
@@ -729,7 +660,7 @@ import {
             if (!p) { Storage.setProfile(def); return def; }
             // Мердж дефолтів і нормалізація старих/пошкоджених profile fields.
             const merged = { ...def, ...p };
-            ['nickname', 'avatar', 'avatarVideo', 'banner', 'bannerVideo', 'bio', 'realName', 'birthdate', 'effect', 'atmosphere', 'avatarDecoration', 'themeVariant', 'tabStyle', 'bannerEffect'].forEach(key => {
+            ['nickname', 'avatar', 'avatarVideo', 'banner', 'bannerVideo', 'bio', 'realName', 'birthdate', 'effect', 'atmosphere', 'avatarDecoration', 'bannerEffect'].forEach(key => {
                 if (typeof merged[key] !== 'string') merged[key] = def[key];
             });
             merged.nickname = merged.nickname.trim() || def.nickname;

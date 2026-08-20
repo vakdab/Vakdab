@@ -148,7 +148,7 @@ import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-lega
             _stickersCache: null,
             getStickers() {
                 try {
-                    const raw = localStorage.getItem('vakdab_stickers');
+                    let raw = localStorage.getItem('vakdab_stickers');
                     if (raw === this._stickersRaw && this._stickersCache) return this._stickersCache;
                     const source = raw ? JSON.parse(raw) : null;
                     const parsed = source && typeof source === 'object' && !Array.isArray(source)
@@ -158,9 +158,6 @@ import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-lega
                     parsed.sets = Array.isArray(parsed.sets) ? parsed.sets.filter(Boolean) : [];
                     parsed.medals = Array.isArray(parsed.medals) ? parsed.medals.filter(m => typeof m === 'string' || typeof m === 'number').slice(0, PROFILE_STICKER_SLOTS) : [];
                     parsed.colors = parsed.colors && typeof parsed.colors === 'object' && !Array.isArray(parsed.colors) ? parsed.colors : {};
-                    // Міграція старого формату (nickBadge/medals зберігали номер варіанта напряму)
-                    if (typeof parsed.nickBadge === 'number') parsed.nickBadge = 'v:' + parsed.nickBadge;
-                    if (parsed.nickBadge !== null && typeof parsed.nickBadge !== 'string') parsed.nickBadge = null;
                     parsed.medals = parsed.medals.map(m => typeof m === 'number' ? ('v:' + m) : String(m));
                     this._stickersRaw = raw;
                     this._stickersCache = parsed;

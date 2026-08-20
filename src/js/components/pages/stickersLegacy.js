@@ -1,4 +1,4 @@
-import { Storage } from '../../core/compat/storage.js';
+import { Storage } from '../../core/compat/storage.js?v=20260820-appearance-cleanup-v1';
 import { db } from '../../services/firebase/client.js';
 import { Router } from '../../core/compat/router.js';
 import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix4';
@@ -37,25 +37,14 @@ import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260820-menu-pages-fi
         }
 
         // Уніфікований ключ наліпки: вбудовані обличчя ідентифікуються номером варіанта,
-        // власні завантажені фото — унікальним id (у них немає variant). Ключ дозволяє
-        // однаково зберігати нік-бейдж/медалі незалежно від типу наліпки.
+        // власні завантажені фото — унікальним id (у них немає variant).
         function stickerKeyFor(s) {
             return s.image ? ('img:' + s.id) : ('v:' + s.variant);
-        }
-        function resolveStickerByKey(d, key) {
-            if (!key) return null;
-            if (key.startsWith('img:')) return (d.singles || []).find(x => x.id === key.slice(4)) || null;
-            if (key.startsWith('v:')) return { variant: parseInt(key.slice(2), 10) };
-            return null;
         }
         function renderStickerVisual(s, color) {
             if (s && s.image) return `<img src="${escapeHtml(s.image)}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:contain;border-radius:8px;background:transparent;">`;
             const safeColor = color || s?.color || 'var(--text)';
             return `<span class="sticker-svg-visual" style="color:${escapeHtml(safeColor)};display:block;width:100%;height:100%;">${stickerFaceSvg(s ? s.variant : 0)}</span>`;
-        }
-        export function renderStickerFaceByKey(d, key) {
-            const s = resolveStickerByKey(d, key);
-            return s ? renderStickerVisual(s, d.colors?.[key]) : '';
         }
 
         let _everyoneStickersCache = null;
@@ -146,7 +135,6 @@ import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260820-menu-pages-fi
                     current.singles = (current.singles || []).filter(s => s && s.image);
                     current.sets = (current.sets || []).map(st => ({ ...st, variants: [], images: (st.images || []).filter(id => current.singles.some(s => s.id === id)) })).filter(st => st.images.length);
                     current.medals = (current.medals || []).filter(key => !legacyKeys.has(key));
-                    if (current.nickBadge && legacyKeys.has(current.nickBadge)) current.nickBadge = null;
                     if (current.colors) legacyKeys.forEach(key => delete current.colors[key]);
                     if (legacyKeys.size) Storage.setStickers(current);
                 }
@@ -311,7 +299,6 @@ import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260820-menu-pages-fi
                                         <button class="sticker-single-tile${s._public ? ' sticker-public-single-add' : ''}" data-single-id="${s.id}" ${s._public ? `data-public-owner="${escapeHtml(s._ownerId || '')}"` : ''} style="aspect-ratio:1;border-radius:14px;border:${s.image ? 'none' : '1px solid var(--border)'};background:${s.image ? 'transparent' : 'var(--tag-bg)'};padding:${s.image ? '0' : '0.6rem'};position:relative;cursor:pointer;transition:all var(--transition);overflow:hidden;">
                                             ${renderStickerVisual(s)}
                                             ${s.favorite ? `<i class="fas fa-star" style="position:absolute;top:6px;right:6px;font-size:0.65rem;color:#fff;text-shadow:0 0 3px rgba(0,0,0,0.6);"></i>` : ''}
-                                            ${d.nickBadge === sKey ? `<i class="fas fa-id-badge" style="position:absolute;bottom:6px;left:6px;font-size:0.65rem;color:#fff;text-shadow:0 0 3px rgba(0,0,0,0.6);"></i>` : ''}
                                             ${d.medals.includes(sKey) ? `<i class="fas fa-medal" style="position:absolute;bottom:6px;right:6px;font-size:0.65rem;color:#fff;text-shadow:0 0 3px rgba(0,0,0,0.6);"></i>` : ''}
                                         </button>
                                     ` : `
@@ -321,7 +308,6 @@ import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260820-menu-pages-fi
                                                 <div style="font-size:0.85rem;font-weight:700;">${sLabel}</div>
                                                 <div style="font-size:0.72rem;color:var(--text-muted);">
                                                     ${s.favorite ? '<i class="fas fa-star"></i> Улюблена' : ''}
-                                                    ${d.nickBadge === sKey ? ' · Біля ніку' : ''}
                                                     ${d.medals.includes(sKey) ? ' · Медаль' : ''}
                                                 </div>
                                             </div>
@@ -425,7 +411,6 @@ import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260820-menu-pages-fi
                         const s = d.singles.find(x => x.id === t.id);
                         if (!s) return '';
                         const sKey = stickerKeyFor(s);
-                        const isNick = d.nickBadge === sKey;
                         const isMedal = d.medals.includes(sKey);
                         return `
                             <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:1.2rem;">
@@ -436,7 +421,6 @@ import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260820-menu-pages-fi
                             <div style="display:flex;flex-direction:column;gap:0.5rem;">
                                 ${s.image ? '<button class="sticker-action-btn" data-act="remove-bg" data-single-id="' + s.id + '">' + sIconRow('fa-wand-magic-sparkles', 'Видалити фон AI') + '</button>' : ''}
                                 <button class="sticker-action-btn" data-act="favorite" data-single-id="${s.id}">${sIconRow(s.favorite ? 'fa-star' : 'fa-star', s.favorite ? 'Прибрати з улюблених' : 'Додати в улюблені')}</button>
-                                <button class="sticker-action-btn" data-act="nick" data-single-id="${s.id}">${sIconRow('fa-id-badge', isNick ? 'Прибрати біля ніку' : 'Встановити біля ніку')}</button>
                                 <button class="sticker-action-btn" data-act="medal" data-single-id="${s.id}">${sIconRow('fa-medal', isMedal ? 'Прибрати медаль' : 'Додати як медаль')}</button>
                                 <button class="sticker-action-btn" data-act="delete" data-single-id="${s.id}" style="border-style:dashed;">${sIconRow('fa-trash', 'Видалити наліпку')}</button>
                             </div>
@@ -453,7 +437,6 @@ import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260820-menu-pages-fi
                                         const sKey = stickerKeyFor(s);
                                         return `<div style="aspect-ratio:1;background:${s.image ? 'transparent' : 'var(--tag-bg)'};border:${s.image ? 'none' : '1px solid var(--border)'};border-radius:10px;padding:${s.image ? '0' : '0.35rem'};position:relative;overflow:hidden;">
                                             ${renderStickerVisual(s)}
-                                            ${d.nickBadge === sKey ? `<i class="fas fa-id-badge" style="position:absolute;bottom:2px;left:2px;font-size:0.55rem;color:#fff;text-shadow:0 0 2px #000;"></i>` : ''}
                                             ${d.medals.includes(sKey) ? `<i class="fas fa-medal" style="position:absolute;bottom:2px;right:2px;font-size:0.55rem;color:#fff;text-shadow:0 0 2px #000;"></i>` : ''}
                                         </div>`;
                                     }).join('')}
@@ -699,11 +682,6 @@ import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260820-menu-pages-fi
                             const s = cur.singles.find(x => x.id === btn.dataset.singleId);
                             if (s) s.favorite = !s.favorite;
                             saveData(cur);
-                        } else if (act === 'nick') {
-                            const s = cur.singles.find(x => x.id === btn.dataset.singleId);
-                            if (s) { const sKey = stickerKeyFor(s); cur.nickBadge = cur.nickBadge === sKey ? null : sKey; }
-                            saveData(cur);
-                            showToast(cur.nickBadge !== null ? 'Наліпку встановлено біля ніку' : 'Наліпку прибрано');
                         } else if (act === 'medal') {
                             const s = cur.singles.find(x => x.id === btn.dataset.singleId);
                             if (s) {

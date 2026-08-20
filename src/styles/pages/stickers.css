@@ -1,44 +1,4 @@
 /* Dedicated stickers styles. */
-.settings-sticker-summary {
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            background: var(--tag-bg);
-            padding: 1rem;
-            margin-bottom: 1.2rem;
-        }
-
-        .settings-sticker-summary-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.7rem;
-        }
-
-        .settings-sticker-summary-row:last-of-type { margin-bottom: 0; }
-
-        .settings-sticker-summary-label {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--text-secondary);
-        }
-
-        .settings-sticker-summary-empty {
-            font-size: 0.76rem;
-            color: var(--text-muted);
-        }
-
-        .settings-sticker-medals-mini { display: flex; gap: 0.35rem; }
-
-        .settings-sticker-mini {
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            padding: 4px;
-            color: var(--text);
-        }
-
 /* Shared sticker controls and the public per-user sticker shelf. */
 .sticker-color-control { display:flex; align-items:center; gap:.65rem; padding:.72rem .85rem; border:1px solid var(--border); border-radius:14px; background:var(--tag-bg); color:var(--text); font-size:.82rem; font-weight:700; }
 .sticker-color-control input { width:34px; height:28px; padding:0; border:0; background:transparent; cursor:pointer; }

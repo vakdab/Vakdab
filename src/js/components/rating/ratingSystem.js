@@ -1,8 +1,7 @@
 import { Auth } from '../../core/compat/auth.js';
-import { Storage } from '../../core/compat/storage.js';
+import { Storage } from '../../core/compat/storage.js?v=20260820-appearance-cleanup-v1';
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
-import { renderStickerFaceByKey } from '../pages/stickersLegacy.js?v=20260820-profile-media-v3';
 
 function escapeRatingHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -21,16 +20,8 @@ function ratingProfileMediaMarkup(profile, className) {
     return `<img class="${className}${gifClass}" src="${safeUrl}" alt="" loading="lazy">`;
 }
 
-function ratingStickerMarkup(profile) {
-    const stickers = profile.stickers || {};
-    const key = typeof stickers.nickBadge === 'string' ? stickers.nickBadge : '';
-    if (!key) return '';
-    const visual = renderStickerFaceByKey(stickers, key);
-    return visual ? `<span class="rg-nick-badge" title="Наліпка профілю">${visual}</span>` : '';
-}
-
 function ratingNameMarkup(profile, suffix = '') {
-    return `<span class="rg-profile-name-row"><span>${escapeRatingHtml(profile.nickname || 'Гість')}</span>${ratingStickerMarkup(profile)}${suffix}</span>`;
+    return `<span class="rg-profile-name-row"><span>${escapeRatingHtml(profile.nickname || 'Гість')}</span>${suffix}</span>`;
 }
 
 function getProfile() {
@@ -39,8 +30,7 @@ function getProfile() {
         nickname: typeof profile.nickname === 'string' && profile.nickname.trim() ? profile.nickname.trim() : 'Гість',
         avatar: typeof profile.avatar === 'string' ? profile.avatar : '',
         avatarVideo: typeof profile.avatarVideo === 'string' ? profile.avatarVideo : '',
-        avatarVideoSettings: profile.avatarVideoSettings || {},
-        stickers: Storage.getStickers() || {}
+        avatarVideoSettings: profile.avatarVideoSettings || {}
     };
 }
 
@@ -425,7 +415,7 @@ function isGifUrl(url) {
                         document.body.classList.add('community-active');
                         const nav = document.getElementById('bottomNav');
                         if (nav) nav.classList.add('hidden-nav');
-                        import('../community/legacyCommunity.js?v=20260820-profile-media-v3')
+                        import('../community/legacyCommunity.js?v=20260820-appearance-cleanup-v1')
                             .then(({ initCommunity }) => {
                                 initCommunity();
                                 setTimeout(() => {
