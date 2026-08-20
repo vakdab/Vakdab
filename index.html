@@ -39,8 +39,48 @@
     </script>
 
     <link rel="stylesheet" href="src/styles/app.css?v=20260817-manga-adult-v4" />
+    <link rel="stylesheet" href="src/styles/components/entry-screen.css?v=20260820-vakdab-entry-v1" />
 </head>
 <body class="appletv-agnative-topnav">
+
+    <!-- Monochrome Orbital — стартова заставка: чорний логотип для світлої теми, білий для темної. -->
+    <section class="vakdab-entry" id="vakdabEntry" role="dialog" aria-modal="true" aria-label="Вхід до VakDab" data-theme="light">
+        <div class="vakdab-entry__paper" aria-hidden="true"></div>
+        <div class="vakdab-entry__glow vakdab-entry__glow--left" aria-hidden="true"></div>
+        <div class="vakdab-entry__glow vakdab-entry__glow--right" aria-hidden="true"></div>
+        <div class="vakdab-entry__orbits" aria-hidden="true">
+            <span class="vakdab-entry__orbit vakdab-entry__orbit--outer"></span>
+            <span class="vakdab-entry__orbit vakdab-entry__orbit--middle"></span>
+            <span class="vakdab-entry__orbit vakdab-entry__orbit--inner"></span>
+            <span class="vakdab-entry__star vakdab-entry__star--one"></span>
+            <span class="vakdab-entry__star vakdab-entry__star--two"></span>
+            <span class="vakdab-entry__star vakdab-entry__star--three"></span>
+        </div>
+        <header class="vakdab-entry__header">
+            <span class="vakdab-entry__signature"><i aria-hidden="true"></i> VAKDAB / ENTRY</span>
+            <button class="vakdab-entry__theme" id="vakdabEntryTheme" type="button" aria-label="Змінити тему">
+                <span class="vakdab-entry__theme-label">Світла</span>
+                <i class="fas fa-sun" aria-hidden="true"></i>
+            </button>
+        </header>
+        <div class="vakdab-entry__center">
+            <div class="vakdab-entry__logo-wrap">
+                <span class="vakdab-entry__aura" aria-hidden="true"></span>
+                <img class="vakdab-entry__logo vakdab-entry__logo--light" src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663850393525/gKLoRcmOGiapfeao.png" alt="VakDab" />
+                <img class="vakdab-entry__logo vakdab-entry__logo--dark" src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663850393525/lZsIIYoTUJrQIjwx.png" alt="" aria-hidden="true" />
+                <span class="vakdab-entry__sheen" aria-hidden="true"></span>
+            </div>
+            <p class="vakdab-entry__kicker"><i class="fas fa-sparkles" aria-hidden="true"></i> Твій простір для аніме-вечора</p>
+        </div>
+        <footer class="vakdab-entry__footer">
+            <div class="vakdab-entry__load" aria-live="polite">
+                <span class="vakdab-entry__line"><i id="vakdabEntryProgress"></i></span>
+                <span id="vakdabEntryStatus">Налаштовуємо твій простір</span>
+                <b id="vakdabEntryPercent">0%</b>
+            </div>
+            <button class="vakdab-entry__enter" id="vakdabEntryEnter" type="button"><span>Пропустити</span><i class="fas fa-xmark" aria-hidden="true"></i></button>
+        </footer>
+    </section>
 
     <main class="app-container" id="appRoot">
 
@@ -323,6 +363,7 @@
     </div>
 
 
+    <script type="module" src="src/js/entry-screen.js?v=20260820-vakdab-entry-v1"></script>
     <script type="module" src="src/js/app.js?v=20260819-promo-filter-v5"></script>
 
     <!-- ===== BOTTOM NAV ===== -->
@@ -366,5 +407,3 @@
 
 </body>
 </html>
-
-
