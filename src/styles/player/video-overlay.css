@@ -906,3 +906,49 @@
 #playerPageModal .player-video-container:fullscreen { width: 100vw; height: 100vh; border-radius: 0; }
 #playerPageModal .player-video-error i { color: var(--accent); font-size: 24px; }
 @media (max-width: 560px) { #playerPageModal .player-video-container { min-height: 0; } #playerPageModal .lp-controls { padding-bottom: max(12px, env(safe-area-inset-bottom)); } }
+/* Playback state polish: transition between sources and a recoverable error state. */
+#playerPageModal .lampa-player-container {
+    isolation: isolate;
+    contain: layout paint;
+    transition: opacity .28s ease, transform .28s ease, box-shadow .28s ease;
+}
+#playerPageModal .lampa-player-container.is-loading {
+    opacity: .82;
+    transform: scale(.995);
+}
+#playerPageModal .lampa-player-container video,
+#playerPageModal .lampa-player-container iframe {
+    transition: opacity .3s ease, filter .3s ease;
+}
+#playerPageModal .lampa-player-container.is-loading video,
+#playerPageModal .lampa-player-container.is-loading iframe { filter: brightness(.72); }
+#playerPageModal .lp-error-retry {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    margin-top: 4px;
+    padding: 0 16px;
+    border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 750;
+    transition: transform .18s ease, background .18s ease, border-color .18s ease;
+}
+#playerPageModal .lp-error-retry:hover,
+#playerPageModal .lp-error-retry:focus-visible {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-text);
+    transform: translateY(-1px);
+}
+#playerPageModal .lp-error-retry:active { transform: scale(.97); }
+@media (max-width: 600px) {
+    #playerPageModal .lampa-player-container.is-loading { transform: none; }
+    #playerPageModal .lp-error-retry { min-height: 44px; }
+}
