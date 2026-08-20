@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-banner-mobile-v4';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260820-banner-mobile-v4';
+} from '../../legacy/app-legacy.js?v=20260820-gif-avatar-v1';
+import { getProfile, saveProfile } from './settingsLegacy.js?v=20260820-gif-avatar-v1';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -1922,7 +1922,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const isPng = !isVideo && (file.type === 'image/png' || String(file.name || '').toLowerCase().endsWith('.png'));
             const previousBodyOverflow = document.body.style.overflow;
             const overlay = document.createElement('div');
-            overlay.className = `imgedit-overlay${mode === 'banner' ? ' imgedit-banner-overlay' : ''}`;
+            overlay.className = `imgedit-overlay${mode === 'banner' ? ' imgedit-banner-overlay' : ' imgedit-avatar-overlay'}`;
             document.body.style.overflow = 'hidden';
             overlay.innerHTML = `
                 <div class="imgedit-topbar">
@@ -2694,9 +2694,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const file = e.target.files[0];
             if (!file) return;
             const isVideo = isVideoFile(file);
-            const isGif = !isVideo && file.type === 'image/gif';
-            const maxSize = isVideo ? 50 * 1024 * 1024 : (isGif ? 10 * 1024 * 1024 : 15 * 1024 * 1024);
-            if (file.size > maxSize) { showToast(isVideo ? 'Відео занадто велике (максимум 50 МБ)' : (isGif ? 'GIF занадто великий (максимум 10 МБ) — стисни його або вибери коротший' : 'Файл занадто великий (максимум 15 МБ)')); e.target.value = ''; return; }
+            const isGif = !isVideo && (file.type === 'image/gif' || /\.gif$/i.test(file.name || ''));
+            const maxSize = isVideo ? 50 * 1024 * 1024 : (isGif ? 50 * 1024 * 1024 : 15 * 1024 * 1024);
+            if (file.size > maxSize) { showToast(isVideo ? 'Відео занадто велике (максимум 50 МБ)' : (isGif ? 'GIF занадто великий (максимум 50 МБ) — вибери коротший' : 'Файл занадто великий (максимум 15 МБ)')); e.target.value = ''; return; }
 
             const doUpload = async (blobOrFile, raw, mediaType = 'image', mediaSettings = null) => {
                 showToast(mediaType === 'video' ? 'Завантаження відео-аватарки...' : (isGif ? 'Завантаження GIF-аватарки...' : 'Завантаження аватарки...'));
@@ -2865,9 +2865,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const file = e.target.files[0];
             if (!file) return;
             const isVideo = isVideoFile(file);
-            const isGif = !isVideo && file.type === 'image/gif';
-            const maxSize = isVideo ? 50 * 1024 * 1024 : (isGif ? 10 * 1024 * 1024 : 15 * 1024 * 1024);
-            if (file.size > maxSize) { showToast(isVideo ? 'Відео занадто велике (максимум 50 МБ)' : (isGif ? 'GIF занадто великий (максимум 10 МБ) — стисни його або вибери коротший' : 'Файл занадто великий (максимум 15 МБ)')); e.target.value = ''; return; }
+            const isGif = !isVideo && (file.type === 'image/gif' || /\.gif$/i.test(file.name || ''));
+            const maxSize = isVideo ? 50 * 1024 * 1024 : (isGif ? 50 * 1024 * 1024 : 15 * 1024 * 1024);
+            if (file.size > maxSize) { showToast(isVideo ? 'Відео занадто велике (максимум 50 МБ)' : (isGif ? 'GIF занадто великий (максимум 50 МБ) — вибери коротший' : 'Файл занадто великий (максимум 15 МБ)')); e.target.value = ''; return; }
 
             const doUpload = async (blobOrFile, raw, mediaType = 'image', mediaSettings = null, format = 'narrow') => {
                 showToast(mediaType === 'video' ? 'Завантаження відео-банера...' : (isGif ? 'Завантаження GIF-банера...' : 'Завантаження банера...'));

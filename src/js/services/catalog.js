@@ -10,7 +10,7 @@ import {
     playerPageCurrentDub, playerPageCurrentSeason, playerPageCurrentSource,
     buildBottomSheetData, buildEpisodeViews, buildSeasonRow,
     showToast, updateFilterChip, updateSourceChip
-} from '../legacy/app-legacy.js?v=20260820-banner-mobile-v4';
+} from '../legacy/app-legacy.js?v=20260820-gif-avatar-v1';
 
         export const CATALOG_POSTER_FALLBACK = './android-chrome-512x512.png';
         export function normalizeAnimeUrl(href = '') {
