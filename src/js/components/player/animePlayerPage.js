@@ -16,7 +16,7 @@ import {
 import { renderProfilePage } from '../pages/profileLegacy.js?v=20260820-banner-format-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix4';
+} from '../../legacy/app-legacy.js?v=20260820-banner-format-v1';
 import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
 
         // ====================================================================

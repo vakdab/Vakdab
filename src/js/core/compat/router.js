@@ -6,7 +6,7 @@ import {
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
     renderGenresPage, renderProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix4';
+} from '../../legacy/app-legacy.js?v=20260820-banner-format-v1';
 
         export const Router = {
             currentRoute: 'main',

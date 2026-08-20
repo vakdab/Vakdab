@@ -4,7 +4,7 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix4';
+} from '../../legacy/app-legacy.js?v=20260820-banner-format-v1';
 import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260820-banner-format-v1';
 
 export function renderProfilePage() {
