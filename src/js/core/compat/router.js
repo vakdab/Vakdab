@@ -1,5 +1,5 @@
 import { HIKKA_API } from '../../config/constants.js?v=20260820-hikka-proxy-fix4';
-import { loadFeature } from '../feature-loader.js?v=20260818-ranobe-v6';
+import { loadFeature } from '../feature-loader.js?v=20260820-menu-pages-fix1';
 import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
     initRatingPage, loadAndDisplayGenreSections, loadMangaReader,
@@ -206,13 +206,19 @@ import {
                 renderSchedulePage();
             },
             showStickers() {
-                loadFeature('stickers').catch(error => console.warn('[VakDab] stickers feature preload:', error));
                 const container = document.getElementById('stickersPageContainer');
                 if (container) {
                     container.style.display = 'block';
                     container.classList.add('active');
                 }
-                window.renderStickersPage?.();
+                loadFeature('stickers')
+                    .then(({ renderStickersPage }) => {
+                        if (this.currentRoute === 'stickers') renderStickersPage(container);
+                    })
+                    .catch(error => {
+                        console.error('[VakDab] stickers feature failed to load:', error);
+                        if (container) container.innerHTML = '<div class="loader">Не вдалося завантажити модуль наліпок. Спробуйте ще раз.</div>';
+                    });
                 syncLeftdockActive();
             },
 

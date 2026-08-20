@@ -1,4 +1,4 @@
-import { HIKKA_API, GENRE_MAP, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js?v=20260820-hikka-proxy-fix4';
+import { HIKKA_API, GENRE_MAP, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js?v=20260820-menu-pages-fix1';
 import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
@@ -2828,10 +2828,19 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         // ====================================================================
         export let genrePageState = { slug: '', name: '', page: 1, list: [], hasNextPage: false, total: 0 };
 
+        // Keep the genres page independent from app-legacy.js. Importing the
+        // helper back from that compatibility layer would deepen its existing
+        // circular dependency with this module.
+        function getGenres() {
+            return Object.entries(GENRE_MAP)
+                .map(([name, slug]) => ({ slug, name }))
+                .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+        }
+
         export async function renderGenresPage() {
             const container = document.getElementById('genresPageContainer');
             if (!container) return;
-            const genres = loadGenres();
+            const genres = getGenres();
             let html = '<div class="genre-page-header"><h2>Жанри</h2></div>';
             html += '<div class="genres-grid">';
             genres.forEach(g => {

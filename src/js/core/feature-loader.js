@@ -5,7 +5,7 @@ const loaders = Object.freeze({
     community: () => import('../components/community/group.js?v=20260817-community-lazy-v1'),
     chat: () => import('../components/community/chat.js?v=20260817-chat-lazy-v1'),
     profile: () => import('../components/pages/profile.js?v=20260817-profile-lazy-v1'),
-    stickers: () => import('../components/pages/stickersPage.js?v=20260817-stickers-lazy-v1')
+    stickers: () => import('../components/pages/stickersPage.js?v=20260820-menu-pages-fix1')
 });
 
 const cache = new Map();
