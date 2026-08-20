@@ -1,5 +1,5 @@
 import { Auth } from './auth.js';
-import { getDefaultStickers } from '../../legacy/app-legacy.js?v=20260818-honey-free-chapter-v2';
+import { getDefaultStickers } from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix1';
         export const Storage = {
             _syncTimer: null,
             _pendingSyncScope: null,

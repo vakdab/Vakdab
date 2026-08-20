@@ -16,7 +16,7 @@ export function bootstrap() {
         }
     });
     startGlobalEvents();
-    bootstrapPromise = import('../legacy/app-legacy.js?v=20260819-promo-filter-v5')
+    bootstrapPromise = import('../legacy/app-legacy.js?v=20260820-hikka-proxy-fix1')
         .then(module => {
             window.VakDabLegacy = module;
             // Expose compatibility services only after the legacy module has fully evaluated.

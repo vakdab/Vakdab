@@ -3,7 +3,7 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260818-manga-filters-v7';
+} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix1';
 import { getProfile, saveProfile } from './settingsLegacy.js';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';

@@ -1,6 +1,6 @@
 import { Storage } from '../../core/compat/storage.js';
 import { Router } from '../../core/compat/router.js';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260818-honey-free-chapter-v2';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix1';
 import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260818-catalog-filters-v1';
 
         function stickerFaceSvg(variant) {
