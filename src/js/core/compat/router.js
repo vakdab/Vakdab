@@ -1,4 +1,4 @@
-import { HIKKA_API } from '../../config/constants.js';
+import { HIKKA_API } from '../../config/constants.js?v=20260820-hikka-proxy-fix2';
 import { loadFeature } from '../feature-loader.js?v=20260818-ranobe-v6';
 import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
@@ -6,7 +6,7 @@ import {
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
     renderGenresPage, renderProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix1';
+} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix2';
 
         export const Router = {
             currentRoute: 'main',

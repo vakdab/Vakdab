@@ -1,10 +1,10 @@
 import { arrayRemove, arrayUnion, addDoc, collection, deleteDoc, doc, getDoc, limit, onSnapshot, query, serverTimestamp, setDoc, updateDoc } from '../../config/firebase.js';
-import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js';
+import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js?v=20260820-hikka-proxy-fix2';
 import { db, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import {
     ACHIEVEMENTS, Auth, DailyStats, Router, Storage, calcTotalXP, escapeHtml,
     getLevel, isGifUrl, openPlayerPage, showToast
-} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix1';
+} from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix2';
 import { getProfile } from '../pages/settingsLegacy.js';
 import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
 
