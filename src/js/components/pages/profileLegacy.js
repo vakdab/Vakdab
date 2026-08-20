@@ -5,7 +5,7 @@ import {
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
 } from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix4';
-import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260820-banner-original-v1';
+import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260820-banner-format-v1';
 
 export function renderProfilePage() {
             const container = document.getElementById('profilePageContainer');
@@ -24,7 +24,8 @@ export function renderProfilePage() {
             const isGifAvatar = isGifUrl(activeAvatar);
             const bannerEffectClass = (profile.bannerEffect && profile.bannerEffect !== 'none') ? ` banner-effect-${profile.bannerEffect}` : '';
             const decorationClass = (profile.avatarDecoration && profile.avatarDecoration !== 'none') ? ` avatar-decoration-${profile.avatarDecoration}` : '';
-            const bannerClass = (isGifBanner ? 'profile-banner is-gif' : 'profile-banner') + bannerEffectClass;
+            const bannerFormatClass = profile.bannerFormat === 'wide' ? 'profile-banner--wide' : 'profile-banner--narrow';
+            const bannerClass = (isGifBanner ? 'profile-banner is-gif' : 'profile-banner') + ` ${bannerFormatClass}` + bannerEffectClass;
             const avatarClass = isGifAvatar ? 'profile-avatar is-gif' : 'profile-avatar';
             const profileNickname = escapeHtml(profile.nickname);
             const profileHandle = escapeHtml('@' + profile.nickname.toLowerCase().replace(/\s/g, '_'));

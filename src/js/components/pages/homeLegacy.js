@@ -4,7 +4,7 @@ import {
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
 } from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix4';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260820-banner-original-v1';
+import { getProfile, saveProfile } from './settingsLegacy.js?v=20260820-banner-format-v1';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -1914,8 +1914,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         // ====================================================================
         export function _imgeditClamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
-        export function openImageEditor(file, mode, onSaved) {
-            // mode: 'avatar' (1:1 circle) or 'banner' (wide rect w/ device guide)
+        export function openImageEditor(file, mode, onSaved, initialBannerFormat = 'narrow') {
+            // mode: 'avatar' (1:1 circle) or 'banner' (narrow/wide profile banner)
+            const normalizedBannerFormat = mode === 'banner' && initialBannerFormat === 'wide' ? 'wide' : 'narrow';
             const objectUrl = URL.createObjectURL(file);
             const isVideo = isVideoFile(file);
             const isPng = !isVideo && (file.type === 'image/png' || String(file.name || '').toLowerCase().endsWith('.png'));
@@ -1935,8 +1936,11 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     <div class="imgedit-frame" id="imgeditFrame"></div>
                     <div id="imgeditGuides"></div>
                 </div>
+                ${mode === 'banner' ? `<div class="imgedit-format-row" role="group" aria-label="Формат банера">
+                    <button class="imgedit-format-btn${normalizedBannerFormat === 'narrow' ? ' active' : ''}" id="imgeditNarrow" aria-pressed="${normalizedBannerFormat === 'narrow'}">Вузький</button>
+                    <button class="imgedit-format-btn${normalizedBannerFormat === 'wide' ? ' active' : ''}" id="imgeditWide" aria-pressed="${normalizedBannerFormat === 'wide'}">Широкий</button>
+                </div>` : ''}
                 <div class="imgedit-bottombar">
-                    ${mode === 'banner' ? `<div class="imgedit-caption">Банер профілю виглядатиме по-різному залежно від пристрою. Найбільшим він буде на комп'ютері, менший — на телефоні. Тримайте важливе ближче до центру, щоб воно не обрізалось.</div>` : `<div class="imgedit-caption">Перемістіть і масштабуйте ${isVideo ? 'відео' : 'фото'}, щоб обрати область для аватарки.</div>`}
                     <div class="imgedit-tools-row">
                         <button class="imgedit-tool-btn" id="imgeditCenterBtn" title="По центру">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
@@ -1951,8 +1955,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     <div class="imgedit-zoom-row">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/><line x1="7" y1="10" x2="13" y2="10"/></svg>
                         <input type="range" class="imgedit-zoom-slider" id="imgeditZoom" min="100" max="300" value="100">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/><line x1="10" y1="7" x2="10" y2="13"/><line x1="7" y1="10" x2="13" y2="10"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/><line x1="10" y1="7" x2="10" y2="13"/></svg>
                     </div>
+                    ${mode === 'banner' ? `<div class="imgedit-caption">Виберіть формат банера. Вузький показує банер тонкою смугою, широкий — вищим і з більшою видимою областю.</div>` : `<div class="imgedit-caption">Перемістіть і масштабуйте ${isVideo ? 'відео' : 'фото'}, щоб обрати область для аватарки.</div>`}
                 </div>`;
             document.body.appendChild(overlay);
             requestAnimationFrame(() => overlay.classList.add('open'));
@@ -1967,12 +1972,15 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const centerBtn = overlay.querySelector('#imgeditCenterBtn');
             const mirrorHBtn = overlay.querySelector('#imgeditMirrorHBtn');
             const mirrorVBtn = overlay.querySelector('#imgeditMirrorVBtn');
+            const narrowBtn = overlay.querySelector('#imgeditNarrow');
+            const wideBtn = overlay.querySelector('#imgeditWide');
 
             let frameW, frameH, frameX, frameY;
             let natW = 0, natH = 0;
             let baseScale = 1, scale = 1, minScale = 1;
             let tx = 0, ty = 0;
             let mirrorX = false, mirrorY = false;
+            let bannerFormat = normalizedBannerFormat;
             let dragging = false, dragStartX = 0, dragStartY = 0, startTx = 0, startTy = 0;
 
             function layoutFrame() {
@@ -1983,7 +1991,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     frameW = size; frameH = size;
                 } else {
                     frameW = stageRect.width * 0.92;
-                    frameH = Math.min(stageRect.height * 0.62, frameW * 0.24);
+                    const formatRatio = bannerFormat === 'wide' ? 0.5 : 0.24;
+                    frameH = Math.min(stageRect.height * (bannerFormat === 'wide' ? 0.62 : 0.55), frameW * formatRatio);
                 }
                 frameX = (stageRect.width - frameW) / 2;
                 frameY = (stageRect.height - frameH) / 2;
@@ -1998,22 +2007,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     scale = minScale * Math.max(1, zoomRatio);
                 }
 
-                if (mode === 'banner') {
-                    const bands = [
-                        { wRatio: 1.0, label: 'Телевізор' },
-                        { wRatio: 0.72, label: "Комп'ютер" },
-                        { wRatio: 0.46, label: 'Усі пристрої' }
-                    ];
-                    guidesEl.innerHTML = bands.map((b, i) => {
-                        const w = frameW * b.wRatio;
-                        const x = frameX + (frameW - w) / 2;
-                        return `<div class="imgedit-grid-line" style="left:${x}px; top:${frameY}px; width:1px; height:${frameH}px;"></div>
-                                <div class="imgedit-grid-line" style="left:${x + w}px; top:${frameY}px; width:1px; height:${frameH}px;"></div>
-                                <div class="imgedit-grid-chip" style="left:${x + 4}px; top:${frameY + 4 + i * 16}px;">${b.label}</div>`;
-                    }).join('');
-                } else {
-                    guidesEl.innerHTML = '';
-                }
+                guidesEl.innerHTML = '';
             }
 
             function clampPan() {
@@ -2094,6 +2088,20 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 applyTransform();
             });
 
+            if (mode === 'banner') {
+                const setBannerFormat = (format) => {
+                    bannerFormat = format === 'wide' ? 'wide' : 'narrow';
+                    narrowBtn?.classList.toggle('active', bannerFormat === 'narrow');
+                    wideBtn?.classList.toggle('active', bannerFormat === 'wide');
+                    narrowBtn?.setAttribute('aria-pressed', String(bannerFormat === 'narrow'));
+                    wideBtn?.setAttribute('aria-pressed', String(bannerFormat === 'wide'));
+                    layoutFrame();
+                    if (natW && natH) centerImage();
+                };
+                narrowBtn?.addEventListener('click', () => setBannerFormat('narrow'));
+                wideBtn?.addEventListener('click', () => setBannerFormat('wide'));
+            }
+
             // Центрування
             centerBtn.addEventListener('click', () => centerImage());
 
@@ -2136,7 +2144,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                             x: Number((((tx - centeredTx) / Math.max(frameW, 1)) * 100).toFixed(4)),
                             y: Number((((ty - centeredTy) / Math.max(frameH, 1)) * 100).toFixed(4)),
                             mirrorX: !!mirrorX,
-                            mirrorY: !!mirrorY
+                            mirrorY: !!mirrorY,
+                            bannerFormat: mode === 'banner' ? bannerFormat : undefined
                         });
                         return;
                     }
@@ -2172,7 +2181,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     canvas.toBlob(blob => {
                         if (!blob) { showToast('Помилка обробки зображення'); saveBtn.disabled = false; saveBtn.textContent = 'Зберегти'; return; }
                         closeEditor();
-                        onSaved(blob);
+                        onSaved(blob, { bannerFormat: mode === 'banner' ? bannerFormat : undefined });
                     }, format, quality);
                 } catch (err) {
                     console.error('Image editor save failed:', err);
@@ -2200,7 +2209,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 const type = blob.type || 'image/jpeg';
                 const extension = type === 'image/png' ? 'png' : 'jpg';
                 const file = new File([blob], `${mode}.${extension}`, { type });
-                openImageEditor(file, mode, async (croppedBlob) => {
+                const currentProfile = getProfile();
+                openImageEditor(file, mode, async (croppedBlob, editorState) => {
                     try {
                         showToast(mode === 'avatar' ? 'Збереження аватарки...' : 'Збереження банера...');
                         const imageUrl = await uploadBlobToCloudinary(croppedBlob, `${mode}.${extension}`);
@@ -2213,6 +2223,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                             profile.banner = imageUrl;
                             profile.bannerVideo = '';
                             profile.bannerVideoSettings = null;
+                            profile.bannerFormat = editorState?.bannerFormat === 'wide' ? 'wide' : (profile.bannerFormat === 'wide' ? 'wide' : 'narrow');
                         }
                         saveProfile(profile);
                         if (Router.currentRoute === 'profile') renderProfilePage();
@@ -2222,7 +2233,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                         console.error('Edited profile image upload error:', err);
                         showToast('Не вдалося зберегти відредаговане зображення');
                     }
-                });
+                }, mode === 'banner' ? currentProfile.bannerFormat : 'narrow');
             } catch (err) {
                 console.error('Existing profile image editor error:', err);
                 showToast('Не вдалося відкрити редактор зображення');
@@ -2237,14 +2248,16 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 if (!response.ok) throw new Error('Не вдалося завантажити відео');
                 const blob = await response.blob();
                 const file = new File([blob], `${mode}.mp4`, { type: blob.type || 'video/mp4' });
+                const currentProfile = getProfile();
                 openImageEditor(file, mode, (settings) => {
                     const profile = getProfile();
                     profile[mode === 'avatar' ? 'avatarVideoSettings' : 'bannerVideoSettings'] = settings;
+                    if (mode === 'banner') profile.bannerFormat = settings?.bannerFormat === 'wide' ? 'wide' : (currentProfile.bannerFormat === 'wide' ? 'wide' : 'narrow');
                     saveProfile(profile);
                     if (Router.currentRoute === 'profile') renderProfilePage();
                     if (Router.currentRoute === 'settings') renderSettingsPage();
                     showToast(mode === 'avatar' ? 'Відео-аватарку оновлено' : 'Відео-банер оновлено');
-                });
+                }, mode === 'banner' ? currentProfile.bannerFormat : 'narrow');
             } catch (err) {
                 console.error('Existing profile video editor error:', err);
                 showToast('Не вдалося відкрити редактор відео');
@@ -2856,13 +2869,14 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const maxSize = isVideo ? 50 * 1024 * 1024 : (isGif ? 10 * 1024 * 1024 : 15 * 1024 * 1024);
             if (file.size > maxSize) { showToast(isVideo ? 'Відео занадто велике (максимум 50 МБ)' : (isGif ? 'GIF занадто великий (максимум 10 МБ) — стисни його або вибери коротший' : 'Файл занадто великий (максимум 15 МБ)')); e.target.value = ''; return; }
 
-            const doUpload = async (blobOrFile, raw, mediaType = 'image', mediaSettings = null) => {
+            const doUpload = async (blobOrFile, raw, mediaType = 'image', mediaSettings = null, format = 'narrow') => {
                 showToast(mediaType === 'video' ? 'Завантаження відео-банера...' : (isGif ? 'Завантаження GIF-банера...' : 'Завантаження банера...'));
                 try {
                     const imageUrl = mediaType === 'video' ? await uploadVideoToCloudinary(blobOrFile, 'banner.mp4') : (raw ? await uploadRawToCloudinary(blobOrFile, 'banner.gif') : await uploadBlobToCloudinary(blobOrFile, 'banner.jpg'));
                     const profile = getProfile();
                     if (mediaType === 'video') { profile.bannerVideo = imageUrl; profile.banner = ''; profile.bannerVideoSettings = mediaSettings || null; }
                     else { profile.banner = imageUrl; profile.bannerVideo = ''; profile.bannerVideoSettings = null; }
+                    profile.bannerFormat = mediaSettings?.bannerFormat === 'wide' || format === 'wide' ? 'wide' : 'narrow';
                     saveProfile(profile);
                     if (Router.currentRoute === 'profile') renderProfilePage();
                     if (Router.currentRoute === 'settings') renderSettingsPage();
@@ -2874,12 +2888,12 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             };
 
             if (isVideo) {
-                openImageEditor(file, 'banner', (settings) => doUpload(file, true, 'video', settings));
+                openImageEditor(file, 'banner', (settings) => doUpload(file, true, 'video', settings, settings?.bannerFormat));
             } else if (isGif) {
                 showToast('GIF без кадрування — щоб зберегти анімацію');
                 await doUpload(file, true);
             } else {
-                openImageEditor(file, 'banner', (blob) => doUpload(blob, false));
+                openImageEditor(file, 'banner', (blob, editorState) => doUpload(blob, false, 'image', null, editorState?.bannerFormat));
             }
             e.target.value = '';
         });

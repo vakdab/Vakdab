@@ -70,10 +70,34 @@
             backdrop-filter: blur(4px);
         }
 
+        .imgedit-format-row {
+            flex: 0 0 auto;
+            display: flex;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.35rem 1rem 0;
+        }
+        .imgedit-format-btn {
+            min-width: 92px;
+            padding: 0.42rem 0.85rem;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.72);
+            font: inherit;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
+        }
+        .imgedit-format-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .imgedit-format-btn:active { transform: scale(0.97); }
+        .imgedit-format-btn.active { background: #fff; border-color: #fff; color: #0b0b0b; }
+
         .imgedit-bottombar {
             flex: 0 0 auto;
-            padding: 0.9rem 1.2rem max(1.3rem, env(safe-area-inset-bottom));
-            display: flex; flex-direction: column; align-items: center; gap: 0.7rem;
+            padding: 0.55rem 1.2rem max(1.3rem, env(safe-area-inset-bottom));
+            display: flex; flex-direction: column; align-items: center; gap: 0.55rem;
         }
 
         .imgedit-tools-row {
@@ -1138,6 +1162,8 @@
 }
         @media (max-width: 480px) {
             .imgedit-topbar { padding-left: 0.7rem; padding-right: 0.7rem; }
+            .imgedit-format-row { padding-left: 0.75rem; padding-right: 0.75rem; }
+            .imgedit-format-btn { min-width: 86px; }
             .imgedit-bottombar { padding-left: 0.75rem; padding-right: 0.75rem; }
             .imgedit-caption { max-width: 340px; }
         }

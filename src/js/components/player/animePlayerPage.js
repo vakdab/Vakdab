@@ -12,8 +12,8 @@ import {
 } from '../../services/catalog.js';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
-} from '../pages/homeLegacy.js?v=20260818-ranobe-direct-v5';
-import { renderProfilePage } from '../pages/profileLegacy.js?v=20260820-banner-original-v1';
+} from '../pages/homeLegacy.js?v=20260820-banner-format-v1';
+import { renderProfilePage } from '../pages/profileLegacy.js?v=20260820-banner-format-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
 } from '../../legacy/app-legacy.js?v=20260820-hikka-proxy-fix4';

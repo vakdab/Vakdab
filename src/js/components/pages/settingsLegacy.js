@@ -61,7 +61,7 @@ import {
             const avatarMarkup = profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, '', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, '', 'avatar') : `<span class="settings-preview-avatar-fallback">${escapeHtml((profile.nickname || 'К').charAt(0).toUpperCase())}</span>`);
             panel.innerHTML = `
               <div class="settings-preview-profile">
-                <div class="profile-banner settings-preview-banner${bannerEffectClass}">
+                <div class="profile-banner settings-preview-banner profile-banner--${profile.bannerFormat === 'wide' ? 'wide' : 'narrow'}${bannerEffectClass}">
                   ${profile.bannerVideo ? profileMediaMarkup(profile.bannerVideo, 'preview-banner-img', 'video banner', profile.bannerVideoSettings) : (profile.banner ? profileMediaMarkup(profile.banner, 'preview-banner-img', 'banner') : '')}
                   ${profile.atmosphere && profile.atmosphere !== 'none' ? `<div class="atmosphere-${profile.atmosphere}"></div>` : ''}
                   ${profile.effect && profile.effect !== 'none' ? buildEffectOverlayHtml(profile.effect) : ''}
@@ -649,7 +649,8 @@ import {
                 effect: 'none',
                 atmosphere: 'none',
                 avatarDecoration: 'none',
-                bannerEffect: 'none'
+                bannerEffect: 'none',
+                bannerFormat: 'narrow'
             };
         }
 
@@ -659,10 +660,11 @@ import {
             if (!p) { Storage.setProfile(def); return def; }
             // Мердж дефолтів і нормалізація старих/пошкоджених profile fields.
             const merged = { ...def, ...p };
-            ['nickname', 'avatar', 'avatarVideo', 'banner', 'bannerVideo', 'bio', 'realName', 'birthdate', 'effect', 'atmosphere', 'avatarDecoration', 'bannerEffect'].forEach(key => {
+            ['nickname', 'avatar', 'avatarVideo', 'banner', 'bannerVideo', 'bio', 'realName', 'birthdate', 'effect', 'atmosphere', 'avatarDecoration', 'bannerEffect', 'bannerFormat'].forEach(key => {
                 if (typeof merged[key] !== 'string') merged[key] = def[key];
             });
             merged.nickname = merged.nickname.trim() || def.nickname;
+            if (merged.bannerFormat !== 'narrow' && merged.bannerFormat !== 'wide') merged.bannerFormat = def.bannerFormat;
             merged.bioBold = merged.bioBold === true;
             return merged;
         }
