@@ -17,3 +17,8 @@ The explicit responsive width fix prevents the saved note from collapsing vertic
 - The compact composer remains separate from the saved note and clicking the saved cloud still reopens the editor.
 - The local profile route `#profile` loads the thought trigger and saved note elements.
 - Regression checks passed: catalog-pagination fixtures, manga-loading fixtures, novel-source test, JavaScript syntax checks, and `git diff --check`.
+
+
+## v25 mobile composer QA
+
+The open composer was previously appearing as a clipped rectangular panel. v25 applies the same masked cloud silhouette to the composer and constrains it to `calc(100vw - 32px)`, with `left: 0` relative to the avatar wrapper. Console geometry confirms the composer is positioned inside the local viewport (`x: 74`, `width: 300` in the 892px browser viewport) and has the cloud mask applied. The saved note remains connected to the trigger via the right-side tail.
