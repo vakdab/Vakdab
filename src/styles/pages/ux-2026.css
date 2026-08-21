@@ -1546,3 +1546,115 @@ body:not(.dark-mode) .header .logo-text span {
         max-width: none;
     }
 }
+
+/* Final thought-note shape: tiny trigger, cloud above the avatar, never a pill. */
+.profile-thought-trigger {
+    width: 27px;
+    height: 27px;
+    right: 1px;
+    bottom: 0;
+    border-width: 2px;
+    box-shadow: 0 3px 8px rgba(0,0,0,.16);
+}
+.profile-thought-trigger i { font-size: 10px; }
+.profile-thought-note {
+    left: 18px;
+    top: auto;
+    bottom: calc(100% + 12px);
+    width: min(154px, calc(100vw - 72px));
+    min-height: 42px;
+    padding: 13px 14px 13px 15px;
+    border: 1.5px solid color-mix(in srgb, var(--text, #111) 18%, transparent);
+    border-radius: 46% 54% 57% 43% / 53% 43% 57% 47%;
+    font-size: .72rem;
+    line-height: 1.22;
+    box-shadow: 0 10px 24px rgba(0,0,0,.17);
+    transform-origin: 22px 100%;
+}
+.profile-thought-note::before {
+    width: 27px;
+    height: 23px;
+    left: 19px;
+    top: auto;
+    bottom: -9px;
+    border: 1.5px solid color-mix(in srgb, var(--text, #111) 18%, transparent);
+    box-shadow: 28px 3px 0 -1px var(--surface, #fff), 54px -2px 0 -3px var(--surface, #fff);
+}
+.profile-thought-note::after {
+    width: 12px;
+    height: 12px;
+    left: 8px;
+    top: auto;
+    bottom: -21px;
+    border: 1.5px solid color-mix(in srgb, var(--text, #111) 18%, transparent);
+    box-shadow: -13px 10px 0 -4px var(--surface, #fff);
+}
+.profile-thought-note__dot { display: none; }
+@media (max-width: 479px) {
+    .profile-thought-trigger { width: 25px; height: 25px; right: 1px; }
+    .profile-thought-trigger i { font-size: 9px; }
+    .profile-thought-note {
+        left: 14px;
+        bottom: calc(100% + 10px);
+        width: min(148px, calc(100vw - 66px));
+    }
+}
+
+/* Cloud silhouette refinement: rounded puffs around a softer, taller note body. */
+.profile-thought-note {
+    min-height: 54px;
+    padding: 15px 16px;
+    border-radius: 48% 52% 46% 54% / 57% 47% 53% 43%;
+    overflow: visible;
+}
+.profile-thought-note::before {
+    width: 36px;
+    height: 31px;
+    left: 18px;
+    bottom: -10px;
+    top: auto;
+    border: 0;
+    box-shadow: 27px -25px 0 1px var(--surface, #fff), 59px -18px 0 -1px var(--surface, #fff), 83px -4px 0 -4px var(--surface, #fff);
+}
+.profile-thought-note::after {
+    width: 17px;
+    height: 17px;
+    left: 5px;
+    bottom: -22px;
+    top: auto;
+    border: 0;
+    box-shadow: -13px 10px 0 -4px var(--surface, #fff);
+}
+@media (max-width: 479px) {
+    .profile-thought-note {
+        min-height: 50px;
+        padding: 14px 15px;
+    }
+}
+
+/* True cloud silhouette: transparent corners, organic lobes and a two-dot tail. */
+.profile-thought-note {
+    width: min(176px, calc(100vw - 68px));
+    min-height: 82px;
+    padding: 17px 22px 27px 28px;
+    border: 0;
+    border-radius: 0;
+    background: var(--surface, #fff);
+    box-shadow: none;
+    filter: drop-shadow(0 9px 13px rgba(0,0,0,.17));
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 90'%3E%3Cpath fill='white' d='M20 56C8 56 3 48 8 39C2 29 10 19 21 21C22 11 31 5 40 10C47 1 60 4 64 13C74 8 86 13 87 24C98 23 105 31 101 41C106 48 98 57 87 56H20ZM28 64C34 63 37 67 34 71C31 75 25 72 24 68C23 66 25 64 28 64ZM18 79C21 78 23 80 22 82C20 84 17 83 16 81C15 80 16 79 18 79Z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 90'%3E%3Cpath fill='white' d='M20 56C8 56 3 48 8 39C2 29 10 19 21 21C22 11 31 5 40 10C47 1 60 4 64 13C74 8 86 13 87 24C98 23 105 31 101 41C106 48 98 57 87 56H20ZM28 64C34 63 37 67 34 71C31 75 25 72 24 68C23 66 25 64 28 64ZM18 79C21 78 23 80 22 82C20 84 17 83 16 81C15 80 16 79 18 79Z'/%3E%3C/svg%3E");
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+}
+.profile-thought-note::before,
+.profile-thought-note::after { display: none; }
+@media (max-width: 479px) {
+    .profile-thought-note {
+        width: min(168px, calc(100vw - 62px));
+        min-height: 78px;
+        padding: 16px 20px 26px 27px;
+    }
+}

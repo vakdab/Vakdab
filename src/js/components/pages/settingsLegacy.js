@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v18';
+} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v20';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 

@@ -1,6 +1,6 @@
 import { loadFeature } from '../../core/feature-loader.js';
-import { Router } from '../../core/compat/router.js?v=20260821-profile-thought-v18';
-import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260821-profile-thought-v18';
+import { Router } from '../../core/compat/router.js?v=20260821-profile-thought-v20';
+import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260821-profile-thought-v20';
 
 export function initBottomNav() {
 
