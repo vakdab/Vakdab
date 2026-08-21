@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-genre-catalog-v1';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-genre-catalog-v1';
+} from '../../legacy/app-legacy.js?v=20260821-mode-filters-v3';
+import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-mode-filters-v3';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -766,6 +766,32 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             }));
         }
 
+        function homeFilterSelect(key, label, options, value) {
+            return `<label class="home-catalog-mode-filter"><span>${escapeHtml(label)}</span><select data-home-catalog-filter="${escapeHtml(key)}" aria-label="${escapeHtml(label)}">${options.map(option => `<option value="${escapeHtml(option.key)}"${option.key === value ? ' selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}</select></label>`;
+        }
+
+        export function homeCatalogModeFilterHtml() {
+            if (homeCatalogMode === 'anime') return '';
+            const isManga = homeCatalogMode === 'manga';
+            const title = isManga ? 'Фільтри манґи' : 'Фільтри ранобе';
+            const ageOptions = isManga
+                ? HOME_MANGA_AGE_OPTIONS
+                : ranobeFilterAges().map(option => ({ key: option.key, label: option.label }));
+            const common = [
+                homeFilterSelect('availability', 'Доступність', isManga
+                    ? [{ key: 'all', label: 'Усі тайтли' }, { key: 'available', label: 'Є що читати' }]
+                    : [{ key: 'all', label: 'Усі тайтли' }, { key: 'available', label: 'Є доступний розділ' }], homeCatalogAvailability),
+                homeFilterSelect('age', 'Вікова категорія', ageOptions, homeCatalogAge)
+            ];
+            if (isManga) return `<section class="home-catalog-mode-filter-panel" aria-labelledby="homeCatalogModeFiltersTitle"><div class="home-catalog-mode-filter-panel__heading"><div><span class="home-catalog-genre-browser__eyebrow">Окремі налаштування</span><h3 id="homeCatalogModeFiltersTitle">${title}</h3></div><span class="home-catalog-mode-filter-panel__hint">Манґа</span></div><div class="home-catalog-mode-filter-grid">${common.join('')}</div><div class="home-catalog-mode-filter-actions"><button type="button" class="home-catalog-mode-filter-reset" data-home-catalog-filter-reset>Скинути</button><button type="button" class="home-catalog-mode-filter-apply" data-home-catalog-filter-apply>Застосувати</button></div></section>`;
+            const novelFields = [
+                homeFilterSelect('status', 'Статус', [{ key: 'all', label: 'Усі статуси' }, { key: 'ongoing', label: 'Онґоїнг' }, { key: 'finished', label: 'Завершені' }], homeCatalogStatus),
+                ...common,
+                homeFilterSelect('origin', 'Походження', [{ key: 'all', label: 'Усі країни та типи' }, ...ranobeFilterOrigins().map(origin => ({ key: origin, label: origin }))], homeCatalogOrigin)
+            ];
+            return `<section class="home-catalog-mode-filter-panel" aria-labelledby="homeCatalogModeFiltersTitle"><div class="home-catalog-mode-filter-panel__heading"><div><span class="home-catalog-genre-browser__eyebrow">Окремі налаштування</span><h3 id="homeCatalogModeFiltersTitle">${title}</h3></div><span class="home-catalog-mode-filter-panel__hint">Ранобе</span></div><div class="home-catalog-mode-filter-grid">${novelFields.join('')}</div><div class="home-catalog-mode-filter-actions"><button type="button" class="home-catalog-mode-filter-reset" data-home-catalog-filter-reset>Скинути</button><button type="button" class="home-catalog-mode-filter-apply" data-home-catalog-filter-apply>Застосувати</button></div></section>`;
+        }
+
         export async function loadHoneyMangaFullCatalog() {
             const filterAdult = homeCatalogAdult;
             const promiseKey = filterAdult ? 'adult' : 'public';
@@ -1155,10 +1181,10 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     <div class="home-catalog-view-toggle" role="group" aria-label="Вигляд каталогу"><button type="button" class="home-catalog-view${homeCatalogView === 'grid' ? ' active' : ''}" data-catalog-view="grid" aria-label="Сітка"><i class="fas fa-grip"></i></button><button type="button" class="home-catalog-view${homeCatalogView === 'list' ? ' active' : ''}" data-catalog-view="list" aria-label="Список"><i class="fas fa-list"></i></button></div>
                     <div class="home-catalog-quick-actions" role="group" aria-label="Швидкі дії каталогу">
                         <button class="home-catalog-filter-btn home-catalog-schedule-btn" id="homeCatalogScheduleBtn" type="button"><i class="fas fa-calendar-days"></i><span>Розклад виходу</span></button>
-                        <button class="home-catalog-filter-btn home-catalog-adult-btn${homeCatalogAdult ? ' active' : ''}" id="homeCatalogAdultBtn" type="button" aria-pressed="${homeCatalogAdult ? 'true' : 'false'}" aria-label="Манґа 18+"${homeCatalogMode === 'manga' ? '' : ' hidden'}><span>18+</span></button>
                     </div>
                 </div>
 
+                ${homeCatalogModeFilterHtml()}
                 ${homeCatalogMode === 'anime' ? `<section class="home-catalog-genre-browser" aria-labelledby="homeCatalogGenresTitle"><div class="home-catalog-genre-browser__heading"><div><span class="home-catalog-genre-browser__eyebrow">Швидкий вибір</span><h3 id="homeCatalogGenresTitle">Жанри</h3></div><span class="home-catalog-genre-browser__hint">Проведіть убік</span></div><div class="home-catalog-genre-rail" id="homeCatalogGenreRailHost" role="list" aria-label="Жанри каталогу"></div></section>` : ''}
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
@@ -1285,6 +1311,92 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             });
         }
 
+        function bindHomeCatalogModeFilters(root) {
+            root.querySelectorAll('[data-home-catalog-filter]').forEach(control => control.addEventListener('change', () => {
+                control.closest('.home-catalog-mode-filter-panel')?.classList.add('is-dirty');
+            }));
+            root.querySelector('[data-home-catalog-filter-apply]')?.addEventListener('click', async event => {
+                const button = event.currentTarget;
+                button.disabled = true;
+                button.textContent = 'Завантаження…';
+                try { await applyHomeCatalogModeFilters(root); }
+                finally { button.disabled = false; button.textContent = 'Застосувати'; root.querySelector('.home-catalog-mode-filter-panel')?.classList.remove('is-dirty'); }
+            });
+            root.querySelector('[data-home-catalog-filter-reset]')?.addEventListener('click', async () => {
+                resetHomeCatalogModeFilters();
+                await reloadHomeCatalog();
+            });
+        }
+
+        function syncHomeCatalogModeControls(root = document) {
+            const section = root.querySelector('#homeCatalogSection');
+            const resultsLabel = section?.querySelector('#homeCatalogResultsLabel');
+            if (!section || !resultsLabel) return;
+            const panel = section.querySelector('.home-catalog-mode-filter-panel');
+            const genreBrowser = section.querySelector('.home-catalog-genre-browser');
+            if (homeCatalogMode === 'anime') {
+                panel?.remove();
+                if (!genreBrowser) {
+                    resultsLabel.insertAdjacentHTML('beforebegin', `<section class="home-catalog-genre-browser" aria-labelledby="homeCatalogGenresTitle"><div class="home-catalog-genre-browser__heading"><div><span class="home-catalog-genre-browser__eyebrow">Швидкий вибір</span><h3 id="homeCatalogGenresTitle">Жанри</h3></div><span class="home-catalog-genre-browser__hint">Проведіть убік</span></div><div class="home-catalog-genre-rail" id="homeCatalogGenreRailHost" role="list" aria-label="Жанри каталогу"></div></section>`);
+                }
+                syncHomeCatalogGenreControl(section);
+                return;
+            }
+            genreBrowser?.remove();
+            const markup = homeCatalogModeFilterHtml();
+            if (panel) panel.outerHTML = markup;
+            else resultsLabel.insertAdjacentHTML('beforebegin', markup);
+            bindHomeCatalogModeFilters(section);
+        }
+
+        async function applyHomeCatalogModeFilters(root) {
+            const read = key => root.querySelector(`[data-home-catalog-filter="${key}"]`)?.value || 'all';
+            if (homeCatalogMode === 'manga') {
+                homeCatalogAvailability = read('availability');
+                homeCatalogAge = read('age');
+                homeCatalogAdult = homeCatalogAge === 'adult';
+                homeCatalogStatus = 'all';
+                homeCatalogOrigin = 'all';
+                const source = await loadHoneyMangaFullCatalog();
+                const result = filterMangaCatalogItems(source);
+                homeCatalogFilterResultItems = result;
+                homeCatalogFilterIndexReady = true;
+                homeCatalogFilterResultOffset = Math.min(24, result.length);
+                homeCatalogItems = result.slice(0, homeCatalogFilterResultOffset);
+                homeCatalogPage = 0;
+                homeCatalogHasMore = homeCatalogFilterResultOffset < result.length;
+                homeCatalogTotal = result.length;
+                homeCatalogAvailableTotal = result.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
+                renderHomeCatalogGrid();
+                syncHomeCatalogMoreButton();
+                return;
+            }
+            homeCatalogStatus = read('status');
+            homeCatalogAvailability = read('availability');
+            homeCatalogAge = read('age');
+            homeCatalogOrigin = read('origin');
+            homeCatalogAdult = false;
+            homeCatalogFilterResultItems = null;
+            homeCatalogFilterResultOffset = 0;
+            homeCatalogFilterIndexReady = false;
+            renderHomeCatalogGrid();
+        }
+
+        function resetHomeCatalogModeFilters() {
+            homeCatalogStatus = 'all';
+            homeCatalogAvailability = 'all';
+            homeCatalogAge = 'all';
+            homeCatalogOrigin = 'all';
+            homeCatalogAdult = false;
+            homeCatalogYearMin = '';
+            homeCatalogYearMax = '';
+            homeCatalogScoreMin = '';
+            homeCatalogGenres = new Set();
+            homeCatalogFilterResultItems = null;
+            homeCatalogFilterResultOffset = 0;
+            homeCatalogFilterIndexReady = false;
+        }
+
         export function bindHomeCatalogMenu(root) {
             const tabs = root.querySelectorAll('[data-catalog-mode]');
             tabs.forEach(tab => tab.addEventListener('click', async () => {
@@ -1316,6 +1428,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 root.querySelectorAll('[data-catalog-view]').forEach(item => item.classList.toggle('active', item === button));
                 renderHomeCatalogGrid();
             }));
+            bindHomeCatalogModeFilters(root);
             root.querySelector('#homeCatalogAdultBtn')?.addEventListener('click', async () => {
                 if (homeCatalogLoading) return;
                 homeCatalogAdult = !homeCatalogAdult;
@@ -1364,6 +1477,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (!grid || homeCatalogLoading) return;
             const requestId = ++homeCatalogRequestId;
             updateHomeCatalogModeLabels();
+            syncHomeCatalogModeControls();
             homeCatalogLoading = true;
             homeCatalogFilterResultItems = null;
             homeCatalogFilterResultOffset = 0;

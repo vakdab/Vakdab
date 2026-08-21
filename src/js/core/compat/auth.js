@@ -3,9 +3,9 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260821-genre-catalog-v1';
-import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-genre-catalog-v1';
-import { Storage } from './storage.js?v=20260821-genre-catalog-v1';
+} from '../../legacy/app-legacy.js?v=20260821-mode-filters-v3';
+import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-mode-filters-v3';
+import { Storage } from './storage.js?v=20260821-mode-filters-v3';
 
         const Auth = {
             _user: null,

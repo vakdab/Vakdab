@@ -917,3 +917,110 @@ body:not(.dark-mode) .header .logo-text span {
 @media (prefers-reduced-motion: reduce) {
     .home-catalog-genre-card { transition: none; }
 }
+
+
+/* Mode-specific filters for manga and novels. Anime keeps its inline genre browser. */
+.home-catalog-mode-filter-panel {
+    margin: 18px 0 6px;
+    padding: 16px;
+    border: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--surface) 92%, var(--accent) 3%);
+    box-shadow: 0 7px 22px rgba(0,0,0,.045);
+}
+.home-catalog-mode-filter-panel__heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 13px;
+}
+.home-catalog-mode-filter-panel__heading h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: clamp(1.02rem, 3.8vw, 1.25rem);
+    font-weight: 850;
+    letter-spacing: -.025em;
+}
+.home-catalog-mode-filter-panel__hint {
+    flex: 0 0 auto;
+    color: var(--accent);
+    font-size: .72rem;
+    font-weight: 800;
+}
+.home-catalog-mode-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+.home-catalog-mode-filter {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 6px;
+}
+.home-catalog-mode-filter > span {
+    color: var(--text-muted);
+    font-size: .7rem;
+    font-weight: 750;
+}
+.home-catalog-mode-filter select {
+    width: 100%;
+    min-height: 46px;
+    min-width: 0;
+    padding: 0 28px 0 11px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: .78rem;
+    font-weight: 700;
+    outline: none;
+}
+.home-catalog-mode-filter select:focus-visible {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.home-catalog-mode-filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 13px;
+}
+.home-catalog-mode-filter-reset,
+.home-catalog-mode-filter-apply {
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 12px;
+    font-size: .76rem;
+    font-weight: 800;
+    transition: transform 160ms var(--ui-ease), background 180ms var(--ui-ease), color 180ms var(--ui-ease), border-color 180ms var(--ui-ease);
+}
+.home-catalog-mode-filter-reset {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+}
+.home-catalog-mode-filter-apply {
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-text, #fff);
+}
+.home-catalog-mode-filter-reset:hover,
+.home-catalog-mode-filter-apply:hover,
+.home-catalog-mode-filter-reset:focus-visible,
+.home-catalog-mode-filter-apply:focus-visible {
+    transform: translateY(-1px);
+    outline: none;
+}
+.home-catalog-mode-filter-reset:active,
+.home-catalog-mode-filter-apply:active { transform: scale(.97); }
+.home-catalog-mode-filter-apply:disabled { cursor: wait; opacity: .65; }
+@media (max-width: 380px) {
+    .home-catalog-mode-filter-panel { padding: 13px; }
+    .home-catalog-mode-filter-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .home-catalog-mode-filter-reset,
+    .home-catalog-mode-filter-apply { transition: none; }
+}
