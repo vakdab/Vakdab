@@ -1241,3 +1241,31 @@ body:not(.dark-mode) .header .logo-text span {
     .home-catalog-quick-actions { grid-column: 1 / -1; }
     .home-catalog-age-rail { grid-auto-columns: 48px; }
 }
+
+/* Age controls match the compact schedule button: white surface, dark outline, black active state. */
+.home-catalog-age-card,
+.home-catalog-age-card:hover,
+.home-catalog-age-card:focus-visible {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    box-shadow: none !important;
+}
+.home-catalog-age-card .home-catalog-genre-card__icon,
+.home-catalog-age-card.active .home-catalog-genre-card__icon {
+    background: var(--surface) !important;
+    border: 1px solid var(--border);
+    color: var(--text) !important;
+    box-shadow: none;
+}
+.home-catalog-age-card.active {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: var(--accent-text) !important;
+    box-shadow: 0 6px 14px rgba(0,0,0,.12) !important;
+}
+.home-catalog-age-card.active .home-catalog-genre-card__icon {
+    background: var(--accent) !important;
+    border-color: var(--accent);
+    color: var(--accent-text) !important;
+}

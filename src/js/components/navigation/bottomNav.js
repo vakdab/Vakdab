@@ -1,6 +1,6 @@
 import { loadFeature } from '../../core/feature-loader.js';
-import { Router } from '../../core/compat/router.js?v=20260821-genres-compact-v10';
-import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260821-genres-compact-v10';
+import { Router } from '../../core/compat/router.js?v=20260821-ranobe-no-all-age-black-v11';
+import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260821-ranobe-no-all-age-black-v11';
 
 export function initBottomNav() {
 

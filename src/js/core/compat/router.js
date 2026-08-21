@@ -6,7 +6,7 @@ import {
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
     renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-genres-compact-v10';
+} from '../../legacy/app-legacy.js?v=20260821-ranobe-no-all-age-black-v11';
 
         export const Router = {
             currentRoute: 'main',

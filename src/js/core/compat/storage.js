@@ -1,5 +1,5 @@
 import { Auth } from './auth.js';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260821-genres-compact-v10';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260821-ranobe-no-all-age-black-v11';
         export const Storage = {
             _syncTimer: null,
             _pendingSyncScope: null,

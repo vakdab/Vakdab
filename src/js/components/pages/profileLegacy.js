@@ -4,9 +4,9 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-genres-compact-v10';
-import { getProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-genres-compact-v10';
-import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-genres-compact-v10';
+} from '../../legacy/app-legacy.js?v=20260821-ranobe-no-all-age-black-v11';
+import { getProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-ranobe-no-all-age-black-v11';
+import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-ranobe-no-all-age-black-v11';
 
 function primeProfileMediaPlayback(container) {
     if (!container) return;
@@ -438,7 +438,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-genres-compact-v10');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-ranobe-no-all-age-black-v11');
         const profile = await getPublicProfile(targetUid);
         if (!profile) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';

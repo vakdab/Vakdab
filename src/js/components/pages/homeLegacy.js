@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-genres-compact-v10';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-genres-compact-v10';
+} from '../../legacy/app-legacy.js?v=20260821-ranobe-no-all-age-black-v11';
+import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-ranobe-no-all-age-black-v11';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -836,9 +836,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         }
 
         export function homeCatalogModeFilterHtml() {
-            if (homeCatalogMode !== 'novel') return '';
-            const allCard = homeCatalogFilterCardGroup('all', '', [{ key: 'all', label: 'Усі' }], 'all');
-            return `<section class="home-catalog-genre-browser home-catalog-mode-filter-panel home-catalog-mode-filter-panel--all-only" aria-labelledby="homeCatalogModeFiltersTitle"><div class="home-catalog-genre-browser__heading"><div><span class="home-catalog-genre-browser__eyebrow">Швидкий вибір</span><h3 id="homeCatalogModeFiltersTitle">Ранобе</h3></div></div><div class="home-catalog-genre-rail home-catalog-mode-filter-rail" role="list" aria-label="Ранобе">${allCard}</div></section>`;
+            return '';
         }
 
         export async function loadHoneyMangaFullCatalog() {

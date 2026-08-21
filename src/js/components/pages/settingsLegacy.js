@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260821-genres-compact-v10';
+} from '../../legacy/app-legacy.js?v=20260821-ranobe-no-all-age-black-v11';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 
