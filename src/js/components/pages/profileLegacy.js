@@ -4,9 +4,9 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-one-all-instant-v7';
-import { getProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-one-all-instant-v7';
-import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-one-all-instant-v7';
+} from '../../legacy/app-legacy.js?v=20260821-all-only-v8';
+import { getProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-all-only-v8';
+import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-all-only-v8';
 
 function primeProfileMediaPlayback(container) {
     if (!container) return;
@@ -438,7 +438,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-one-all-instant-v7');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-all-only-v8');
         const profile = await getPublicProfile(targetUid);
         if (!profile) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';

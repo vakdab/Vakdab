@@ -1,8 +1,8 @@
-import { Storage } from '../../core/compat/storage.js?v=20260821-one-all-instant-v7';
+import { Storage } from '../../core/compat/storage.js?v=20260821-all-only-v8';
 import { db } from '../../services/firebase/client.js';
-import { Router } from '../../core/compat/router.js?v=20260821-one-all-instant-v7';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260821-one-all-instant-v7';
-import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260821-one-all-instant-v7';
+import { Router } from '../../core/compat/router.js?v=20260821-all-only-v8';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260821-all-only-v8';
+import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260821-all-only-v8';
 
         function stickerFaceSvg(variant) {
             const s = 'stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"';
