@@ -1,3 +1,3 @@
-import { bootstrap } from './core/bootstrap.js?v=20260821-age-only-v9';
+import { bootstrap } from './core/bootstrap.js?v=20260821-genres-compact-v10';
 
 bootstrap();

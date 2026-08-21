@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-age-only-v9';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-age-only-v9';
+} from '../../legacy/app-legacy.js?v=20260821-genres-compact-v10';
+import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-genres-compact-v10';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -826,12 +826,12 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         function homeCatalogAgeCardHtml() {
             return HOME_CATALOG_AGE_OPTIONS.map(option => {
                 const active = homeCatalogAge === option.key;
-                return `<button class="home-catalog-genre-card home-catalog-age-card${active ? ' active' : ''}" type="button" data-catalog-age="${option.key}" aria-pressed="${active ? 'true' : 'false'}" role="listitem"><span class="home-catalog-genre-card__icon">${escapeHtml(option.icon)}</span><span class="home-catalog-genre-card__name">${escapeHtml(option.label)}</span></button>`;
+                return `<button class="home-catalog-genre-card home-catalog-age-card${active ? ' active' : ''}" type="button" data-catalog-age="${option.key}" aria-label="${escapeHtml(option.label)}" title="${escapeHtml(option.label)}" aria-pressed="${active ? 'true' : 'false'}" role="listitem"><span class="home-catalog-genre-card__icon">${escapeHtml(option.icon)}</span><span class="home-catalog-genre-card__name">${escapeHtml(option.label)}</span></button>`;
             }).join('');
         }
 
         export function homeCatalogAgeHtml() {
-            if (homeCatalogMode !== 'anime' && homeCatalogMode !== 'manga') return '';
+            if (homeCatalogMode !== 'manga') return '';
             return `<div class="home-catalog-age-rail" id="homeCatalogAgeRailHost" role="list" aria-label="Вікові категорії">${homeCatalogAgeCardHtml()}</div>`;
         }
 
@@ -1236,6 +1236,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 </div>
 
                 ${homeCatalogModeFilterHtml()}
+                ${homeCatalogMode === 'anime' ? `<section class="home-catalog-genre-browser" aria-labelledby="homeCatalogGenresTitle"><div class="home-catalog-genre-browser__heading"><div><span class="home-catalog-genre-browser__eyebrow">Швидкий вибір</span><h3 id="homeCatalogGenresTitle">Жанри</h3></div><span class="home-catalog-genre-browser__hint">Проведіть убік</span></div><div class="home-catalog-genre-rail" id="homeCatalogGenreRailHost" role="list" aria-label="Жанри каталогу"></div></section>` : ''}
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
                 <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>
@@ -1376,9 +1377,18 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const genreBrowser = section.querySelector('.home-catalog-genre-browser:not(.home-catalog-mode-filter-panel)');
             const quickActions = section.querySelector('.home-catalog-quick-actions');
             const ageHost = section.querySelector('#homeCatalogAgeRailHost');
-            if (homeCatalogMode === 'anime' || homeCatalogMode === 'manga') {
+            if (homeCatalogMode === 'anime') {
                 panel?.remove();
+                ageHost?.remove();
+                if (!genreBrowser) {
+                    resultsLabel.insertAdjacentHTML('beforebegin', `<section class="home-catalog-genre-browser" aria-labelledby="homeCatalogGenresTitle"><div class="home-catalog-genre-browser__heading"><div><span class="home-catalog-genre-browser__eyebrow">Швидкий вибір</span><h3 id="homeCatalogGenresTitle">Жанри</h3></div><span class="home-catalog-genre-browser__hint">Проведіть убік</span></div><div class="home-catalog-genre-rail" id="homeCatalogGenreRailHost" role="list" aria-label="Жанри каталогу"></div></section>`);
+                }
+                syncHomeCatalogGenreControl(section);
+                return;
+            }
+            if (homeCatalogMode === 'manga') {
                 genreBrowser?.remove();
+                panel?.remove();
                 if (!ageHost && quickActions) quickActions.insertAdjacentHTML('beforeend', homeCatalogAgeHtml());
                 syncHomeCatalogAgeControl(section);
                 return;

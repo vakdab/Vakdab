@@ -1189,3 +1189,55 @@ body:not(.dark-mode) .header .logo-text span {
         min-height: 104px;
     }
 }
+
+/* Compact schedule and age controls: same square footprint as the reference screenshot. */
+.home-catalog-quick-actions {
+    align-items: center;
+    gap: 8px;
+    overflow: visible;
+}
+.home-catalog-schedule-btn {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+    min-height: 48px;
+    padding: 0;
+    border-radius: 14px;
+}
+.home-catalog-schedule-btn span { display: none; }
+.home-catalog-age-rail {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 48px;
+    gap: 8px;
+    flex: 0 0 auto;
+    min-width: 0;
+    overflow: visible;
+    padding: 0;
+}
+.home-catalog-age-card,
+.home-catalog-age-card:hover,
+.home-catalog-age-card:focus-visible {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+    min-height: 48px;
+    padding: 0;
+    gap: 0;
+    border-radius: 14px;
+    transform: none;
+}
+.home-catalog-age-card .home-catalog-genre-card__icon {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    flex-basis: 48px;
+    border-radius: 14px;
+    font-size: .72rem;
+}
+.home-catalog-age-card .home-catalog-genre-card__name { display: none; }
+@media (max-width: 599px) {
+    .home-catalog-quick-actions { grid-column: 1 / -1; }
+    .home-catalog-age-rail { grid-auto-columns: 48px; }
+}

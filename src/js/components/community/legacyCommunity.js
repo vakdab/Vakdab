@@ -4,8 +4,8 @@ import { db, initialized as firebaseInitialized } from '../../services/firebase/
 import {
     ACHIEVEMENTS, Auth, DailyStats, Router, calcTotalXP, escapeHtml,
     getLevel, isGifUrl, openPlayerPage, profileMediaMarkup, showToast
-} from '../../legacy/app-legacy.js?v=20260821-age-only-v9';
-import { getProfile } from '../pages/settingsLegacy.js?v=20260821-age-only-v9';
+} from '../../legacy/app-legacy.js?v=20260821-genres-compact-v10';
+import { getProfile } from '../pages/settingsLegacy.js?v=20260821-genres-compact-v10';
 import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
 
         function _renderReplyBanner() {
