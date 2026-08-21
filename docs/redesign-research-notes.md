@@ -85,3 +85,12 @@ On the fresh `app.js?v=20260821-mikai-source-v2` runtime, the movie player shows
 
 ## Verified Mikai playback proof
 A real movie playback was started in the browser. After 5 seconds: source label = `Mikai.me`; video `readyState = 4`, `paused = false`, `currentTime = 43.53s`, `duration = 6015.51s`, `MediaError = null`, buffered range starts at 0 and reaches the full duration. The actual `currentSrc` is a proxied HLS manifest resolved from an `ashdi.vip` URL through the configured Mikai playback flow.
+
+## Related renderer runtime QA
+After the related-ua cache-busted entrypoint, the opened Gintama player shows Ukrainian title `Ґінтама`, Ukrainian genres and controls. The related section is below the current viewport and needs a targeted scroll/DOM check to confirm localized related cards and poster fallback states.
+
+## Related-ua-v2 movie QA
+The related-ua-v2 runtime loaded successfully and the movie page correctly hides season/episode controls. The movie itself has no visible related cards in this data response, so the next related localization verification must use a TV title with actual relations (for example Gintama or Frieren).
+
+## Final related localization proof
+The exact `Ґінтама` TV player now renders related cards in Ukrainian: `Ґінтама - 2 сезон`, `Ґінтама: Оскільки початок є вирішальним...`, `Ґінтама: Народження білого демона`, and `Ґінтама: Грандіозні збори`. Relation/type labels are Ukrainian (`наступний сезон`, `спін-оф`, `Серіал`), and poster images use valid AniList URLs instead of blank blocks.

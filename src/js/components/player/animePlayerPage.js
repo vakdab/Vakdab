@@ -8,8 +8,8 @@ import { DailyStats } from '../rating/ratingSystem.js?v=20260821-social-v13';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
-    searchHikka, switchProviderSource
-} from '../../services/catalog.js?v=20260821-mikai-source-v2';
+    searchHikka, searchHikkaAllTitles, switchProviderSource
+} from '../../services/catalog.js?v=20260821-related-ua-v2';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
 } from '../pages/homeLegacy.js?v=20260821-social-v13';
@@ -1200,8 +1200,59 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             if (more) { more.hidden = playerCharacterItems.length <= 8; more.textContent = playerCharacterExpanded ? '←' : '→'; }
         }
 
+        const RELATED_RELATION_LABELS_UA = {
+            'prequel': 'попередня історія', 'sequel': 'наступна історія', 'side story': 'спін-оф',
+            'spin-off': 'спін-оф', 'alternative version': 'альтернативна версія', 'alternative setting': 'альтернативна версія',
+            'summary': 'короткий переказ', 'adaptation': 'адаптація', 'parent story': 'пов’язаний твір',
+            'character': 'пов’язаний твір', 'full story': 'повна історія', 'other': 'пов’язаний твір'
+        };
+        const RELATED_TYPE_LABELS_UA = {
+            'tv': 'TV серіал', 'tv series': 'TV серіал', 'movie': 'Фільм', 'film': 'Фільм',
+            'ova': 'OVA', 'ona': 'ONA', 'special': 'Спешл', 'tv special': 'ТВ спешл', 'music': 'Музика'
+        };
+        const relatedLocalizationCache = new Map();
+        const normalizeRelatedKey = value => String(value || '').toLocaleLowerCase('uk-UA')
+            .replace(/[\u2010-\u2015:!?.,'’"()\[\]{}]/g, ' ').replace(/\s+/g, ' ').trim();
+        const relatedRelationLabelUa = value => RELATED_RELATION_LABELS_UA[String(value || '').trim().toLocaleLowerCase('en-US')] || String(value || '');
+        const relatedTypeLabelUa = value => RELATED_TYPE_LABELS_UA[String(value || '').trim().toLocaleLowerCase('en-US')] || String(value || '');
+
+        async function localizeRelatedItem(item) {
+            const key = normalizeRelatedKey(item?.titleEn || item?.title);
+            if (!key) return item;
+            if (relatedLocalizationCache.has(key)) return relatedLocalizationCache.get(key);
+            const promise = (async () => {
+                try {
+                    const results = await searchHikkaAllTitles(item.titleEn || item.title, 1);
+                    const exact = (results || []).find(candidate => {
+                        const names = [candidate.title, candidate.originalTitle, ...(candidate.alternativeTitles || [])].map(normalizeRelatedKey).filter(Boolean);
+                        return names.some(name => name === key || name.includes(key) || key.includes(name));
+                    });
+                    const match = exact || (results || [])[0];
+                    if (match) {
+                        return {
+                            ...item,
+                            title: match.title || item.title,
+                            titleEn: item.titleEn || match.originalTitle || item.titleEn,
+                            image: item.image || match.images?.jpg?.large_image_url || match.images?.jpg?.image_url || '',
+                            typeLabel: match.typeLabel || item.typeLabel,
+                            relationLabel: item.relationLabel
+                        };
+                    }
+                } catch (error) {
+                    console.warn('Related Ukrainian localization failed:', error);
+                }
+                return item;
+            })();
+            relatedLocalizationCache.set(key, promise);
+            return promise;
+        }
+
         function relatedCardMarkup(x) {
-            return `<article class="related-card" data-related-title="${escapeHtml(x.title || '')}" data-related-title-en="${escapeHtml(x.titleEn || '')}"><img src="${escapeHtml(x.image || '')}" alt="" loading="lazy"><div><strong>${escapeHtml(x.title || '')}</strong><span>${escapeHtml([x.year, x.typeLabel, x.relationLabel].filter(Boolean).join(' · '))}</span></div></article>`;
+            const title = x.title || x.titleEn || 'Без назви';
+            const poster = normalizePosterUrl(x.image || '');
+            const typeLabel = relatedTypeLabelUa(x.typeLabel);
+            const relationLabel = relatedRelationLabelUa(x.relationLabel);
+            return `<article class="related-card" data-related-title="${escapeHtml(title)}" data-related-title-en="${escapeHtml(x.titleEn || '')}"><img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.onerror=null;this.src='./android-chrome-512x512.png';this.classList.add('poster-fallback')"><div><strong>${escapeHtml(title)}</strong><span>${escapeHtml([x.year, typeLabel, relationLabel].filter(Boolean).join(' · '))}</span></div></article>`;
         }
 
         async function openRelatedAnimeInPlayer(card) {
@@ -1243,7 +1294,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             return unique.map((x, i) => {
                 const result = i < details.length ? details[i] : null;
                 const full = result?.status === 'fulfilled' ? result.value.data : {};
-                return { url: full.url || x.url, image: jikanImage(full) || jikanImage(x), title: full.title || x.name, year: full.year || (full.aired?.from || '').slice(0, 4), typeLabel: full.type || '', relationLabel: x.relation };
+                return { url: full.url || x.url, image: jikanImage(full) || jikanImage(x), title: full.title || x.name, titleEn: full.title || x.name, year: full.year || (full.aired?.from || '').slice(0, 4), typeLabel: full.type || '', relationLabel: x.relation };
             });
         }
 
@@ -1266,6 +1317,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             if (!list) return;
             try {
                 playerRelatedItems = data?._provider === 'anilist' ? await renderRelatedAnimeFromAnilist(data) : await renderRelatedAnimeFromJikan(data);
+                playerRelatedItems = await Promise.all(playerRelatedItems.map(localizeRelatedItem));
             } catch (e) { console.warn('Related anime lookup failed:', e); playerRelatedItems = []; }
             if (!playerRelatedItems.length) { setSectionState('relatedSection', false); return; }
             setSectionState('relatedSection', true);

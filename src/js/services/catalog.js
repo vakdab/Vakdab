@@ -108,6 +108,7 @@ import {
         }
         export async function fetchHikkaMain(page) { return hikkaCatalog('anime', page, {only_translated:true, sort:['score:desc','scored_by:desc']}); }
         export async function searchHikka(query, page) { return hikkaCatalog('anime', page, {query:String(query||'').trim(), only_translated:true}); }
+        export async function searchHikkaAllTitles(query, page) { return hikkaCatalog('anime', page, {query:String(query||'').trim()}); }
         export async function fetchHikkaByCategory(categorySlug, page) {
             const body = String(categorySlug).startsWith('format:')
                 ? { media_type: [String(categorySlug).slice(7)], only_translated: true }
