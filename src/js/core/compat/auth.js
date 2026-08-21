@@ -3,8 +3,8 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260820-gif-video-v4';
-import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260820-gif-video-v4';
+} from '../../legacy/app-legacy.js?v=20260821-social-v4';
+import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-social-v4';
 import { Storage } from './storage.js';
 
         const Auth = {

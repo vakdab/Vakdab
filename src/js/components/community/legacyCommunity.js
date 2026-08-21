@@ -4,8 +4,8 @@ import { db, initialized as firebaseInitialized } from '../../services/firebase/
 import {
     ACHIEVEMENTS, Auth, DailyStats, Router, calcTotalXP, escapeHtml,
     getLevel, isGifUrl, openPlayerPage, profileMediaMarkup, showToast
-} from '../../legacy/app-legacy.js?v=20260820-gif-video-v4';
-import { getProfile } from '../pages/settingsLegacy.js?v=20260820-gif-video-v4';
+} from '../../legacy/app-legacy.js?v=20260821-social-v4';
+import { getProfile } from '../pages/settingsLegacy.js?v=20260821-social-v4';
 import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
 
         function _renderReplyBanner() {
@@ -172,7 +172,9 @@ import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
             const reply = post.replyTo?.text ? `<div class="modern-community-reply-quote"><b>Відповідь ${escapeHtml(post.replyTo.authorName || 'учаснику')}</b><span>${escapeHtml(post.replyTo.text)}</span></div>` : '';
             const text = post.text ? `<p>${escapeHtml(post.text).replace(/\n/g, '<br>')}</p>` : '';
             const reactions = Object.entries(post.reactions || {}).filter(([, uids]) => Array.isArray(uids) && uids.length).map(([emoji, uids]) => `<button type="button" class="modern-community-reaction${Auth.isAuthenticated() && uids.includes(Auth._user?.uid) ? ' is-mine' : ''}" data-community-action="reaction" data-emoji="${escapeHtml(emoji)}" data-post-id="${escapeHtml(post.id)}">${emoji} <span>${uids.length}</span></button>`).join('');
-            return `<article class="modern-community-post"><div class="modern-community-post-top"><div class="modern-community-avatar">${modernCommunityAuthor(post)}</div><div class="modern-community-author">${modernCommunityAuthorName(post)}<span>${modernCommunityDate(post.createdAt)}</span></div><span class="modern-community-tag">${escapeHtml(topicLabel)}</span></div>${reply}${text}${media}${anime}<div class="modern-community-post-actions"><button type="button" class="modern-community-action" data-community-action="reaction" data-emoji="♡" data-post-id="${escapeHtml(post.id)}">♡ Реакція</button><button type="button" class="modern-community-action" data-community-action="reply" data-post-id="${escapeHtml(post.id)}">↩ Відповісти</button>${reactions}</div></article>`;
+            const profileUid = String(post.uid || '').trim();
+            const profileAttrs = profileUid ? ` data-community-profile-uid="${escapeHtml(profileUid)}" role="link" tabindex="0" title="Відкрити профіль"` : '';
+            return `<article class="modern-community-post"><div class="modern-community-post-top"><div class="modern-community-avatar"${profileAttrs}>${modernCommunityAuthor(post)}</div><div class="modern-community-author"${profileAttrs}>${modernCommunityAuthorName(post)}<span>${modernCommunityDate(post.createdAt)}</span></div><span class="modern-community-tag">${escapeHtml(topicLabel)}</span></div>${reply}${text}${media}${anime}<div class="modern-community-post-actions"><button type="button" class="modern-community-action" data-community-action="reaction" data-emoji="♡" data-post-id="${escapeHtml(post.id)}">♡ Реакція</button><button type="button" class="modern-community-action" data-community-action="reply" data-post-id="${escapeHtml(post.id)}">↩ Відповісти</button>${reactions}</div></article>`;
         }
         function renderModernCommunityFeed() {
             const feed = document.getElementById('modernCommunityFeed');
@@ -184,6 +186,13 @@ import { loadHikkaDetail, searchHikka } from '../../services/catalog.js';
             const count = document.getElementById('modernCommunityCount');
             if (count) count.textContent = `${posts.length} публікацій`;
             feed.innerHTML = posts.length ? posts.map(modernCommunityPostCard).join('') : `<div class="modern-community-empty"><div class="modern-community-empty-icon">✦</div><h3>Група ще чекає на першу розмову</h3><p>Створи перше повідомлення в цій темі та започаткуй обговорення.</p></div>`;
+            feed.querySelectorAll('[data-community-profile-uid]').forEach(card => {
+                const openProfile = () => Router.goTo('profile', { uid: card.dataset.communityProfileUid });
+                card.addEventListener('click', openProfile);
+                card.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openProfile(); }
+                });
+            });
             feed.querySelectorAll('[data-community-action="reply"]').forEach(btn => btn.addEventListener('click', () => { const post = modernCommunityPosts.find(item => item.id === btn.dataset.postId); if (!post) return; modernCommunityReplyTo = { id: post.id, authorName: post.authorName || 'учаснику', text: (post.text || post.animeData?.title || 'публікації').slice(0, 120) }; const banner = document.getElementById('modernCommunityReplyBanner'); if (banner) { banner.innerHTML = `<b>Відповідь ${escapeHtml(modernCommunityReplyTo.authorName)}</b><span>${escapeHtml(modernCommunityReplyTo.text)}</span><button type="button" data-community-cancel-reply>×</button>`; banner.hidden = false; } document.getElementById('modernCommunityComposer')?.focus(); }));
             feed.querySelectorAll('[data-community-action="reaction"]').forEach(btn => btn.addEventListener('click', async () => { if (!Auth.isAuthenticated() || !db) return showToast('Увійди, щоб реагувати на публікації'); const { updateDoc, doc, arrayUnion, arrayRemove } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js'); const post = modernCommunityPosts.find(item => item.id === btn.dataset.postId); if (!post) return; const emoji = btn.dataset.emoji || '♡'; const mine = Array.isArray(post.reactions?.[emoji]) && post.reactions[emoji].includes(Auth._user.uid); try { await updateDoc(doc(db, 'community_posts', post.id), { [`reactions.${emoji}`]: mine ? arrayRemove(Auth._user.uid) : arrayUnion(Auth._user.uid) }); } catch (error) { console.warn('Community reaction failed:', error); showToast('Не вдалося додати реакцію'); } }));
         }

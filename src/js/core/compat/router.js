@@ -4,9 +4,9 @@ import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
     initRatingPage, loadAndDisplayGenreSections, loadMangaReader,
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
-    renderGenresPage, renderProfilePage, renderSchedulePage, renderSearchPage,
+    renderGenresPage, renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260820-gif-video-v4';
+} from '../../legacy/app-legacy.js?v=20260821-social-v4';
 
         export const Router = {
             currentRoute: 'main',
@@ -86,7 +86,7 @@ import {
                 } else if (route === 'profile') {
                     document.querySelector('.agnative-leftdock__item.selector[data-action="profile"]')?.classList.add(
                         'is-active');
-                    this.showProfile();
+                    this.showProfile(params.uid || '');
                 } else if (route === 'genre') {
                     const slug = params.slug || '';
                     const name = params.name || slug;
@@ -158,11 +158,16 @@ import {
                 syncLeftdockActive();
             },
 
-            showProfile() {
+            showProfile(publicUid = '') {
                 loadFeature('profile').catch(error => console.warn('[VakDab] profile feature preload:', error));
                 const container = document.getElementById('profilePageContainer');
                 container.style.display = 'block';
                 container.classList.add('active');
+                if (publicUid) {
+                    renderPublicProfilePage(publicUid);
+                    syncLeftdockActive();
+                    return;
+                }
                 if (!Auth._authResolved) {
                     // Firebase ще не перевірив сесію — показуємо заглушку
                     container.innerHTML = '<div class="loader" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;gap:1rem;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i><p>Перевірка сесії...</p></div>';

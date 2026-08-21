@@ -2,9 +2,9 @@ import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/f
 import { auth, db } from '../../services/firebase/client.js';
 import { GENRE_MAP } from '../../config/constants.js?v=20260820-hikka-proxy-fix4';
 import { Router } from '../../core/compat/router.js';
-import { Storage } from '../../core/compat/storage.js?v=20260820-appearance-cleanup-v1';
+import { Storage } from '../../core/compat/storage.js?v=20260821-social-v4';
 import { LampaPlayer } from './lampaPlayer.js?v=20260820-player-modern-v1';
-import { DailyStats } from '../rating/ratingSystem.js?v=20260820-appearance-cleanup-v1';
+import { DailyStats } from '../rating/ratingSystem.js?v=20260821-social-v4';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -12,11 +12,11 @@ import {
 } from '../../services/catalog.js';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
-} from '../pages/homeLegacy.js?v=20260820-gif-video-v4';
-import { renderProfilePage } from '../pages/profileLegacy.js?v=20260820-gif-video-v4';
+} from '../pages/homeLegacy.js?v=20260821-social-v4';
+import { renderProfilePage } from '../pages/profileLegacy.js?v=20260821-social-v4';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260820-gif-video-v4';
+} from '../../legacy/app-legacy.js?v=20260821-social-v4';
 import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
 
         // ====================================================================

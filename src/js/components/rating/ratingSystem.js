@@ -1,5 +1,6 @@
 import { Auth } from '../../core/compat/auth.js';
-import { Storage } from '../../core/compat/storage.js?v=20260820-appearance-cleanup-v1';
+import { Router } from '../../core/compat/router.js?v=20260821-social-v4';
+import { Storage } from '../../core/compat/storage.js?v=20260821-social-v4';
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
 
@@ -415,7 +416,7 @@ function isGifUrl(url) {
                         document.body.classList.add('community-active');
                         const nav = document.getElementById('bottomNav');
                         if (nav) nav.classList.add('hidden-nav');
-                        import('../community/legacyCommunity.js?v=20260820-appearance-cleanup-v1')
+                        import('../community/legacyCommunity.js?v=20260821-social-v4')
                             .then(({ initCommunity }) => {
                                 initCommunity();
                                 setTimeout(() => {
@@ -652,7 +653,8 @@ function isGifUrl(url) {
                 html += '<div class="rg-podium">';
                 order.forEach((u, i) => {
                     const av = ratingProfileMediaMarkup(u, 'rg-podium-avatar-media');
-                    html += `<div class="rg-podium-item ${cls[i]}" style="animation-delay:${i*0.08}s">
+                    const podiumProfileAttrs = u.uid ? ` data-profile-uid="${escapeRatingHtml(u.uid)}" role="link" tabindex="0" title="Відкрити профіль"` : '';
+                    html += `<div class="rg-podium-item ${cls[i]}"${podiumProfileAttrs} style="animation-delay:${i*0.08}s">
                         <img class="rg-podium-badge" src="${TOP_BADGES[cls[i]]}" alt="Топ ${cls[i] === 'p1' ? '1' : cls[i] === 'p2' ? '2' : '3'}" loading="lazy">
                         <div class="rg-podium-avatar">${av}</div>
                         <div class="rg-podium-name">${ratingNameMarkup(u)}</div>
@@ -668,7 +670,8 @@ function isGifUrl(url) {
                 const isMe = u.uid === myUid;
                 const av   = ratingProfileMediaMarkup(u, 'rg-lb-avatar-media');
                 const ri   = getUserRankInfo(u.episodes, u.minutes);
-                html += `<div class="rg-lb-item ${isMe ? 'is-me' : ''}" style="animation-delay:${Math.min(i*0.02, 0.4)}s">
+                const listProfileAttrs = u.uid ? ` data-profile-uid="${escapeRatingHtml(u.uid)}" role="link" tabindex="0" title="Відкрити профіль"` : '';
+                html += `<div class="rg-lb-item ${isMe ? 'is-me' : ''}"${listProfileAttrs} style="animation-delay:${Math.min(i*0.02, 0.4)}s">
                     <div class="rg-lb-num">${i + 4}</div>
                     <div class="rg-lb-avatar">${av}</div>
                     <div class="rg-lb-info">
@@ -681,6 +684,13 @@ function isGifUrl(url) {
             html += '</div>';
             lb.className = '';
             lb.innerHTML = html;
+            lb.querySelectorAll('[data-profile-uid]').forEach(card => {
+                const openProfile = () => Router.goTo('profile', { uid: card.dataset.profileUid });
+                card.addEventListener('click', openProfile);
+                card.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openProfile(); }
+                });
+            });
         }
 
         export async function loadRatingPage() { initRatingPage(); }

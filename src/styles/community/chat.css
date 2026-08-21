@@ -317,6 +317,20 @@
             border-color: rgba(var(--accent-rgb), 0.3);
             background: rgba(var(--accent-rgb), 0.04);
         }
+        .modern-community-avatar[data-community-profile-uid],
+        .modern-community-author[data-community-profile-uid],
+        .rg-podium-item[data-profile-uid],
+        .rg-lb-item[data-profile-uid] { cursor: pointer; }
+        .modern-community-avatar[data-community-profile-uid]:focus-visible,
+        .modern-community-author[data-community-profile-uid]:focus-visible,
+        .rg-podium-item[data-profile-uid]:focus-visible,
+        .rg-lb-item[data-profile-uid]:focus-visible {
+            outline: 3px solid rgba(var(--accent-rgb), .35);
+            outline-offset: 3px;
+        }
+        .modern-community-author[data-community-profile-uid]:hover,
+        .rg-podium-item[data-profile-uid]:hover .rg-podium-name,
+        .rg-lb-item[data-profile-uid]:hover .rg-lb-name { color: var(--accent); }
         .rg-lb-num {
             font-size: 13px; font-weight: 800; color: var(--text-muted);
             min-width: 22px; text-align: center;

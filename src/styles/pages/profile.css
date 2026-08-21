@@ -265,11 +265,66 @@
         }
 
         .profile-stats {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 8px;
         }
         @media (min-width:480px) {
-            .profile-stats { gap: 10px; }
+            .profile-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+        }
+        .profile-social-stat {
+            appearance: none;
+            -webkit-appearance: none;
+            color: inherit;
+            font: inherit;
+            cursor: pointer;
+        }
+        .profile-social-stat:focus-visible,
+        .profile-follow-btn:focus-visible {
+            outline: 3px solid rgba(var(--accent-rgb), .35);
+            outline-offset: 2px;
+        }
+        .profile-public-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 12px 0 14px;
+        }
+        .profile-follow-btn {
+            min-height: 42px;
+            padding: 10px 22px;
+            border: 1px solid var(--text);
+            border-radius: 999px;
+            background: var(--text);
+            color: var(--surface);
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform .2s ease, opacity .2s ease, background .2s ease, color .2s ease;
+        }
+        .profile-follow-btn:hover { transform: translateY(-1px); }
+        .profile-follow-btn:disabled { cursor: wait; opacity: .65; }
+        .profile-follow-btn.is-following {
+            background: transparent;
+            color: var(--text);
+        }
+        .profile-owner-badge {
+            color: var(--text-muted);
+            font-size: .85rem;
+        }
+        .profile-public-empty {
+            min-height: 42vh;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+        @media (max-width:479px) {
+            .profile-stat-pill { min-width: 0; padding: 9px 5px; }
+            .profile-stat-pill .num { font-size: 16px; }
+            .profile-stat-pill .label { font-size: 8px; letter-spacing: .6px; }
+            .profile-public-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         }
 
         .profile-medals-section {
