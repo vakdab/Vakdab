@@ -79,3 +79,9 @@ The runtime DOM confirmed the season wrapper had `hidden=""` and the season bloc
 
 ## Mikai runtime QA
 After the Mikai entrypoint cache-bust, the movie player runtime reports `Mikai.me` as the source label. The season and episode wrappers have zero height for the movie, while the Ukrainian озвучка select remains visible. The app entry script is the new `20260821-mikai-source-v2` version.
+
+## Mikai playback attempt
+On the fresh `app.js?v=20260821-mikai-source-v2` runtime, the movie player shows `Mikai.me` as the source label and Ukrainian controls. Pressing the preview play button creates the custom video controls, so the player lifecycle starts; the next verification should inspect the media element after a short wait for `currentSrc`, `readyState`, `networkState`, `duration`, and `MediaError`.
+
+## Verified Mikai playback proof
+A real movie playback was started in the browser. After 5 seconds: source label = `Mikai.me`; video `readyState = 4`, `paused = false`, `currentTime = 43.53s`, `duration = 6015.51s`, `MediaError = null`, buffered range starts at 0 and reaches the full duration. The actual `currentSrc` is a proxied HLS manifest resolved from an `ashdi.vip` URL through the configured Mikai playback flow.
