@@ -1794,3 +1794,46 @@ body:not(.dark-mode) .header .logo-text span {
         padding: 28px 23px 66px 23px;
     }
 }
+
+/* Right-side direction: cloud starts at the trigger and expands toward the poster. */
+.profile-thought-note {
+    left: 22px;
+    right: auto;
+    bottom: -6px;
+    width: min(190px, calc(100vw - 50px));
+    min-height: 170px;
+    padding: 34px 25px 64px 27px;
+    transform-origin: 16% 100%;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM47 84C55 81 61 87 58 94C55 100 47 97 44 92C42 88 44 85 47 84ZM32 103C37 101 40 104 38 107C36 110 32 109 30 106C29 104 30 103 32 103Z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM47 84C55 81 61 87 58 94C55 100 47 97 44 92C42 88 44 85 47 84ZM32 103C37 101 40 104 38 107C36 110 32 109 30 106C29 104 30 103 32 103Z'/%3E%3C/svg%3E");
+}
+.profile-thought-bubble {
+    left: 22px;
+    right: auto;
+    bottom: -6px;
+    width: min(270px, calc(100vw - 38px));
+    max-width: calc(100vw - 38px);
+    min-height: 230px;
+    padding: 29px 23px 68px 25px;
+    transform-origin: 16% 100%;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM47 84C55 81 61 87 58 94C55 100 47 97 44 92C42 88 44 85 47 84ZM32 103C37 101 40 104 38 107C36 110 32 109 30 106C29 104 30 103 32 103Z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM47 84C55 81 61 87 58 94C55 100 47 97 44 92C42 88 44 85 47 84ZM32 103C37 101 40 104 38 107C36 110 32 109 30 106C29 104 30 103 32 103Z'/%3E%3C/svg%3E");
+}
+@media (max-width: 479px) {
+    .profile-thought-note { left: 20px; right: auto; width: min(184px, calc(100vw - 42px)); }
+    .profile-thought-bubble { left: 20px; right: auto; width: min(270px, calc(100vw - 32px)); max-width: calc(100vw - 32px); }
+}
+
+/* Exact trigger alignment: the cloud's left edge begins at the trigger, then grows rightward. */
+.profile-thought-note {
+    left: 64px;
+    right: auto;
+}
+.profile-thought-bubble {
+    left: 64px;
+    right: auto;
+}
+@media (max-width: 479px) {
+    .profile-thought-note { left: 52px; right: auto; }
+    .profile-thought-bubble { left: 52px; right: auto; }
+}
