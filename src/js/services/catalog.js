@@ -457,8 +457,9 @@ import {
             try {
                 let sourceData = externalSourceCache[providerName];
                 if (!sourceData) {
-                    sourceData = playerPageAnime?.mikaiUrl
-                        ? await loadMikaiSeasons(playerPageAnime.mikaiUrl)
+                    const isMikaiProvider = /^mikai\.me$/i.test(String(providerName || '').trim());
+                    sourceData = isMikaiProvider
+                        ? await loadMikaiSeasons(playerPageAnime?.mikaiUrl || getMikaiUrl(playerPageAnime))
                         : await loadAnimeOnSeasons(playerPageAnime?.animeOnUrl || getAnimeOnUrl(playerPageAnime));
                     externalSourceCache[providerName] = sourceData;
                 }
@@ -467,7 +468,7 @@ import {
                 playerPageAnime.dubLogos = mikaiData.dubLogos || {};
                 playerPageAnime.subtitleLogos = mikaiData.subtitleLogos || {};
                 refreshAfterSourceSwitch();
-                showToast(`${providerName}: ASHDI без реклами`);
+                showToast(`${providerName}: українське відео без реклами`);
             } catch (e) {
                 console.warn('[switchProviderSource]', providerName, e);
                 showToast(`${providerName}: ${e.message || 'недоступно'}`);

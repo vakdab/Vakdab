@@ -9,7 +9,7 @@ import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, switchProviderSource
-} from '../../services/catalog.js';
+} from '../../services/catalog.js?v=20260821-mikai-source-v2';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
 } from '../pages/homeLegacy.js?v=20260821-social-v13';
@@ -179,7 +179,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
                 playerPageAnime = anime;
                 playerPageAnimeuaSeasons = {};
                 externalSourceCache = {};
-                playerPageSources = anime.mikaiUrl ? ['Mikai / ASHDI'] : anime.animeOnUrl ? ['AnimeON / ASHDI'] : ['Основне'];
+                playerPageSources = anime.mikaiUrl ? ['Mikai.me'] : anime.animeOnUrl ? ['AnimeON'] : ['Основне'];
                 playerPageCurrentSource = playerPageSources[0];
                 const posterUrl = normalizePosterUrl(anime.images?.jpg?.large_image_url);
                 document.getElementById('playerPosterImg').src = posterUrl;
@@ -428,9 +428,9 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
 
         export function updateSourceChip() {
             const label = document.getElementById('playerSourceLabel');
-            if (label) label.textContent = playerPageCurrentSource || 'Джерело';
+            if (label) label.textContent = playerPageCurrentSource || 'Джерело відео';
             const watchSourceValue = document.getElementById('watchSourceValue');
-            if (watchSourceValue) watchSourceValue.textContent = `${playerPageCurrentSource || 'Джерело'} · ${playerPageCurrentQuality || ''}`;
+            if (watchSourceValue) watchSourceValue.textContent = `${playerPageCurrentSource || 'Джерело відео'} · ${playerPageCurrentQuality || ''}`;
         }
 
         function renderDubLogo(dubName) {
@@ -2022,7 +2022,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
         document.getElementById('bsApplyBtn').addEventListener('click', () => {
             closeBottomSheet();
             if (bottomSheetMode === 'source') {
-                showToast(`Джерело: ${playerPageCurrentSource}`);
+                showToast(`Джерело відео: ${playerPageCurrentSource}`);
             } else {
                 showToast('Фільтри застосовано');
             }
