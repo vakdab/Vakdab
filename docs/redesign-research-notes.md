@@ -58,3 +58,9 @@ The final 390px screenshot shows a contained rounded hero with readable title, s
 
 ## Follow-up screenshot QA
 The 390px follow-up preview confirms that VakDab is now a normal header brand above the hero rather than a pill floating over artwork. The home catalog poster cards no longer render play/favorite controls or the related bottom gradient. The mobile catalog is configured for three equal columns, and the bottom navigation is a compact floating five-item bar instead of a tall wide tray.
+
+## Search and navigation QA checkpoint
+The browser render after the interaction-state patch shows the catalog search input and active catalog tab remain present and functional. The final CSS explicitly removes native input focus outlines, keeps the search field on one composed focus ring, forces readable foreground color for active/pressed controls, and restores animated transitions for bottom navigation visibility, active pills, hover, and press feedback.
+
+## Computed-style verification
+Browser computed styles confirm the active catalog tab resolves to a monochrome black background with white text and white `-webkit-text-fill-color`, eliminating the unreadable pressed state. The focused search input has no native outline or inner box-shadow; the surrounding shell receives one 4px focus ring and an elevated shadow. Bottom navigation resolves to a 64px compact bar with transform/opacity/box-shadow transitions and the active Home pill uses the accent background.

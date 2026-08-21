@@ -538,3 +538,131 @@ body:not(.dark-mode) .header .logo-text span {
 @media (min-width: 700px) {
     .bottom-nav { bottom: 18px !important; }
 }
+
+/* Search and interaction-state correction from iOS screenshots. */
+.home-catalog-search {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 52px;
+    padding: 0 16px;
+    border: 1px solid var(--border) !important;
+    border-radius: 17px;
+    background: var(--surface) !important;
+    color: var(--text-muted);
+    box-shadow: 0 5px 18px rgba(0,0,0,.035);
+    transition: border-color 180ms var(--ui-ease), box-shadow 180ms var(--ui-ease), background 180ms var(--ui-ease);
+}
+.home-catalog-search:focus-within {
+    border-color: color-mix(in srgb, var(--accent) 62%, var(--border)) !important;
+    background: var(--surface) !important;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 11%, transparent), 0 8px 22px rgba(0,0,0,.06);
+}
+.home-catalog-search > i {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    place-items: center;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    transition: color 180ms var(--ui-ease), transform 180ms var(--ui-ease);
+}
+.home-catalog-search:focus-within > i { color: var(--accent); transform: scale(1.05); }
+.home-catalog-search input,
+.home-catalog-search input:focus,
+.home-catalog-search input:focus-visible,
+.home-catalog-search input:active {
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent !important;
+    color: var(--text) !important;
+    -webkit-text-fill-color: var(--text) !important;
+    font-size: clamp(.9rem, 2.7vw, 1rem);
+}
+.home-catalog-search input::placeholder { color: var(--text-muted); opacity: .78; }
+
+/* Never let iOS pressed/focus rendering produce black text on a black button. */
+.home-catalog-tab:active,
+.home-catalog-preset:active,
+.home-catalog-view:active,
+.home-catalog-filter-btn:active,
+.home-catalog-schedule-btn:active,
+.home-catalog-more:active,
+.action-pill:active {
+    border-color: var(--accent) !important;
+    background: var(--accent) !important;
+    color: var(--accent-text) !important;
+    -webkit-text-fill-color: var(--accent-text) !important;
+}
+.home-catalog-tab:active span,
+.home-catalog-tab:active i,
+.home-catalog-preset:active span,
+.home-catalog-preset:active i,
+.home-catalog-view:active i,
+.home-catalog-filter-btn:active span,
+.home-catalog-filter-btn:active i,
+.home-catalog-schedule-btn:active span,
+.home-catalog-schedule-btn:active i,
+.home-catalog-more:active span,
+.home-catalog-more:active i,
+.action-pill:active span,
+.action-pill:active i {
+    color: var(--accent-text) !important;
+    -webkit-text-fill-color: var(--accent-text) !important;
+}
+.home-catalog-tab.active,
+.home-catalog-tab.active:hover,
+.home-catalog-tab.active:focus-visible,
+.home-catalog-tab.active span,
+.home-catalog-tab.active i {
+    color: var(--accent-text) !important;
+    -webkit-text-fill-color: var(--accent-text) !important;
+}
+.home-catalog-view.active,
+.home-catalog-view.active:hover,
+.home-catalog-view.active:focus-visible,
+.home-catalog-view.active i {
+    background: var(--accent) !important;
+    color: var(--accent-text) !important;
+    -webkit-text-fill-color: var(--accent-text) !important;
+}
+
+/* Restore the bottom navigation's soft motion language. */
+.bottom-nav {
+    will-change: transform, opacity;
+    transition: transform 300ms var(--ui-ease), opacity 240ms ease, box-shadow 220ms var(--ui-ease) !important;
+}
+.bottom-nav.hidden-nav {
+    transform: translateX(-50%) translateY(120%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+.bottom-nav .bn-item {
+    transition: transform 160ms var(--ui-ease), opacity 160ms ease;
+    will-change: transform;
+}
+.bottom-nav .bn-item:active { transform: scale(.92); }
+.bottom-nav .bn-pill {
+    transition: background 220ms var(--ui-ease), color 220ms var(--ui-ease), box-shadow 220ms var(--ui-ease), transform 160ms var(--ui-ease);
+    will-change: background, box-shadow, transform;
+}
+.bottom-nav .bn-item.active .bn-pill {
+    box-shadow: 0 7px 18px color-mix(in srgb, var(--accent) 22%, transparent), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.bottom-nav .bn-item:not(.active):hover .bn-pill,
+.bottom-nav .bn-item:not(.active):focus-visible .bn-pill {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    color: var(--text);
+    transform: translateY(-2px);
+}
+.bottom-nav .bn-item:not(.active):active .bn-pill { transform: scale(.94); }
+.bottom-nav .bn-item.active .bn-pill svg,
+.bottom-nav .bn-item.active .bn-label { color: var(--accent-text) !important; }
