@@ -4,9 +4,9 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-social-v6';
-import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260821-social-v6';
-import { getSocialState } from '../../services/firebase/socialProfile.js?v=20260821-social-v6';
+} from '../../legacy/app-legacy.js?v=20260821-social-v7';
+import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260821-social-v7';
+import { getSocialState } from '../../services/firebase/socialProfile.js?v=20260821-social-v7';
 
 function primeProfileMediaPlayback(container) {
     if (!container) return;
@@ -289,7 +289,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-social-v6');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-social-v7');
         const profile = await getPublicProfile(targetUid);
         if (!profile) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';
@@ -325,7 +325,6 @@ export async function renderPublicProfilePage(uid) {
                 <div class="profile-social-summary" aria-label="Соціальні показники">
                   <span class="profile-social-link"><span class="label">Друзі</span><strong class="num" id="publicFriendsCount">${social.friends}</strong></span>
                   <span class="profile-social-link"><span class="label">Слідкую</span><strong class="num" id="publicFollowingCount">${social.following}</strong></span>
-                  <span class="profile-social-link"><span class="label">Підписники</span><strong class="num" id="publicFollowersCount">${social.followers}</strong></span>
                 </div>
               </div>
               <div class="profile-nick-row"><span class="profile-nick">${nickname}</span></div>
@@ -352,10 +351,8 @@ export async function renderPublicProfilePage(uid) {
                 button.textContent = nextValue ? 'Слідкую' : 'Слідкувати';
                 const friends = container.querySelector('#publicFriendsCount');
                 const following = container.querySelector('#publicFollowingCount');
-                const followers = container.querySelector('#publicFollowersCount');
                 if (friends) friends.textContent = String(nextSocial.friends);
                 if (following) following.textContent = String(nextSocial.following);
-                if (followers) followers.textContent = String(nextSocial.followers);
                 showToast(nextValue ? `Ви слідкуєте за ${profile.nickname}` : 'Підписку скасовано');
             } catch (error) {
                 console.error('[VakDab] follow update failed:', error);
