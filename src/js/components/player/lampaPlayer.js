@@ -197,6 +197,7 @@ export class LampaPlayer {
                 this._centerTimer = null;
                 this._sourceRequestId = 0;
                 this._lastSourceRequest = null;
+                this._playbackErrorTimer = null;
                 this._onFullscreenChange = null;
                 this._init();
             }
@@ -299,7 +300,10 @@ export class LampaPlayer {
                     this.state.duration = Number.isFinite(v.duration) ? v.duration : 0;
                     this._updateProgress();
                 };
-                v.addEventListener('loadedmetadata', syncTimeState);
+                v.addEventListener('loadedmetadata', () => {
+                    if (v.readyState >= 1) this._clearPlaybackError();
+                    syncTimeState();
+                });
                 v.addEventListener('durationchange', syncTimeState);
                 v.addEventListener('timeupdate', syncTimeState);
                 v.addEventListener('waiting', () => {
@@ -667,7 +671,7 @@ export class LampaPlayer {
                             safePlay();
                         }
                     });
-                    v.addEventListener('error', () => { if (isCurrentRequest()) this._showPlaybackError('Потік пошкоджений, заблокований або несумісний із цим пристроєм.'); }, { once: true });
+                    v.addEventListener('error', () => { if (isCurrentRequest()) this._schedulePlaybackError('Потік пошкоджений, заблокований або несумісний із цим пристроєм.'); }, { once: true });
                 };
 
                 if (!isHlsSource) {
@@ -675,7 +679,7 @@ export class LampaPlayer {
                     // Attach listeners before load(): Safari can emit error synchronously for a bad source.
                     const onNativeError = () => {
                         const detail = v.error?.code ? ` (код ${v.error.code})` : '';
-                        this._showPlaybackError(`Відеофайл не вдалося відкрити на цьому пристрої${detail}.`);
+                        this._schedulePlaybackError(`Відеофайл не вдалося відкрити на цьому пристрої${detail}.`);
                     };
                     v.addEventListener('error', onNativeError, { once: true });
                     v.addEventListener('canplay', hideLoading, { once: true });
@@ -685,7 +689,7 @@ export class LampaPlayer {
                 } else if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                     _startHls();
                 } else if (v.canPlayType('application/vnd.apple.mpegurl') !== '' || v.canPlayType('audio/mpegurl') !== '') {
-                    const onNativeError = () => this._showPlaybackError('HLS-потік не вдалося відкрити на цьому пристрої.');
+                    const onNativeError = () => this._schedulePlaybackError('HLS-потік не вдалося відкрити на цьому пристрої.');
                     v.addEventListener('error', onNativeError, { once: true });
                     v.addEventListener('canplay', hideLoading, { once: true });
                     v.src = proxyUrl; v.load();
@@ -704,7 +708,24 @@ export class LampaPlayer {
             }
 
             _clearPlaybackError() {
+                clearTimeout(this._playbackErrorTimer);
+                this._playbackErrorTimer = null;
                 this.containerRef?.querySelector('.lp-error')?.remove();
+            }
+
+            _schedulePlaybackError(message, delay = 6000) {
+                clearTimeout(this._playbackErrorTimer);
+                const requestId = this._sourceRequestId;
+                const video = this.videoRef;
+                this._playbackErrorTimer = window.setTimeout(() => {
+                    this._playbackErrorTimer = null;
+                    if (requestId !== this._sourceRequestId || video !== this.videoRef) return;
+                    if (video && (video.readyState >= 2 || !video.error)) {
+                        this._clearPlaybackError();
+                        return;
+                    }
+                    this._showPlaybackError(message);
+                }, delay);
             }
 
             _showPlaybackError(message) {
@@ -749,6 +770,8 @@ export class LampaPlayer {
 
             destroy() {
                 clearTimeout(this._controlsTimer);
+                clearTimeout(this._playbackErrorTimer);
+                this._playbackErrorTimer = null;
                 this._sourceRequestId += 1;
                 if (this._onKeyDown) document.removeEventListener('keydown', this._onKeyDown);
                 if (this._onFullscreenChange) {
