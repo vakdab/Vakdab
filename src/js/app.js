@@ -1,3 +1,3 @@
-import { bootstrap } from './core/bootstrap.js?v=20260821-social-v12';
+import { bootstrap } from './core/bootstrap.js?v=20260821-social-v13';
 
 bootstrap();

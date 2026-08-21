@@ -94,12 +94,15 @@ export async function getSocialState(profileUid, viewerUid = '') {
         const data = item.data() || {};
         if (data.followerUid) followerIds.add(String(data.followerUid));
     });
-    let friends = 0;
-    followingIds.forEach(uid => { if (followerIds.has(uid)) friends += 1; });
+    // У VakDab «Друзі» — це всі соціальні зв'язки профілю:
+    // достатньо, щоб один із користувачів почав слідкувати за іншим.
+    // Тому підписник відображається у друзях профілю, на який він підписався,
+    // навіть якщо взаємного follow ще немає.
+    const friendIds = new Set([...followingIds, ...followerIds]);
     return {
         following: followingIds.size,
         followers: followerIds.size,
-        friends,
+        friends: friendIds.size,
         isFollowing: Boolean(viewerUid && followerIds.has(String(viewerUid))),
         followingIds: [...followingIds],
         followerIds: [...followerIds]
@@ -136,13 +139,16 @@ async function loadProfilesByIds(ids) {
     return profiles.filter(Boolean);
 }
 
-// Отримати список друзів (взаємні підписки) разом із публічними профілями.
+// Отримати список друзів/соціальних зв'язків разом із публічними профілями.
+// Одностороння підписка також входить до цього списку.
 export async function getFriendsList(uid) {
     const targetUid = String(uid || '').trim();
     if (!targetUid) return [];
     const social = await getSocialState(targetUid);
-    const followerIds = new Set(social.followerIds || []);
-    const friendIds = (social.followingIds || []).filter(friendUid => followerIds.has(friendUid));
+    const friendIds = [...new Set([
+        ...(social.followingIds || []),
+        ...(social.followerIds || [])
+    ])];
     return loadProfilesByIds(friendIds);
 }
 

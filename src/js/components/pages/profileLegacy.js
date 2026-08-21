@@ -4,9 +4,9 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-social-v12';
-import { getProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-social-v12';
-import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-social-v12';
+} from '../../legacy/app-legacy.js?v=20260821-social-v13';
+import { getProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-social-v13';
+import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-social-v13';
 
 function primeProfileMediaPlayback(container) {
     if (!container) return;
@@ -334,9 +334,14 @@ async function renderSocialListPage({ uid, title, emptyText, loader, showUnfollo
         const canUnfollow = showUnfollow && targetUid === viewerUid;
         const back = socialListBackRoute(targetUid, viewerUid);
         const renderList = (query = '') => {
-            const normalizedQuery = String(query || '').trim().toLowerCase();
+            const normalizedQuery = String(query || '').trim().toLowerCase().replace(/^@+/, '');
             const visibleProfiles = profiles.filter(profile => {
-                const haystack = `${profile.nickname || ''} ${profile.realName || ''} ${profile.bio || ''}`.toLowerCase();
+                const nickname = String(profile.nickname || '').toLowerCase();
+                const realName = String(profile.realName || '').toLowerCase();
+                const bio = String(profile.bio || '').toLowerCase();
+                const uid = String(profile.uid || '').toLowerCase();
+                const handle = nickname.replace(/\s/g, '_');
+                const haystack = `${nickname} ${realName} ${bio} ${uid} ${handle}`;
                 return !normalizedQuery || haystack.includes(normalizedQuery);
             });
             const listHtml = visibleProfiles.length
@@ -433,7 +438,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-social-v12');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-social-v13');
         const profile = await getPublicProfile(targetUid);
         if (!profile) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';
@@ -484,7 +489,7 @@ export async function renderPublicProfilePage(uid) {
                   </div>
                 </div>
                 <div class="profile-social-summary" aria-label="Соціальні показники">
-                  ${canFollow ? `<button type="button" class="profile-follow-icon${social.isFollowing ? ' is-following' : ''}" id="publicFollowBtn" data-following="${social.isFollowing ? '1' : '0'}" aria-label="${social.isFollowing ? 'Відписатися від користувача' : 'Підписатися на користувача'}" title="${social.isFollowing ? 'Відписатися' : 'Підписатися'}">
+                  ${canFollow && !social.isFollowing ? `<button type="button" class="profile-follow-icon" id="publicFollowBtn" data-following="0" aria-label="Підписатися на користувача" title="Підписатися">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 20v-1.6a3.4 3.4 0 0 0-3.4-3.4H5.4A3.4 3.4 0 0 0 2 18.4V20M8.5 11.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2ZM19 8v6M16 11h6"/></svg>
                   </button>` : ''}
                   <span class="profile-social-link"><span class="label">Друзі</span><strong class="num" id="publicFriendsCount">${social.friends}</strong></span>
@@ -521,9 +526,14 @@ export async function renderPublicProfilePage(uid) {
             try {
                 const nextSocial = await setFollowing(Auth._user.uid, targetUid, nextValue);
                 button.dataset.following = nextValue ? '1' : '0';
-                button.classList.toggle('is-following', nextValue);
-                button.setAttribute('aria-label', nextValue ? 'Відписатися від користувача' : 'Підписатися на користувача');
-                button.setAttribute('title', nextValue ? 'Відписатися' : 'Підписатися');
+                if (nextValue) {
+                    // Після успішної підписки іконка більше не показується у чужому профілі.
+                    button.remove();
+                } else {
+                    button.classList.remove('is-following');
+                    button.setAttribute('aria-label', 'Підписатися на користувача');
+                    button.setAttribute('title', 'Підписатися');
+                }
                 const friends = container.querySelector('#publicFriendsCount');
                 const following = container.querySelector('#publicFollowingCount');
                 if (friends) friends.textContent = String(nextSocial.friends);

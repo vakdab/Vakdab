@@ -3,9 +3,9 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260821-social-v12';
-import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-social-v12';
-import { Storage } from './storage.js?v=20260821-social-v12';
+} from '../../legacy/app-legacy.js?v=20260821-social-v13';
+import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-social-v13';
+import { Storage } from './storage.js?v=20260821-social-v13';
 
         const Auth = {
             _user: null,
