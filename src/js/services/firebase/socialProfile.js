@@ -126,6 +126,34 @@ export async function setFollowing(viewerUid, targetUid, shouldFollow) {
     return getSocialState(followingUid, followerUid);
 }
 
+async function loadProfilesByIds(ids) {
+    const uniqueIds = [...new Set((Array.isArray(ids) ? ids : []).map(id => String(id || '').trim()).filter(Boolean))];
+    if (!uniqueIds.length) return [];
+    const profiles = await Promise.all(uniqueIds.map(id => getPublicProfile(id).catch(error => {
+        console.warn('[VakDab] social list profile failed:', id, error);
+        return null;
+    })));
+    return profiles.filter(Boolean);
+}
+
+// Отримати список друзів (взаємні підписки) разом із публічними профілями.
+export async function getFriendsList(uid) {
+    const targetUid = String(uid || '').trim();
+    if (!targetUid) return [];
+    const social = await getSocialState(targetUid);
+    const followerIds = new Set(social.followerIds || []);
+    const friendIds = (social.followingIds || []).filter(friendUid => followerIds.has(friendUid));
+    return loadProfilesByIds(friendIds);
+}
+
+// Отримати список користувачів, на яких підписаний профіль.
+export async function getFollowingList(uid) {
+    const targetUid = String(uid || '').trim();
+    if (!targetUid) return [];
+    const social = await getSocialState(targetUid);
+    return loadProfilesByIds(social.followingIds || []);
+}
+
 export function publicProfileRoute(uid) {
     return `#profile?uid=${encodeURIComponent(String(uid || ''))}`;
 }

@@ -4,9 +4,9 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-social-v11';
-import { getProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-social-v11';
-import { getSocialState } from '../../services/firebase/socialProfile.js?v=20260821-social-v11';
+} from '../../legacy/app-legacy.js?v=20260821-social-v12';
+import { getProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-social-v12';
+import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-social-v12';
 
 function primeProfileMediaPlayback(container) {
     if (!container) return;
@@ -76,12 +76,12 @@ export function renderProfilePage() {
                     </div>
                   </div>
                   <div class="profile-social-summary" aria-label="Соціальні показники">
-                    <span class="profile-social-link profile-social-stat" id="profileFriendsStat">
+                    <button type="button" class="profile-social-link profile-social-stat" id="profileFriendsStat" aria-label="Відкрити список друзів">
                       <span class="label">Друзі</span><strong class="num">—</strong>
-                    </span>
-                    <span class="profile-social-link profile-social-stat" id="profileFollowingStat">
+                    </button>
+                    <button type="button" class="profile-social-link profile-social-stat" id="profileFollowingStat" aria-label="Відкрити список підписок">
                       <span class="label">Слідкую</span><strong class="num">—</strong>
-                    </span>
+                    </button>
                   </div>
                 </div>
                 <div class="profile-nick-row">
@@ -136,6 +136,8 @@ export function renderProfilePage() {
             </div>
           `;
             primeProfileMediaPlayback(container);
+            container.querySelector('#profileFriendsStat')?.addEventListener('click', () => Router.goTo('friends'));
+            container.querySelector('#profileFollowingStat')?.addEventListener('click', () => Router.goTo('following'));
             if (!isGuestMode && Auth._user?.uid) {
                 getSocialState(Auth._user.uid, Auth._user.uid).then(social => {
                     const friends = container.querySelector('#profileFriendsStat .num');
@@ -280,6 +282,148 @@ export function renderProfilePage() {
             syncLeftdockActive();
         }
 
+function socialListProfileMarkup(profile) {
+    const media = profile.avatarVideo || profile.avatar || '';
+    const placeholder = escapeHtml((profile.nickname || 'К').charAt(0).toUpperCase());
+    return `<div class="social-list-avatar">
+        ${media ? profileMediaMarkup(media, 'social-list-avatar-media', `${profile.nickname} avatar`, profile.avatarVideo ? profile.avatarVideoSettings : null) : ''}
+        <span class="social-list-avatar-placeholder" style="display:${media ? 'none' : 'flex'};">${placeholder}</span>
+    </div>`;
+}
+
+function socialListCardMarkup(profile, { showUnfollow = false } = {}) {
+    const nickname = escapeHtml(profile.nickname || 'Користувач');
+    const handle = escapeHtml('@' + String(profile.nickname || 'user').toLowerCase().replace(/\\s/g, '_'));
+    return `<article class="social-list-item" data-social-profile-uid="${escapeHtml(profile.uid)}" tabindex="0" role="link">
+        ${socialListProfileMarkup(profile)}
+        <div class="social-list-user">
+            <strong class="social-list-name">${nickname}</strong>
+            <span class="social-list-handle">${handle}</span>
+            ${profile.bio ? `<span class="social-list-bio">${escapeHtml(profile.bio)}</span>` : ''}
+        </div>
+        ${showUnfollow ? `<button type="button" class="social-unfollow-btn" data-unfollow-uid="${escapeHtml(profile.uid)}">Перестати слідкувати</button>` : ''}
+    </article>`;
+}
+
+function bindSocialListMedia(container) {
+    primeProfileMediaPlayback(container);
+    container.querySelectorAll('.social-list-avatar-media').forEach(media => {
+        media.addEventListener('error', () => {
+            media.style.display = 'none';
+            const placeholder = media.parentElement?.querySelector('.social-list-avatar-placeholder');
+            if (placeholder) placeholder.style.display = 'flex';
+        });
+    });
+}
+
+function socialListBackRoute(uid, viewerUid) {
+    return uid && uid !== viewerUid ? { route: 'profile', params: { uid } } : { route: 'profile', params: {} };
+}
+
+async function renderSocialListPage({ uid, title, emptyText, loader, showUnfollow = false }) {
+    const container = document.getElementById('profilePageContainer');
+    const viewerUid = Auth.isAuthenticated() && !Auth.isGuest() ? String(Auth._user?.uid || '') : '';
+    const targetUid = String(uid || viewerUid || '').trim();
+    if (!container || !targetUid) {
+        if (container) container.innerHTML = '<div class="profile-public-empty">Увійдіть в акаунт, щоб переглядати соціальні списки.</div>';
+        return;
+    }
+    container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
+    try {
+        let profiles = await loader(targetUid);
+        const canUnfollow = showUnfollow && targetUid === viewerUid;
+        const back = socialListBackRoute(targetUid, viewerUid);
+        const renderList = (query = '') => {
+            const normalizedQuery = String(query || '').trim().toLowerCase();
+            const visibleProfiles = profiles.filter(profile => {
+                const haystack = `${profile.nickname || ''} ${profile.realName || ''} ${profile.bio || ''}`.toLowerCase();
+                return !normalizedQuery || haystack.includes(normalizedQuery);
+            });
+            const listHtml = visibleProfiles.length
+                ? visibleProfiles.map(profile => socialListCardMarkup(profile, { showUnfollow: canUnfollow })).join('')
+                : `<div class="social-list-empty">${normalizedQuery ? 'Нічого не знайдено за вашим запитом.' : emptyText}</div>`;
+            container.querySelector('#socialListItems').innerHTML = listHtml;
+            container.querySelector('#socialListCount').textContent = String(profiles.length);
+            bindSocialListMedia(container);
+            container.querySelectorAll('[data-social-profile-uid]').forEach(card => {
+                const openProfile = () => Router.goTo('profile', { uid: card.dataset.socialProfileUid });
+                card.addEventListener('click', event => {
+                    if (event.target.closest('.social-unfollow-btn')) return;
+                    openProfile();
+                });
+                card.addEventListener('keydown', event => {
+                    if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('.social-unfollow-btn')) {
+                        event.preventDefault();
+                        openProfile();
+                    }
+                });
+            });
+            container.querySelectorAll('[data-unfollow-uid]').forEach(button => {
+                button.addEventListener('click', async event => {
+                    event.stopPropagation();
+                    if (!viewerUid) {
+                        showToast('Увійдіть в акаунт, щоб змінювати підписки');
+                        return;
+                    }
+                    const target = String(button.dataset.unfollowUid || '');
+                    button.disabled = true;
+                    try {
+                        await setFollowing(viewerUid, target, false);
+                        profiles = profiles.filter(profile => profile.uid !== target);
+                        renderList(container.querySelector('#socialListSearch')?.value || '');
+                        showToast('Підписку скасовано');
+                    } catch (error) {
+                        console.error('[VakDab] social list unfollow failed:', error);
+                        button.disabled = false;
+                        showToast('Не вдалося скасувати підписку');
+                    }
+                });
+            });
+        };
+        container.innerHTML = `<section class="social-list-page" aria-labelledby="socialListTitle">
+            <div class="social-list-toolbar">
+                <button type="button" class="social-list-back" id="socialListBack" aria-label="Назад">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <div class="social-list-heading">
+                    <h1 id="socialListTitle">${title}</h1>
+                    <span><strong id="socialListCount">${profiles.length}</strong> користувачів</span>
+                </div>
+            </div>
+            <label class="social-search-wrap" for="socialListSearch">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></svg>
+                <input id="socialListSearch" class="social-search-input" type="search" placeholder="Пошук користувача" autocomplete="off" />
+            </label>
+            <div class="social-list" id="socialListItems"></div>
+        </section>`;
+        container.querySelector('#socialListBack').addEventListener('click', () => Router.goTo(back.route, back.params));
+        container.querySelector('#socialListSearch').addEventListener('input', event => renderList(event.target.value));
+        renderList();
+    } catch (error) {
+        console.error('[VakDab] social list failed:', error);
+        container.innerHTML = '<div class="profile-public-empty">Не вдалося завантажити список. Спробуйте ще раз.</div>';
+    }
+}
+
+export function renderFriendsPage(uid = '') {
+    return renderSocialListPage({
+        uid,
+        title: 'Друзі',
+        emptyText: 'У вас ще немає взаємних підписок.',
+        loader: getFriendsList
+    });
+}
+
+export function renderFollowingPage(uid = '') {
+    return renderSocialListPage({
+        uid,
+        title: 'Слідкую',
+        emptyText: 'Ви ще ні за ким не слідкуєте.',
+        loader: getFollowingList,
+        showUnfollow: true
+    });
+}
+
 export async function renderPublicProfilePage(uid) {
     const container = document.getElementById('profilePageContainer');
     const targetUid = String(uid || '').trim();
@@ -289,7 +433,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-social-v11');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-social-v12');
         const profile = await getPublicProfile(targetUid);
         if (!profile) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';

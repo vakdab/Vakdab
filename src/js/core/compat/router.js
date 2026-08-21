@@ -4,9 +4,9 @@ import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
     initRatingPage, loadAndDisplayGenreSections, loadMangaReader,
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
-    renderGenresPage, renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
+    renderFriendsPage, renderFollowingPage, renderGenresPage, renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-social-v11';
+} from '../../legacy/app-legacy.js?v=20260821-social-v12';
 
         export const Router = {
             currentRoute: 'main',
@@ -87,6 +87,12 @@ import {
                     document.querySelector('.agnative-leftdock__item.selector[data-action="profile"]')?.classList.add(
                         'is-active');
                     this.showProfile(params.uid || '');
+                } else if (route === 'friends') {
+                    document.querySelector('.agnative-leftdock__item.selector[data-action="profile"]')?.classList.add('is-active');
+                    this.showFriends(params.uid || '');
+                } else if (route === 'following') {
+                    document.querySelector('.agnative-leftdock__item.selector[data-action="profile"]')?.classList.add('is-active');
+                    this.showFollowing(params.uid || '');
                 } else if (route === 'genre') {
                     const slug = params.slug || '';
                     const name = params.name || slug;
@@ -187,6 +193,24 @@ import {
                 } else {
                     renderAuthPage();
                 }
+                syncLeftdockActive();
+            },
+
+            showFriends(uid = '') {
+                const container = document.getElementById('profilePageContainer');
+                if (!container) return;
+                container.style.display = 'block';
+                container.classList.add('active');
+                renderFriendsPage(uid);
+                syncLeftdockActive();
+            },
+
+            showFollowing(uid = '') {
+                const container = document.getElementById('profilePageContainer');
+                if (!container) return;
+                container.style.display = 'block';
+                container.classList.add('active');
+                renderFollowingPage(uid);
                 syncLeftdockActive();
             },
 
