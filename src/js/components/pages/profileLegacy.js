@@ -4,9 +4,9 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-social-v9';
-import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260821-social-v9';
-import { getSocialState } from '../../services/firebase/socialProfile.js?v=20260821-social-v9';
+} from '../../legacy/app-legacy.js?v=20260821-social-v11';
+import { getProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-social-v11';
+import { getSocialState } from '../../services/firebase/socialProfile.js?v=20260821-social-v11';
 
 function primeProfileMediaPlayback(container) {
     if (!container) return;
@@ -289,7 +289,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-social-v9');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-social-v11');
         const profile = await getPublicProfile(targetUid);
         if (!profile) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';
@@ -307,6 +307,23 @@ export async function renderPublicProfilePage(uid) {
         const nickname = escapeHtml(profile.nickname);
         const handle = escapeHtml('@' + profile.nickname.toLowerCase().replace(/\\s/g, '_'));
         const canFollow = Boolean(viewerUid && viewerUid !== targetUid && !Auth.isGuest());
+        const publicHistory = profile.hideHistory ? [] : profile.history;
+        const publicBookmarks = profile.hideBookmarks ? [] : profile.bookmarks;
+        const uniqueAnime = new Set(publicHistory.map(item => item?.animeId || item?.title).filter(Boolean));
+        const publicAchievements = getAchievements(publicHistory, publicBookmarks, uniqueAnime.size, publicHistory.length, profile.watchTime, { xp: profile.xp, posts: 0, ratings: 0 });
+        const historyTab = profile.hideHistory ? '' : `<button class="profile-tab active" data-tab="history">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+          Історія
+        </button>`;
+        const bookmarksTab = profile.hideBookmarks ? '' : `<button class="profile-tab${profile.hideHistory ? ' active' : ''}" data-tab="bookmarks">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16l-7-3.5L5 21V5z"/></svg>
+          Закладки
+        </button>`;
+        const achievementsTab = `<button class="profile-tab${profile.hideHistory && profile.hideBookmarks ? ' active' : ''}" data-tab="achievements">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.04 2.6a1 1 0 0 1 1.92 0l1.7 5.18a1 1 0 0 0 .95.69h5.47a1 1 0 0 1 .59 1.8l-4.43 3.22a1 1 0 0 0-.36 1.12l1.7 5.18a1 1 0 0 1-1.54 1.12l-4.42-3.22a1 1 0 0 0-1.18 0l-4.42 3.22a1 1 0 0 1-1.54-1.12l1.7-5.18a1 1 0 0 0-.36-1.12L3.3 10.27a1 1 0 0 1 .59-1.8h5.47a1 1 0 0 0 .95-.69l1.7-5.18z"/></svg>
+          Досягнення
+        </button>`;
+        const initialTab = profile.hideHistory ? (profile.hideBookmarks ? 'achievements' : 'bookmarks') : 'history';
         container.innerHTML = `
           <div class="profile-wrapper profile-public-wrapper">
             <div class="${bannerClass}">
@@ -334,8 +351,21 @@ export async function renderPublicProfilePage(uid) {
               <div class="profile-meta"><span>${handle}</span></div>
               ${profile.bio ? `<div class="profile-bio-row"><div class="profile-bio${profile.bioBold ? ' is-bold' : ''}">${escapeHtml(profile.bio)}</div></div>` : ''}
             </div>
+          </div>
+          <div class="profile-tabs" id="publicProfileTabs">
+            ${historyTab}${bookmarksTab}${achievementsTab}
+          </div>
+          <div id="publicProfilePanels">
+            ${profile.hideHistory ? '' : `<div class="profile-panel${initialTab === 'history' ? ' active' : ''}" id="publicProfilePanel-history">${renderHistoryPanel(publicHistory)}</div>`}
+            ${profile.hideBookmarks ? '' : `<div class="profile-panel${initialTab === 'bookmarks' ? ' active' : ''}" id="publicProfilePanel-bookmarks">${renderBookmarksPanel(publicBookmarks)}</div>`}
+            <div class="profile-panel${initialTab === 'achievements' ? ' active' : ''}" id="publicProfilePanel-achievements">${renderAchievementsPanel(publicAchievements, profile.watchTime, publicHistory.length)}</div>
           </div>`;
         primeProfileMediaPlayback(container);
+        container.querySelectorAll('#publicProfileTabs .profile-tab').forEach(tab => tab.addEventListener('click', () => {
+            const target = tab.dataset.tab;
+            container.querySelectorAll('#publicProfileTabs .profile-tab').forEach(item => item.classList.toggle('active', item === tab));
+            container.querySelectorAll('#publicProfilePanels .profile-panel').forEach(panel => panel.classList.toggle('active', panel.id === `publicProfilePanel-${target}`));
+        }));
         container.querySelector('#publicFollowBtn')?.addEventListener('click', async event => {
             const button = event.currentTarget;
             if (!Auth.isAuthenticated() || Auth.isGuest() || !Auth._user?.uid) {

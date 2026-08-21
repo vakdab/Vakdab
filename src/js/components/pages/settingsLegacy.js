@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260821-social-v9';
+} from '../../legacy/app-legacy.js?v=20260821-social-v11';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 
@@ -90,6 +90,34 @@ import {
               </div>
               <label class="settings-switch">
                 <input type="checkbox" id="settingsPrivacyToggle" ${profile.private ? 'checked' : ''}>
+                <span class="settings-switch-slider"></span>
+              </label>
+            </div>
+
+            <div class="settings-section-title">Приватність вкладок</div>
+            <div class="settings-card settings-card--nested">
+              <div class="settings-card-left">
+                <i class="fas fa-clock"></i>
+                <div>
+                  <div class="label">Приховати історію</div>
+                  <div class="desc">Інші користувачі не бачитимуть вашу історію переглядів</div>
+                </div>
+              </div>
+              <label class="settings-switch">
+                <input type="checkbox" id="settingsHideHistoryToggle" ${profile.hideHistory ? 'checked' : ''}>
+                <span class="settings-switch-slider"></span>
+              </label>
+            </div>
+            <div class="settings-card settings-card--nested">
+              <div class="settings-card-left">
+                <i class="fas fa-bookmark"></i>
+                <div>
+                  <div class="label">Приховати закладки</div>
+                  <div class="desc">Інші користувачі не бачитимуть ваші закладки</div>
+                </div>
+              </div>
+              <label class="settings-switch">
+                <input type="checkbox" id="settingsHideBookmarksToggle" ${profile.hideBookmarks ? 'checked' : ''}>
                 <span class="settings-switch-slider"></span>
               </label>
             </div>
@@ -406,6 +434,24 @@ import {
                 saveProfile(p);
             });
 
+            const hideHistoryToggle = document.getElementById('settingsHideHistoryToggle');
+            if (hideHistoryToggle) hideHistoryToggle.addEventListener('change', () => {
+                const p = getProfile();
+                p.hideHistory = hideHistoryToggle.checked;
+                saveProfile(p);
+                if (Auth.isAuthenticated()) Auth.syncUserData({ scope: 'profile' }).catch(error => console.warn('[VakDab] history privacy sync failed:', error));
+                showToast(hideHistoryToggle.checked ? 'Історію приховано' : 'Історію відкрито');
+            });
+
+            const hideBookmarksToggle = document.getElementById('settingsHideBookmarksToggle');
+            if (hideBookmarksToggle) hideBookmarksToggle.addEventListener('change', () => {
+                const p = getProfile();
+                p.hideBookmarks = hideBookmarksToggle.checked;
+                saveProfile(p);
+                if (Auth.isAuthenticated()) Auth.syncUserData({ scope: 'profile' }).catch(error => console.warn('[VakDab] bookmarks privacy sync failed:', error));
+                showToast(hideBookmarksToggle.checked ? 'Закладки приховано' : 'Закладки відкрито');
+            });
+
             const birthdayToggle = document.getElementById('settingsShowBirthdayToggle');
             if (birthdayToggle) birthdayToggle.addEventListener('change', () => {
                 const p = getProfile();
@@ -654,6 +700,8 @@ import {
                 birthdate: '',
                 showBirthdate: true,
                 private: false,
+                hideHistory: false,
+                hideBookmarks: false,
                 effect: 'none',
                 atmosphere: 'none',
                 avatarDecoration: 'none',
@@ -674,6 +722,8 @@ import {
             merged.nickname = merged.nickname.trim() || def.nickname;
             if (merged.bannerFormat !== 'narrow' && merged.bannerFormat !== 'wide') merged.bannerFormat = def.bannerFormat;
             merged.bioBold = merged.bioBold === true;
+            merged.hideHistory = merged.hideHistory === true;
+            merged.hideBookmarks = merged.hideBookmarks === true;
             return merged;
         }
 
@@ -713,8 +763,8 @@ import {
             return 'медалей';
         }
 
-        function getAchievements(history, bookmarks, uniqueCount, totalEpisodes, totalWatchTime) {
-            const xp = calcTotalXP();
+        export function getAchievements(history, bookmarks, uniqueCount, totalEpisodes, totalWatchTime, overrides = {}) {
+            const xp = Number.isFinite(Number(overrides.xp)) ? Number(overrides.xp) : calcTotalXP();
             const lvl = getLevel(xp);
             const stats = {
                 episodes: totalEpisodes,
@@ -722,8 +772,8 @@ import {
                 bookmarks: bookmarks.length,
                 xp: xp,
                 level: lvl,
-                posts: DailyStats.getTotalPosts(),
-                ratings: DailyStats.getTotalRatings()
+                posts: Number.isFinite(Number(overrides.posts)) ? Number(overrides.posts) : DailyStats.getTotalPosts(),
+                ratings: Number.isFinite(Number(overrides.ratings)) ? Number(overrides.ratings) : DailyStats.getTotalRatings()
             };
             return ACHIEVEMENTS.map(a => {
                 const val = stats[a.field] || 0;

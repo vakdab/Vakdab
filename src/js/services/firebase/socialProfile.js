@@ -22,6 +22,12 @@ function normalizeProfile(uid, data = {}) {
         effect: String(profile.effect || 'none'),
         avatarDecoration: String(profile.avatarDecoration || 'none'),
         private: profile.private === true,
+        hideHistory: profile.hideHistory === true,
+        hideBookmarks: profile.hideBookmarks === true,
+        history: Array.isArray(data.history) ? data.history.slice(-100).reverse() : [],
+        bookmarks: Array.isArray(data.bookmarks) ? data.bookmarks.slice(0, 100) : [],
+        watchTime: Number(data.watchTime || 0),
+        xp: Number(data.xp || 0),
         createdAt: data.createdAt || null
     };
 }
