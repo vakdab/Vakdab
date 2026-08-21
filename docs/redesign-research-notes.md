@@ -94,3 +94,6 @@ The related-ua-v2 runtime loaded successfully and the movie page correctly hides
 
 ## Final related localization proof
 The exact `Ґінтама` TV player now renders related cards in Ukrainian: `Ґінтама - 2 сезон`, `Ґінтама: Оскільки початок є вирішальним...`, `Ґінтама: Народження білого демона`, and `Ґінтама: Грандіозні збори`. Relation/type labels are Ukrainian (`наступний сезон`, `спін-оф`, `Серіал`), and poster images use valid AniList URLs instead of blank blocks.
+
+## Deployment audit
+Remote `origin/main` equals commit `4e00e42`; GitHub Pages is enabled from `main` root and reports status `built` at `https://vakdab.github.io/Vakdab/`. The project URL loads the catalog directly without the startup splash. `https://vakdab.github.io/` returns GitHub Pages 404, and `https://vakdab.web.app/` returns Firebase Site Not Found. Therefore the live address must be the project Pages URL with `/Vakdab/`; root/old production URLs do not serve this repository.

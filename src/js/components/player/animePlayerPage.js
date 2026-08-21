@@ -1213,7 +1213,16 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
         const relatedLocalizationCache = new Map();
         const RELATED_TITLE_OVERRIDES_UA = {
             'yuusha tokkyuu might gaine': 'Юуша Токкюу Майті Ґейн',
-            'yuusha tokkyuu might gain': 'Юуша Токкюу Майті Ґейн'
+            'yuusha tokkyuu might gain': 'Юуша Токкюу Майті Ґейн',
+            'code geass: hangyaku no lelouch': 'Код Ґіас: Повстання Лелуша',
+            'code geass: hangyaku no lelouch r2': 'Код Ґіас: Повстання Лелуша R2',
+            'code geass: hangyaku no lelouch - kiseki no birthday picture drama': 'Код Ґіас: Повстання Лелуша — драма «День народження Кісекі»',
+            'code geass: hangyaku no lelouch r2 flash flash - kaette kita baba gekijou': 'Код Ґіас: Повстання Лелуша R2 — короткий спешл «Баба Ґекіджо»',
+            'code geass: hangyaku no lelouch r2 flash flash kaette kita baba gekijou': 'Код Ґіас: Повстання Лелуша R2 — короткий спешл «Баба Ґекіджо»',
+            'code geass hangyaku no lelouch': 'Код Ґіас: Повстання Лелуша',
+            'code geass hangyaku no lelouch r2': 'Код Ґіас: Повстання Лелуша R2',
+            'code geass hangyaku no lelouch kiseki no birthday picture drama': 'Код Ґіас: Повстання Лелуша — драма «День народження Кісекі»',
+            'code geass hangyaku no lelouch r2 flash flash kaette kita baba gekijou': 'Код Ґіас: Повстання Лелуша R2 — короткий спешл «Баба Ґекіджо»'
         };
         const normalizeRelatedKey = value => String(value || '').toLocaleLowerCase('uk-UA')
             .replace(/[\u2010-\u2015:!?.,'’"()\[\]{}]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -1381,6 +1390,18 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             }
         }
 
+        const CAST_CHARACTER_NAMES_UA = {
+            'lelouch': 'Лелуш', 'suzaku': 'Сузаку', 'c.c.': 'C.C.', 'cc': 'C.C.',
+            'kallen': 'Карен', 'shirley': 'Ширлі', 'nunnally': 'Нанналі'
+        };
+        function localizeCastCharacter(value) {
+            const raw = String(value || '').trim();
+            const isVoice = /\(\s*voice\s*\)/i.test(raw);
+            const clean = raw.replace(/\s*\(\s*voice\s*\)\s*/gi, '').trim();
+            const localized = CAST_CHARACTER_NAMES_UA[clean.toLocaleLowerCase('uk-UA')] || clean;
+            return isVoice ? `Озвучує: ${localized}` : localized;
+        }
+
         function renderCast(details) {
             const section = document.getElementById('castSection');
             const list = document.getElementById('castList');
@@ -1397,7 +1418,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
                 <div class="cast-card">
                     <div class="cast-avatar" style="${avatarStyle}"></div>
                     <div class="cast-name">${escapeHtml(c.name || '')}</div>
-                    <div class="cast-role">${escapeHtml(c.character || '')}</div>
+                    <div class="cast-role">${escapeHtml(localizeCastCharacter(c.character))}</div>
                 </div>`;
             }).join('');
         }
@@ -1416,7 +1437,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
                 const person = voice?.person || {};
                 const avatar = jikanImage(person);
                 const style = avatar ? `background-image:url('${escapeHtml(avatar)}');` : '';
-                return `<article class="cast-card"><div class="cast-avatar" style="${style}"></div><div class="cast-name">${escapeHtml(person.name || 'Сейю невідомий')}</div><div class="cast-role">${escapeHtml(c.name || '')}</div></article>`;
+                return `<article class="cast-card"><div class="cast-avatar" style="${style}"></div><div class="cast-name">${escapeHtml(person.name || 'Сейю невідомий')}</div><div class="cast-role">${escapeHtml(localizeCastCharacter(c.name))}</div></article>`;
             }).join('');
         }
 
