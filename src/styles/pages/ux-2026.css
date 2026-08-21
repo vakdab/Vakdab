@@ -1269,3 +1269,21 @@ body:not(.dark-mode) .header .logo-text span {
     border-color: var(--accent);
     color: var(--accent-text) !important;
 }
+
+/* Hero edge-to-edge fix: no light seams between the background and rounded shell. */
+.hero-wrapper {
+    border: 0 !important;
+    overflow: hidden !important;
+    background: #0a0a0a !important;
+}
+.hero-slide,
+.hero-slide-bg,
+.hero-slide-overlay {
+    inset: -2px !important;
+}
+.hero-slide-bg {
+    transform: scale(1.04) !important;
+}
+.hero-slide.active .hero-slide-bg {
+    transform: scale(1.04) !important;
+}

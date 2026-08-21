@@ -10,7 +10,7 @@ import {
     playerPageCurrentDub, playerPageCurrentSeason, playerPageCurrentSource,
     buildBottomSheetData, buildEpisodeViews, buildSeasonRow,
     showToast, updateFilterChip, updateSourceChip
-} from '../legacy/app-legacy.js?v=20260821-ranobe-no-all-age-black-v11';
+} from '../legacy/app-legacy.js?v=20260821-hero-edge-v12';
 
         export const CATALOG_POSTER_FALLBACK = './android-chrome-512x512.png';
         export function normalizeAnimeUrl(href = '') {

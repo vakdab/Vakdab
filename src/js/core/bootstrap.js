@@ -16,7 +16,7 @@ export function bootstrap() {
         }
     });
     startGlobalEvents();
-    bootstrapPromise = import('../legacy/app-legacy.js?v=20260821-ranobe-no-all-age-black-v11')
+    bootstrapPromise = import('../legacy/app-legacy.js?v=20260821-hero-edge-v12')
         .then(module => {
             window.VakDabLegacy = module;
             // Expose compatibility services only after the legacy module has fully evaluated.
