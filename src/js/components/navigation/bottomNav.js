@@ -1,6 +1,6 @@
 import { loadFeature } from '../../core/feature-loader.js';
-import { Router } from '../../core/compat/router.js?v=20260821-filter-cards-v4';
-import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260821-filter-cards-v4';
+import { Router } from '../../core/compat/router.js?v=20260821-compact-filter-rail-v6';
+import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260821-compact-filter-rail-v6';
 
 export function initBottomNav() {
 

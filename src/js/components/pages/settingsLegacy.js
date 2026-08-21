@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260821-filter-cards-v4';
+} from '../../legacy/app-legacy.js?v=20260821-compact-filter-rail-v6';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 
