@@ -560,3 +560,10 @@ body.player-page-open > .bottom-sheet-overlay {
 #playerPageModal .player-season-select-wrap { width: 100%; }
 #playerPageModal .player-episode-select-line { grid-template-columns: minmax(0, 1fr); }
 #playerPageModal .player-episode-select-wrap { width: 100%; }
+
+/* Respect runtime conditional visibility for player controls. */
+#playerPageModal .player-compact-controls [hidden],
+#playerPageModal .player-control-block[hidden],
+#playerPageModal #episodeSectionTitle[hidden] {
+    display: none !important;
+}

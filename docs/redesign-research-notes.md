@@ -64,3 +64,15 @@ The browser render after the interaction-state patch shows the catalog search in
 
 ## Computed-style verification
 Browser computed styles confirm the active catalog tab resolves to a monochrome black background with white text and white `-webkit-text-fill-color`, eliminating the unreadable pressed state. The focused search input has no native outline or inner box-shadow; the surrounding shell receives one 4px focus ring and an elevated shadow. Bottom navigation resolves to a 64px compact bar with transform/opacity/box-shadow transitions and the active Home pill uses the accent background.
+
+## Conditional player controls runtime QA
+The actual browser render exposed why the previous conditional-controls commit appeared ineffective: the `hidden` attribute was applied to the season wrapper, but the existing player CSS used `display: flex` on `.player-select-wrap`, overriding the browser's hidden presentation. A final `[hidden] { display: none !important; }` rule scoped to player controls is required so single-season selectors and movie episode/season controls truly disappear.
+
+## Runtime cache-busting correction
+The second browser verification showed the season wrapper had `hidden: true` but still rendered at 60px with `display: flex`, proving the conditional rule was not active in the browser session. The player-polish import used a stale query version, so app.css now points to a new `20260821-player-conditional-v2` version to force clients to fetch the corrected visibility rules.
+
+## Second runtime verification
+After cache-busting, the fresh browser render still shows a visible `Сезон 1` field for Steins;Gate. This confirms the remaining issue is not only stale CSS; the next check must inspect the exact wrapper's `hidden` property and the runtime call order/state used for this anime.
+
+## Root stylesheet cache-busting
+The runtime DOM confirmed the season wrapper had `hidden=""` and the season block had `display:none`, but the wrapper still computed to `display:flex`, because the root `app.css` URL itself was cached. The HTML stylesheet link is now versioned to `20260821-player-conditional-v3`, in addition to the updated player-polish import.
