@@ -4,9 +4,9 @@ import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
     initRatingPage, loadAndDisplayGenreSections, loadMangaReader,
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
-    renderFriendsPage, renderFollowingPage, renderGenresPage, renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
+    renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-social-v13';
+} from '../../legacy/app-legacy.js?v=20260821-genre-catalog-v1';
 
         export const Router = {
             currentRoute: 'main',
@@ -108,7 +108,7 @@ import {
                         'is-active');
                     this.showSettings(params.tab);
                 } else if (route === 'genres') {
-                    this.showGenres();
+                    this.goTo('main');
                 } else if (route === 'rating') {
                     this.showRating();
                 } else if (route === 'schedule') {
@@ -219,13 +219,6 @@ import {
                 container.style.display = 'block';
                 container.classList.add('active');
                 renderGenrePage(slug, name);
-            },
-
-            showGenres() {
-                const container = document.getElementById('genresPageContainer');
-                container.style.display = 'block';
-                container.classList.add('active');
-                renderGenresPage();
             },
 
             showSchedule() {

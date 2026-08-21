@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-social-v13';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-social-v13';
+} from '../../legacy/app-legacy.js?v=20260821-genre-catalog-v1';
+import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-genre-catalog-v1';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -725,14 +725,43 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             return [...values.values()].sort((a, b) => a.localeCompare(b, 'uk'));
         }
 
-        export function homeCatalogGenreHtml() { return ''; }
+        export function homeCatalogGenreHtml() {
+            const genres = Object.entries(GENRE_MAP)
+                .map(([name, slug]) => ({ name, slug }))
+                .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+            const allActive = homeCatalogGenre === 'all';
+            const allCard = `<button class="home-catalog-genre-card${allActive ? ' active' : ''}" type="button" data-catalog-genre="all" aria-pressed="${allActive ? 'true' : 'false'}" role="listitem"><span class="home-catalog-genre-card__icon home-catalog-genre-card__icon--all">Усі</span><span class="home-catalog-genre-card__name">Усі жанри</span></button>`;
+            const cards = genres.map(({ name, slug }) => {
+                const active = homeCatalogGenre === slug;
+                const letter = name.trim().charAt(0).toUpperCase();
+                return `<button class="home-catalog-genre-card${active ? ' active' : ''}" type="button" data-catalog-genre="${escapeHtml(slug)}" aria-pressed="${active ? 'true' : 'false'}" role="listitem"><span class="home-catalog-genre-card__icon">${escapeHtml(letter)}</span><span class="home-catalog-genre-card__name">${escapeHtml(name)}</span></button>`;
+            }).join('');
+            return allCard + cards;
+        }
+
+        function homeCatalogGenreMatches(item, selectedGenre) {
+            const selected = normalizeHoneyMatch(selectedGenre);
+            if (!selected || selected === 'all') return true;
+            if (selected.startsWith('format ')) return normalizeHoneyMatch(item?.type || item?.media_type) === selected.slice(7);
+            const mappedName = Object.entries(GENRE_MAP).find(([, slug]) => normalizeHoneyMatch(slug) === selected)?.[0] || '';
+            const candidates = [selected, normalizeHoneyMatch(mappedName)].filter(Boolean);
+            return (item?.genres || []).some(genre => {
+                const value = normalizeHoneyMatch(typeof genre === 'object' ? genre?.name_ua || genre?.name || '' : genre);
+                return candidates.some(candidate => value === candidate || value.includes(candidate) || candidate.includes(value));
+            });
+        }
+
         export function syncHomeCatalogGenreControl(root = document) {
             const host = root.querySelector('#homeCatalogGenreRailHost');
             if (!host) return;
             host.innerHTML = homeCatalogGenreHtml();
             host.querySelectorAll('[data-catalog-genre]').forEach(button => button.addEventListener('click', () => {
                 homeCatalogGenre = button.dataset.catalogGenre || 'all';
-                host.querySelectorAll('[data-catalog-genre]').forEach(item => item.classList.toggle('active', item === button));
+                host.querySelectorAll('[data-catalog-genre]').forEach(item => {
+                    const active = item === button;
+                    item.classList.toggle('active', active);
+                    item.setAttribute('aria-pressed', String(active));
+                });
                 renderHomeCatalogGrid();
             }));
         }
@@ -907,10 +936,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             }
             const items = [...homeCatalogItems];
             let filtered = items;
-            if (homeCatalogGenre !== 'all') {
-                const selectedGenre = normalizeHoneyMatch(homeCatalogGenre);
-                filtered = filtered.filter(item => (item.genres || []).some(genre => normalizeHoneyMatch(genre) === selectedGenre));
-            }
+            if (homeCatalogGenre !== 'all') filtered = filtered.filter(item => homeCatalogGenreMatches(item, homeCatalogGenre));
             if (homeCatalogStatus !== 'all') {
                 filtered = filtered.filter(item => {
                     const status = String(item.status || item.state || '').toLowerCase();
@@ -945,6 +971,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
         export function homeCatalogCountText(visibleCount) {
             const isFilteredManga = homeCatalogMode === 'manga' && (homeCatalogAdult || homeCatalogAge !== 'all' || homeCatalogFilterResultItems !== null);
+            const isFilteredAnime = homeCatalogMode === 'anime' && (homeCatalogGenre !== 'all' || homeCatalogStatus !== 'all' || homeCatalogType !== 'all' || homeCatalogYearMin || homeCatalogYearMax || homeCatalogScoreMin);
             const isFilteredNovel = homeCatalogMode === 'novel' && (homeCatalogStatus !== 'all' || homeCatalogAvailability !== 'all' || homeCatalogAge !== 'all' || homeCatalogOrigin !== 'all' || homeCatalogYearMin || homeCatalogYearMax || homeCatalogScoreMin || homeCatalogGenres.size);
             const total = isFilteredManga
                 ? (homeCatalogFilterIndexReady && homeCatalogFilterResultItems ? homeCatalogFilterResultItems.length : visibleCount)
@@ -954,6 +981,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 const suffix = isFilteredManga && !homeCatalogFilterIndexReady ? '' : ` із ${formatHomeCatalogNumber(total)}`;
                 return `Доступно для читання: ${formatHomeCatalogNumber(available)}${suffix} манґи`;
             }
+            if (homeCatalogMode === 'anime' && isFilteredAnime) return `Показано ${formatHomeCatalogNumber(visibleCount)} з ${formatHomeCatalogNumber(homeCatalogTotal || total)} результатів`;
             if (homeCatalogMode === 'novel' && isFilteredNovel) return `Показано ${formatHomeCatalogNumber(visibleCount)} з ${formatHomeCatalogNumber(homeCatalogTotal || total)} результатів`;
             if (homeCatalogMode === 'novel' && !homeCatalogTotal) return `Показано ${formatHomeCatalogNumber(total)}+ результатів`;
             return `Знайдено ${formatHomeCatalogNumber(total)} результатів`;
@@ -1127,11 +1155,11 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     <div class="home-catalog-view-toggle" role="group" aria-label="Вигляд каталогу"><button type="button" class="home-catalog-view${homeCatalogView === 'grid' ? ' active' : ''}" data-catalog-view="grid" aria-label="Сітка"><i class="fas fa-grip"></i></button><button type="button" class="home-catalog-view${homeCatalogView === 'list' ? ' active' : ''}" data-catalog-view="list" aria-label="Список"><i class="fas fa-list"></i></button></div>
                     <div class="home-catalog-quick-actions" role="group" aria-label="Швидкі дії каталогу">
                         <button class="home-catalog-filter-btn home-catalog-schedule-btn" id="homeCatalogScheduleBtn" type="button"><i class="fas fa-calendar-days"></i><span>Розклад виходу</span></button>
-                        <button class="home-catalog-filter-btn" id="homeCatalogFilterBtn" type="button"><i class="fas fa-filter"></i><span>Фільтри</span></button>
                         <button class="home-catalog-filter-btn home-catalog-adult-btn${homeCatalogAdult ? ' active' : ''}" id="homeCatalogAdultBtn" type="button" aria-pressed="${homeCatalogAdult ? 'true' : 'false'}" aria-label="Манґа 18+"${homeCatalogMode === 'manga' ? '' : ' hidden'}><span>18+</span></button>
                     </div>
                 </div>
 
+                ${homeCatalogMode === 'anime' ? `<section class="home-catalog-genre-browser" aria-labelledby="homeCatalogGenresTitle"><div class="home-catalog-genre-browser__heading"><div><span class="home-catalog-genre-browser__eyebrow">Швидкий вибір</span><h3 id="homeCatalogGenresTitle">Жанри</h3></div><span class="home-catalog-genre-browser__hint">Проведіть убік</span></div><div class="home-catalog-genre-rail" id="homeCatalogGenreRailHost" role="list" aria-label="Жанри каталогу"></div></section>` : ''}
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
                 <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>
@@ -1313,7 +1341,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             root.querySelector('#homeCatalogScheduleBtn')?.addEventListener('click', () => {
                 Router.goTo('schedule');
             });
-            root.querySelector('#homeCatalogFilterBtn')?.addEventListener('click', () => openHomeCatalogFilters(root));
+
         }
 
         export function updateHomeCatalogModeLabels() {
@@ -3066,40 +3094,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         //  СТОРІНКА ЖАНРУ
         // ====================================================================
         export let genrePageState = { slug: '', name: '', page: 1, list: [], hasNextPage: false, total: 0 };
-
-        // Keep the genres page independent from app-legacy.js. Importing the
-        // helper back from that compatibility layer would deepen its existing
-        // circular dependency with this module.
-        function getGenres() {
-            return Object.entries(GENRE_MAP)
-                .map(([name, slug]) => ({ slug, name }))
-                .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
-        }
-
-        export async function renderGenresPage() {
-            const container = document.getElementById('genresPageContainer');
-            if (!container) return;
-            const genres = getGenres();
-            let html = '<div class="genre-page-header"><h2>Жанри</h2></div>';
-            html += '<div class="genres-grid">';
-            genres.forEach(g => {
-                const letter = g.name.charAt(0).toUpperCase();
-                html += `<div class="genre-card" data-slug="${g.slug}" data-name="${g.name}">
-                    <div class="genre-card__icon">${letter}</div>
-                    <div class="genre-card__name">${g.name}</div>
-                </div>`;
-            });
-            html += '</div>';
-            container.innerHTML = html;
-            container.querySelectorAll('.genre-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    const slug = card.dataset.slug;
-                    const name = card.dataset.name;
-                    Router.goTo('genre', { slug, name });
-                });
-            });
-        }
-
 
         export async function renderGenrePage(slug, name) {
             const container = document.getElementById('genrePageContainer');

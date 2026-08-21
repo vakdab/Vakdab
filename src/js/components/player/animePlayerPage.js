@@ -1,22 +1,22 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
 import { GENRE_MAP } from '../../config/constants.js?v=20260820-hikka-proxy-fix4';
-import { Router } from '../../core/compat/router.js?v=20260821-social-v13';
-import { Storage } from '../../core/compat/storage.js?v=20260821-social-v13';
+import { Router } from '../../core/compat/router.js?v=20260821-genre-catalog-v1';
+import { Storage } from '../../core/compat/storage.js?v=20260821-genre-catalog-v1';
 import { LampaPlayer } from './lampaPlayer.js?v=20260820-player-modern-v1';
-import { DailyStats } from '../rating/ratingSystem.js?v=20260821-social-v13';
+import { DailyStats } from '../rating/ratingSystem.js?v=20260821-genre-catalog-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, searchHikkaAllTitles, switchProviderSource
-} from '../../services/catalog.js?v=20260821-related-ua-v2';
+} from '../../services/catalog.js?v=20260821-genre-catalog-v1';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
-} from '../pages/homeLegacy.js?v=20260821-social-v13';
-import { renderProfilePage } from '../pages/profileLegacy.js?v=20260821-social-v13';
+} from '../pages/homeLegacy.js?v=20260821-genre-catalog-v1';
+import { renderProfilePage } from '../pages/profileLegacy.js?v=20260821-genre-catalog-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260821-social-v13';
+} from '../../legacy/app-legacy.js?v=20260821-genre-catalog-v1';
 import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
 
         // ====================================================================
@@ -2005,9 +2005,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             btn.addEventListener('click', () => {
                 const action = btn.dataset.action;
                 closeMenuPopover();
-                if (action === 'genres') {
-                    Router.goTo('genres');
-                } else if (action === 'settings') {
+                if (action === 'settings') {
                     Router.goTo('settings');
                 } else if (action === 'filters') {
                     Router.goTo('filter');
