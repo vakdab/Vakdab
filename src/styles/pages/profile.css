@@ -311,33 +311,38 @@
         }
         .profile-social-stat { cursor: default; }
         .profile-social-stat:focus-visible,
-        .profile-follow-btn:focus-visible {
+        .profile-follow-icon:focus-visible {
             outline: 3px solid rgba(var(--accent-rgb), .35);
             outline-offset: 2px;
         }
-        .profile-public-actions {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 12px 0 14px;
+        .profile-follow-icon {
+            display: inline-grid;
+            place-items: center;
+            flex: 0 0 auto;
+            width: 42px;
+            height: 42px;
+            padding: 0;
+            border: 0;
+            border-radius: 50%;
+            background: var(--surface-muted, #e5e5e5);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: transform .2s ease, background .2s ease, color .2s ease, opacity .2s ease;
         }
-        .profile-follow-btn {
-            min-height: 42px;
-            padding: 10px 22px;
-            border: 1px solid var(--text);
-            border-radius: 999px;
+        .profile-follow-icon:hover { transform: translateY(-1px); background: var(--surface-hover, #dcdcdc); }
+        .profile-follow-icon:disabled { cursor: wait; opacity: .65; }
+        .profile-follow-icon.is-following {
             background: var(--text);
             color: var(--surface);
-            font: inherit;
-            font-weight: 700;
-            cursor: pointer;
-            transition: transform .2s ease, opacity .2s ease, background .2s ease, color .2s ease;
         }
-        .profile-follow-btn:hover { transform: translateY(-1px); }
-        .profile-follow-btn:disabled { cursor: wait; opacity: .65; }
-        .profile-follow-btn.is-following {
-            background: transparent;
-            color: var(--text);
+        .profile-follow-icon svg {
+            width: 23px;
+            height: 23px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
         .profile-owner-badge {
             color: var(--text-muted);
@@ -357,6 +362,8 @@
             .profile-social-link { gap: .28rem; font-size: .72rem; }
             .profile-social-link .label { font-size: .66rem; }
             .profile-social-link .num { font-size: .84rem; }
+            .profile-follow-icon { width: 38px; height: 38px; }
+            .profile-follow-icon svg { width: 21px; height: 21px; }
             .profile-stat-pill { min-width: 0; padding: 9px 5px; }
             .profile-stat-pill .num { font-size: 16px; }
             .profile-stat-pill .label { font-size: 8px; letter-spacing: .6px; }

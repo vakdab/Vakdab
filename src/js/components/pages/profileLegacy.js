@@ -4,9 +4,9 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-social-v7';
-import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260821-social-v7';
-import { getSocialState } from '../../services/firebase/socialProfile.js?v=20260821-social-v7';
+} from '../../legacy/app-legacy.js?v=20260821-social-v8';
+import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260821-social-v8';
+import { getSocialState } from '../../services/firebase/socialProfile.js?v=20260821-social-v8';
 
 function primeProfileMediaPlayback(container) {
     if (!container) return;
@@ -289,7 +289,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-social-v7');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-social-v8');
         const profile = await getPublicProfile(targetUid);
         if (!profile) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';
@@ -323,6 +323,9 @@ export async function renderPublicProfilePage(uid) {
                   </div>
                 </div>
                 <div class="profile-social-summary" aria-label="Соціальні показники">
+                  ${canFollow ? `<button type="button" class="profile-follow-icon${social.isFollowing ? ' is-following' : ''}" id="publicFollowBtn" data-following="${social.isFollowing ? '1' : '0'}" aria-label="${social.isFollowing ? 'Відписатися від користувача' : 'Підписатися на користувача'}" title="${social.isFollowing ? 'Відписатися' : 'Підписатися'}">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 20v-1.6a3.4 3.4 0 0 0-3.4-3.4H5.4A3.4 3.4 0 0 0 2 18.4V20M8.5 11.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2ZM19 8v6M16 11h6"/></svg>
+                  </button>` : ''}
                   <span class="profile-social-link"><span class="label">Друзі</span><strong class="num" id="publicFriendsCount">${social.friends}</strong></span>
                   <span class="profile-social-link"><span class="label">Слідкую</span><strong class="num" id="publicFollowingCount">${social.following}</strong></span>
                 </div>
@@ -330,9 +333,6 @@ export async function renderPublicProfilePage(uid) {
               <div class="profile-nick-row"><span class="profile-nick">${nickname}</span></div>
               <div class="profile-meta"><span>${handle}</span></div>
               ${profile.bio ? `<div class="profile-bio-row"><div class="profile-bio${profile.bioBold ? ' is-bold' : ''}">${escapeHtml(profile.bio)}</div></div>` : ''}
-              <div class="profile-public-actions">
-                ${canFollow ? `<button type="button" class="profile-follow-btn${social.isFollowing ? ' is-following' : ''}" id="publicFollowBtn" data-following="${social.isFollowing ? '1' : '0'}">${social.isFollowing ? 'Слідкую' : 'Слідкувати'}</button>` : (viewerUid === targetUid ? '<span class="profile-owner-badge">Це ваш профіль</span>' : '')}
-              </div>
             </div>
           </div>`;
         primeProfileMediaPlayback(container);
@@ -348,7 +348,8 @@ export async function renderPublicProfilePage(uid) {
                 const nextSocial = await setFollowing(Auth._user.uid, targetUid, nextValue);
                 button.dataset.following = nextValue ? '1' : '0';
                 button.classList.toggle('is-following', nextValue);
-                button.textContent = nextValue ? 'Слідкую' : 'Слідкувати';
+                button.setAttribute('aria-label', nextValue ? 'Відписатися від користувача' : 'Підписатися на користувача');
+                button.setAttribute('title', nextValue ? 'Відписатися' : 'Підписатися');
                 const friends = container.querySelector('#publicFriendsCount');
                 const following = container.querySelector('#publicFollowingCount');
                 if (friends) friends.textContent = String(nextSocial.friends);
