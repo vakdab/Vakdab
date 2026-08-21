@@ -1024,3 +1024,57 @@ body:not(.dark-mode) .header .logo-text span {
     .home-catalog-mode-filter-reset,
     .home-catalog-mode-filter-apply { transition: none; }
 }
+
+
+/* Manga and novel filters use the same card language as the anime genre browser. */
+.home-catalog-mode-filter-groups {
+    display: grid;
+    gap: 16px;
+}
+.home-catalog-mode-filter-group {
+    min-width: 0;
+}
+.home-catalog-mode-filter-group__label {
+    margin: 0 0 8px 2px;
+    color: var(--text-muted);
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .01em;
+}
+.home-catalog-mode-filter-rail {
+    grid-auto-columns: minmax(96px, 110px);
+    gap: 9px;
+    padding: 2px 2px 7px;
+}
+.home-catalog-mode-filter-card {
+    min-width: 96px;
+    min-height: 104px;
+    gap: 8px;
+    padding: 11px 7px;
+}
+.home-catalog-mode-filter-card .home-catalog-genre-card__icon {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+    font-size: 1.02rem;
+}
+.home-catalog-mode-filter-card .home-catalog-genre-card__icon--all {
+    width: auto;
+    min-width: 42px;
+    font-size: .68rem;
+}
+.home-catalog-mode-filter-card .home-catalog-genre-card__name {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+}
+@media (min-width: 700px) {
+    .home-catalog-mode-filter-rail {
+        grid-auto-columns: minmax(108px, 124px);
+        gap: 11px;
+    }
+    .home-catalog-mode-filter-card {
+        min-width: 108px;
+        min-height: 112px;
+    }
+}

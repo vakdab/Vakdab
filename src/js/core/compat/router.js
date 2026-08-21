@@ -6,7 +6,7 @@ import {
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
     renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-mode-filters-v3';
+} from '../../legacy/app-legacy.js?v=20260821-filter-cards-v4';
 
         export const Router = {
             currentRoute: 'main',

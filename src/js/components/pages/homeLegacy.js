@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-mode-filters-v3';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-mode-filters-v3';
+} from '../../legacy/app-legacy.js?v=20260821-filter-cards-v4';
+import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-filter-cards-v4';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -766,8 +766,24 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             }));
         }
 
-        function homeFilterSelect(key, label, options, value) {
-            return `<label class="home-catalog-mode-filter"><span>${escapeHtml(label)}</span><select data-home-catalog-filter="${escapeHtml(key)}" aria-label="${escapeHtml(label)}">${options.map(option => `<option value="${escapeHtml(option.key)}"${option.key === value ? ' selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}</select></label>`;
+        function homeCatalogFilterCardIcon(groupKey, option, label) {
+            if (option.key === 'all') return 'Усі';
+            if (option.key === 'adult') return '18+';
+            if (option.key === 'teen') return '13+';
+            if (option.key === 'children') return 'Діти';
+            if (option.key === 'available') return 'Чит';
+            if (option.key === 'ongoing') return 'О';
+            if (option.key === 'finished') return 'З';
+            return String(option.icon || label || option.label || '').trim().charAt(0).toUpperCase() || '•';
+        }
+
+        function homeCatalogFilterCardGroup(groupKey, label, options, value) {
+            const cards = options.map(option => {
+                const active = option.key === value;
+                const icon = homeCatalogFilterCardIcon(groupKey, option, label);
+                return `<button class="home-catalog-genre-card home-catalog-mode-filter-card${active ? ' active' : ''}" type="button" data-home-catalog-filter-card data-home-catalog-filter-value="${escapeHtml(option.key)}" aria-pressed="${active ? 'true' : 'false'}" role="listitem"><span class="home-catalog-genre-card__icon${option.key === 'all' ? ' home-catalog-genre-card__icon--all' : ''}">${escapeHtml(icon)}</span><span class="home-catalog-genre-card__name">${escapeHtml(option.label)}</span></button>`;
+            }).join('');
+            return `<section class="home-catalog-mode-filter-group" aria-label="${escapeHtml(label)}"><div class="home-catalog-mode-filter-group__label">${escapeHtml(label)}</div><div class="home-catalog-genre-rail home-catalog-mode-filter-rail" data-home-catalog-filter-group="${escapeHtml(groupKey)}" role="list">${cards}</div></section>`;
         }
 
         export function homeCatalogModeFilterHtml() {
@@ -777,19 +793,15 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const ageOptions = isManga
                 ? HOME_MANGA_AGE_OPTIONS
                 : ranobeFilterAges().map(option => ({ key: option.key, label: option.label }));
-            const common = [
-                homeFilterSelect('availability', 'Доступність', isManga
-                    ? [{ key: 'all', label: 'Усі тайтли' }, { key: 'available', label: 'Є що читати' }]
-                    : [{ key: 'all', label: 'Усі тайтли' }, { key: 'available', label: 'Є доступний розділ' }], homeCatalogAvailability),
-                homeFilterSelect('age', 'Вікова категорія', ageOptions, homeCatalogAge)
-            ];
-            if (isManga) return `<section class="home-catalog-mode-filter-panel" aria-labelledby="homeCatalogModeFiltersTitle"><div class="home-catalog-mode-filter-panel__heading"><div><span class="home-catalog-genre-browser__eyebrow">Окремі налаштування</span><h3 id="homeCatalogModeFiltersTitle">${title}</h3></div><span class="home-catalog-mode-filter-panel__hint">Манґа</span></div><div class="home-catalog-mode-filter-grid">${common.join('')}</div><div class="home-catalog-mode-filter-actions"><button type="button" class="home-catalog-mode-filter-reset" data-home-catalog-filter-reset>Скинути</button><button type="button" class="home-catalog-mode-filter-apply" data-home-catalog-filter-apply>Застосувати</button></div></section>`;
-            const novelFields = [
-                homeFilterSelect('status', 'Статус', [{ key: 'all', label: 'Усі статуси' }, { key: 'ongoing', label: 'Онґоїнг' }, { key: 'finished', label: 'Завершені' }], homeCatalogStatus),
-                ...common,
-                homeFilterSelect('origin', 'Походження', [{ key: 'all', label: 'Усі країни та типи' }, ...ranobeFilterOrigins().map(origin => ({ key: origin, label: origin }))], homeCatalogOrigin)
-            ];
-            return `<section class="home-catalog-mode-filter-panel" aria-labelledby="homeCatalogModeFiltersTitle"><div class="home-catalog-mode-filter-panel__heading"><div><span class="home-catalog-genre-browser__eyebrow">Окремі налаштування</span><h3 id="homeCatalogModeFiltersTitle">${title}</h3></div><span class="home-catalog-mode-filter-panel__hint">Ранобе</span></div><div class="home-catalog-mode-filter-grid">${novelFields.join('')}</div><div class="home-catalog-mode-filter-actions"><button type="button" class="home-catalog-mode-filter-reset" data-home-catalog-filter-reset>Скинути</button><button type="button" class="home-catalog-mode-filter-apply" data-home-catalog-filter-apply>Застосувати</button></div></section>`;
+            const availabilityOptions = isManga
+                ? [{ key: 'all', label: 'Усі тайтли' }, { key: 'available', label: 'Є що читати' }]
+                : [{ key: 'all', label: 'Усі тайтли' }, { key: 'available', label: 'Є доступний розділ' }];
+            const groups = [homeCatalogFilterCardGroup('availability', 'Доступність', availabilityOptions, homeCatalogAvailability), homeCatalogFilterCardGroup('age', 'Вікова категорія', ageOptions, homeCatalogAge)];
+            if (!isManga) {
+                groups.unshift(homeCatalogFilterCardGroup('status', 'Статус', [{ key: 'all', label: 'Усі статуси' }, { key: 'ongoing', label: 'Онґоїнг' }, { key: 'finished', label: 'Завершені' }], homeCatalogStatus));
+                groups.push(homeCatalogFilterCardGroup('origin', 'Походження', [{ key: 'all', label: 'Усі країни та типи' }, ...ranobeFilterOrigins().map(origin => ({ key: origin, label: origin }))], homeCatalogOrigin));
+            }
+            return `<section class="home-catalog-mode-filter-panel" aria-labelledby="homeCatalogModeFiltersTitle"><div class="home-catalog-mode-filter-panel__heading"><div><span class="home-catalog-genre-browser__eyebrow">Картковий швидкий вибір</span><h3 id="homeCatalogModeFiltersTitle">${title}</h3></div><span class="home-catalog-mode-filter-panel__hint">Проведіть убік</span></div><div class="home-catalog-mode-filter-groups">${groups.join('')}</div><div class="home-catalog-mode-filter-actions"><button type="button" class="home-catalog-mode-filter-reset" data-home-catalog-filter-reset>Скинути</button><button type="button" class="home-catalog-mode-filter-apply" data-home-catalog-filter-apply>Застосувати</button></div></section>`;
         }
 
         export async function loadHoneyMangaFullCatalog() {
@@ -1312,7 +1324,13 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         }
 
         function bindHomeCatalogModeFilters(root) {
-            root.querySelectorAll('[data-home-catalog-filter]').forEach(control => control.addEventListener('change', () => {
+            root.querySelectorAll('[data-home-catalog-filter-card]').forEach(control => control.addEventListener('click', () => {
+                const group = control.closest('[data-home-catalog-filter-group]');
+                group?.querySelectorAll('[data-home-catalog-filter-card]').forEach(item => {
+                    const active = item === control;
+                    item.classList.toggle('active', active);
+                    item.setAttribute('aria-pressed', String(active));
+                });
                 control.closest('.home-catalog-mode-filter-panel')?.classList.add('is-dirty');
             }));
             root.querySelector('[data-home-catalog-filter-apply]')?.addEventListener('click', async event => {
@@ -1350,7 +1368,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         }
 
         async function applyHomeCatalogModeFilters(root) {
-            const read = key => root.querySelector(`[data-home-catalog-filter="${key}"]`)?.value || 'all';
+            const read = key => root.querySelector(`[data-home-catalog-filter-group="${key}"] [data-home-catalog-filter-card].active`)?.dataset.homeCatalogFilterValue || root.querySelector(`[data-home-catalog-filter="${key}"]`)?.value || 'all';
             if (homeCatalogMode === 'manga') {
                 homeCatalogAvailability = read('availability');
                 homeCatalogAge = read('age');

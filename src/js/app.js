@@ -1,3 +1,3 @@
-import { bootstrap } from './core/bootstrap.js?v=20260821-mode-filters-v3';
+import { bootstrap } from './core/bootstrap.js?v=20260821-filter-cards-v4';
 
 bootstrap();
