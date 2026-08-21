@@ -445,8 +445,18 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             const episodeSelect = document.getElementById('playerEpisodeSelect');
             const dubSelect = document.getElementById('playerDubSelect');
             const seasonSelect = document.getElementById('playerSeasonSelect');
+            const seasonWrap = document.querySelector('#playerCompactControls .player-season-select-wrap');
+            const episodeLine = document.querySelector('#playerCompactControls .player-episode-select-line');
+            const seasonBlock = document.getElementById('episodeSeasonRow')?.closest('.player-control-block');
+            const episodeBlock = document.getElementById('episodeViewGrid')?.closest('.player-control-block');
             const episodes = getCurrentEpisodes();
             const seasons = Object.keys(playerPageAnime?.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
+            const isMovie = playerAnimeIsMovie();
+            const hasSeasonChoice = !isMovie && seasons.length > 1;
+            if (seasonWrap) seasonWrap.hidden = !hasSeasonChoice;
+            if (seasonBlock) seasonBlock.hidden = !hasSeasonChoice;
+            if (episodeLine) episodeLine.hidden = isMovie;
+            if (episodeBlock) episodeBlock.hidden = isMovie;
             const dubs = Object.keys(playerPageAnime?.seasons?.[playerPageCurrentSeason] || {}).sort();
             if (episodeSelect) {
                 episodeSelect.innerHTML = episodes.map(ep => `<option value="${escapeHtml(String(ep.episode))}">Серія ${escapeHtml(String(ep.episode))}</option>`).join('');
@@ -493,6 +503,11 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             const sectionTitle = document.getElementById('episodeSectionTitle');
             if (!sectionTitle) return;
             const seasons = Object.keys(playerPageAnime?.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
+            if (playerAnimeIsMovie()) {
+                sectionTitle.hidden = true;
+                return;
+            }
+            sectionTitle.hidden = false;
             if (seasons.length <= 1) {
                 sectionTitle.textContent = `Сезон ${playerPageCurrentSeason || 1}`;
                 sectionTitle.classList.add('single');
@@ -543,6 +558,9 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
         export function buildSeasonRow(seasons) {
             const row = document.getElementById('episodeSeasonRow');
             if (!row) return;
+            const seasonBlock = row.closest('.player-control-block');
+            const showSeasonChoice = !playerAnimeIsMovie() && seasons.length > 1;
+            if (seasonBlock) seasonBlock.hidden = !showSeasonChoice;
             let html = `<span>Сезон</span>`;
             seasons.forEach(s => {
                 const active = s === playerPageCurrentSeason ? ' active' : '';
