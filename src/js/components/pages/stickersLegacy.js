@@ -1,8 +1,8 @@
-import { Storage } from '../../core/compat/storage.js?v=20260821-profile-thought-v20';
+import { Storage } from '../../core/compat/storage.js?v=20260821-profile-thought-v23';
 import { db } from '../../services/firebase/client.js';
-import { Router } from '../../core/compat/router.js?v=20260821-profile-thought-v20';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260821-profile-thought-v20';
-import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260821-profile-thought-v20';
+import { Router } from '../../core/compat/router.js?v=20260821-profile-thought-v23';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260821-profile-thought-v23';
+import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260821-profile-thought-v23';
 
         function stickerFaceSvg(variant) {
             const s = 'stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"';

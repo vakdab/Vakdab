@@ -1658,3 +1658,78 @@ body:not(.dark-mode) .header .logo-text span {
         padding: 16px 20px 26px 27px;
     }
 }
+
+/* Thought cloud anchored to the add-thought button and reaching into the hero poster. */
+.profile-thought-note {
+    left: auto;
+    right: -40px;
+    bottom: calc(100% + 58px);
+    width: min(190px, calc(100vw - 42px));
+    min-height: 108px;
+    padding: 22px 28px 34px 28px;
+    transform-origin: 76% 100%;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM76 87C84 84 90 90 87 97C84 103 76 100 73 95C71 91 73 88 76 87ZM63 106C68 104 71 107 69 110C67 113 63 112 61 109C60 107 61 106 63 106Z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM76 87C84 84 90 90 87 97C84 103 76 100 73 95C71 91 73 88 76 87ZM63 106C68 104 71 107 69 110C67 113 63 112 61 109C60 107 61 106 63 106Z'/%3E%3C/svg%3E");
+}
+.profile-thought-note.is-popping { animation: profileThoughtNoteToButton .46s cubic-bezier(.2,.85,.2,1) both; }
+@keyframes profileThoughtNoteToButton {
+    0% { opacity: 0; transform: translateY(12px) scale(.62); }
+    65% { opacity: 1; transform: translateY(-3px) scale(1.04); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.profile-thought-bubble {
+    left: auto;
+    right: -26px;
+    top: auto;
+    bottom: calc(100% + 10px);
+    transform-origin: 86% 100%;
+}
+.profile-thought-bubble::before,
+.profile-thought-bubble::after {
+    top: auto;
+    bottom: -8px;
+    left: auto;
+    right: 30px;
+}
+.profile-thought-bubble::after { right: 18px; bottom: -18px; }
+@media (max-width: 479px) {
+    .profile-thought-note {
+        right: -34px;
+        bottom: calc(100% + 48px);
+        width: min(184px, calc(100vw - 34px));
+        min-height: 102px;
+        padding: 21px 26px 32px 27px;
+    }
+    .profile-thought-bubble { right: -20px; }
+}
+
+/* Final anchor correction: the cloud tail must meet the trigger at the avatar edge. */
+.profile-thought-note {
+    bottom: 8px;
+    right: -40px;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM113 84C121 81 127 87 124 94C121 100 113 97 110 92C108 88 110 85 113 84ZM128 103C133 101 136 104 134 107C132 110 128 109 126 106C125 104 126 103 128 103Z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM113 84C121 81 127 87 124 94C121 100 113 97 110 92C108 88 110 85 113 84ZM128 103C133 101 136 104 134 107C132 110 128 109 126 106C125 104 126 103 128 103Z'/%3E%3C/svg%3E");
+}
+@media (max-width: 479px) {
+    .profile-thought-note { bottom: 7px; right: -34px; }
+}
+
+/* Banner-to-trigger bridge: cloud body sits in the poster, tail reaches the button. */
+.profile-thought-note {
+    right: -28px;
+    bottom: -6px;
+    width: min(190px, calc(100vw - 42px));
+    min-height: 170px;
+    box-sizing: border-box;
+    padding: 34px 27px 64px 27px;
+    transform-origin: 80% 100%;
+}
+@media (max-width: 479px) {
+    .profile-thought-note {
+        right: -34px;
+        bottom: -6px;
+        width: min(184px, calc(100vw - 34px));
+        min-height: 162px;
+        padding: 32px 25px 61px 25px;
+    }
+}
