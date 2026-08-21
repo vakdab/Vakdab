@@ -763,3 +763,27 @@ body:not(.dark-mode) .header .logo-text span {
 @media (min-width: 900px) {
     .bottom-nav { display: none !important; }
 }
+
+/* Hotfix: keep the legacy active pill inside its own navigation slot. */
+.bottom-nav .bn-item {
+    flex: 1 1 0;
+    min-width: 0;
+}
+.bottom-nav .bn-item.active {
+    flex: 2.45 1 0;
+    min-width: 0;
+}
+.bottom-nav .bn-pill {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.bottom-nav .bn-item.active .bn-pill {
+    width: max-content;
+    max-width: 100%;
+    overflow: hidden;
+}
+@media (max-width: 380px) {
+    .bottom-nav .bn-item.active { flex: 2.25 1 0; }
+    .bottom-nav .bn-item.active .bn-pill { padding-inline: 13px; }
+    .bottom-nav .bn-label { font-size: 13px; }
+}
