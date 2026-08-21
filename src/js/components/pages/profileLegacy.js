@@ -4,9 +4,9 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v16';
-import { getProfile, saveProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-profile-thought-v16';
-import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-profile-thought-v16';
+} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v18';
+import { getProfile, saveProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-profile-thought-v18';
+import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-profile-thought-v18';
 
 function bindProfileThought(container) {
     const trigger = container?.querySelector('#profileThoughtTrigger');
@@ -15,8 +15,21 @@ function bindProfileThought(container) {
     const count = container?.querySelector('#profileThoughtCount');
     const save = container?.querySelector('#profileThoughtSave');
     const close = container?.querySelector('#profileThoughtClose');
+    const note = container?.querySelector('#profileThoughtNote');
+    const noteText = container?.querySelector('#profileThoughtNoteText');
     if (!trigger || !bubble || !input || !save) return;
 
+    const setNote = (text, animate = false) => {
+        const value = String(text || '').trim();
+        if (!note || !noteText) return;
+        noteText.textContent = value;
+        note.hidden = !value;
+        note.classList.toggle('is-visible', Boolean(value));
+        if (animate && value) {
+            note.classList.remove('is-popping');
+            requestAnimationFrame(() => note.classList.add('is-popping'));
+        }
+    };
     const setOpen = (open) => {
         bubble.hidden = !open;
         trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -33,9 +46,14 @@ function bindProfileThought(container) {
     };
 
     updateCount();
+    setNote(input.value, false);
     trigger.addEventListener('click', (event) => {
         event.stopPropagation();
         setOpen(bubble.hidden);
+    });
+    note?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        setOpen(true);
     });
     close?.addEventListener('click', () => setOpen(false));
     input.addEventListener('input', updateCount);
@@ -48,6 +66,7 @@ function bindProfileThought(container) {
         profile.thought = input.value.trim().slice(0, 120);
         saveProfile(profile);
         trigger.classList.toggle('has-thought', Boolean(profile.thought));
+        setNote(profile.thought, true);
         setOpen(false);
         showToast(profile.thought ? 'Думку збережено' : 'Думку видалено');
     });
@@ -125,6 +144,10 @@ export function renderProfilePage() {
                     <button type="button" class="profile-thought-trigger${profile.thought ? ' has-thought' : ''}" id="profileThoughtTrigger" aria-label="Відкрити думку" aria-expanded="false" aria-controls="profileThoughtBubble" title="Думка">
                       <i class="fas fa-comment-dots" aria-hidden="true"></i>
                     </button>
+                    <div class="profile-thought-note${profile.thought ? ' is-visible' : ''}" id="profileThoughtNote"${profile.thought ? '' : ' hidden'} role="status" aria-live="polite">
+                      <span class="profile-thought-note__dot" aria-hidden="true"></span>
+                      <span id="profileThoughtNoteText">${escapeHtml(profile.thought || '')}</span>
+                    </div>
                     <div class="profile-thought-bubble" id="profileThoughtBubble" hidden>
                       <div class="profile-thought-bubble__head">
                         <strong>Думка</strong>
@@ -501,7 +524,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-profile-thought-v16');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-profile-thought-v18');
         const profile = await getPublicProfile(targetUid);
         if (!profile) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';

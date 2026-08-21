@@ -1,9 +1,10 @@
-# Profile thought note QA
 
-Date: 2026-08-21
+## v17 save-flow smoke test
 
-A clean v16 guest profile preview was checked. The thought trigger appears at the lower-right edge of the avatar. Clicking it opens an animated thought bubble with the Ukrainian title `Думка`, a 120-character textarea, live character count, close button, and `Зберегти` action.
+The compact composer opens correctly, accepts text, and after clicking `Зберегти` the composer closes while `#profileThoughtNote` appears with the saved text and the toast `Думку збережено`.
 
-The bubble uses a cloud-like rounded shape with two tail circles and a pop animation. It is keyboard accessible through a real button, supports Escape to close, click-outside close, and reduced-motion fallback. The profile renderer and settings save API are wired without removing the existing avatar navigation hooks.
+The smoke screenshot exposed one CSS issue for the next patch: because the saved note used `display: inline-flex` with only `max-width`, absolute-position shrink-to-fit collapsed the note into a very narrow vertical column. The next fix sets an explicit responsive width while retaining the compact bubble design.
 
-Syntax checks, all three regression fixtures, and `git diff --check` passed.
+## v18 width and edit QA
+
+The explicit responsive width fix prevents the saved note from collapsing vertically. In the clean v18 preview, `Моя думка` appears as a compact horizontal note beside the avatar. Clicking the note reopens the compact editor with the saved text already loaded for editing.
