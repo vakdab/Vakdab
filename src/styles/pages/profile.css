@@ -270,15 +270,46 @@
             gap: 8px;
         }
         @media (min-width:480px) {
-            .profile-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+            .profile-stats { gap: 10px; }
         }
-        .profile-social-stat {
-            appearance: none;
-            -webkit-appearance: none;
-            color: inherit;
-            font: inherit;
-            cursor: pointer;
+
+        .profile-head-row {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1rem;
+            min-height: 92px;
         }
+        .profile-social-summary {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 0 0 .8rem;
+            margin-left: auto;
+        }
+        .profile-social-link {
+            display: inline-flex;
+            align-items: baseline;
+            gap: .38rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            font-size: .78rem;
+            line-height: 1.2;
+        }
+        .profile-social-link .label {
+            color: var(--text-muted);
+            font-size: .72rem;
+            font-weight: 600;
+            letter-spacing: .02em;
+        }
+        .profile-social-link .num {
+            color: var(--text);
+            font-size: .92rem;
+            font-weight: 800;
+        }
+        .profile-social-stat { cursor: default; }
         .profile-social-stat:focus-visible,
         .profile-follow-btn:focus-visible {
             outline: 3px solid rgba(var(--accent-rgb), .35);
@@ -321,6 +352,11 @@
             text-align: center;
         }
         @media (max-width:479px) {
+            .profile-head-row { min-height: 76px; gap: .65rem; }
+            .profile-social-summary { gap: .7rem; padding-bottom: .55rem; }
+            .profile-social-link { gap: .28rem; font-size: .72rem; }
+            .profile-social-link .label { font-size: .66rem; }
+            .profile-social-link .num { font-size: .84rem; }
             .profile-stat-pill { min-width: 0; padding: 9px 5px; }
             .profile-stat-pill .num { font-size: 16px; }
             .profile-stat-pill .label { font-size: 8px; letter-spacing: .6px; }

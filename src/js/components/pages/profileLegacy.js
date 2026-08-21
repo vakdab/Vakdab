@@ -4,9 +4,9 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-social-v4';
-import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260821-social-v4';
-import { getSocialState } from '../../services/firebase/socialProfile.js?v=20260821-social-v4';
+} from '../../legacy/app-legacy.js?v=20260821-social-v6';
+import { getProfile, getProfileStats } from './settingsLegacy.js?v=20260821-social-v6';
+import { getSocialState } from '../../services/firebase/socialProfile.js?v=20260821-social-v6';
 
 function primeProfileMediaPlayback(container) {
     if (!container) return;
@@ -68,10 +68,20 @@ export function renderProfilePage() {
                 ${profile.effect && profile.effect !== 'none' ? buildEffectOverlayHtml(profile.effect) : ''}
               </div>
               <div class="profile-info">
-                <div class="profile-avatar-wrap${decorationClass}">
-                  <div class="${avatarClass}">
-                    ${profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, 'profile-avatar-media', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, 'profile-avatar-media', 'avatar') : '')}
-                    <span class="avatar-placeholder" style="display:none;">${escapeHtml(profile.nickname.charAt(0).toUpperCase())}</span>
+                <div class="profile-head-row">
+                  <div class="profile-avatar-wrap${decorationClass}">
+                    <div class="${avatarClass}">
+                      ${profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, 'profile-avatar-media', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, 'profile-avatar-media', 'avatar') : '')}
+                      <span class="avatar-placeholder" style="display:none;">${escapeHtml(profile.nickname.charAt(0).toUpperCase())}</span>
+                    </div>
+                  </div>
+                  <div class="profile-social-summary" aria-label="Соціальні показники">
+                    <span class="profile-social-link profile-social-stat" id="profileFriendsStat">
+                      <span class="label">Друзі</span><strong class="num">—</strong>
+                    </span>
+                    <span class="profile-social-link profile-social-stat" id="profileFollowingStat">
+                      <span class="label">Слідкую</span><strong class="num">—</strong>
+                    </span>
                   </div>
                 </div>
                 <div class="profile-nick-row">
@@ -96,14 +106,6 @@ export function renderProfilePage() {
                     <div class="num">${stats.achievements}</div>
                     <div class="label">Досягнень</div>
                   </div>
-                  <button type="button" class="profile-stat-pill profile-social-stat" id="profileFriendsStat">
-                    <div class="num">—</div>
-                    <div class="label">Друзі</div>
-                  </button>
-                  <button type="button" class="profile-stat-pill profile-social-stat" id="profileFollowingStat">
-                    <div class="num">—</div>
-                    <div class="label">Слідкую</div>
-                  </button>
                 </div>
               </div>
             </div>
@@ -287,7 +289,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-social-v4');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-social-v6');
         const profile = await getPublicProfile(targetUid);
         if (!profile) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';
@@ -313,10 +315,17 @@ export async function renderPublicProfilePage(uid) {
               ${profile.effect && profile.effect !== 'none' ? buildEffectOverlayHtml(profile.effect) : ''}
             </div>
             <div class="profile-info">
-              <div class="profile-avatar-wrap${profile.avatarDecoration && profile.avatarDecoration !== 'none' ? ` avatar-decoration-${escapeHtml(profile.avatarDecoration)}` : ''}">
-                <div class="${avatarClass}">
-                  ${avatar ? profileMediaMarkup(avatar, 'profile-avatar-media', 'profile avatar', profile.avatarVideo ? profile.avatarVideoSettings : null) : ''}
-                  <span class="avatar-placeholder" style="display:${avatar ? 'none' : 'flex'};">${escapeHtml(profile.nickname.charAt(0).toUpperCase())}</span>
+              <div class="profile-head-row">
+                <div class="profile-avatar-wrap${profile.avatarDecoration && profile.avatarDecoration !== 'none' ? ` avatar-decoration-${escapeHtml(profile.avatarDecoration)}` : ''}">
+                  <div class="${avatarClass}">
+                    ${avatar ? profileMediaMarkup(avatar, 'profile-avatar-media', 'profile avatar', profile.avatarVideo ? profile.avatarVideoSettings : null) : ''}
+                    <span class="avatar-placeholder" style="display:${avatar ? 'none' : 'flex'};">${escapeHtml(profile.nickname.charAt(0).toUpperCase())}</span>
+                  </div>
+                </div>
+                <div class="profile-social-summary" aria-label="Соціальні показники">
+                  <span class="profile-social-link"><span class="label">Друзі</span><strong class="num" id="publicFriendsCount">${social.friends}</strong></span>
+                  <span class="profile-social-link"><span class="label">Слідкую</span><strong class="num" id="publicFollowingCount">${social.following}</strong></span>
+                  <span class="profile-social-link"><span class="label">Підписники</span><strong class="num" id="publicFollowersCount">${social.followers}</strong></span>
                 </div>
               </div>
               <div class="profile-nick-row"><span class="profile-nick">${nickname}</span></div>
@@ -324,11 +333,6 @@ export async function renderPublicProfilePage(uid) {
               ${profile.bio ? `<div class="profile-bio-row"><div class="profile-bio${profile.bioBold ? ' is-bold' : ''}">${escapeHtml(profile.bio)}</div></div>` : ''}
               <div class="profile-public-actions">
                 ${canFollow ? `<button type="button" class="profile-follow-btn${social.isFollowing ? ' is-following' : ''}" id="publicFollowBtn" data-following="${social.isFollowing ? '1' : '0'}">${social.isFollowing ? 'Слідкую' : 'Слідкувати'}</button>` : (viewerUid === targetUid ? '<span class="profile-owner-badge">Це ваш профіль</span>' : '')}
-              </div>
-              <div class="profile-stats profile-public-stats">
-                <div class="profile-stat-pill"><div class="num" id="publicFriendsCount">${social.friends}</div><div class="label">Друзі</div></div>
-                <div class="profile-stat-pill"><div class="num" id="publicFollowingCount">${social.following}</div><div class="label">Слідкую</div></div>
-                <div class="profile-stat-pill"><div class="num" id="publicFollowersCount">${social.followers}</div><div class="label">Підписники</div></div>
               </div>
             </div>
           </div>`;

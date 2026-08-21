@@ -1,6 +1,6 @@
-import { Auth } from '../../core/compat/auth.js?v=20260821-social-v5';
-import { Router } from '../../core/compat/router.js?v=20260821-social-v4';
-import { Storage } from '../../core/compat/storage.js?v=20260821-social-v4';
+import { Auth } from '../../core/compat/auth.js?v=20260821-social-v6';
+import { Router } from '../../core/compat/router.js?v=20260821-social-v6';
+import { Storage } from '../../core/compat/storage.js?v=20260821-social-v6';
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
 
@@ -416,7 +416,7 @@ function isGifUrl(url) {
                         document.body.classList.add('community-active');
                         const nav = document.getElementById('bottomNav');
                         if (nav) nav.classList.add('hidden-nav');
-                        import('../community/legacyCommunity.js?v=20260821-social-v4')
+                        import('../community/legacyCommunity.js?v=20260821-social-v6')
                             .then(({ initCommunity }) => {
                                 initCommunity();
                                 setTimeout(() => {
