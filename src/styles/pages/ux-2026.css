@@ -1314,3 +1314,13 @@ body:not(.dark-mode) .header .logo-text span {
 .hero-wrapper {
     margin-top: 0 !important;
 }
+
+/* Hero meets the top edge with square top corners; only the bottom corners stay rounded. */
+.hero-wrapper {
+    border-radius: 0 0 clamp(22px, 3vw, 32px) clamp(22px, 3vw, 32px) !important;
+}
+@media (max-width: 599px) {
+    .hero-wrapper {
+        border-radius: 0 0 24px 24px !important;
+    }
+}

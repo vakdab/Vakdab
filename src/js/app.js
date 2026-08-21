@@ -1,3 +1,3 @@
-import { bootstrap } from './core/bootstrap.js?v=20260821-hide-brand-hero-v14';
+import { bootstrap } from './core/bootstrap.js?v=20260821-hero-square-top-v15';
 
 bootstrap();

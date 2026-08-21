@@ -16,7 +16,7 @@ export function bootstrap() {
         }
     });
     startGlobalEvents();
-    bootstrapPromise = import('../legacy/app-legacy.js?v=20260821-hide-brand-hero-v14')
+    bootstrapPromise = import('../legacy/app-legacy.js?v=20260821-hero-square-top-v15')
         .then(module => {
             window.VakDabLegacy = module;
             // Expose compatibility services only after the legacy module has fully evaluated.

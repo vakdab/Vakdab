@@ -3,9 +3,9 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260821-hide-brand-hero-v14';
-import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-hide-brand-hero-v14';
-import { Storage } from './storage.js?v=20260821-hide-brand-hero-v14';
+} from '../../legacy/app-legacy.js?v=20260821-hero-square-top-v15';
+import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-hero-square-top-v15';
+import { Storage } from './storage.js?v=20260821-hero-square-top-v15';
 
         const Auth = {
             _user: null,
