@@ -16,7 +16,7 @@ export function bootstrap() {
         }
     });
     startGlobalEvents();
-    bootstrapPromise = import('../legacy/app-legacy.js?v=20260821-hero-square-top-v15')
+    bootstrapPromise = import('../legacy/app-legacy.js?v=20260821-profile-thought-v16')
         .then(module => {
             window.VakDabLegacy = module;
             // Expose compatibility services only after the legacy module has fully evaluated.

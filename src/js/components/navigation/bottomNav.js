@@ -1,6 +1,6 @@
 import { loadFeature } from '../../core/feature-loader.js';
-import { Router } from '../../core/compat/router.js?v=20260821-hero-square-top-v15';
-import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260821-hero-square-top-v15';
+import { Router } from '../../core/compat/router.js?v=20260821-profile-thought-v16';
+import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260821-profile-thought-v16';
 
 export function initBottomNav() {
 

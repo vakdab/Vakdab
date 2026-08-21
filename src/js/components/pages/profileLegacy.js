@@ -4,9 +4,57 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-hero-square-top-v15';
-import { getProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-hero-square-top-v15';
-import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-hero-square-top-v15';
+} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v16';
+import { getProfile, saveProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-profile-thought-v16';
+import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-profile-thought-v16';
+
+function bindProfileThought(container) {
+    const trigger = container?.querySelector('#profileThoughtTrigger');
+    const bubble = container?.querySelector('#profileThoughtBubble');
+    const input = container?.querySelector('#profileThoughtInput');
+    const count = container?.querySelector('#profileThoughtCount');
+    const save = container?.querySelector('#profileThoughtSave');
+    const close = container?.querySelector('#profileThoughtClose');
+    if (!trigger || !bubble || !input || !save) return;
+
+    const setOpen = (open) => {
+        bubble.hidden = !open;
+        trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        trigger.classList.toggle('is-open', open);
+        if (open) {
+            requestAnimationFrame(() => {
+                input.focus();
+                input.setSelectionRange(input.value.length, input.value.length);
+            });
+        }
+    };
+    const updateCount = () => {
+        if (count) count.textContent = `${input.value.length}/120`;
+    };
+
+    updateCount();
+    trigger.addEventListener('click', (event) => {
+        event.stopPropagation();
+        setOpen(bubble.hidden);
+    });
+    close?.addEventListener('click', () => setOpen(false));
+    input.addEventListener('input', updateCount);
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') setOpen(false);
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') save.click();
+    });
+    save.addEventListener('click', () => {
+        const profile = getProfile();
+        profile.thought = input.value.trim().slice(0, 120);
+        saveProfile(profile);
+        trigger.classList.toggle('has-thought', Boolean(profile.thought));
+        setOpen(false);
+        showToast(profile.thought ? 'Думку збережено' : 'Думку видалено');
+    });
+    document.addEventListener('click', (event) => {
+        if (!bubble.hidden && !bubble.contains(event.target) && !trigger.contains(event.target)) setOpen(false);
+    }, { once: false });
+}
 
 function primeProfileMediaPlayback(container) {
     if (!container) return;
@@ -74,6 +122,20 @@ export function renderProfilePage() {
                       ${profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, 'profile-avatar-media', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, 'profile-avatar-media', 'avatar') : '')}
                       <span class="avatar-placeholder" style="display:none;">${escapeHtml(profile.nickname.charAt(0).toUpperCase())}</span>
                     </div>
+                    <button type="button" class="profile-thought-trigger${profile.thought ? ' has-thought' : ''}" id="profileThoughtTrigger" aria-label="Відкрити думку" aria-expanded="false" aria-controls="profileThoughtBubble" title="Думка">
+                      <i class="fas fa-comment-dots" aria-hidden="true"></i>
+                    </button>
+                    <div class="profile-thought-bubble" id="profileThoughtBubble" hidden>
+                      <div class="profile-thought-bubble__head">
+                        <strong>Думка</strong>
+                        <button type="button" id="profileThoughtClose" class="profile-thought-bubble__close" aria-label="Закрити думку">×</button>
+                      </div>
+                      <textarea id="profileThoughtInput" maxlength="120" placeholder="Що у тебе в думках?">${escapeHtml(profile.thought || '')}</textarea>
+                      <div class="profile-thought-bubble__foot">
+                        <span id="profileThoughtCount">0/120</span>
+                        <button type="button" id="profileThoughtSave">Зберегти</button>
+                      </div>
+                    </div>
                   </div>
                   <div class="profile-social-summary" aria-label="Соціальні показники">
                     <button type="button" class="profile-social-link profile-social-stat" id="profileFriendsStat" aria-label="Відкрити список друзів">
@@ -136,6 +198,7 @@ export function renderProfilePage() {
             </div>
           `;
             primeProfileMediaPlayback(container);
+            bindProfileThought(container);
             container.querySelector('#profileFriendsStat')?.addEventListener('click', () => Router.goTo('friends'));
             container.querySelector('#profileFollowingStat')?.addEventListener('click', () => Router.goTo('following'));
             if (!isGuestMode && Auth._user?.uid) {
@@ -438,7 +501,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-hero-square-top-v15');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-profile-thought-v16');
         const profile = await getPublicProfile(targetUid);
         if (!profile) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';

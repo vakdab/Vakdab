@@ -1324,3 +1324,130 @@ body:not(.dark-mode) .header .logo-text span {
         border-radius: 0 0 24px 24px !important;
     }
 }
+
+/* Profile thought note: a small avatar action that opens an animated Instagram-Notes-like bubble. */
+.profile-avatar-wrap {
+    position: relative;
+    z-index: 12;
+    overflow: visible !important;
+}
+.profile-thought-trigger {
+    position: absolute;
+    right: -3px;
+    bottom: 1px;
+    z-index: 20;
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border: 3px solid var(--surface, #fff);
+    border-radius: 50%;
+    background: var(--surface, #fff);
+    color: var(--text, #111);
+    box-shadow: 0 5px 14px rgba(0,0,0,.18);
+    cursor: pointer;
+    transition: transform .2s var(--ui-ease), background .2s var(--ui-ease), color .2s var(--ui-ease);
+}
+.profile-thought-trigger i { font-size: 17px; }
+.profile-thought-trigger:hover,
+.profile-thought-trigger:focus-visible { transform: scale(1.08); }
+.profile-thought-trigger:focus-visible { outline: 2px solid var(--text, #111); outline-offset: 3px; }
+.profile-thought-trigger:active { transform: scale(.94); }
+.profile-thought-trigger.has-thought,
+.profile-thought-trigger.is-open {
+    background: var(--text, #111);
+    color: var(--surface, #fff);
+}
+.profile-thought-bubble {
+    position: absolute;
+    left: 26px;
+    top: calc(100% + 10px);
+    z-index: 40;
+    width: min(260px, calc(100vw - 54px));
+    padding: 14px;
+    border: 1px solid color-mix(in srgb, var(--text, #111) 15%, transparent);
+    border-radius: 22px;
+    background: var(--surface, #fff);
+    color: var(--text, #111);
+    box-shadow: 0 16px 38px rgba(0,0,0,.18);
+    transform-origin: 22px 0;
+}
+.profile-thought-bubble:not([hidden]) { animation: profileThoughtPop .28s cubic-bezier(.2,.8,.2,1) both; }
+.profile-thought-bubble::before,
+.profile-thought-bubble::after {
+    position: absolute;
+    content: '';
+    border-radius: 50%;
+    background: var(--surface, #fff);
+    box-shadow: 0 2px 6px rgba(0,0,0,.06);
+}
+.profile-thought-bubble::before { width: 15px; height: 15px; left: 18px; top: -8px; }
+.profile-thought-bubble::after { width: 8px; height: 8px; left: 8px; top: -17px; }
+.profile-thought-bubble__head,
+.profile-thought-bubble__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.profile-thought-bubble__head strong { font-size: .82rem; letter-spacing: .01em; }
+.profile-thought-bubble__close {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-muted, #777);
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.profile-thought-bubble__close:hover { background: var(--surface-muted, #eee); color: var(--text, #111); }
+.profile-thought-bubble textarea {
+    display: block;
+    width: 100%;
+    min-height: 66px;
+    margin: 10px 0;
+    padding: 10px 11px;
+    border: 1px solid color-mix(in srgb, var(--text, #111) 15%, transparent);
+    border-radius: 14px;
+    background: var(--surface-muted, #f3f3f3);
+    color: var(--text, #111);
+    font: inherit;
+    font-size: .8rem;
+    line-height: 1.35;
+    resize: none;
+    outline: none;
+}
+.profile-thought-bubble textarea:focus { border-color: var(--text, #111); box-shadow: 0 0 0 3px color-mix(in srgb, var(--text, #111) 10%, transparent); }
+.profile-thought-bubble__foot span { color: var(--text-muted, #777); font-size: .68rem; }
+.profile-thought-bubble__foot button {
+    min-height: 34px;
+    padding: 0 13px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--text, #111);
+    color: var(--surface, #fff);
+    font: inherit;
+    font-size: .72rem;
+    font-weight: 750;
+    cursor: pointer;
+}
+@keyframes profileThoughtPop {
+    0% { opacity: 0; transform: translateY(-8px) scale(.72); }
+    70% { opacity: 1; transform: translateY(2px) scale(1.03); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (max-width: 479px) {
+    .profile-thought-trigger { width: 38px; height: 38px; right: -1px; }
+    .profile-thought-trigger i { font-size: 15px; }
+    .profile-thought-bubble { left: 20px; width: min(250px, calc(100vw - 48px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .profile-thought-bubble:not([hidden]) { animation: none; }
+    .profile-thought-trigger { transition: none; }
+}

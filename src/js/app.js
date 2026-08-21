@@ -1,3 +1,3 @@
-import { bootstrap } from './core/bootstrap.js?v=20260821-hero-square-top-v15';
+import { bootstrap } from './core/bootstrap.js?v=20260821-profile-thought-v16';
 
 bootstrap();
