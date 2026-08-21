@@ -76,3 +76,6 @@ After cache-busting, the fresh browser render still shows a visible `Сезон 
 
 ## Root stylesheet cache-busting
 The runtime DOM confirmed the season wrapper had `hidden=""` and the season block had `display:none`, but the wrapper still computed to `display:flex`, because the root `app.css` URL itself was cached. The HTML stylesheet link is now versioned to `20260821-player-conditional-v3`, in addition to the updated player-polish import.
+
+## Mikai runtime QA
+After the Mikai entrypoint cache-bust, the movie player runtime reports `Mikai.me` as the source label. The season and episode wrappers have zero height for the movie, while the Ukrainian озвучка select remains visible. The app entry script is the new `20260821-mikai-source-v2` version.
