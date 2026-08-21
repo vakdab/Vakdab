@@ -1,6 +1,6 @@
 import { Storage } from '../../core/compat/storage.js?v=20260821-social-v4';
 import { db } from '../../services/firebase/client.js';
-import { Router } from '../../core/compat/router.js';
+import { Router } from '../../core/compat/router.js?v=20260821-social-v5';
 import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260821-social-v4';
 import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260821-social-v4';
 

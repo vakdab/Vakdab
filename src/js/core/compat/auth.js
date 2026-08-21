@@ -5,7 +5,7 @@ import {
     renderAuthPage, renderProfilePage, showToast
 } from '../../legacy/app-legacy.js?v=20260821-social-v4';
 import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-social-v4';
-import { Storage } from './storage.js';
+import { Storage } from './storage.js?v=20260821-social-v5';
 
         const Auth = {
             _user: null,

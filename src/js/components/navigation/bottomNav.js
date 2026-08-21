@@ -1,5 +1,5 @@
 import { loadFeature } from '../../core/feature-loader.js';
-import { Router } from '../../core/compat/router.js';
+import { Router } from '../../core/compat/router.js?v=20260821-social-v5';
 import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260821-social-v4';
 
 export function initBottomNav() {

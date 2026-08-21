@@ -1,4 +1,4 @@
-import { Auth } from '../../core/compat/auth.js';
+import { Auth } from '../../core/compat/auth.js?v=20260821-social-v5';
 import { Router } from '../../core/compat/router.js?v=20260821-social-v4';
 import { Storage } from '../../core/compat/storage.js?v=20260821-social-v4';
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';

@@ -19,9 +19,9 @@ export const PROFILE_STICKER_SLOTS = 8;
         // ====================================================================
         //  СИСТЕМА АВТОРИЗАЦІЇ
         // ====================================================================
-import { Auth } from '../core/compat/auth.js';
+import { Auth } from '../core/compat/auth.js?v=20260821-social-v5';
 import { Storage } from '../core/compat/storage.js?v=20260821-social-v4';
-import { Router } from '../core/compat/router.js';
+import { Router } from '../core/compat/router.js?v=20260821-social-v5';
 import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260820-player-modern-v1';
 import { initCommunity } from '../components/community/legacyCommunity.js?v=20260821-social-v4';
 import { initBottomNav } from '../components/navigation/bottomNav.js';

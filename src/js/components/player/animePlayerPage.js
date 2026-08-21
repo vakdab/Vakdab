@@ -1,7 +1,7 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
 import { GENRE_MAP } from '../../config/constants.js?v=20260820-hikka-proxy-fix4';
-import { Router } from '../../core/compat/router.js';
+import { Router } from '../../core/compat/router.js?v=20260821-social-v5';
 import { Storage } from '../../core/compat/storage.js?v=20260821-social-v4';
 import { LampaPlayer } from './lampaPlayer.js?v=20260820-player-modern-v1';
 import { DailyStats } from '../rating/ratingSystem.js?v=20260821-social-v4';
