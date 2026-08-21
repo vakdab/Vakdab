@@ -192,6 +192,7 @@ import { DailyStats, Storage, openPlayerPage, showToast } from '../../legacy/app
                 <div class="hero-slide-bg" id="heroBg_${Date.now()}" style="${bgStyle}"></div>
                 <div class="hero-slide-overlay"></div>
                 <div class="hero-slide-content">
+                    <span class="hero-slide-kicker">Обрано для тебе</span>
                     <div class="hero-slide-title">${escapeHeroText(title)}</div>
                     ${synopsisHtml}
                     <div class="hero-slide-tags">
@@ -202,7 +203,7 @@ import { DailyStats, Storage, openPlayerPage, showToast } from '../../legacy/app
                         ${metaHtml}
                     </div>
                     <div class="hero-cta-row">
-                        <button type="button" class="hero-watch-btn"><i class="fas fa-play"></i><span>Дивитись</span></button>
+                        <button type="button" class="hero-watch-btn" aria-label="Дивитись ${escapeHeroText(title)}"><i class="fas fa-play"></i><span>Дивитись</span></button>
                         <button type="button" class="hero-fav-btn${bookmarked ? ' is-active' : ''}" aria-pressed="${bookmarked ? 'true' : 'false'}" aria-label="${bookmarked ? 'Видалити з обраного' : 'Додати в обране'}"><i class="fas fa-heart"></i></button>
                     </div>
                 </div>
@@ -257,8 +258,11 @@ import { DailyStats, Storage, openPlayerPage, showToast } from '../../legacy/app
             if (!dotsContainer) return;
             dotsContainer.innerHTML = '';
             heroItems.forEach((_, idx) => {
-                const dot = document.createElement('div');
+                const dot = document.createElement('button');
+                dot.type = 'button';
                 dot.className = 'hero-dot' + (idx === heroCurrentIndex ? ' active' : '');
+                dot.setAttribute('aria-label', `Показати рекомендацію ${idx + 1}`);
+                dot.setAttribute('aria-current', String(idx === heroCurrentIndex));
                 dot.addEventListener('click', () => goToSlide(idx));
                 dotsContainer.appendChild(dot);
             });
@@ -267,7 +271,9 @@ import { DailyStats, Storage, openPlayerPage, showToast } from '../../legacy/app
         function updateHeroIndicators() {
             const dots = document.querySelectorAll('.hero-dot');
             dots.forEach((dot, idx) => {
-                dot.classList.toggle('active', idx === heroCurrentIndex);
+                const active = idx === heroCurrentIndex;
+                dot.classList.toggle('active', active);
+                dot.setAttribute('aria-current', String(active));
             });
         }
 

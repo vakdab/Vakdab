@@ -66,7 +66,7 @@ import {
 
                 if (route === 'main') {
                     hero.style.display = 'block';
-                    actions.style.display = 'flex';
+                    actions.style.removeProperty('display');
                     if (logo) logo.style.display = 'flex';
                     if (searchBtn) searchBtn.style.display = 'flex';
                 } else {
