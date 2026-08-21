@@ -1,6 +1,6 @@
 import { loadFeature } from '../../core/feature-loader.js';
-import { Router } from '../../core/compat/router.js?v=20260821-all-only-v8';
-import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260821-all-only-v8';
+import { Router } from '../../core/compat/router.js?v=20260821-age-only-v9';
+import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260821-age-only-v9';
 
 export function initBottomNav() {
 

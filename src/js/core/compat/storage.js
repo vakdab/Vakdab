@@ -1,5 +1,5 @@
 import { Auth } from './auth.js';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260821-all-only-v8';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260821-age-only-v9';
         export const Storage = {
             _syncTimer: null,
             _pendingSyncScope: null,

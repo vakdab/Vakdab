@@ -1139,3 +1139,53 @@ body:not(.dark-mode) .header .logo-text span {
         min-height: 120px;
     }
 }
+
+/* Anime and manga keep only large age cards beside the schedule control. */
+.home-catalog-quick-actions {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    min-width: 0;
+}
+.home-catalog-age-rail {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(126px, 148px);
+    gap: 10px;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding: 0 2px 4px;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--accent) 42%, transparent) transparent;
+}
+.home-catalog-age-card {
+    min-width: 126px;
+    min-height: 96px;
+    padding: 12px 10px;
+    border-radius: 18px;
+}
+.home-catalog-age-card .home-catalog-genre-card__icon {
+    width: 48px;
+    height: 48px;
+    flex-basis: 48px;
+    font-size: .95rem;
+}
+.home-catalog-age-card .home-catalog-genre-card__name {
+    font-size: .78rem;
+}
+@media (max-width: 599px) {
+    .home-catalog-quick-actions {
+        align-items: stretch;
+        overflow: hidden;
+    }
+    .home-catalog-age-rail {
+        flex: 1 1 0;
+        grid-auto-columns: minmax(132px, 146px);
+    }
+    .home-catalog-age-card {
+        min-width: 132px;
+        min-height: 104px;
+    }
+}

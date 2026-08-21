@@ -6,7 +6,7 @@ import {
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
     renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-all-only-v8';
+} from '../../legacy/app-legacy.js?v=20260821-age-only-v9';
 
         export const Router = {
             currentRoute: 'main',
