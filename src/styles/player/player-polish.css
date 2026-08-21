@@ -555,3 +555,8 @@ body.player-page-open > .bottom-sheet-overlay {
 }
 #playerPageModal .player-select-leading img { width: 100%; height: 100%; object-fit: cover; }
 #playerPageModal .player-season-mark { border-radius: 10px; background: var(--accent); color: var(--accent-text); }
+
+/* Episode navigation arrows removed; season and episode are now explicit full-width selects. */
+#playerPageModal .player-season-select-wrap { width: 100%; }
+#playerPageModal .player-episode-select-line { grid-template-columns: minmax(0, 1fr); }
+#playerPageModal .player-episode-select-wrap { width: 100%; }
