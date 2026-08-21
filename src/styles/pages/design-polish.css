@@ -189,10 +189,16 @@ header.header,
     padding-inline: .1rem;
 }
 
-.home-catalog-card__play {
-    width: 2.15rem;
-    height: 2.15rem;
+.home-catalog-card__watch {
     box-shadow: 0 5px 15px rgba(0, 0, 0, .25);
+}
+
+.home-catalog-card__fav {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, .25);
+}
+
+.home-catalog-card__rating {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, .2);
 }
 
 .home-catalog-more {

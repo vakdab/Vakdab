@@ -509,12 +509,13 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
 .home-catalog-card:hover .home-catalog-card__poster img { transform: scale(1.05); filter: brightness(1.08); }
 .home-catalog-card__status {
     position: absolute;
-    top: .35rem;
-    left: .35rem;
-    max-width: calc(100% - .7rem);
-    padding: .22rem .35rem;
+    top: .4rem;
+    left: .4rem;
+    z-index: 2;
+    max-width: calc(100% - 3.4rem);
+    padding: .22rem .4rem;
     overflow: hidden;
-    border-radius: 5px;
+    border-radius: 6px;
     background: rgba(8, 8, 10, .78);
     color: #fff;
     font-size: clamp(.48rem, 1vw, .64rem);
@@ -524,25 +525,91 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     white-space: nowrap;
     backdrop-filter: blur(8px);
 }
-.home-catalog-card__play {
+.home-catalog-card__rating {
+    position: absolute;
+    top: .4rem;
+    right: .4rem;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: .22rem;
+    padding: .22rem .4rem;
+    border-radius: 999px;
+    background: rgba(8, 8, 10, .78);
+    color: #fff;
+    font-size: clamp(.5rem, 1vw, .66rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: .01em;
+    backdrop-filter: blur(8px);
+}
+.home-catalog-card__rating i { color: #ffcf4d; font-size: .85em; }
+
+/* Bottom action row over the poster: always-visible "watch" cue and a real
+   favorite toggle. Both meet a >=32px touch target on mobile, >=36px from
+   tablet up, per current mobile-UI guidance — no hover-only affordances. */
+.home-catalog-card__watch {
+    position: absolute;
+    left: .4rem;
+    bottom: .4rem;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    max-width: calc(100% - 3rem);
+    padding: .32rem .55rem;
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 999px;
+    background: rgba(8, 8, 10, .72);
+    color: #fff;
+    font-size: clamp(.56rem, 1.15vw, .68rem);
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    backdrop-filter: blur(8px);
+    transition: background var(--transition), transform var(--transition);
+}
+.home-catalog-card__watch span { overflow: hidden; text-overflow: ellipsis; }
+.home-catalog-card__watch i { font-size: .68em; }
+.home-catalog-card:hover .home-catalog-card__watch,
+.home-catalog-card:focus-visible .home-catalog-card__watch {
+    background: var(--accent);
+    color: var(--accent-text);
+    transform: translateY(-1px);
+}
+.home-catalog-card__fav {
     position: absolute;
     right: .4rem;
     bottom: .4rem;
+    z-index: 3;
     display: grid;
-    width: 1.65rem;
-    height: 1.65rem;
+    width: 1.85rem;
+    height: 1.85rem;
+    min-width: 32px;
+    min-height: 32px;
     place-items: center;
-    border: 1px solid rgba(255,255,255,.35);
+    border: 1px solid rgba(255,255,255,.28);
     border-radius: 50%;
-    background: rgba(0,0,0,.68);
-    color: #fff;
-    font-size: .62rem;
-    opacity: 0;
-    transform: translateY(4px);
-    transition: opacity var(--transition), transform var(--transition);
+    background: rgba(8, 8, 10, .68);
+    color: rgba(255,255,255,.82);
+    font-size: .78rem;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition), transform var(--transition), color var(--transition);
 }
-.home-catalog-card:hover .home-catalog-card__play,
-.home-catalog-card:focus-visible .home-catalog-card__play { opacity: 1; transform: translateY(0); }
+.home-catalog-card__fav:hover {
+    background: rgba(8, 8, 10, .86);
+    transform: translateY(-1px) scale(1.05);
+}
+.home-catalog-card__fav:active { transform: scale(.92); }
+.home-catalog-card__fav.is-active {
+    border-color: color-mix(in srgb, var(--accent) 60%, rgba(255,255,255,.28));
+    background: color-mix(in srgb, var(--accent) 55%, rgba(8,8,10,.68));
+    color: #ff5d7a;
+}
+.home-catalog-card__fav:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
 .home-catalog-card__title {
     display: -webkit-box;
     min-height: 2.45em;
@@ -594,7 +661,28 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     .home-catalog-card__poster, .home-catalog-card__title { border-radius: 9px; }
     .home-catalog-card__title { margin-top: .32rem; font-size: .61rem; }
     .home-catalog-card__meta { font-size: .5rem; }
-    .home-catalog-card__play { display: none; }
+    .home-catalog-card__watch span { display: none; }
+    .home-catalog-card__watch {
+        left: .3rem;
+        bottom: .3rem;
+        width: 2.1rem;
+        height: 2.1rem;
+        min-width: 34px;
+        min-height: 34px;
+        padding: 0;
+        justify-content: center;
+        border-radius: 50%;
+    }
+    .home-catalog-card__fav {
+        right: .3rem;
+        bottom: .3rem;
+        width: 2.1rem;
+        height: 2.1rem;
+        min-width: 34px;
+        min-height: 34px;
+    }
+    .home-catalog-card__rating,
+    .home-catalog-card__status { top: .3rem; }
 }
 @media (min-width: 900px) {
     .home-catalog-grid { gap: 1.1rem; }
@@ -1084,7 +1172,7 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
 @media (hover: none), (pointer: coarse) {
     .home-catalog-card:hover { transform: none; }
     .home-catalog-card:hover .home-catalog-card__poster img { transform: none; filter: none; }
-    .home-catalog-card:hover .home-catalog-card__play { opacity: 0; transform: translateY(4px); }
+    .home-catalog-card:hover .home-catalog-card__watch { background: rgba(8, 8, 10, .72); color: #fff; transform: none; }
 }
 
 
@@ -1116,8 +1204,10 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     transform: translate(-50%, -50%);
     animation: homeCatalogReaderSpin .75s linear infinite;
 }
-.home-catalog-card[aria-busy="true"] .home-catalog-card__play {
+.home-catalog-card[aria-busy="true"] .home-catalog-card__watch,
+.home-catalog-card[aria-busy="true"] .home-catalog-card__fav {
     opacity: 0;
+    pointer-events: none;
 }
 @keyframes homeCatalogReaderSpin {
     to { transform: translate(-50%, -50%) rotate(360deg); }

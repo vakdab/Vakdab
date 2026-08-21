@@ -959,6 +959,31 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             return `Знайдено ${formatHomeCatalogNumber(total)} результатів`;
         }
 
+        // Улюблене на картках каталогу — той самий локальний список закладок,
+        // що й кнопка в плеєрі (Storage.getBookmarks/setBookmarks), тож стан
+        // синхронний з профілем і не залежить від режиму каталогу.
+        export function isCatalogUrlBookmarked(url) {
+            if (!url) return false;
+            return Storage.getBookmarks().some(b => b?.url === url);
+        }
+
+        export function toggleCatalogBookmark(url, title, poster) {
+            if (!url) return false;
+            const bookmarks = Storage.getBookmarks();
+            const idx = bookmarks.findIndex(b => b?.url === url);
+            if (idx >= 0) {
+                bookmarks.splice(idx, 1);
+                Storage.setBookmarks(bookmarks);
+                showToast('Видалено з обраного');
+                return false;
+            }
+            bookmarks.push({ url, title: title || 'Без назви', poster: poster || '', addedAt: Date.now() });
+            Storage.setBookmarks(bookmarks);
+            DailyStats.increment('bookmarksToday', 1);
+            showToast('Додано до обраного');
+            return true;
+        }
+
         export function homeCatalogCardHtml(a) {
             const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
             const title = a.title || 'Без назви';
@@ -967,11 +992,17 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const meta = [type, a.year, status].filter(Boolean).join(' · ');
             const honeyId = a.honeyId || a.honeyTitleId || (homeCatalogMode === 'manga' ? String(a.url || '').split('/').filter(Boolean).pop() : '');
             const isMangaCard = homeCatalogMode === 'manga' && Boolean(honeyId);
-            return `<article class="home-catalog-card${a.readerUrl || a.readerAvailable || isMangaCard ? ' home-catalog-card--reader' : ''}" data-url="${escapeHtml(String(a.url || ''))}"${a.readerUrl ? ` data-reader-url="${escapeHtml(a.readerUrl)}"` : ''}${isMangaCard && !a.readerUrl ? ` data-reader-pending="1" data-honey-id="${escapeHtml(String(honeyId))}"` : ''} data-reader-title="${escapeHtml(title)}" tabindex="0" role="button" aria-label="${escapeHtml(title)}">
+            const url = String(a.url || '');
+            const score = Number(a.score || a.native_score || 0);
+            const ratingHtml = score > 0 ? `<span class="home-catalog-card__rating"><i class="fas fa-star"></i>${score.toFixed(1)}</span>` : '';
+            const bookmarked = isCatalogUrlBookmarked(url);
+            return `<article class="home-catalog-card${a.readerUrl || a.readerAvailable || isMangaCard ? ' home-catalog-card--reader' : ''}" data-url="${escapeHtml(url)}"${a.readerUrl ? ` data-reader-url="${escapeHtml(a.readerUrl)}"` : ''}${isMangaCard && !a.readerUrl ? ` data-reader-pending="1" data-honey-id="${escapeHtml(String(honeyId))}"` : ''} data-reader-title="${escapeHtml(title)}" tabindex="0" role="button" aria-label="${escapeHtml(title)}">
                 <div class="home-catalog-card__poster">
                     <img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" onload="this.classList.add('img--loaded')" onerror="this.onerror=null;this.src='${ANIME_CARD_PLACEHOLDER}'">
                     ${status ? `<span class="home-catalog-card__status">${escapeHtml(status)}</span>` : ''}
-                    <span class="home-catalog-card__play"><i class="fas fa-play"></i></span>
+                    ${ratingHtml}
+                    <button type="button" class="home-catalog-card__fav${bookmarked ? ' is-active' : ''}" aria-pressed="${bookmarked ? 'true' : 'false'}" aria-label="${bookmarked ? 'Видалити з обраного' : 'Додати в обране'}"><i class="fas fa-heart"></i></button>
+                    <span class="home-catalog-card__watch"><i class="fas fa-play"></i><span>Дивитись</span></span>
                 </div>
                 <div class="home-catalog-card__title">${escapeHtml(title)}</div>
                 <div class="home-catalog-card__meta">${escapeHtml(meta || 'Аніме')}</div>
@@ -1039,8 +1070,14 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 // consume the first tap to activate the hover state. Handle the
                 // touch/pointer activation directly and ignore the synthetic click
                 // Safari dispatches immediately afterwards.
+                // The favorite button is a real nested <button> with its own click
+                // handler below — every card-level activation path must ignore
+                // events that originate from it, or tapping the heart would also
+                // open the reader/player underneath it.
+                const isFavTarget = event => Boolean(event.target.closest?.('.home-catalog-card__fav'));
                 let lastTouchActivation = 0;
                 const activateCard = event => {
+                    if (isFavTarget(event)) return;
                     if (event.type === 'pointerup' && event.pointerType !== 'mouse') {
                         lastTouchActivation = Date.now();
                         event.preventDefault();
@@ -1053,7 +1090,21 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 card.addEventListener('pointerup', activateCard, { passive: false });
                 card.addEventListener('click', activateCard);
                 card.addEventListener('keydown', event => {
+                    if (isFavTarget(event)) return;
                     if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
+                });
+
+                const favBtn = card.querySelector('.home-catalog-card__fav');
+                favBtn?.addEventListener('click', event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const posterImg = card.querySelector('.home-catalog-card__poster img');
+                    const title = card.dataset.readerTitle || card.getAttribute('aria-label') || '';
+                    const active = toggleCatalogBookmark(card.dataset.url, title, posterImg?.src || '');
+                    favBtn.classList.toggle('is-active', active);
+                    favBtn.setAttribute('aria-pressed', String(active));
+                    favBtn.setAttribute('aria-label', active ? 'Видалити з обраного' : 'Додати в обране');
+                    // Icon stays a solid heart; only color/opacity communicate the active state (see .home-catalog-card__fav.is-active).
                 });
             });
         }

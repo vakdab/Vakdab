@@ -1,5 +1,5 @@
 import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../services/catalog.js';
-import { openPlayerPage } from '../../legacy/app-legacy.js?v=20260821-social-v13';
+import { DailyStats, Storage, openPlayerPage, showToast } from '../../legacy/app-legacy.js?v=20260821-social-v13';
 
         let heroItems = [],
             heroPool = [],
@@ -125,6 +125,35 @@ import { openPlayerPage } from '../../legacy/app-legacy.js?v=20260821-social-v13
                 .trim();
         }
 
+        // Улюблене на слайдах героя — той самий локальний список закладок, що й
+        // на картках каталогу та в плеєрі (Storage.getBookmarks/setBookmarks).
+        function isHeroItemBookmarked(url) {
+            if (!url) return false;
+            return Storage.getBookmarks().some(b => b?.url === url);
+        }
+
+        function toggleHeroBookmark(item) {
+            if (!item?.url) return false;
+            const bookmarks = Storage.getBookmarks();
+            const idx = bookmarks.findIndex(b => b?.url === item.url);
+            if (idx >= 0) {
+                bookmarks.splice(idx, 1);
+                Storage.setBookmarks(bookmarks);
+                showToast('Видалено з обраного');
+                return false;
+            }
+            bookmarks.push({
+                url: item.url,
+                title: item.title || 'Без назви',
+                poster: item.images?.jpg?.large_image_url || '',
+                addedAt: Date.now()
+            });
+            Storage.setBookmarks(bookmarks);
+            DailyStats.increment('bookmarksToday', 1);
+            showToast('Додано до обраного');
+            return true;
+        }
+
         function renderHeroSlide(item) {
             const container = document.getElementById('heroSlidesContainer');
             if (!container || !item) return;
@@ -158,6 +187,7 @@ import { openPlayerPage } from '../../legacy/app-legacy.js?v=20260821-social-v13
                 ? `background-image: url('${safePoster}');`
                 : 'background: linear-gradient(135deg, #1a1a1a, #2d2d2d);';
 
+            const bookmarked = isHeroItemBookmarked(item.url);
             slide.innerHTML = `
                 <div class="hero-slide-bg" id="heroBg_${Date.now()}" style="${bgStyle}"></div>
                 <div class="hero-slide-overlay"></div>
@@ -170,6 +200,10 @@ import { openPlayerPage } from '../../legacy/app-legacy.js?v=20260821-social-v13
                     <div class="hero-info-pill hero-rating-row hero-rating-row--bottom">
                         <span class="hero-rating-badge"><span class="star">★</span> ${rating}</span>
                         ${metaHtml}
+                    </div>
+                    <div class="hero-cta-row">
+                        <button type="button" class="hero-watch-btn"><i class="fas fa-play"></i><span>Дивитись</span></button>
+                        <button type="button" class="hero-fav-btn${bookmarked ? ' is-active' : ''}" aria-pressed="${bookmarked ? 'true' : 'false'}" aria-label="${bookmarked ? 'Видалити з обраного' : 'Додати в обране'}"><i class="fas fa-heart"></i></button>
                     </div>
                 </div>
             `;
@@ -195,6 +229,26 @@ import { openPlayerPage } from '../../legacy/app-legacy.js?v=20260821-social-v13
             slide.addEventListener('click', () => {
                 if (heroJustSwiped) { heroJustSwiped = false; return; }
                 if (item.url) openPlayerPage(item.url);
+            });
+
+            // Кнопка "Дивитись" робить той самий перехід явним і фокусованим —
+            // не залежить від кліку по всьому слайду.
+            slide.querySelector('.hero-watch-btn')?.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (item.url) openPlayerPage(item.url);
+            });
+
+            // "В обране" — окрема дія, не повинна відкривати плеєр.
+            const favBtn = slide.querySelector('.hero-fav-btn');
+            favBtn?.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                const active = toggleHeroBookmark(item);
+                favBtn.classList.toggle('is-active', active);
+                favBtn.setAttribute('aria-pressed', String(active));
+                favBtn.setAttribute('aria-label', active ? 'Видалити з обраного' : 'Додати в обране');
+                // Icon stays a solid heart; only color/opacity communicate the active state (see .hero-fav-btn.is-active).
             });
         }
 

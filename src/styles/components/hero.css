@@ -318,6 +318,74 @@
             font-weight: 600;
         }
 
+        /* Explicit "Дивитись" / "В обране" actions — sit right under the
+           rating pill, always visible (no hover-only reveal), sized for a
+           comfortable mobile tap target. */
+        .hero-cta-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+        .hero-watch-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            height: 44px;
+            padding: 0 22px;
+            border: none;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #0a0a0a;
+            font-size: 0.92rem;
+            font-weight: 800;
+            letter-spacing: 0.01em;
+            cursor: pointer;
+            box-shadow: 0 10px 26px rgba(0,0,0,0.32);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+        .hero-watch-btn i { font-size: 0.78rem; }
+        .hero-watch-btn:hover,
+        .hero-watch-btn:focus-visible {
+            background: #f0f0f0;
+            transform: translateY(-1px);
+            box-shadow: 0 14px 32px rgba(0,0,0,0.38);
+        }
+        .hero-watch-btn:active { transform: scale(0.97); }
+        .hero-fav-btn {
+            display: grid;
+            place-items: center;
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.22);
+            border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.82);
+            font-size: 1.05rem;
+            cursor: pointer;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+        .hero-fav-btn:hover,
+        .hero-fav-btn:focus-visible {
+            background: rgba(255,255,255,0.18);
+            transform: translateY(-1px);
+        }
+        .hero-fav-btn:active { transform: scale(0.92); }
+        .hero-fav-btn.is-active {
+            color: #ff5d7a;
+            border-color: rgba(255,93,122,0.5);
+            background: rgba(255,93,122,0.14);
+        }
+        @media (max-width: 480px) {
+            .hero-cta-row { margin-top: 4px; gap: 8px; }
+            .hero-watch-btn { height: 40px; padding: 0 18px; font-size: 0.85rem; }
+            .hero-fav-btn { width: 40px; height: 40px; font-size: 0.95rem; }
+        }
+
         /* Dot indicators */
         .hero-dots {
             position: absolute;
