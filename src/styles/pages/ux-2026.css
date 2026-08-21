@@ -433,3 +433,108 @@ a:active { transform: scale(.97); }
     border: 0;
 }
 .hero-dot:focus-visible { outline: 2px solid #fff; outline-offset: 5px; }
+
+/* Follow-up correction from mobile review screenshots. */
+.header {
+    position: relative !important;
+    inset: auto !important;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    min-height: 64px;
+    padding: 12px 0 10px;
+    background: transparent;
+}
+.header .header-left { width: 100%; }
+.header .logo {
+    min-height: 44px;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 0;
+    background: transparent !important;
+    box-shadow: none;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+.header .logo-text h1,
+.header .logo-text span,
+body:not(.dark-mode) .header .logo-text h1,
+body:not(.dark-mode) .header .logo-text span {
+    color: var(--text) !important;
+    text-shadow: none;
+}
+.header .logo-text h1 { font-size: clamp(1.35rem, 4.5vw, 1.65rem); font-weight: 900; }
+.hero-wrapper { clear: both; }
+
+/* The poster itself is now a clean content thumbnail; actions stay on detail/player surfaces. */
+.home-catalog-card__poster::after,
+.home-catalog-card__watch,
+.home-catalog-card__fav { display: none !important; }
+.home-catalog-card { padding-bottom: 10px; }
+
+/* Three readable thumbnails per row on phone screens. */
+.home-catalog-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.home-catalog-card__title {
+    margin-top: 8px;
+    font-size: clamp(.68rem, 2.2vw, .82rem);
+    line-height: 1.2;
+}
+.home-catalog-card__meta { font-size: .58rem; }
+@media (max-width: 599px) {
+    .home-catalog-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 7px; }
+    .home-catalog-card { padding: 5px 5px 9px; border-radius: 16px; }
+    .home-catalog-card__poster { border-radius: 12px; }
+}
+@media (max-width: 380px) {
+    .home-catalog-grid { gap: 8px 5px; }
+    .home-catalog-card__title { font-size: .64rem; }
+    .home-catalog-card__meta { font-size: .53rem; }
+}
+
+/* Compact floating navigation: no giant empty tray and no content overlap. */
+.bottom-nav {
+    left: 50% !important;
+    right: auto !important;
+    bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+    width: min(calc(100% - 24px), 430px) !important;
+    min-height: 0 !important;
+    height: 64px !important;
+    transform: translateX(-50%);
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: center;
+    gap: 4px;
+    padding: 5px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 22px !important;
+    background: color-mix(in srgb, var(--surface) 96%, transparent) !important;
+    box-shadow: 0 12px 34px rgba(0,0,0,.14) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+.bottom-nav .bn-item {
+    width: 100%;
+    min-width: 0;
+    min-height: 52px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+.bottom-nav .bn-pill {
+    width: 100%;
+    min-height: 52px;
+    gap: 4px;
+    padding: 0 4px;
+    border-radius: 16px;
+    background: transparent;
+}
+.bottom-nav .bn-item.active .bn-pill { background: var(--accent); color: var(--accent-text); }
+.bottom-nav .bn-pill svg { width: 22px; height: 22px; flex: 0 0 auto; }
+.bottom-nav .bn-label { font-size: .62rem; font-weight: 800; line-height: 1; }
+@media (max-width: 599px) {
+    .app-container { padding-bottom: calc(5.8rem + env(safe-area-inset-bottom)); }
+    .bottom-nav { width: calc(100% - 24px) !important; }
+}
+@media (min-width: 700px) {
+    .bottom-nav { bottom: 18px !important; }
+}

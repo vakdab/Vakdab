@@ -55,3 +55,6 @@ Browser computed styles revealed that `Router.goTo()` was setting `#actionsRow.s
 
 ## Final mobile QA checkpoint
 The final 390px screenshot shows a contained rounded hero with readable title, synopsis, genre chips, rating/meta, visible 48px Watch and Favorite controls, and accessible slide indicators. Popular and Random actions now sit side-by-side in a balanced two-column toolbar after removing the router's inline flex style. The catalog card begins with a clear title/count header and mode tabs, while the fixed bottom navigation remains reachable without horizontal page overflow.
+
+## Follow-up screenshot QA
+The 390px follow-up preview confirms that VakDab is now a normal header brand above the hero rather than a pill floating over artwork. The home catalog poster cards no longer render play/favorite controls or the related bottom gradient. The mobile catalog is configured for three equal columns, and the bottom navigation is a compact floating five-item bar instead of a tall wide tray.

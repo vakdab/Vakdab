@@ -1001,8 +1001,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     <img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" onload="this.classList.add('img--loaded')" onerror="this.onerror=null;this.src='${ANIME_CARD_PLACEHOLDER}'">
                     ${status ? `<span class="home-catalog-card__status">${escapeHtml(status)}</span>` : ''}
                     ${ratingHtml}
-                    <button type="button" class="home-catalog-card__fav${bookmarked ? ' is-active' : ''}" aria-pressed="${bookmarked ? 'true' : 'false'}" aria-label="${bookmarked ? 'Видалити з обраного' : 'Додати в обране'}"><i class="fas fa-heart"></i></button>
-                    <span class="home-catalog-card__watch"><i class="fas fa-play"></i><span>Дивитись</span></span>
                 </div>
                 <div class="home-catalog-card__title">${escapeHtml(title)}</div>
                 <div class="home-catalog-card__meta">${escapeHtml(meta || 'Аніме')}</div>
