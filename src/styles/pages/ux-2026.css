@@ -1295,3 +1295,22 @@ body:not(.dark-mode) .header .logo-text span {
     margin-left: calc(50% - 50vw) !important;
     margin-right: calc(50% - 50vw) !important;
 }
+
+/* Minimal top shell: keep hidden logoHome hook for navigation, but remove the visible brand row. */
+.header {
+    height: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+}
+.header .logo,
+.header .logo-text,
+.header .agnative-topnav-clock,
+#agnativeTopnavClock {
+    display: none !important;
+}
+.hero-wrapper {
+    margin-top: 0 !important;
+}
