@@ -1211,6 +1211,10 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             'ova': 'OVA', 'ona': 'ONA', 'special': 'Спешл', 'tv special': 'ТВ спешл', 'music': 'Музика'
         };
         const relatedLocalizationCache = new Map();
+        const RELATED_TITLE_OVERRIDES_UA = {
+            'yuusha tokkyuu might gaine': 'Юуша Токкюу Майті Ґейн',
+            'yuusha tokkyuu might gain': 'Юуша Токкюу Майті Ґейн'
+        };
         const normalizeRelatedKey = value => String(value || '').toLocaleLowerCase('uk-UA')
             .replace(/[\u2010-\u2015:!?.,'’"()\[\]{}]/g, ' ').replace(/\s+/g, ' ').trim();
         const relatedRelationLabelUa = value => RELATED_RELATION_LABELS_UA[String(value || '').trim().toLocaleLowerCase('en-US')] || String(value || '');
@@ -1248,7 +1252,8 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
         }
 
         function relatedCardMarkup(x) {
-            const title = x.title || x.titleEn || 'Без назви';
+            const rawTitle = x.title || x.titleEn || 'Без назви';
+            const title = RELATED_TITLE_OVERRIDES_UA[normalizeRelatedKey(x.titleEn || x.title)] || rawTitle;
             const poster = normalizePosterUrl(x.image || '');
             const typeLabel = relatedTypeLabelUa(x.typeLabel);
             const relationLabel = relatedRelationLabelUa(x.relationLabel);
