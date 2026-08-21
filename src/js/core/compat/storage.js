@@ -1,5 +1,5 @@
 import { Auth } from './auth.js';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260821-hero-edge-v12';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260821-hero-fullbleed-v13';
         export const Storage = {
             _syncTimer: null,
             _pendingSyncScope: null,

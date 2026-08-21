@@ -1287,3 +1287,11 @@ body:not(.dark-mode) .header .logo-text span {
 .hero-slide.active .hero-slide-bg {
     transform: scale(1.04) !important;
 }
+
+/* Full-bleed hero: escape the app shell's horizontal padding on every viewport. */
+.hero-wrapper {
+    width: 100vw !important;
+    max-width: none !important;
+    margin-left: calc(50% - 50vw) !important;
+    margin-right: calc(50% - 50vw) !important;
+}
