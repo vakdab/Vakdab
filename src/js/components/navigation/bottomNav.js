@@ -1,6 +1,6 @@
 import { loadFeature } from '../../core/feature-loader.js';
-import { Router } from '../../core/compat/router.js?v=20260821-compact-filter-rail-v6';
-import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260821-compact-filter-rail-v6';
+import { Router } from '../../core/compat/router.js?v=20260821-one-all-instant-v7';
+import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260821-one-all-instant-v7';
 
 export function initBottomNav() {
 

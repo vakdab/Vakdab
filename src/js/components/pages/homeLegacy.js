@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-compact-filter-rail-v6';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-compact-filter-rail-v6';
+} from '../../legacy/app-legacy.js?v=20260821-one-all-instant-v7';
+import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-one-all-instant-v7';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -781,7 +781,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             return options.map(option => {
                 const active = option.key === value;
                 const icon = homeCatalogFilterCardIcon(groupKey, option, label);
-                return `<button class="home-catalog-genre-card home-catalog-mode-filter-card${active ? ' active' : ''}" type="button" data-home-catalog-filter-card data-home-catalog-filter-group="${escapeHtml(groupKey)}" data-home-catalog-filter-value="${escapeHtml(option.key)}" aria-pressed="${active ? 'true' : 'false'}" role="listitem"><span class="home-catalog-genre-card__icon${option.key === 'all' ? ' home-catalog-genre-card__icon--all' : ''}">${escapeHtml(icon)}</span><span class="home-catalog-mode-filter-card__group">${escapeHtml(label)}</span><span class="home-catalog-genre-card__name">${escapeHtml(option.label)}</span></button>`;
+                const groupMarkup = label ? `<span class="home-catalog-mode-filter-card__group">${escapeHtml(label)}</span>` : '';
+                return `<button class="home-catalog-genre-card home-catalog-mode-filter-card${active ? ' active' : ''}" type="button" data-home-catalog-filter-card data-home-catalog-filter-group="${escapeHtml(groupKey)}" data-home-catalog-filter-value="${escapeHtml(option.key)}" aria-pressed="${active ? 'true' : 'false'}" role="listitem"><span class="home-catalog-genre-card__icon${option.key === 'all' ? ' home-catalog-genre-card__icon--all' : ''}">${escapeHtml(icon)}</span>${groupMarkup}<span class="home-catalog-genre-card__name">${escapeHtml(option.label)}</span></button>`;
             }).join('');
         }
 
@@ -793,14 +794,18 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 ? HOME_MANGA_AGE_OPTIONS
                 : ranobeFilterAges().map(option => ({ key: option.key, label: option.label }));
             const availabilityOptions = isManga
-                ? [{ key: 'all', label: 'Усі тайтли' }, { key: 'available', label: 'Є що читати' }]
-                : [{ key: 'all', label: 'Усі тайтли' }, { key: 'available', label: 'Є доступний розділ' }];
-            const groups = [homeCatalogFilterCardGroup('availability', 'Доступність', availabilityOptions, homeCatalogAvailability), homeCatalogFilterCardGroup('age', 'Вікова категорія', ageOptions, homeCatalogAge)];
+                ? [{ key: 'available', label: 'Є що читати' }]
+                : [{ key: 'available', label: 'Є доступний розділ' }];
+            const allFiltersActive = isManga
+                ? homeCatalogAvailability === 'all' && homeCatalogAge === 'all'
+                : homeCatalogStatus === 'all' && homeCatalogAvailability === 'all' && homeCatalogAge === 'all' && homeCatalogOrigin === 'all';
+            const allCard = homeCatalogFilterCardGroup('all', '', [{ key: 'all', label: 'Усі' }], allFiltersActive ? 'all' : '__inactive__');
+            const groups = [allCard, homeCatalogFilterCardGroup('availability', 'Доступність', availabilityOptions, homeCatalogAvailability), homeCatalogFilterCardGroup('age', 'Вікова категорія', ageOptions.filter(option => option.key !== 'all'), homeCatalogAge)];
             if (!isManga) {
-                groups.unshift(homeCatalogFilterCardGroup('status', 'Статус', [{ key: 'all', label: 'Усі статуси' }, { key: 'ongoing', label: 'Онґоїнг' }, { key: 'finished', label: 'Завершені' }], homeCatalogStatus));
-                groups.push(homeCatalogFilterCardGroup('origin', 'Походження', [{ key: 'all', label: 'Усі країни та типи' }, ...ranobeFilterOrigins().map(origin => ({ key: origin, label: origin }))], homeCatalogOrigin));
+                groups.splice(1, 0, homeCatalogFilterCardGroup('status', 'Статус', [{ key: 'ongoing', label: 'Онґоїнг' }, { key: 'finished', label: 'Завершені' }], homeCatalogStatus));
+                groups.push(homeCatalogFilterCardGroup('origin', 'Походження', ranobeFilterOrigins().map(origin => ({ key: origin, label: origin })), homeCatalogOrigin));
             }
-            return `<section class="home-catalog-genre-browser home-catalog-mode-filter-panel" aria-labelledby="homeCatalogModeFiltersTitle"><div class="home-catalog-genre-browser__heading"><div><span class="home-catalog-genre-browser__eyebrow">Швидкий вибір</span><h3 id="homeCatalogModeFiltersTitle">${title}</h3></div><span class="home-catalog-genre-browser__hint">Проведіть убік</span></div><div class="home-catalog-genre-rail home-catalog-mode-filter-rail" role="list" aria-label="${escapeHtml(title)}">${groups.join('')}</div><div class="home-catalog-mode-filter-actions"><button type="button" class="home-catalog-mode-filter-reset" data-home-catalog-filter-reset>Скинути</button><button type="button" class="home-catalog-mode-filter-apply" data-home-catalog-filter-apply>Застосувати</button></div></section>`;
+            return `<section class="home-catalog-genre-browser home-catalog-mode-filter-panel" aria-labelledby="homeCatalogModeFiltersTitle"><div class="home-catalog-genre-browser__heading"><div><span class="home-catalog-genre-browser__eyebrow">Швидкий вибір</span><h3 id="homeCatalogModeFiltersTitle">${title}</h3></div><span class="home-catalog-genre-browser__hint">Проведіть убік</span></div><div class="home-catalog-genre-rail home-catalog-mode-filter-rail" role="list" aria-label="${escapeHtml(title)}">${groups.join('')}</div></section>`;
         }
 
         export async function loadHoneyMangaFullCatalog() {
@@ -1323,26 +1328,31 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         }
 
         function bindHomeCatalogModeFilters(root) {
-            root.querySelectorAll('[data-home-catalog-filter-card]').forEach(control => control.addEventListener('click', () => {
+            root.querySelectorAll('[data-home-catalog-filter-card]').forEach(control => control.addEventListener('click', async () => {
                 const group = control.dataset.homeCatalogFilterGroup;
+                if (group === 'all') {
+                    resetHomeCatalogModeFilters();
+                    await reloadHomeCatalog();
+                    return;
+                }
                 root.querySelectorAll(`[data-home-catalog-filter-card][data-home-catalog-filter-group="${group}"]`).forEach(item => {
                     const active = item === control;
                     item.classList.toggle('active', active);
                     item.setAttribute('aria-pressed', String(active));
                 });
-                control.closest('.home-catalog-mode-filter-panel')?.classList.add('is-dirty');
-            }));
-            root.querySelector('[data-home-catalog-filter-apply]')?.addEventListener('click', async event => {
-                const button = event.currentTarget;
-                button.disabled = true;
-                button.textContent = 'Завантаження…';
+                const allCard = root.querySelector('[data-home-catalog-filter-card][data-home-catalog-filter-group="all"]');
+                allCard?.classList.remove('active');
+                allCard?.setAttribute('aria-pressed', 'false');
+                const panel = control.closest('.home-catalog-mode-filter-panel');
+                if (panel?.dataset.filterBusy === 'true') return;
+                panel?.setAttribute('data-filter-busy', 'true');
+                panel?.setAttribute('aria-busy', 'true');
                 try { await applyHomeCatalogModeFilters(root); }
-                finally { button.disabled = false; button.textContent = 'Застосувати'; root.querySelector('.home-catalog-mode-filter-panel')?.classList.remove('is-dirty'); }
-            });
-            root.querySelector('[data-home-catalog-filter-reset]')?.addEventListener('click', async () => {
-                resetHomeCatalogModeFilters();
-                await reloadHomeCatalog();
-            });
+                finally {
+                    panel?.removeAttribute('data-filter-busy');
+                    panel?.setAttribute('aria-busy', 'false');
+                }
+            }));
         }
 
         function syncHomeCatalogModeControls(root = document) {
