@@ -568,15 +568,20 @@ body.player-page-open > .bottom-sheet-overlay {
     display: none !important;
 }
 
-/* v51: у player не показуємо проміжний Mikai/Hikka hero poster, щоб під час
-   відкриття не було мерехтіння з English title; основні дані йдуть одразу після
-   української назви та короткого опису. */
+/* v54: poster має бути обов’язково; під час завантаження він прозорий,
+   щоб не показувати тимчасовий asset або English title. Після load показується
+   саме poster поточного аніме. */
 #playerPageModal #page-info {
     display: flex !important;
     flex-direction: column;
 }
 #playerPageModal #page-info > .hero-img {
-    display: none !important;
+    display: block !important;
+}
+#playerPageModal #page-info > .hero-img.is-loading {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 #playerPageModal #page-info > .content-top { order: 10; }
 #playerPageModal #page-info > .anime-info-section { order: 20; }
@@ -588,7 +593,9 @@ body.player-page-open > .bottom-sheet-overlay {
 #playerPageModal #page-info > #relatedSection { order: 80; }
 #playerPageModal #page-info > #mediaSection { order: 90; }
 #playerPageModal #page-info > section:last-of-type { order: 100; }
-#playerPageModal #page-info > .content-top .meta-line { margin-top: 2px; }
+#playerPageModal #page-info > .content-top .meta-line {
+    display: none !important;
+}
 #playerPageModal #page-info > .ratings-row {
     display: none !important;
 }

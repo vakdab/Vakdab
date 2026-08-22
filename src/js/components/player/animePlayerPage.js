@@ -1,22 +1,22 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
 import { GENRE_MAP } from '../../config/constants.js?v=20260820-hikka-proxy-fix4';
-import { Router } from '../../core/compat/router.js?v=20260822-player-overlay-v53';
-import { Storage } from '../../core/compat/storage.js?v=20260822-player-overlay-v53';
+import { Router } from '../../core/compat/router.js?v=20260822-player-overlay-v54';
+import { Storage } from '../../core/compat/storage.js?v=20260822-player-overlay-v54';
 import { LampaPlayer } from './lampaPlayer.js?v=20260820-player-modern-v1';
-import { DailyStats } from '../rating/ratingSystem.js?v=20260822-player-overlay-v53';
+import { DailyStats } from '../rating/ratingSystem.js?v=20260822-player-overlay-v54';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, searchHikkaAllTitles, switchProviderSource
-} from '../../services/catalog.js?v=20260822-player-overlay-v53';
+} from '../../services/catalog.js?v=20260822-player-overlay-v54';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
-} from '../pages/homeLegacy.js?v=20260822-player-overlay-v53';
-import { renderProfilePage } from '../pages/profileLegacy.js?v=20260822-player-overlay-v53';
+} from '../pages/homeLegacy.js?v=20260822-player-overlay-v54';
+import { renderProfilePage } from '../pages/profileLegacy.js?v=20260822-player-overlay-v54';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v53';
+} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v54';
 import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
 
         // ====================================================================
@@ -134,8 +134,10 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             playerPageIsPlaying = false;
             document.getElementById('playerVideoContainer').classList.add('active');
             const posterTargets = [document.getElementById('playerPosterImg'), document.getElementById('playerHeroPoster')];
-            posterTargets.forEach(img => { if (img) { img.src = CATALOG_POSTER_FALLBACK; img.alt = ''; } });
-            document.getElementById('playerBlurBg').style.backgroundImage = `url(${CATALOG_POSTER_FALLBACK})`;
+            posterTargets.forEach(img => { if (img) { img.src = ''; img.alt = ''; } });
+            const playerHero = document.getElementById('playerBlurBg');
+            playerHero.classList.add('is-loading');
+            playerHero.style.backgroundImage = '';
             document.getElementById('playerPageVideo').innerHTML = '';
             document.getElementById('episodeViewGrid').innerHTML = '';
             document.getElementById('episodeViewCompact').innerHTML = '';
@@ -178,19 +180,27 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
                 const hikkaPosterUrl = normalizePosterUrl(anime.images?.jpg?.large_image_url);
                 const mikaiPosterUrl = normalizePosterUrl(anime.mikaiPosterUrl || '', '');
                 const posterUrl = mikaiPosterUrl || hikkaPosterUrl;
-                const posterTargets = [document.getElementById('playerPosterImg'), document.getElementById('playerHeroPoster')];
+                const heroPoster = document.getElementById('playerHeroPoster');
+                const revealPlayerHero = () => playerHero.classList.remove('is-loading');
+                const posterTargets = [document.getElementById('playerPosterImg'), heroPoster];
                 posterTargets.forEach(img => {
                     if (!img) return;
                     img.onerror = () => {
-                        if (hikkaPosterUrl && img.src !== hikkaPosterUrl) img.src = hikkaPosterUrl;
+                        if (img.src !== hikkaPosterUrl && hikkaPosterUrl) {
+                            img.src = hikkaPosterUrl;
+                        } else {
+                            revealPlayerHero();
+                        }
                     };
+                    if (img === heroPoster) img.onload = revealPlayerHero;
                     img.src = posterUrl;
                     if (img.id === 'playerHeroPoster') img.alt = anime.title || '';
                 });
+                if (heroPoster?.complete && heroPoster.naturalWidth > 0) revealPlayerHero();
                 document.getElementById('playerPosterTitle').textContent = anime.title;
                 const kickerEl = document.getElementById('playerKicker');
                 if (kickerEl) {
-                    kickerEl.textContent = anime.originalTitle || anime.title;
+                    kickerEl.textContent = anime.title;
                     kickerEl.style.display = mikaiPosterUrl ? 'none' : '';
                 }
                 document.getElementById('playerTopbarTitle').textContent = anime.title;
