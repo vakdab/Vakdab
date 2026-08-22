@@ -1,6 +1,6 @@
-import { Auth } from '../../core/compat/auth.js?v=20260822-catalog-genres-v55';
-import { Router } from '../../core/compat/router.js?v=20260822-catalog-genres-v55';
-import { Storage } from '../../core/compat/storage.js?v=20260822-catalog-genres-v55';
+import { Auth } from '../../core/compat/auth.js?v=20260822-schedule-page-v56';
+import { Router } from '../../core/compat/router.js?v=20260822-schedule-page-v56';
+import { Storage } from '../../core/compat/storage.js?v=20260822-schedule-page-v56';
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
 
@@ -416,7 +416,7 @@ function isGifUrl(url) {
                         document.body.classList.add('community-active');
                         const nav = document.getElementById('bottomNav');
                         if (nav) nav.classList.add('hidden-nav');
-                        import('../community/legacyCommunity.js?v=20260822-catalog-genres-v55')
+                        import('../community/legacyCommunity.js?v=20260822-schedule-page-v56')
                             .then(({ initCommunity }) => {
                                 initCommunity();
                                 setTimeout(() => {

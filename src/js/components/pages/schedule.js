@@ -1,4 +1,4 @@
-import { openScheduleItemInPlayer } from './homeLegacy.js?v=20260822-catalog-genres-v55';
+import { openScheduleItemInPlayer } from './homeLegacy.js?v=20260822-schedule-page-v56';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() - Date.now()); const total = Math.floor(ms / 1000); const days = Math.floor(total / 86400); const hours = Math.floor((total % 86400) / 3600); const minutes = Math.floor((total % 3600) / 60); return days ? `через ${days} д ${hours} год` : hours ? `через ${hours} год ${minutes} хв` : `через ${minutes} хв`; };
@@ -79,7 +79,7 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
             const date = scheduleItemDate(item, offset);
             const dateText = date ? new Intl.DateTimeFormat('uk-UA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(date) : 'Час невідомий';
             const countdown = date && date.getTime() > Date.now() ? `<span class="schedule-countdown" data-time="${date.toISOString()}">${countdownText(date)}</span>` : '';
-            return `<article class="schedule-item schedule-week-item" data-title="${escapeHtml(title)}" data-title-en="${escapeHtml(titleEn)}" data-slug="${escapeHtml(a.slug || '')}">
+            return `<article class="schedule-item schedule-week-item" role="button" tabindex="0" aria-label="Відкрити ${escapeHtml(title)}" data-title="${escapeHtml(title)}" data-title-en="${escapeHtml(titleEn)}" data-slug="${escapeHtml(a.slug || '')}">
                 <div class="schedule-item__poster"><img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.style.opacity=0"></div>
                 <div class="schedule-item__info"><div class="schedule-item__title">${escapeHtml(title)}</div><div class="schedule-item__ep">${item?.episode ? `Епізод ${escapeHtml(item.episode)}` : 'Наступний епізод'} · ${escapeHtml(dateText)}</div>${countdown}</div><i class="fas fa-chevron-right schedule-item__arrow"></i>
             </article>`;
@@ -100,7 +100,13 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
                     return `<section class="schedule-week-day${offset === 0 ? ' is-today' : ''}"><div class="schedule-week-day__title"><strong>${day}</strong><span>${offset === 0 ? 'Сьогодні' : formatScheduleDisplayDate(d)}</span></div><div class="schedule-week-list">${list.map(item => scheduleCard(item, offset)).join('')}</div></section>`;
                 }).join('');
                 content.innerHTML = sections || '<div class="loader">На найближчі дні розкладу немає</div>';
-                content.querySelectorAll('.schedule-week-item').forEach(el => el.addEventListener('click', () => openScheduleItemInPlayer(el.dataset.title, el)));
+                content.querySelectorAll('.schedule-week-item').forEach(el => {
+                    const open = () => openScheduleItemInPlayer(el.dataset.title, el);
+                    el.addEventListener('click', open);
+                    el.addEventListener('keydown', event => {
+                        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
+                    });
+                });
                 if (scheduleState.weekTimer) clearInterval(scheduleState.weekTimer);
                 scheduleState.weekTimer = setInterval(() => content.querySelectorAll('.schedule-countdown').forEach(el => { const d = new Date(el.dataset.time); el.textContent = countdownText(d); }), 60000);
             } catch (e) {
@@ -116,8 +122,17 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
             const container = document.getElementById('schedulePageContainer');
             if (!container) return;
             container.innerHTML = `
-                <div class="genre-page-header"><h2>Розклад виходу</h2></div>
-                <p class="schedule-page-hint">Актуальний розклад онґоїнг-аніме, згрупований за днями. Час показується лише коли його повертає джерело.</p>
+                <section class="schedule-page-hero" aria-labelledby="schedulePageTitle">
+                    <div class="schedule-page-hero__ambient" aria-hidden="true"></div>
+                    <div class="schedule-page-hero__copy">
+                        <span class="schedule-page-kicker"><i class="fas fa-calendar-days" aria-hidden="true"></i> Розклад онґоїнг-аніме</span>
+                        <h2 id="schedulePageTitle">Розклад виходу серій</h2>
+                        <p class="schedule-page-hint">Зверніть увагу, що це дата виходу на телебаченні в Японії, українські адаптації потребують певного часу.</p>
+                    </div>
+                    <div class="schedule-page-hero__character" aria-hidden="true">
+                        <img src="src/assets/schedule/schedule-american-flag-girl.png" alt="" loading="eager" decoding="async">
+                    </div>
+                </section>
                 <div id="scheduleWeekContent" class="schedule-week-content"></div>
             `;
             loadScheduleWeek();

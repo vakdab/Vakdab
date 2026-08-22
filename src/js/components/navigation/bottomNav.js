@@ -1,6 +1,6 @@
 import { loadFeature } from '../../core/feature-loader.js';
-import { Router } from '../../core/compat/router.js?v=20260822-catalog-genres-v55';
-import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260822-catalog-genres-v55';
+import { Router } from '../../core/compat/router.js?v=20260822-schedule-page-v56';
+import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260822-schedule-page-v56';
 
 export function initBottomNav() {
 
