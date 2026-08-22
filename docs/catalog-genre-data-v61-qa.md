@@ -41,3 +41,7 @@ With a fresh v63 module URL, the homepage displayed exactly 19 requested genre c
 ## v64 matcher fix verification
 
 After preserving `genreSlugs` in Hikka-normalized items and using those slugs in the homepage matcher, the exact 19-button list rendered correctly. `Чарівниці` (`mahou-shoujo`) now returns `Показано 24 з 68 результатів` with 24 cards; `Трилер` (`suspense`) returns 283 results with 24 cards; returning to `Усі` restores 4 187 results with 24 cards. Each freshly rendered selected button reports `aria-pressed="true"`.
+
+## Live v64 verification
+
+After Pages deployment of commit `2f11236`, the live homepage displayed exactly the requested 19 genres and no previous genre labels. Live functional checks returned 68 results / 24 cards for `Чарівниці`, 283 results / 24 cards for `Трилер`, and restored 4 187 results / 24 cards for `Усі жанри`; each selected control retained `aria-pressed="true"` after reload.
