@@ -111,7 +111,8 @@ async function handleMessage(message, env) {
 
   const memoryKey = getMemoryKey(message.from);
   const text = (message.text || '').trim();
-
+  // Активна рулетка має перехоплювати і текст, і медіа без text/caption.
+  if (await relayRouletteMessage(message, env)) return;
   if (text === '/start') {
     const state = getState(chatId);
     state.screen = 'home';
@@ -150,12 +151,8 @@ async function handleMessage(message, env) {
     await handleLunaMessage(chatId, memoryKey, text, env);
     return;
   }
-
   if (!text) return;
-
   const state = getState(chatId);
-
-  if (await relayRouletteMessage(message, env)) return;
 
   if (state.screen === 'waiting_for_luna') {
     await handleLunaMessage(chatId, memoryKey, text, env);
