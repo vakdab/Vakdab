@@ -273,10 +273,19 @@ export class LampaPlayer {
                             <button class="lp-btn" id="lpVolBtn" title="Вимкнути звук" aria-label="Вимкнути звук">${LP_ICONS.volOn}</button>
                             <input class="lp-volume" id="lpVolume" type="range" min="0" max="1" step="0.05" value="0.8" aria-label="Гучність">
                         </div>
+                        <button class="lp-btn lp-fullscreen-btn" id="lpFullscreenBtn" title="Повний екран" aria-label="Повний екран">${LP_ICONS.fsEnter}</button>
                     </div>
                 `;
                 this._controls = controls;
                 wrap.appendChild(controls);
+
+                const qualityRail = document.createElement('div');
+                qualityRail.className = 'lp-quality-rail';
+                qualityRail.hidden = true;
+                qualityRail.setAttribute('aria-label', 'Якість відео');
+                wrap.appendChild(qualityRail);
+                this._qualityRail = qualityRail;
+                wrap.classList.add('is-native');
 
                 this.container.appendChild(wrap);
                 this._bindEvents();
@@ -331,13 +340,13 @@ export class LampaPlayer {
 
                 // Click on wrap — toggle play, show controls
                 wrap.addEventListener('click', e => {
-                    if (e.target.closest('.lp-controls, .video-overlay-topbar, .player-preview-play')) return;
+                    if (e.target.closest('.lp-controls, .lp-quality-rail, .video-overlay-topbar, .player-preview-play')) return;
                     this._flashCenter();
                     this.togglePlay();
                     this._showControls();
                 });
                 wrap.addEventListener('dblclick', e => {
-                    if (e.target.closest('.lp-controls, .video-overlay-topbar, .player-preview-play')) return;
+                    if (e.target.closest('.lp-controls, .lp-quality-rail, .video-overlay-topbar, .player-preview-play')) return;
                     this.toggleFullscreen();
                 });
                 wrap.addEventListener('mousemove', () => this._showControls());
@@ -366,6 +375,7 @@ export class LampaPlayer {
                 // Volume — mute toggle plus a compact range slider.
                 const volBtn = wrap.querySelector('#lpVolBtn');
                 const volumeSlider = wrap.querySelector('#lpVolume');
+                const fullscreenBtn = wrap.querySelector('#lpFullscreenBtn');
                 v.volume = this.state.volume ?? 0.8;
                 if (volBtn) volBtn.addEventListener('click', e => {
                     e.stopPropagation();
@@ -383,6 +393,10 @@ export class LampaPlayer {
                     this._updateVolBtn();
                 });
                 v.addEventListener('volumechange', () => this._updateVolBtn());
+                fullscreenBtn?.addEventListener('click', event => {
+                    event.stopPropagation();
+                    this.toggleFullscreen();
+                });
 
                 const skipBy = seconds => {
                     if (!Number.isFinite(v.duration)) return;
@@ -401,6 +415,7 @@ export class LampaPlayer {
                 const qualityBtn = wrap.querySelector('#lpQualityBtn');
                 const qualityMenu = wrap.querySelector('#lpQualityMenu');
                 const qualityLabel = wrap.querySelector('#lpQualityLabel');
+                const qualityRail = this._qualityRail;
 
                 const setMenuOpen = (menu, btn, open) => {
                     if (!menu || !btn) return;
@@ -442,19 +457,35 @@ export class LampaPlayer {
                     });
                     closePlayerMenus();
                 }));
+                const applyQuality = option => {
+                    if (!option) return;
+                    const idx = Number(option.dataset.qualityIndex);
+                    if (this.hls) this.hls.currentLevel = idx;
+                    const label = option.dataset.qualityLabel || 'Авто';
+                    if (qualityLabel) qualityLabel.textContent = label;
+                    qualityMenu?.querySelectorAll('[data-quality-index]').forEach(item => {
+                        const active = item === option || Number(item.dataset.qualityIndex) === idx;
+                        item.classList.toggle('is-active', active);
+                        item.setAttribute('aria-checked', String(active));
+                    });
+                    qualityRail?.querySelectorAll('[data-quality-index]').forEach(item => {
+                        const active = item === option || (idx >= 0 && Number(item.dataset.qualityIndex) === idx);
+                        item.classList.toggle('is-active', active);
+                        item.setAttribute('aria-checked', String(active));
+                    });
+                    closePlayerMenus();
+                };
                 qualityMenu?.addEventListener('click', e => {
                     const option = e.target.closest('[data-quality-index]');
                     if (!option) return;
                     e.stopPropagation();
-                    const idx = Number(option.dataset.qualityIndex);
-                    if (this.hls) this.hls.currentLevel = idx;
-                    if (qualityLabel) qualityLabel.textContent = option.dataset.qualityLabel || 'Авто';
-                    qualityMenu.querySelectorAll('[data-quality-index]').forEach(o => {
-                        const a = o === option;
-                        o.classList.toggle('is-active', a);
-                        o.setAttribute('aria-checked', String(a));
-                    });
-                    closePlayerMenus();
+                    applyQuality(option);
+                });
+                qualityRail?.addEventListener('click', e => {
+                    const option = e.target.closest('[data-quality-index]');
+                    if (!option) return;
+                    e.stopPropagation();
+                    applyQuality(option);
                 });
                 document.addEventListener('click', closePlayerMenus);
                 this._closePlayerMenus = closePlayerMenus;
@@ -465,13 +496,16 @@ export class LampaPlayer {
 
                 this._onFullscreenChange = () => {
                     this.state.fullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
-                    const pageFs = document.getElementById('playerFullscreenBtn');
-                    if (pageFs) {
-                        pageFs.innerHTML = this.state.fullscreen ? LP_ICONS.fsExit : LP_ICONS.fsEnter;
-                        pageFs.title = this.state.fullscreen ? 'Вийти з повного екрана' : 'Повний екран';
-                        pageFs.setAttribute('aria-label', pageFs.title);
-                        pageFs.classList.toggle('is-fullscreen', this.state.fullscreen);
-                    }
+                    const fullscreenButtons = [
+                        document.getElementById('playerFullscreenBtn'),
+                        this.containerRef?.querySelector('#lpFullscreenBtn')
+                    ].filter(Boolean);
+                    fullscreenButtons.forEach(button => {
+                        button.innerHTML = this.state.fullscreen ? LP_ICONS.fsExit : LP_ICONS.fsEnter;
+                        button.title = this.state.fullscreen ? 'Вийти з повного екрана' : 'Повний екран';
+                        button.setAttribute('aria-label', button.title);
+                        button.classList.toggle('is-fullscreen', this.state.fullscreen);
+                    });
                 };
                 document.addEventListener('fullscreenchange', this._onFullscreenChange);
                 document.addEventListener('webkitfullscreenchange', this._onFullscreenChange);
@@ -496,9 +530,11 @@ export class LampaPlayer {
                 if (!menu) return;
                 const checkSvg = '<svg class="lp-check" viewBox="0 0 24 24" width="14" height="14"><path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
                 const mkBtn = (idx, label, active) => `<button type="button" class="${active ? 'is-active' : ''}" data-quality-index="${idx}" data-quality-label="${label}" role="menuitemradio" aria-checked="${active}"><span>${label}</span>${checkSvg}</button>`;
+                const rail = this._qualityRail;
                 const levels = this.hls?.levels || [];
                 if (!levels.length) {
                     menu.innerHTML = '<div class="lp-popover-label">Якість</div>' + mkBtn(-1, 'Авто', true);
+                    if (rail) { rail.innerHTML = ''; rail.hidden = true; }
                     if (labelEl) labelEl.textContent = 'Авто';
                     return;
                 }
@@ -511,6 +547,10 @@ export class LampaPlayer {
                 menu.innerHTML = '<div class="lp-popover-label">Якість</div>' +
                     mkBtn(-1, 'Авто', true) +
                     unique.map(item => mkBtn(item.index, item.label, false)).join('');
+                if (rail) {
+                    rail.innerHTML = unique.map(item => mkBtn(item.index, item.label, false)).join('');
+                    rail.hidden = false;
+                }
                 if (labelEl) labelEl.textContent = 'Авто';
             }
 
@@ -626,6 +666,8 @@ export class LampaPlayer {
                     ? getProxyUrl(src, isMobileDevice ? 'mobile' : 'desktop')
                     : src;
                 const isHlsSource = /\.m3u8(?:[?#]|$)/i.test(src);
+                const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+                const isSafariNativeHls = /Safari/i.test(ua) && !/(Chrome|CriOS|Chromium|Edg|Firefox|OPR)/i.test(ua);
                 const isCurrentRequest = () => requestId === this._sourceRequestId && this.videoRef === v;
                 const hideLoading = () => {
                     if (!isCurrentRequest()) return;
@@ -688,7 +730,7 @@ export class LampaPlayer {
                     safePlay();
                 } else if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                     _startHls();
-                } else if (v.canPlayType('application/vnd.apple.mpegurl') !== '' || v.canPlayType('audio/mpegurl') !== '') {
+                } else if (isSafariNativeHls && (v.canPlayType('application/vnd.apple.mpegurl') !== '' || v.canPlayType('audio/mpegurl') !== '')) {
                     const onNativeError = () => this._schedulePlaybackError('HLS-потік не вдалося відкрити на цьому пристрої.');
                     v.addEventListener('error', onNativeError, { once: true });
                     v.addEventListener('canplay', hideLoading, { once: true });

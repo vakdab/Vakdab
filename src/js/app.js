@@ -1,3 +1,3 @@
-import { bootstrap } from './core/bootstrap.js?v=20260822-profile-identity-v42';
+import { bootstrap } from './core/bootstrap.js?v=20260822-player-overlay-v44';
 
 bootstrap();

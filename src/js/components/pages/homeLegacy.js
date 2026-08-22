@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260822-profile-identity-v42';
-import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from './settingsLegacy.js?v=20260822-profile-identity-v42';
+} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v44';
+import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from './settingsLegacy.js?v=20260822-player-overlay-v44';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';

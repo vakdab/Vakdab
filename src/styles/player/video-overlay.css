@@ -570,3 +570,196 @@
     #playerPageModal .lampa-player-container iframe,
     #playerPageModal .player-frame-poster { transition: none; animation-duration: .01ms !important; }
 }
+
+
+/* ============== Reference-style controls over video ============== */
+#playerPageModal .player-video-container {
+    background: #000;
+}
+#playerPageModal .lp-controls {
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 7px 14px 11px;
+    border: 0;
+    border-radius: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, .54) 22%, rgba(0, 0, 0, .94) 100%);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+#playerPageModal .lp-progress-wrap {
+    height: 4px;
+    margin: 0 0 7px;
+    border-radius: 0;
+    background: rgba(255, 255, 255, .38);
+}
+#playerPageModal .lp-progress-wrap:hover { height: 5px; }
+#playerPageModal .lp-progress-fill {
+    border-radius: 0;
+    background: #fff;
+}
+#playerPageModal .lp-progress-fill::after {
+    width: 10px;
+    height: 10px;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+}
+#playerPageModal .lp-progress-wrap:hover .lp-progress-fill::after { transform: translateY(-50%) scale(1); }
+#playerPageModal .lp-bottom-row {
+    min-height: 28px;
+    gap: 8px;
+}
+#playerPageModal .lp-btn {
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 2px;
+    color: #fff;
+}
+#playerPageModal .lp-btn svg { width: 18px; height: 18px; }
+#playerPageModal .lp-btn:hover,
+#playerPageModal .lp-btn:focus-visible {
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
+}
+#playerPageModal .lp-btn:active { transform: scale(.94); }
+#playerPageModal .lp-main-btn {
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 2px;
+    background: transparent;
+    color: #fff;
+}
+#playerPageModal .lp-main-btn:hover,
+#playerPageModal .lp-main-btn:focus-visible {
+    border: 0;
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
+}
+#playerPageModal .lp-time {
+    margin-left: 1px;
+    color: rgba(255, 255, 255, .9);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+#playerPageModal .lp-settings-wrap { gap: 6px; }
+#playerPageModal .lp-control-pill {
+    min-width: 42px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid rgba(255, 255, 255, .28);
+    border-radius: 2px;
+    background: rgba(0, 0, 0, .5);
+    color: #fff;
+    font-size: 11px;
+}
+#playerPageModal .lp-control-pill:hover,
+#playerPageModal .lp-control-pill:focus-visible,
+#playerPageModal .lp-control-pill.is-open {
+    border-color: rgba(255, 255, 255, .72);
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
+}
+#playerPageModal .lp-chevron { color: #fff; }
+#playerPageModal .lp-popover {
+    min-width: 92px;
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 2px;
+    background: rgba(0, 0, 0, .94);
+    box-shadow: 0 8px 26px rgba(0, 0, 0, .45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+#playerPageModal .lp-popover-label {
+    padding: 5px 8px 4px;
+    color: rgba(255, 255, 255, .56);
+    font-size: 9px;
+}
+#playerPageModal .lp-popover button {
+    min-height: 32px;
+    padding: 0 8px;
+    border-radius: 2px;
+    color: rgba(255, 255, 255, .78);
+    font-size: 11px;
+}
+#playerPageModal .lp-popover button:hover,
+#playerPageModal .lp-popover button:focus-visible,
+#playerPageModal .lp-popover button.is-active {
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
+}
+#playerPageModal .lp-popover button .lp-check { color: #fff; }
+#playerPageModal .lp-volume-group { gap: 0; }
+#playerPageModal .lp-volume { display: none; }
+
+@media (max-width: 620px) {
+    #playerPageModal .lp-controls { padding: 6px 8px max(8px, env(safe-area-inset-bottom)); }
+    #playerPageModal .lp-bottom-row { gap: 3px; }
+    #playerPageModal .lp-btn,
+    #playerPageModal .lp-main-btn { width: 28px; height: 28px; }
+    #playerPageModal .lp-time { font-size: 10px; }
+    #playerPageModal .lp-settings-wrap { gap: 3px; }
+    #playerPageModal .lp-control-pill { min-width: 36px; height: 26px; padding-inline: 6px; font-size: 10px; }
+    #playerPageModal .lp-quality-pill { min-width: 42px; }
+}
+
+
+#playerPageModal .lp-quality-rail {
+    position: absolute;
+    z-index: 13;
+    top: 50%;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transform: translateY(-50%);
+}
+#playerPageModal .lp-quality-rail[hidden] { display: none; }
+#playerPageModal .lp-quality-rail button {
+    display: inline-flex;
+    min-width: 42px;
+    min-height: 28px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 7px;
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 2px;
+    background: rgba(0, 0, 0, .62);
+    color: rgba(255, 255, 255, .82);
+    font: inherit;
+    font-size: 10px;
+    font-weight: 750;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
+}
+#playerPageModal .lp-quality-rail button .lp-check { display: none; }
+#playerPageModal .lp-quality-rail button:hover,
+#playerPageModal .lp-quality-rail button:focus-visible {
+    border-color: rgba(255, 255, 255, .78);
+    background: rgba(255, 255, 255, .18);
+    color: #fff;
+    outline: none;
+}
+#playerPageModal .lp-quality-rail button:active { transform: scale(.94); }
+#playerPageModal .lp-quality-rail button.is-active {
+    border-color: rgba(255, 255, 255, .9);
+    background: #fff;
+    color: #111;
+}
+@media (max-width: 620px) {
+    #playerPageModal .lp-quality-rail { right: 8px; gap: 3px; }
+    #playerPageModal .lp-quality-rail button { min-width: 38px; min-height: 25px; padding-inline: 5px; font-size: 9px; }
+}
+
+
+/* Once the custom video controls exist, keep fullscreen in the same lower rail as the reference player. */
+#playerPageModal .player-video-container:has(.lampa-player-container) .video-overlay-topbar .icon-btn {
+    display: none;
+}
