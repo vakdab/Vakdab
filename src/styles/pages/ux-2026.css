@@ -1803,10 +1803,10 @@ body:not(.dark-mode) .header .logo-text span {
     gap: 10px;
     margin: 0 0 12px;
     padding: 0 16px;
-    border: 1px solid color-mix(in srgb, var(--text, #111) 14%, transparent);
+    border: 1px solid #229ED9;
     border-radius: 14px;
-    background: color-mix(in srgb, var(--surface, #fff) 86%, transparent);
-    color: var(--text, #111);
+    background: #229ED9;
+    color: #fff;
     font: inherit;
     font-weight: 750;
     cursor: pointer;
@@ -1814,7 +1814,7 @@ body:not(.dark-mode) .header .logo-text span {
 }
 .telegram-btn svg { width: 22px; height: 22px; fill: currentColor; flex: 0 0 auto; }
 .telegram-btn:hover,
-.telegram-btn:focus-visible { background: color-mix(in srgb, var(--text, #111) 8%, var(--surface, #fff)); box-shadow: 0 6px 16px rgba(0,0,0,.1); }
+.telegram-btn:focus-visible { background: #168AC1; box-shadow: 0 6px 16px rgba(34,158,217,.28); }
 .telegram-btn:active { transform: scale(.985); }
 .telegram-btn:disabled { opacity: .65; cursor: wait; }
 .auth-card .telegram-btn + .google-btn { margin-top: 0; }

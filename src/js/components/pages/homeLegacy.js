@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v39';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-telegram-auth-v39';
+} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v40';
+import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-telegram-auth-v40';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -2659,7 +2659,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
               <button class="telegram-btn" type="button" id="authTelegramBtn">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.4 3.4-3.1 16.2c-.2 1.1-.8 1.4-1.7.9l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.4-.1-.6-.6-.2L6.2 13.9l-4.6-1.4c-1-.3-1-1 .2-1.5L19.7 3c.8-.3 1.9.2 1.7.4Z"/></svg>
-                Увійти або зареєструватися через Telegram
+                <span class="auth-telegram-label">Увійти через Telegram</span>
               </button>
 
               <button class="google-btn" type="button" id="authGoogleBtn">
@@ -2735,6 +2735,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const sub = document.getElementById('authSub');
             const footNote = document.getElementById('authFootNote');
             const footToggle = document.getElementById('authFootToggle');
+            const telegramBtn = document.getElementById('authTelegramBtn');
+            const telegramLabel = telegramBtn?.querySelector('.auth-telegram-label');
 
             function setAuthMode(mode) {
                 btnLogin.classList.toggle('active', mode === 'login');
@@ -2742,6 +2744,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 switcher.classList.toggle('mode-register', mode === 'register');
                 panelLogin.classList.toggle('active', mode === 'login');
                 panelRegister.classList.toggle('active', mode === 'register');
+                if (telegramLabel) telegramLabel.textContent = mode === 'login' ? 'Увійти через Telegram' : 'Зареєструватися через Telegram';
                 if (mode === 'login') {
                     title.textContent = 'З поверненням';
                     sub.textContent = 'Увійдіть, щоб продовжити роботу з акаунтом.';
@@ -2820,7 +2823,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 this.textContent = 'Перевірка Telegram...';
                 const result = await Auth.signInWithTelegram(telegram.initData);
                 this.disabled = false;
-                this.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.4 3.4-3.1 16.2c-.2 1.1-.8 1.4-1.7.9l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.4-.1-.6-.6-.2L6.2 13.9l-4.6-1.4c-1-.3-1 0 .2-1.5L19.7 3c.8-.3 1.9.2 1.7.4Z"/></svg> Увійти або зареєструватися через Telegram`;
+                this.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.4 3.4-3.1 16.2c-.2 1.1-.8 1.4-1.7.9l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.4-.1-.6-.6-.2L6.2 13.9l-4.6-1.4c-1-.3-1 0 .2-1.5L19.7 3c.8-.3 1.9.2 1.7.4Z"/></svg><span class="auth-telegram-label">${document.querySelector('#authSwitcher [data-mode="register"].active') ? 'Зареєструватися через Telegram' : 'Увійти через Telegram'}</span>`;
                 if (!result.success) errorEl.textContent = result.error || 'Помилка входу через Telegram';
                 else renderProfilePage();
             });

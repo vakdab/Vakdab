@@ -35,3 +35,8 @@ After clearing the sandbox-only local auth state, the profile auth page displaye
 [2] [Firebase Authentication — Create Custom Tokens](https://firebase.google.com/docs/auth/admin/create-custom-tokens)
 
 [3] [Cloudflare Workers — Multipart upload metadata](https://developers.cloudflare.com/workers/configuration/multipart-upload-metadata/)
+
+
+## UI v40 verification
+
+The local auth page now renders a blue Telegram button with the Telegram logo. On the login tab the label is `Увійти через Telegram`; after switching to the registration tab it changes to `Зареєструватися через Telegram`. Google, email/password, and guest controls remain available in both modes.

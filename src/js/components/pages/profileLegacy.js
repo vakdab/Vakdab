@@ -4,9 +4,9 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v39';
-import { getProfile, saveProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-telegram-auth-v39';
-import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-telegram-auth-v39';
+} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v40';
+import { getProfile, saveProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-telegram-auth-v40';
+import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-telegram-auth-v40';
 
 function thoughtSizeClass(text) {
     const length = String(text || '').trim().length;
@@ -601,7 +601,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-telegram-auth-v39');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-telegram-auth-v40');
         const isOwnPublicProfile = Boolean(Auth.isAuthenticated() && Auth._user?.uid && String(Auth._user.uid) === targetUid);
         let profile = null;
         try {

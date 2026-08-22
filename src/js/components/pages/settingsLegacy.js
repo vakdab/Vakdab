@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v39';
+} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v40';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 

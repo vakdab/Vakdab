@@ -3,9 +3,9 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v39';
-import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-telegram-auth-v39';
-import { Storage } from './storage.js?v=20260821-telegram-auth-v39';
+} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v40';
+import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-telegram-auth-v40';
+import { Storage } from './storage.js?v=20260821-telegram-auth-v40';
 import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
 
         const Auth = {
