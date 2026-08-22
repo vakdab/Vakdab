@@ -1,4 +1,4 @@
-import { HIKKA_API, HIKKA_PROXY_URL } from '../config/constants.js?v=20260820-hikka-proxy-fix4';
+import { HIKKA_API, HIKKA_PROXY_URL } from '../config/constants.js?v=20260822-home-genres-v64';
 import { safeQueryAll } from '../utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from '../utils/image.js';
 import { debugLog } from '../utils/debug.js';
@@ -10,7 +10,7 @@ import {
     playerPageCurrentDub, playerPageCurrentSeason, playerPageCurrentSource,
     buildBottomSheetData, buildEpisodeViews, buildSeasonRow,
     showToast, updateFilterChip, updateSourceChip
-} from '../legacy/app-legacy.js?v=20260822-catalog-genre-data-v61';
+} from '../legacy/app-legacy.js?v=20260822-home-genres-v64';
 
         export const CATALOG_POSTER_FALLBACK = './android-chrome-512x512.png';
         export function normalizeAnimeUrl(href = '') {
@@ -63,10 +63,14 @@ import {
             const title=item.title_ua || item.title_en || item.title_ja || item.name_ua || item.name_en || 'Без назви';
             const contentType = endpoint === 'manga' ? 'manga' : endpoint === 'novel' ? 'novel' : hikkaType(item);
             const contentTypeLabel = contentType === 'manga' ? 'Манґа' : contentType === 'novel' ? 'Ранобе' : contentType === 'movie' ? 'Фільм' : contentType === 'ova' ? 'OVA' : 'Серіал';
+            const genreSlugs = (Array.isArray(item.genres) ? item.genres : [item.genres])
+                .map(value => typeof value === 'object' ? value?.slug : value)
+                .map(value => String(value || '').trim())
+                .filter(Boolean);
             return { ...item, mal_id:item.mal_id || item.slug?.hashCode?.() || Date.now(), title,
                 originalTitle:item.title_en || item.title_ja || item.name_en || '', url:`${HIKKA_API}/${endpoint}/${item.slug}`,
                 images:{jpg:{large_image_url:item.image || CATALOG_POSTER_FALLBACK, image_url:item.image || CATALOG_POSTER_FALLBACK}},
-                genres:normalizeGenreList(item.genres), type:contentType, typeLabel:contentTypeLabel,
+                genres:normalizeGenreList(item.genres), genreSlugs, type:contentType, typeLabel:contentTypeLabel,
                 synopsis:normalizeSynopsisText(item.synopsis_ua || item.synopsis_en || ''), from:'hikka' };
         }
         export function hikkaRequest(url, options = {}) {

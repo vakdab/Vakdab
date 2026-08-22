@@ -1,5 +1,5 @@
-import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../services/catalog.js';
-import { DailyStats, Storage, openPlayerPage, showToast } from '../../legacy/app-legacy.js?v=20260822-catalog-genre-data-v61';
+import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../services/catalog.js?v=20260822-home-genres-v64';
+import { DailyStats, Storage, openPlayerPage, showToast } from '../../legacy/app-legacy.js?v=20260822-home-genres-v64';
 
         let heroItems = [],
             heroPool = [],

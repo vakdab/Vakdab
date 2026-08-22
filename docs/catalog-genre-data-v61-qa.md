@@ -21,3 +21,23 @@ After adding `only_translated: true` to the homepage anime request body, the loc
 ## Live verification
 
 After the successful Pages deploy for commit `5714c32`, the live route `https://vakdab.github.io/Vakdab/?v=20260822-catalog-genre-data-v61#main` loaded the Ukrainian catalog and displayed `Знайдено 4 187 результатів`. The live page contained the full homepage genre rail and the updated Hikka-backed catalog flow was present. The live response remained stable after waiting for the initial asynchronous load.
+
+## New genre slug research
+
+The Hikka OpenAPI documentation exposes `GET /genres` as the canonical genre-list endpoint: https://api.hikka.io/docs#/Genres/genres. A direct proxy probe confirmed working slugs for 17 of the requested labels and identified that `thriller` and `magical-girl` return HTTP 400. Probe output is stored in `docs/catalog-genre-slug-probe-v62.jsonl`; the final mapping will use Hikka's canonical values rather than unsupported guesses.
+
+## v62 cache diagnosis
+
+The first v62 local page still displayed the old genre list. Runtime resource inspection showed `homeLegacy.js?v=20260822-home-genres-v62` and `app-legacy.js?v=20260822-home-genres-v62`, but also loaded `constants.js?v=20260820-hikka-proxy-fix4`, `constants.js?v=20260820-menu-pages-fix1`, and unversioned module URLs from compatibility imports. This duplicate module graph explains why the old `GENRE_MAP` can still win in runtime. All internal import URLs need one synchronized v62 marker, not only the already versioned paths.
+
+## v62 runtime follow-up
+
+After a fresh local v62 navigation, the browser still reported the old 19-button list (`Аніфільми`, `Бойові мистецтва`, `Воєнні`, etc.). Performance resources included old constants URLs (`constants.js?v=20260820-hikka-proxy-fix4`, `constants.js?v=20260820-menu-pages-fix1`) and unversioned `constants.js`/`catalog.js`, despite the repository source being synchronized to v62. This requires inspecting the actual served source and any persisted page/service-worker/module cache before finalizing.
+
+## v63 new-list verification
+
+With a fresh v63 module URL, the homepage displayed exactly 19 requested genre controls and no old genres. Functional checks showed `Трилер` (`suspense`) returns 283 results and an active button. `Чарівниці` (`mahou-shoujo`) returns 68 Hikka results, but the rendered card list is empty after the local client-side genre matching step. This reveals a second functional issue: the server slug is correct, but the local matcher does not recognize the returned `mahou-shoujo` item genre representation and must be fixed before release.
+
+## v64 matcher fix verification
+
+After preserving `genreSlugs` in Hikka-normalized items and using those slugs in the homepage matcher, the exact 19-button list rendered correctly. `Чарівниці` (`mahou-shoujo`) now returns `Показано 24 з 68 результатів` with 24 cards; `Трилер` (`suspense`) returns 283 results with 24 cards; returning to `Усі` restores 4 187 results with 24 cards. Each freshly rendered selected button reports `aria-pressed="true"`.

@@ -1,16 +1,16 @@
-import { HIKKA_API, GENRE_MAP, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js?v=20260820-menu-pages-fix1';
+import { HIKKA_API, GENRE_MAP, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js?v=20260822-home-genres-v64';
 import {
     Auth, DailyStats, Router, Storage, escapeHtml,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260822-catalog-genre-data-v61';
-import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from './settingsLegacy.js?v=20260822-catalog-genre-data-v61';
+} from '../../legacy/app-legacy.js?v=20260822-home-genres-v64';
+import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from './settingsLegacy.js?v=20260822-home-genres-v64';
 import { debugLog } from '../../utils/debug.js';
-import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260822-catalog-genre-data-v61';
-import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
+import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260822-home-genres-v64';
+import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js?v=20260822-home-genres-v64';
 import { getProxyUrl } from '../../utils/image.js';
-import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260818-honey-type-filter-v1';
-import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } from '../../services/api/novel.js?v=20260820-ranobe-prefetch-v10';
+import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260822-home-genres-v64';
+import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } from '../../services/api/novel.js?v=20260822-home-genres-v64';
 
         // Hikka may remain pending behind corsproxy for 25+ seconds. The catalog
         // shell must stay interactive so users can switch to Honey Manga or
@@ -771,8 +771,12 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const mappedName = Object.entries(GENRE_MAP).find(([, slug]) => normalizeHoneyMatch(slug) === selected)?.[0] || '';
             const candidates = [selected, normalizeHoneyMatch(mappedName)].filter(Boolean);
             return (item?.genres || []).some(genre => {
-                const value = normalizeHoneyMatch(typeof genre === 'object' ? genre?.name_ua || genre?.name || '' : genre);
-                return candidates.some(candidate => value === candidate || value.includes(candidate) || candidate.includes(value));
+                const source = typeof genre === 'object' ? genre : { name_ua: genre };
+                const values = [
+                    ...(Array.isArray(item?.genreSlugs) ? item.genreSlugs : []),
+                    source?.slug, source?.name_ua, source?.name, genre
+                ].map(value => normalizeHoneyMatch(value)).filter(Boolean);
+                return candidates.some(candidate => values.some(value => value === candidate || value.includes(candidate) || candidate.includes(value)));
             });
         }
 
