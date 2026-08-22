@@ -1734,3 +1734,61 @@ body:not(.dark-mode) .header .logo-text span {
         line-height: 1.23;
     }
 }
+
+/* Thought v38: size follows message length; lighter poster glass. */
+.profile-thought-note {
+    box-sizing: border-box;
+    align-items: center;
+    width: auto;
+    min-width: 0;
+    min-height: 0;
+    padding: 13px 17px 13px 19px;
+    background: color-mix(in srgb, var(--surface, #fff) 38%, transparent);
+    border: 1px solid color-mix(in srgb, var(--surface, #fff) 44%, transparent);
+    -webkit-backdrop-filter: blur(5px) saturate(.72);
+    backdrop-filter: blur(5px) saturate(.72);
+}
+.profile-thought-note::before,
+.profile-thought-note::after {
+    background: color-mix(in srgb, var(--surface, #fff) 38%, transparent);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+}
+.profile-thought-note.is-short {
+    width: min(112px, calc(100vw - 96px));
+    min-height: 48px;
+    padding-inline: 16px;
+}
+.profile-thought-note.is-medium {
+    width: min(166px, calc(100vw - 76px));
+    min-height: 62px;
+}
+.profile-thought-note.is-long {
+    width: min(220px, calc(100vw - 74px));
+    min-height: 82px;
+    padding-inline: 20px;
+}
+.profile-thought-note #profileThoughtNoteText {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: normal;
+    text-wrap: pretty;
+}
+@media (max-width: 479px) {
+    .profile-thought-note.is-short {
+        width: min(108px, calc(100vw - 96px));
+        min-height: 46px;
+        padding-inline: 14px;
+    }
+    .profile-thought-note.is-medium {
+        width: min(158px, calc(100vw - 78px));
+        min-height: 59px;
+        padding-inline: 16px;
+    }
+    .profile-thought-note.is-long {
+        width: min(214px, calc(100vw - 76px));
+        min-height: 78px;
+        padding-inline: 18px;
+    }
+}

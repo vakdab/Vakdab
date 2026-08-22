@@ -62,3 +62,8 @@ The previous implementation relied only on the 1.5-second debounced profile sync
 ## v37 owner-profile restore fix
 
 The screenshot showed the profile opening without the cloud after login. v37 adds an owner-public fallback: when the current route targets the signed-in user's own UID, the renderer merges the active local thought into the profile even if the public Firestore read is empty or denied. The Firebase login restore also preserves an active local thought when the remote profile lacks the thought fields, then schedules a profile sync instead of overwriting it with empty data.
+
+
+## v38 adaptive cloud QA
+
+The saved thought cloud now uses three length states. On the tested mobile viewport, a short message rendered at 112×48px, a medium message at 166×68px, and a long message at 220×82px. The long message retained natural word wrapping and the cloud remained within the poster area. The poster overlay now uses approximately 38% surface color with a 5px backdrop blur, making the banner more visible through the cloud while preserving text contrast.

@@ -4,9 +4,16 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v37';
-import { getProfile, saveProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-profile-thought-v37';
-import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-profile-thought-v37';
+} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v38';
+import { getProfile, saveProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-profile-thought-v38';
+import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-profile-thought-v38';
+
+function thoughtSizeClass(text) {
+    const length = String(text || '').trim().length;
+    if (length <= 18) return 'is-short';
+    if (length <= 58) return 'is-medium';
+    return 'is-long';
+}
 
 function bindProfileThought(container) {
     const trigger = container?.querySelector('#profileThoughtTrigger');
@@ -25,6 +32,8 @@ function bindProfileThought(container) {
         if (!note || !noteText) return;
         noteText.textContent = value;
         note.hidden = !value;
+        note.classList.remove('is-short', 'is-medium', 'is-long');
+        if (value) note.classList.add(thoughtSizeClass(value));
         note.classList.toggle('is-visible', Boolean(value));
         if (animate && value) {
             note.classList.remove('is-popping');
@@ -592,7 +601,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-profile-thought-v37');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-profile-thought-v38');
         const isOwnPublicProfile = Boolean(Auth.isAuthenticated() && Auth._user?.uid && String(Auth._user.uid) === targetUid);
         let profile = null;
         try {
@@ -622,6 +631,7 @@ export async function renderPublicProfilePage(uid) {
         const publicThought = String(profile.thought || '').trim();
         const publicThoughtExpiresAt = Number(profile.thoughtExpiresAt || 0);
         const hasPublicThought = Boolean(publicThought && publicThoughtExpiresAt > Date.now());
+        const publicThoughtClass = hasPublicThought ? ` ${thoughtSizeClass(publicThought)}` : '';
         const bannerClass = `profile-banner ${profile.bannerFormat === 'wide' ? 'profile-banner--wide' : 'profile-banner--narrow'}${profile.bannerEffect && profile.bannerEffect !== 'none' ? ` banner-effect-${escapeHtml(profile.bannerEffect)}` : ''}`;
         const avatarClass = `profile-avatar${isGifUrl(avatar) ? ' is-gif' : ''}`;
         const nickname = escapeHtml(profile.nickname);
@@ -658,7 +668,7 @@ export async function renderPublicProfilePage(uid) {
                     ${avatar ? profileMediaMarkup(avatar, 'profile-avatar-media', 'profile avatar', profile.avatarVideo ? profile.avatarVideoSettings : null) : ''}
                     <span class="avatar-placeholder" style="display:${avatar ? 'none' : 'flex'};">${escapeHtml(profile.nickname.charAt(0).toUpperCase())}</span>
                   </div>
-                  ${hasPublicThought ? `<div class="profile-thought-note profile-thought-note--public is-visible" id="profileThoughtNote" role="status" aria-live="polite"><span class="profile-thought-note__dot" aria-hidden="true"></span><span id="profileThoughtNoteText">${escapeHtml(publicThought)}</span></div>` : ''}
+                  ${hasPublicThought ? `<div class="profile-thought-note profile-thought-note--public is-visible${publicThoughtClass}" id="profileThoughtNote" role="status" aria-live="polite"><span class="profile-thought-note__dot" aria-hidden="true"></span><span id="profileThoughtNoteText">${escapeHtml(publicThought)}</span></div>` : ''}
                 </div>
                 <div class="profile-social-summary" aria-label="Соціальні показники">
                   ${canFollow && !social.isFollowing ? `<button type="button" class="profile-follow-icon" id="publicFollowBtn" data-following="0" aria-label="Підписатися на користувача" title="Підписатися">
