@@ -1702,3 +1702,35 @@ body:not(.dark-mode) .header .logo-text span {
     .profile-thought-bubble__actions { gap: 4px; }
     .profile-thought-bubble__actions button { padding-inline: 8px; }
 }
+
+/* Long-thought readability: wider poster cloud, natural word wrapping, graceful truncation. */
+.profile-thought-note {
+    align-items: flex-start;
+    width: min(220px, calc(100vw - 74px));
+    min-height: 82px;
+    padding: 18px 20px 18px 22px;
+    font-size: .68rem;
+    line-height: 1.24;
+}
+.profile-thought-note #profileThoughtNoteText {
+    display: -webkit-box;
+    width: 100%;
+    max-height: 4.95em;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: none;
+    text-wrap: pretty;
+}
+@media (max-width: 479px) {
+    .profile-thought-note {
+        left: 44px;
+        top: -78px;
+        width: min(220px, calc(100vw - 74px));
+        min-height: 82px;
+        padding: 18px 19px 18px 21px;
+        font-size: .67rem;
+        line-height: 1.23;
+    }
+}

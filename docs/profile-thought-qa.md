@@ -42,3 +42,8 @@ The saved thought remains over the poster area. Browser console confirms a trans
 ## v33 controls and expiry QA
 
 The trigger now uses a modern outline SVG thought icon instead of the previous Font Awesome dots. The composer is narrower and shorter, and its footer contains adjacent `Видалити` and `Зберегти` actions. Delete was smoke-tested locally: it cleared the note, closed the editor, and displayed `Думку видалено`. Saving writes `thoughtAt`, and the runtime timer plus render-time guard remove the thought after four hours.
+
+
+## v34 long-message QA
+
+The saved cloud now expands to 220px on the tested viewport instead of staying at the narrow 148px mobile width. Its text uses natural word wrapping (`word-break: normal`, `overflow-wrap: break-word`) and a four-line clamp with ellipsis, so long Ukrainian messages no longer collapse into a narrow column or break every word. A 120-character smoke message was saved locally and rendered inside the cloud without overflow.

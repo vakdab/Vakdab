@@ -1,6 +1,6 @@
-import { Auth } from '../../core/compat/auth.js?v=20260821-profile-thought-v33';
-import { Router } from '../../core/compat/router.js?v=20260821-profile-thought-v33';
-import { Storage } from '../../core/compat/storage.js?v=20260821-profile-thought-v33';
+import { Auth } from '../../core/compat/auth.js?v=20260821-profile-thought-v34';
+import { Router } from '../../core/compat/router.js?v=20260821-profile-thought-v34';
+import { Storage } from '../../core/compat/storage.js?v=20260821-profile-thought-v34';
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
 
@@ -416,7 +416,7 @@ function isGifUrl(url) {
                         document.body.classList.add('community-active');
                         const nav = document.getElementById('bottomNav');
                         if (nav) nav.classList.add('hidden-nav');
-                        import('../community/legacyCommunity.js?v=20260821-profile-thought-v33')
+                        import('../community/legacyCommunity.js?v=20260821-profile-thought-v34')
                             .then(({ initCommunity }) => {
                                 initCommunity();
                                 setTimeout(() => {
