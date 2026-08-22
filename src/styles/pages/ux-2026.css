@@ -1602,3 +1602,34 @@ body:not(.dark-mode) .header .logo-text span {
     .profile-thought-note.is-popping,
     .profile-thought-bubble:not([hidden]) { animation: none; }
 }
+
+/* Poster overlay thought: translucent cloud with a gentle backdrop blur. */
+.profile-thought-note {
+    left: 46px;
+    top: -82px;
+    bottom: auto;
+    z-index: 28;
+    width: min(154px, calc(100vw - 78px));
+    min-height: 70px;
+    padding: 17px 15px 17px 20px;
+    background: color-mix(in srgb, var(--surface, #fff) 66%, transparent);
+    -webkit-backdrop-filter: blur(6px) saturate(.9);
+    backdrop-filter: blur(6px) saturate(.9);
+    border: 1px solid color-mix(in srgb, var(--surface, #fff) 58%, transparent);
+    filter: drop-shadow(0 5px 9px rgba(0,0,0,.16));
+}
+.profile-thought-note::before,
+.profile-thought-note::after {
+    background: color-mix(in srgb, var(--surface, #fff) 66%, transparent);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
+@media (max-width: 479px) {
+    .profile-thought-note {
+        left: 44px;
+        top: -78px;
+        width: min(148px, calc(100vw - 76px));
+        min-height: 67px;
+        padding: 16px 14px 16px 18px;
+    }
+}

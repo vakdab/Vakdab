@@ -1,4 +1,4 @@
-import { openScheduleItemInPlayer } from './homeLegacy.js?v=20260821-profile-thought-v30';
+import { openScheduleItemInPlayer } from './homeLegacy.js?v=20260821-profile-thought-v31';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() - Date.now()); const total = Math.floor(ms / 1000); const days = Math.floor(total / 86400); const hours = Math.floor((total % 86400) / 3600); const minutes = Math.floor((total % 3600) / 60); return days ? `через ${days} д ${hours} год` : hours ? `через ${hours} год ${minutes} хв` : `через ${minutes} хв`; };

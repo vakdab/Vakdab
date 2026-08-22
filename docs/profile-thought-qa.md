@@ -32,3 +32,8 @@ The saved thought cloud is now compact and placed in the marked profile header a
 ## v30 clean rewrite QA
 
 The previous accumulated thought-note overrides from lines 1455 onward were removed and replaced with one clean block. The saved note is a compact 142–148px cloud beside the trigger with a three-line clamp. The editor is a separate compact panel with a 252–264px responsive width, short textarea, and no SVG mask; this prevents editor controls from being clipped or stretched by the decorative cloud. Local browser checks confirmed both the saved note and the open editor render as separate compact elements.
+
+
+## v31 poster blur overlay QA
+
+The saved thought remains over the poster area. Browser console confirms a translucent background (`color(srgb 1 1 1 / 0.634118)`) and `backdrop-filter: blur(6px) saturate(0.9)`. The note is 154px wide and 70px high, positioned above the trigger so the poster remains visible beneath the cloud while the text stays readable.
