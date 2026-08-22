@@ -1837,3 +1837,43 @@ body:not(.dark-mode) .header .logo-text span {
     .profile-thought-note { left: 52px; right: auto; }
     .profile-thought-bubble { left: 52px; right: auto; }
 }
+
+/* Compact placement from the user's marked area: right of the avatar, below the banner edge. */
+.profile-thought-note {
+    left: 52px;
+    right: auto;
+    top: 10px;
+    bottom: auto;
+    width: min(150px, calc(100vw - 82px));
+    min-height: 92px;
+    padding: 25px 18px 35px 22px;
+    transform-origin: 14% 78%;
+}
+.profile-thought-bubble {
+    left: 52px;
+    right: auto;
+    top: 8px;
+    bottom: auto;
+    width: min(242px, calc(100vw - 42px));
+    max-width: calc(100vw - 42px);
+    min-height: 178px;
+    padding: 23px 18px 45px 18px;
+    transform-origin: 14% 78%;
+}
+@media (max-width: 479px) {
+    .profile-thought-note {
+        left: 52px;
+        top: 8px;
+        width: min(150px, calc(100vw - 78px));
+        min-height: 92px;
+        padding: 24px 17px 34px 21px;
+    }
+    .profile-thought-bubble {
+        left: 52px;
+        top: 7px;
+        width: min(242px, calc(100vw - 42px));
+        max-width: calc(100vw - 42px);
+        min-height: 178px;
+        padding: 22px 17px 44px 17px;
+    }
+}

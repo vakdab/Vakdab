@@ -22,3 +22,8 @@ The explicit responsive width fix prevents the saved note from collapsing vertic
 ## v25 mobile composer QA
 
 The open composer was previously appearing as a clipped rectangular panel. v25 applies the same masked cloud silhouette to the composer and constrains it to `calc(100vw - 32px)`, with `left: 0` relative to the avatar wrapper. Console geometry confirms the composer is positioned inside the local viewport (`x: 74`, `width: 300` in the 892px browser viewport) and has the cloud mask applied. The saved note remains connected to the trigger via the right-side tail.
+
+
+## v28 compact marked-area placement
+
+The saved thought cloud is now compact and placed in the marked profile header area, right of the avatar and below the banner edge. Local console geometry confirms the note is `150px` wide and starts at x126 while the trigger starts at x138, so its body sits beside the trigger and extends to the right instead of occupying the full banner. The note height is `92px`, matching the smaller target shown by the user.
