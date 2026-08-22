@@ -27,3 +27,8 @@ The open composer was previously appearing as a clipped rectangular panel. v25 a
 ## v28 compact marked-area placement
 
 The saved thought cloud is now compact and placed in the marked profile header area, right of the avatar and below the banner edge. Local console geometry confirms the note is `150px` wide and starts at x126 while the trigger starts at x138, so its body sits beside the trigger and extends to the right instead of occupying the full banner. The note height is `92px`, matching the smaller target shown by the user.
+
+
+## v30 clean rewrite QA
+
+The previous accumulated thought-note overrides from lines 1455 onward were removed and replaced with one clean block. The saved note is a compact 142–148px cloud beside the trigger with a three-line clamp. The editor is a separate compact panel with a 252–264px responsive width, short textarea, and no SVG mask; this prevents editor controls from being clipped or stretched by the decorative cloud. Local browser checks confirmed both the saved note and the open editor render as separate compact elements.

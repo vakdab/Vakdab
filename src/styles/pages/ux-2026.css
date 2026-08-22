@@ -1452,487 +1452,153 @@ body:not(.dark-mode) .header .logo-text span {
     .profile-thought-trigger { transition: none; }
 }
 
-/* Compact composer plus the saved thought note shown next to the avatar. */
+
+/* ========================================================================
+   Thought UI clean rewrite — compact cloud beside the avatar, no overlaps.
+   ======================================================================== */
 .profile-thought-trigger {
-    width: 36px;
-    height: 36px;
-    border-width: 2px;
-}
-.profile-thought-trigger i { font-size: 14px; }
-.profile-thought-bubble {
-    left: 20px;
-    width: min(230px, calc(100vw - 80px));
-    padding: 10px;
-    border-radius: 17px;
-}
-.profile-thought-bubble textarea {
-    min-height: 48px;
-    margin: 7px 0;
-    padding: 8px 9px;
-    border-radius: 11px;
-    font-size: .75rem;
-}
-.profile-thought-bubble__head strong { font-size: .76rem; }
-.profile-thought-bubble__close { width: 24px; height: 24px; font-size: 1.15rem; }
-.profile-thought-bubble__foot button { min-height: 29px; padding-inline: 11px; font-size: .68rem; }
-.profile-thought-bubble__foot span { font-size: .62rem; }
-.profile-thought-note {
     position: absolute;
-    left: 37px;
-    top: calc(100% + 8px);
-    z-index: 35;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    max-width: min(220px, calc(100vw - 74px));
-    min-height: 32px;
-    padding: 7px 11px 7px 8px;
-    border: 1px solid color-mix(in srgb, var(--text, #111) 12%, transparent);
-    border-radius: 999px;
-    background: var(--surface, #fff);
-    color: var(--text, #111);
-    box-shadow: 0 9px 24px rgba(0,0,0,.16);
-    font-size: .72rem;
-    font-weight: 650;
-    line-height: 1.15;
-    overflow-wrap: anywhere;
-    cursor: pointer;
-    transform-origin: 14px 0;
-}
-.profile-thought-note[hidden] { display: none !important; }
-.profile-thought-note__dot {
-    flex: 0 0 auto;
-    width: 10px;
-    height: 10px;
+    right: 1px;
+    bottom: 0;
+    z-index: 30;
+    width: 27px;
+    height: 27px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border: 2px solid var(--surface, #fff);
     border-radius: 50%;
     background: var(--text, #111);
+    color: var(--surface, #fff);
+    box-shadow: 0 3px 9px rgba(0,0,0,.2);
+}
+.profile-thought-trigger i { font-size: 10px; }
+.profile-thought-trigger:hover,
+.profile-thought-trigger:focus-visible { transform: scale(1.04); }
+.profile-thought-trigger:active { transform: scale(.96); }
+
+.profile-thought-note {
+    position: absolute;
+    left: 46px;
+    top: 42px;
+    z-index: 28;
+    display: flex;
+    align-items: center;
+    width: min(154px, calc(100vw - 82px));
+    min-height: 70px;
+    box-sizing: border-box;
+    padding: 17px 15px 17px 20px;
+    border: 0;
+    border-radius: 46% 54% 49% 51% / 55% 46% 54% 45%;
+    background: var(--surface, #fff);
+    color: var(--text, #111);
+    filter: drop-shadow(0 5px 9px rgba(0,0,0,.16));
+    font-size: .68rem;
+    font-weight: 750;
+    line-height: 1.18;
+    overflow: visible;
+    cursor: pointer;
+    transform-origin: 10% 25%;
 }
 .profile-thought-note::before,
 .profile-thought-note::after {
     position: absolute;
+    display: block;
     content: '';
     border-radius: 50%;
     background: var(--surface, #fff);
-    box-shadow: 0 2px 5px rgba(0,0,0,.05);
-}
-.profile-thought-note::before { width: 12px; height: 12px; left: 12px; top: -7px; }
-.profile-thought-note::after { width: 7px; height: 7px; left: 4px; top: -14px; }
-.profile-thought-note.is-popping { animation: profileThoughtNotePop .42s cubic-bezier(.2,.85,.2,1) both; }
-@keyframes profileThoughtNotePop {
-    0% { opacity: 0; transform: translateY(-6px) scale(.65); }
-    65% { opacity: 1; transform: translateY(1px) scale(1.06); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-@media (max-width: 479px) {
-    .profile-thought-trigger { width: 34px; height: 34px; right: 0; }
-    .profile-thought-trigger i { font-size: 13px; }
-    .profile-thought-bubble { left: 16px; width: min(220px, calc(100vw - 72px)); }
-    .profile-thought-note { left: 32px; max-width: min(205px, calc(100vw - 64px)); font-size: .68rem; }
-}
-@media (prefers-reduced-motion: reduce) {
-    .profile-thought-note.is-popping { animation: none; }
-}
-
-/* Saved note width fix: prevent absolute inline-flex shrink-to-fit collapse. */
-.profile-thought-note {
-    display: flex;
-    width: min(210px, calc(100vw - 64px));
-    max-width: none;
-    white-space: normal;
-}
-@media (max-width: 479px) {
-    .profile-thought-note {
-        width: min(198px, calc(100vw - 58px));
-        max-width: none;
-    }
-}
-
-/* Final thought-note shape: tiny trigger, cloud above the avatar, never a pill. */
-.profile-thought-trigger {
-    width: 27px;
-    height: 27px;
-    right: 1px;
-    bottom: 0;
-    border-width: 2px;
-    box-shadow: 0 3px 8px rgba(0,0,0,.16);
-}
-.profile-thought-trigger i { font-size: 10px; }
-.profile-thought-note {
-    left: 18px;
-    top: auto;
-    bottom: calc(100% + 12px);
-    width: min(154px, calc(100vw - 72px));
-    min-height: 42px;
-    padding: 13px 14px 13px 15px;
-    border: 1.5px solid color-mix(in srgb, var(--text, #111) 18%, transparent);
-    border-radius: 46% 54% 57% 43% / 53% 43% 57% 47%;
-    font-size: .72rem;
-    line-height: 1.22;
-    box-shadow: 0 10px 24px rgba(0,0,0,.17);
-    transform-origin: 22px 100%;
 }
 .profile-thought-note::before {
-    width: 27px;
-    height: 23px;
-    left: 19px;
-    top: auto;
-    bottom: -9px;
-    border: 1.5px solid color-mix(in srgb, var(--text, #111) 18%, transparent);
-    box-shadow: 28px 3px 0 -1px var(--surface, #fff), 54px -2px 0 -3px var(--surface, #fff);
-}
-.profile-thought-note::after {
-    width: 12px;
-    height: 12px;
-    left: 8px;
-    top: auto;
-    bottom: -21px;
-    border: 1.5px solid color-mix(in srgb, var(--text, #111) 18%, transparent);
-    box-shadow: -13px 10px 0 -4px var(--surface, #fff);
-}
-.profile-thought-note__dot { display: none; }
-@media (max-width: 479px) {
-    .profile-thought-trigger { width: 25px; height: 25px; right: 1px; }
-    .profile-thought-trigger i { font-size: 9px; }
-    .profile-thought-note {
-        left: 14px;
-        bottom: calc(100% + 10px);
-        width: min(148px, calc(100vw - 66px));
-    }
-}
-
-/* Cloud silhouette refinement: rounded puffs around a softer, taller note body. */
-.profile-thought-note {
-    min-height: 54px;
-    padding: 15px 16px;
-    border-radius: 48% 52% 46% 54% / 57% 47% 53% 43%;
-    overflow: visible;
-}
-.profile-thought-note::before {
-    width: 36px;
-    height: 31px;
-    left: 18px;
+    left: 9px;
     bottom: -10px;
-    top: auto;
-    border: 0;
-    box-shadow: 27px -25px 0 1px var(--surface, #fff), 59px -18px 0 -1px var(--surface, #fff), 83px -4px 0 -4px var(--surface, #fff);
+    width: 22px;
+    height: 19px;
 }
 .profile-thought-note::after {
-    width: 17px;
-    height: 17px;
-    left: 5px;
-    bottom: -22px;
-    top: auto;
-    border: 0;
-    box-shadow: -13px 10px 0 -4px var(--surface, #fff);
+    left: 1px;
+    bottom: -23px;
+    width: 11px;
+    height: 11px;
 }
-@media (max-width: 479px) {
-    .profile-thought-note {
-        min-height: 50px;
-        padding: 14px 15px;
-    }
-}
-
-/* True cloud silhouette: transparent corners, organic lobes and a two-dot tail. */
-.profile-thought-note {
-    width: min(176px, calc(100vw - 68px));
-    min-height: 82px;
-    padding: 17px 22px 27px 28px;
-    border: 0;
-    border-radius: 0;
-    background: var(--surface, #fff);
-    box-shadow: none;
-    filter: drop-shadow(0 9px 13px rgba(0,0,0,.17));
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 90'%3E%3Cpath fill='white' d='M20 56C8 56 3 48 8 39C2 29 10 19 21 21C22 11 31 5 40 10C47 1 60 4 64 13C74 8 86 13 87 24C98 23 105 31 101 41C106 48 98 57 87 56H20ZM28 64C34 63 37 67 34 71C31 75 25 72 24 68C23 66 25 64 28 64ZM18 79C21 78 23 80 22 82C20 84 17 83 16 81C15 80 16 79 18 79Z'/%3E%3C/svg%3E");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 90'%3E%3Cpath fill='white' d='M20 56C8 56 3 48 8 39C2 29 10 19 21 21C22 11 31 5 40 10C47 1 60 4 64 13C74 8 86 13 87 24C98 23 105 31 101 41C106 48 98 57 87 56H20ZM28 64C34 63 37 67 34 71C31 75 25 72 24 68C23 66 25 64 28 64ZM18 79C21 78 23 80 22 82C20 84 17 83 16 81C15 80 16 79 18 79Z'/%3E%3C/svg%3E");
-    -webkit-mask-size: 100% 100%;
-    mask-size: 100% 100%;
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-}
-.profile-thought-note::before,
-.profile-thought-note::after { display: none; }
-@media (max-width: 479px) {
-    .profile-thought-note {
-        width: min(168px, calc(100vw - 62px));
-        min-height: 78px;
-        padding: 16px 20px 26px 27px;
-    }
-}
-
-/* Thought cloud anchored to the add-thought button and reaching into the hero poster. */
-.profile-thought-note {
-    left: auto;
-    right: -40px;
-    bottom: calc(100% + 58px);
-    width: min(190px, calc(100vw - 42px));
-    min-height: 108px;
-    padding: 22px 28px 34px 28px;
-    transform-origin: 76% 100%;
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM76 87C84 84 90 90 87 97C84 103 76 100 73 95C71 91 73 88 76 87ZM63 106C68 104 71 107 69 110C67 113 63 112 61 109C60 107 61 106 63 106Z'/%3E%3C/svg%3E");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM76 87C84 84 90 90 87 97C84 103 76 100 73 95C71 91 73 88 76 87ZM63 106C68 104 71 107 69 110C67 113 63 112 61 109C60 107 61 106 63 106Z'/%3E%3C/svg%3E");
-}
-.profile-thought-note.is-popping { animation: profileThoughtNoteToButton .46s cubic-bezier(.2,.85,.2,1) both; }
-@keyframes profileThoughtNoteToButton {
-    0% { opacity: 0; transform: translateY(12px) scale(.62); }
-    65% { opacity: 1; transform: translateY(-3px) scale(1.04); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-.profile-thought-bubble {
-    left: auto;
-    right: -26px;
-    top: auto;
-    bottom: calc(100% + 10px);
-    transform-origin: 86% 100%;
-}
-.profile-thought-bubble::before,
-.profile-thought-bubble::after {
-    top: auto;
-    bottom: -8px;
-    left: auto;
-    right: 30px;
-}
-.profile-thought-bubble::after { right: 18px; bottom: -18px; }
-@media (max-width: 479px) {
-    .profile-thought-note {
-        right: -34px;
-        bottom: calc(100% + 48px);
-        width: min(184px, calc(100vw - 34px));
-        min-height: 102px;
-        padding: 21px 26px 32px 27px;
-    }
-    .profile-thought-bubble { right: -20px; }
-}
-
-/* Final anchor correction: the cloud tail must meet the trigger at the avatar edge. */
-.profile-thought-note {
-    bottom: 8px;
-    right: -40px;
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM113 84C121 81 127 87 124 94C121 100 113 97 110 92C108 88 110 85 113 84ZM128 103C133 101 136 104 134 107C132 110 128 109 126 106C125 104 126 103 128 103Z'/%3E%3C/svg%3E");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM113 84C121 81 127 87 124 94C121 100 113 97 110 92C108 88 110 85 113 84ZM128 103C133 101 136 104 134 107C132 110 128 109 126 106C125 104 126 103 128 103Z'/%3E%3C/svg%3E");
-}
-@media (max-width: 479px) {
-    .profile-thought-note { bottom: 7px; right: -34px; }
-}
-
-/* Banner-to-trigger bridge: cloud body sits in the poster, tail reaches the button. */
-.profile-thought-note {
-    right: -28px;
-    bottom: -6px;
-    width: min(190px, calc(100vw - 42px));
-    min-height: 170px;
-    box-sizing: border-box;
-    padding: 34px 27px 64px 27px;
-    transform-origin: 80% 100%;
-}
-@media (max-width: 479px) {
-    .profile-thought-note {
-        right: -34px;
-        bottom: -6px;
-        width: min(184px, calc(100vw - 34px));
-        min-height: 162px;
-        padding: 32px 25px 61px 25px;
-    }
-}
-
-/* Mobile composer correction: keep the editor fully inside the viewport and anchor its tail to the trigger. */
-.profile-thought-bubble {
-    left: 0;
-    right: auto;
-    bottom: calc(100% + 10px);
-    width: min(300px, calc(100vw - 32px));
-    max-width: calc(100vw - 32px);
-    box-sizing: border-box;
-    transform-origin: 82% 100%;
-}
-.profile-thought-bubble::before,
-.profile-thought-bubble::after {
-    left: auto;
-    right: 29px;
-}
-.profile-thought-bubble::after { right: 17px; }
-@media (max-width: 479px) {
-    .profile-thought-bubble {
-        left: 0;
-        right: auto;
-        bottom: calc(100% + 10px);
-        width: min(300px, calc(100vw - 32px));
-        max-width: calc(100vw - 32px);
-    }
-}
-
-/* Composer cloud: the open editor must use the same poster-to-trigger cloud shape. */
-.profile-thought-bubble {
-    left: 0;
-    right: auto;
-    bottom: -6px;
-    width: min(300px, calc(100vw - 32px));
-    max-width: calc(100vw - 32px);
-    min-height: 230px;
-    box-sizing: border-box;
-    padding: 29px 25px 68px 25px;
-    border: 0;
-    border-radius: 0;
-    background: var(--surface, #fff);
-    box-shadow: none;
-    filter: drop-shadow(0 10px 15px rgba(0,0,0,.18));
-    transform-origin: 82% 100%;
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM113 84C121 81 127 87 124 94C121 100 113 97 110 92C108 88 110 85 113 84ZM128 103C133 101 136 104 134 107C132 110 128 109 126 106C125 104 126 103 128 103Z'/%3E%3C/svg%3E");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM113 84C121 81 127 87 124 94C121 100 113 97 110 92C108 88 110 85 113 84ZM128 103C133 101 136 104 134 107C132 110 128 109 126 106C125 104 126 103 128 103Z'/%3E%3C/svg%3E");
-    -webkit-mask-size: 100% 100%;
-    mask-size: 100% 100%;
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-}
-.profile-thought-bubble::before,
-.profile-thought-bubble::after { display: none; }
-@media (max-width: 479px) {
-    .profile-thought-bubble {
-        left: 0;
-        bottom: -6px;
-        width: min(300px, calc(100vw - 32px));
-        min-height: 230px;
-        padding: 28px 23px 66px 23px;
-    }
-}
-
-/* Right-side direction: cloud starts at the trigger and expands toward the poster. */
-.profile-thought-note {
-    left: 22px;
-    right: auto;
-    bottom: -6px;
-    width: min(190px, calc(100vw - 50px));
-    min-height: 170px;
-    padding: 34px 25px 64px 27px;
-    transform-origin: 16% 100%;
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM47 84C55 81 61 87 58 94C55 100 47 97 44 92C42 88 44 85 47 84ZM32 103C37 101 40 104 38 107C36 110 32 109 30 106C29 104 30 103 32 103Z'/%3E%3C/svg%3E");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM47 84C55 81 61 87 58 94C55 100 47 97 44 92C42 88 44 85 47 84ZM32 103C37 101 40 104 38 107C36 110 32 109 30 106C29 104 30 103 32 103Z'/%3E%3C/svg%3E");
-}
-.profile-thought-bubble {
-    left: 22px;
-    right: auto;
-    bottom: -6px;
-    width: min(270px, calc(100vw - 38px));
-    max-width: calc(100vw - 38px);
-    min-height: 230px;
-    padding: 29px 23px 68px 25px;
-    transform-origin: 16% 100%;
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM47 84C55 81 61 87 58 94C55 100 47 97 44 92C42 88 44 85 47 84ZM32 103C37 101 40 104 38 107C36 110 32 109 30 106C29 104 30 103 32 103Z'/%3E%3C/svg%3E");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 115'%3E%3Cpath fill='white' d='M31 78C14 78 6 66 12 54C5 40 16 27 31 29C33 15 47 8 60 16C70 4 91 7 97 21C111 14 128 21 129 36C144 35 155 47 149 61C153 72 143 81 129 79H31ZM47 84C55 81 61 87 58 94C55 100 47 97 44 92C42 88 44 85 47 84ZM32 103C37 101 40 104 38 107C36 110 32 109 30 106C29 104 30 103 32 103Z'/%3E%3C/svg%3E");
-}
-@media (max-width: 479px) {
-    .profile-thought-note { left: 20px; right: auto; width: min(184px, calc(100vw - 42px)); }
-    .profile-thought-bubble { left: 20px; right: auto; width: min(270px, calc(100vw - 32px)); max-width: calc(100vw - 32px); }
-}
-
-/* Exact trigger alignment: the cloud's left edge begins at the trigger, then grows rightward. */
-.profile-thought-note {
-    left: 64px;
-    right: auto;
-}
-.profile-thought-bubble {
-    left: 64px;
-    right: auto;
-}
-@media (max-width: 479px) {
-    .profile-thought-note { left: 52px; right: auto; }
-    .profile-thought-bubble { left: 52px; right: auto; }
-}
-
-/* Compact placement from the user's marked area: right of the avatar, below the banner edge. */
-.profile-thought-note {
-    left: 52px;
-    right: auto;
-    top: 10px;
-    bottom: auto;
-    width: min(150px, calc(100vw - 82px));
-    min-height: 92px;
-    padding: 25px 18px 35px 22px;
-    transform-origin: 14% 78%;
-}
-.profile-thought-bubble {
-    left: 52px;
-    right: auto;
-    top: 8px;
-    bottom: auto;
-    width: min(242px, calc(100vw - 42px));
-    max-width: calc(100vw - 42px);
-    min-height: 178px;
-    padding: 23px 18px 45px 18px;
-    transform-origin: 14% 78%;
-}
-@media (max-width: 479px) {
-    .profile-thought-note {
-        left: 52px;
-        top: 8px;
-        width: min(150px, calc(100vw - 78px));
-        min-height: 92px;
-        padding: 24px 17px 34px 21px;
-    }
-    .profile-thought-bubble {
-        left: 52px;
-        top: 7px;
-        width: min(242px, calc(100vw - 42px));
-        max-width: calc(100vw - 42px);
-        min-height: 178px;
-        padding: 22px 17px 44px 17px;
-    }
-}
-
-/* Compact visual polish: short cloud beside the trigger, no text collision with profile content. */
-.profile-thought-note {
-    left: 64px;
-    top: 4px;
-    bottom: auto;
-    width: min(142px, calc(100vw - 82px));
-    min-height: 86px;
-    padding: 23px 16px 31px 19px;
-    font-size: .68rem;
-    line-height: 1.18;
-    font-weight: 750;
-    overflow: hidden;
-}
+.profile-thought-note[hidden] { display: none !important; }
+.profile-thought-note__dot { display: none; }
 .profile-thought-note #profileThoughtNoteText {
     display: -webkit-box;
+    width: 100%;
+    overflow: hidden;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
-    overflow: hidden;
     max-height: 3.55em;
     overflow-wrap: anywhere;
     text-wrap: balance;
 }
+.profile-thought-note.is-popping { animation: profileThoughtCleanPop .3s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes profileThoughtCleanPop {
+    0% { opacity: 0; transform: translateY(5px) scale(.84); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .profile-thought-bubble {
-    left: 64px;
-    top: 4px;
-    bottom: auto;
-    width: min(260px, calc(100vw - 38px));
-    max-width: calc(100vw - 38px);
-    min-height: 196px;
-    padding: 24px 18px 50px 18px;
+    position: absolute;
+    left: 46px;
+    top: 18px;
+    z-index: 40;
+    width: min(264px, calc(100vw - 34px));
+    max-width: calc(100vw - 34px);
+    box-sizing: border-box;
+    padding: 13px;
+    border: 1px solid color-mix(in srgb, var(--text, #111) 14%, transparent);
+    border-radius: 18px;
+    background: var(--surface, #fff);
+    color: var(--text, #111);
+    box-shadow: 0 10px 25px rgba(0,0,0,.18);
+    transform-origin: 12% 20%;
 }
-.profile-thought-bubble__head strong { font-size: .72rem; }
+.profile-thought-bubble:not([hidden]) { animation: profileThoughtCleanPop .24s cubic-bezier(.2,.8,.2,1) both; }
+.profile-thought-bubble::before,
+.profile-thought-bubble::after {
+    position: absolute;
+    display: block;
+    content: '';
+    border-radius: 50%;
+    background: var(--surface, #fff);
+}
+.profile-thought-bubble::before { left: 14px; bottom: -8px; width: 15px; height: 15px; }
+.profile-thought-bubble::after { left: 5px; bottom: -17px; width: 8px; height: 8px; }
+.profile-thought-bubble__head,
+.profile-thought-bubble__foot { min-width: 0; }
+.profile-thought-bubble__head strong { font-size: .76rem; }
+.profile-thought-bubble__close { width: 25px; height: 25px; font-size: 1.1rem; }
 .profile-thought-bubble textarea {
-    min-height: 46px;
-    max-height: 58px;
-    margin: 7px 0;
+    min-height: 52px;
+    max-height: 66px;
+    margin: 8px 0;
     padding: 8px 9px;
-    font-size: .72rem;
-    line-height: 1.28;
+    border-radius: 11px;
+    font-size: .74rem;
+    line-height: 1.3;
 }
-.profile-thought-bubble__foot button { min-height: 28px; padding-inline: 11px; font-size: .66rem; }
+.profile-thought-bubble__foot button { min-height: 30px; padding-inline: 12px; font-size: .68rem; }
 @media (max-width: 479px) {
+    .profile-thought-trigger { width: 25px; height: 25px; right: 1px; }
+    .profile-thought-trigger i { font-size: 9px; }
     .profile-thought-note {
-        left: 48px;
-        top: 4px;
-        width: min(142px, calc(100vw - 78px));
-        min-height: 86px;
-        padding: 23px 15px 31px 18px;
+        left: 44px;
+        top: 40px;
+        width: min(148px, calc(100vw - 80px));
+        min-height: 67px;
+        padding: 16px 14px 16px 18px;
+        font-size: .65rem;
     }
     .profile-thought-bubble {
-        left: 48px;
-        top: 4px;
-        width: min(260px, calc(100vw - 28px));
+        left: 44px;
+        top: 15px;
+        width: min(252px, calc(100vw - 28px));
         max-width: calc(100vw - 28px);
-        min-height: 196px;
-        padding: 24px 17px 49px 17px;
+        padding: 12px;
     }
+}
+@media (prefers-reduced-motion: reduce) {
+    .profile-thought-note.is-popping,
+    .profile-thought-bubble:not([hidden]) { animation: none; }
 }
