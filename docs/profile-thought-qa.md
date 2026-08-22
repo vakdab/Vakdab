@@ -37,3 +37,8 @@ The previous accumulated thought-note overrides from lines 1455 onward were remo
 ## v31 poster blur overlay QA
 
 The saved thought remains over the poster area. Browser console confirms a translucent background (`color(srgb 1 1 1 / 0.634118)`) and `backdrop-filter: blur(6px) saturate(0.9)`. The note is 154px wide and 70px high, positioned above the trigger so the poster remains visible beneath the cloud while the text stays readable.
+
+
+## v33 controls and expiry QA
+
+The trigger now uses a modern outline SVG thought icon instead of the previous Font Awesome dots. The composer is narrower and shorter, and its footer contains adjacent `Видалити` and `Зберегти` actions. Delete was smoke-tested locally: it cleared the note, closed the editor, and displayed `Думку видалено`. Saving writes `thoughtAt`, and the runtime timer plus render-time guard remove the thought after four hours.

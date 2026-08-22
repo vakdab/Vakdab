@@ -1633,3 +1633,72 @@ body:not(.dark-mode) .header .logo-text span {
         padding: 16px 14px 16px 18px;
     }
 }
+
+/* Thought v32 controls: modern outline icon, smaller editor, paired save/delete actions. */
+.profile-thought-trigger svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.profile-thought-bubble {
+    width: min(224px, calc(100vw - 30px));
+    max-width: calc(100vw - 30px);
+    padding: 10px;
+    border-radius: 16px;
+}
+.profile-thought-bubble__head strong { font-size: .72rem; }
+.profile-thought-bubble__close { width: 23px; height: 23px; font-size: 1rem; }
+.profile-thought-bubble textarea {
+    min-height: 42px;
+    max-height: 54px;
+    margin: 6px 0;
+    padding: 7px 8px;
+    border-radius: 10px;
+    font-size: .7rem;
+    line-height: 1.25;
+}
+.profile-thought-bubble__foot {
+    gap: 6px;
+    align-items: center;
+}
+.profile-thought-bubble__foot span { font-size: .6rem; }
+.profile-thought-bubble__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+}
+.profile-thought-bubble__actions button {
+    min-height: 27px;
+    padding: 0 9px;
+    border-radius: 999px;
+    font-size: .62rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+.profile-thought-remove {
+    border: 1px solid color-mix(in srgb, var(--text, #111) 18%, transparent);
+    background: transparent;
+    color: var(--text, #111);
+}
+.profile-thought-remove:hover,
+.profile-thought-remove:focus-visible { background: color-mix(in srgb, var(--text, #111) 8%, transparent); }
+.profile-thought-bubble__actions #profileThoughtSave {
+    min-height: 27px;
+    padding: 0 10px;
+    font-size: .62rem;
+}
+@media (max-width: 479px) {
+    .profile-thought-trigger svg { width: 14px; height: 14px; }
+    .profile-thought-bubble {
+        width: min(224px, calc(100vw - 24px));
+        max-width: calc(100vw - 24px);
+        padding: 9px;
+    }
+    .profile-thought-bubble__actions { gap: 4px; }
+    .profile-thought-bubble__actions button { padding-inline: 8px; }
+}

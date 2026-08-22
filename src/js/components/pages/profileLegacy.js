@@ -4,9 +4,9 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v31';
-import { getProfile, saveProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-profile-thought-v31';
-import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-profile-thought-v31';
+} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v33';
+import { getProfile, saveProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-profile-thought-v33';
+import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-profile-thought-v33';
 
 function bindProfileThought(container) {
     const trigger = container?.querySelector('#profileThoughtTrigger');
@@ -14,6 +14,7 @@ function bindProfileThought(container) {
     const input = container?.querySelector('#profileThoughtInput');
     const count = container?.querySelector('#profileThoughtCount');
     const save = container?.querySelector('#profileThoughtSave');
+    const remove = container?.querySelector('#profileThoughtRemove');
     const close = container?.querySelector('#profileThoughtClose');
     const note = container?.querySelector('#profileThoughtNote');
     const noteText = container?.querySelector('#profileThoughtNoteText');
@@ -47,6 +48,26 @@ function bindProfileThought(container) {
 
     updateCount();
     setNote(input.value, false);
+    const scheduleThoughtExpiry = () => {
+        const snapshot = getProfile();
+        const createdAt = Number(snapshot.thoughtAt || 0);
+        if (!snapshot.thought || !createdAt) return;
+        const remaining = Math.max(0, (4 * 60 * 60 * 1000) - (Date.now() - createdAt));
+        window.setTimeout(() => {
+            const latest = getProfile();
+            if (!latest.thought || Number(latest.thoughtAt || 0) !== createdAt) return;
+            latest.thought = '';
+            latest.thoughtAt = 0;
+            saveProfile(latest);
+            input.value = '';
+            updateCount();
+            trigger.classList.remove('has-thought');
+            setNote('', false);
+            setOpen(false);
+            showToast('Термін дії думки завершився');
+        }, remaining);
+    };
+    scheduleThoughtExpiry();
     trigger.addEventListener('click', (event) => {
         event.stopPropagation();
         setOpen(bubble.hidden);
@@ -61,14 +82,27 @@ function bindProfileThought(container) {
         if (event.key === 'Escape') setOpen(false);
         if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') save.click();
     });
-    save.addEventListener('click', () => {
+    const persistThought = (value) => {
         const profile = getProfile();
-        profile.thought = input.value.trim().slice(0, 120);
+        profile.thought = String(value || '').trim().slice(0, 120);
+        profile.thoughtAt = profile.thought ? Date.now() : 0;
         saveProfile(profile);
         trigger.classList.toggle('has-thought', Boolean(profile.thought));
-        setNote(profile.thought, true);
+        setNote(profile.thought, Boolean(profile.thought));
+        return profile;
+    };
+    save.addEventListener('click', () => {
+        const profile = persistThought(input.value);
+        if (profile.thought) scheduleThoughtExpiry();
         setOpen(false);
-        showToast(profile.thought ? 'Думку збережено' : 'Думку видалено');
+        showToast(profile.thought ? 'Думку збережено на 4 години' : 'Думку видалено');
+    });
+    remove?.addEventListener('click', () => {
+        input.value = '';
+        updateCount();
+        persistThought('');
+        setOpen(false);
+        showToast('Думку видалено');
     });
     document.addEventListener('click', (event) => {
         if (!bubble.hidden && !bubble.contains(event.target) && !trigger.contains(event.target)) setOpen(false);
@@ -113,6 +147,18 @@ export function renderProfilePage() {
             }
             const isGuestMode = Auth.isGuest();
             const profile = getProfile();
+            const THOUGHT_TTL_MS = 4 * 60 * 60 * 1000;
+            if (profile.thought) {
+                const thoughtAt = Number(profile.thoughtAt || 0);
+                if (!thoughtAt) {
+                    profile.thoughtAt = Date.now();
+                    saveProfile(profile);
+                } else if (Date.now() - thoughtAt >= THOUGHT_TTL_MS) {
+                    profile.thought = '';
+                    profile.thoughtAt = 0;
+                    saveProfile(profile);
+                }
+            }
             const stats = getProfileStats();
             // GIF detection — use isGifUrl helper
             const activeBanner = profile.bannerVideo || profile.banner || '';
@@ -141,8 +187,8 @@ export function renderProfilePage() {
                       ${profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, 'profile-avatar-media', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, 'profile-avatar-media', 'avatar') : '')}
                       <span class="avatar-placeholder" style="display:none;">${escapeHtml(profile.nickname.charAt(0).toUpperCase())}</span>
                     </div>
-                    <button type="button" class="profile-thought-trigger${profile.thought ? ' has-thought' : ''}" id="profileThoughtTrigger" aria-label="Відкрити думку" aria-expanded="false" aria-controls="profileThoughtBubble" title="Думка">
-                      <i class="fas fa-comment-dots" aria-hidden="true"></i>
+                    <button type="button" class="profile-thought-trigger${profile.thought ? ' has-thought' : ''}" id="profileThoughtTrigger" aria-label="Відкрити думку" aria-expanded="false" aria-controls="profileThoughtBubble" title="Додати думку">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 5.5h13a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-6.2l-3.8 3v-3H5.5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z"/><path d="M8 11.2h.01M12 11.2h.01M16 11.2h.01"/></svg>
                     </button>
                     <div class="profile-thought-note${profile.thought ? ' is-visible' : ''}" id="profileThoughtNote"${profile.thought ? '' : ' hidden'} role="status" aria-live="polite">
                       <span class="profile-thought-note__dot" aria-hidden="true"></span>
@@ -156,7 +202,10 @@ export function renderProfilePage() {
                       <textarea id="profileThoughtInput" maxlength="120" placeholder="Що у тебе в думках?">${escapeHtml(profile.thought || '')}</textarea>
                       <div class="profile-thought-bubble__foot">
                         <span id="profileThoughtCount">0/120</span>
-                        <button type="button" id="profileThoughtSave">Зберегти</button>
+                        <div class="profile-thought-bubble__actions">
+                          <button type="button" id="profileThoughtRemove" class="profile-thought-remove">Видалити</button>
+                          <button type="button" id="profileThoughtSave">Зберегти</button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -524,7 +573,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-profile-thought-v31');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-profile-thought-v33');
         const profile = await getPublicProfile(targetUid);
         if (!profile) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';
