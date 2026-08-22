@@ -1,3 +1,3 @@
-import { bootstrap } from './core/bootstrap.js?v=20260821-profile-thought-v36';
+import { bootstrap } from './core/bootstrap.js?v=20260821-profile-thought-v37';
 
 bootstrap();

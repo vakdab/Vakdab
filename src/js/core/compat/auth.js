@@ -3,9 +3,9 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v36';
-import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-profile-thought-v36';
-import { Storage } from './storage.js?v=20260821-profile-thought-v36';
+} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v37';
+import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-profile-thought-v37';
+import { Storage } from './storage.js?v=20260821-profile-thought-v37';
 
         const Auth = {
             _user: null,
@@ -119,11 +119,19 @@ import { Storage } from './storage.js?v=20260821-profile-thought-v36';
                     if (docSnap.exists()) {
                         // Існуючий юзер — завантажуємо його дані з Firestore
                         const data = docSnap.data();
+                        const localProfileBeforeLoad = Storage.getProfile() || {};
                         /* console.log removed */
                         /* console.log removed */
                         /* console.log removed */
                         if (data.profile) {
                             const mergedProfile = Object.assign(getDefaultProfile(), data.profile);
+                            const localThoughtExpiresAt = Number(localProfileBeforeLoad.thoughtExpiresAt || 0);
+                            if (!mergedProfile.thought && localProfileBeforeLoad.thought && localThoughtExpiresAt > Date.now()) {
+                                mergedProfile.thought = localProfileBeforeLoad.thought;
+                                mergedProfile.thoughtAt = localProfileBeforeLoad.thoughtAt;
+                                mergedProfile.thoughtExpiresAt = localThoughtExpiresAt;
+                                Storage._debounceSync('profile');
+                            }
                             // Доповнюємо Google displayName/photoURL якщо в Firestore порожньо
                             if ((!mergedProfile.nickname || mergedProfile.nickname === 'Користувач') && this._user && this._user.displayName) {
                                 mergedProfile.nickname = this._user.displayName;

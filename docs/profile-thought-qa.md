@@ -57,3 +57,8 @@ The thought now persists as `profile.thought`, `profile.thoughtAt`, and `profile
 ## v36 logout persistence fix
 
 The previous implementation relied only on the 1.5-second debounced profile sync, which could leave the thought local when the user logged out quickly. v36 keeps the local write but then awaits `Auth.syncUserData({ scope: 'profile' })` immediately after save or delete. The UI now reports whether the thought was published or remained device-only. Logout still performs its final full sync before clearing local state. Public profile reading and expiry remain timestamp-based.
+
+
+## v37 owner-profile restore fix
+
+The screenshot showed the profile opening without the cloud after login. v37 adds an owner-public fallback: when the current route targets the signed-in user's own UID, the renderer merges the active local thought into the profile even if the public Firestore read is empty or denied. The Firebase login restore also preserves an active local thought when the remote profile lacks the thought fields, then schedules a profile sync instead of overwriting it with empty data.
