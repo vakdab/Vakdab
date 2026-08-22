@@ -10,7 +10,7 @@ import {
     playerPageCurrentDub, playerPageCurrentSeason, playerPageCurrentSource,
     buildBottomSheetData, buildEpisodeViews, buildSeasonRow,
     showToast, updateFilterChip, updateSourceChip
-} from '../legacy/app-legacy.js?v=20260822-schedule-hero-v60';
+} from '../legacy/app-legacy.js?v=20260822-catalog-genre-data-v61';
 
         export const CATALOG_POSTER_FALLBACK = './android-chrome-512x512.png';
         export function normalizeAnimeUrl(href = '') {

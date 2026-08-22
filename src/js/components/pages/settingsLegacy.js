@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260822-schedule-hero-v60';
+} from '../../legacy/app-legacy.js?v=20260822-catalog-genre-data-v61';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 

@@ -3,10 +3,10 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260822-schedule-hero-v60';
-import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from './settingsLegacy.js?v=20260822-schedule-hero-v60';
+} from '../../legacy/app-legacy.js?v=20260822-catalog-genre-data-v61';
+import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from './settingsLegacy.js?v=20260822-catalog-genre-data-v61';
 import { debugLog } from '../../utils/debug.js';
-import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260822-schedule-hero-v60';
+import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260822-catalog-genre-data-v61';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
 import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260818-honey-type-filter-v1';
@@ -443,6 +443,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
         export function homeCatalogRequestBody() {
             const body = {};
+            if (homeCatalogMode === 'anime') body.only_translated = true;
             if (homeCatalogQuery) body.query = homeCatalogQuery;
             if (homeCatalogSort === 'score') body.sort = ['score:desc', 'scored_by:desc'];
             if (homeCatalogSort === 'newest') body.sort = ['start_date:desc'];
@@ -789,7 +790,12 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 homeCatalogPage = 1;
                 homeCatalogFilterResultItems = null;
                 homeCatalogFilterResultOffset = 0;
-                await reloadHomeCatalog();
+                host.setAttribute('aria-busy', 'true');
+                try {
+                    await reloadHomeCatalog();
+                } finally {
+                    host.setAttribute('aria-busy', 'false');
+                }
             }));
         }
 

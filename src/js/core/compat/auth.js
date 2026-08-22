@@ -3,9 +3,9 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260822-schedule-hero-v60';
-import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../components/pages/settingsLegacy.js?v=20260822-schedule-hero-v60';
-import { Storage } from './storage.js?v=20260822-schedule-hero-v60';
+} from '../../legacy/app-legacy.js?v=20260822-catalog-genre-data-v61';
+import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../components/pages/settingsLegacy.js?v=20260822-catalog-genre-data-v61';
+import { Storage } from './storage.js?v=20260822-catalog-genre-data-v61';
 import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
 
         const Auth = {

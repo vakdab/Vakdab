@@ -1,6 +1,6 @@
 import { loadFeature } from '../../core/feature-loader.js';
-import { Router } from '../../core/compat/router.js?v=20260822-schedule-hero-v60';
-import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260822-schedule-hero-v60';
+import { Router } from '../../core/compat/router.js?v=20260822-catalog-genre-data-v61';
+import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260822-catalog-genre-data-v61';
 
 export function initBottomNav() {
 

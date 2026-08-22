@@ -1,5 +1,5 @@
 import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../services/catalog.js';
-import { DailyStats, Storage, openPlayerPage, showToast } from '../../legacy/app-legacy.js?v=20260822-schedule-hero-v60';
+import { DailyStats, Storage, openPlayerPage, showToast } from '../../legacy/app-legacy.js?v=20260822-catalog-genre-data-v61';
 
         let heroItems = [],
             heroPool = [],
