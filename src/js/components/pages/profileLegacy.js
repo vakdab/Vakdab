@@ -4,9 +4,9 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v35';
-import { getProfile, saveProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-profile-thought-v35';
-import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-profile-thought-v35';
+} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v36';
+import { getProfile, saveProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-profile-thought-v36';
+import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-profile-thought-v36';
 
 function bindProfileThought(container) {
     const trigger = container?.querySelector('#profileThoughtTrigger');
@@ -94,17 +94,30 @@ function bindProfileThought(container) {
         setNote(profile.thought, Boolean(profile.thought));
         return profile;
     };
-    save.addEventListener('click', () => {
+    const syncThoughtNow = async () => {
+        if (!Auth.isAuthenticated()) return { ok: false, error: 'not-authenticated' };
+        try {
+            return await Auth.syncUserData({ scope: 'profile' });
+        } catch (error) {
+            console.warn('[VakDab] thought profile sync failed:', error);
+            return { ok: false, error: error?.message || 'sync-failed' };
+        }
+    };
+    save.addEventListener('click', async () => {
         const profile = persistThought(input.value);
         if (profile.thought) scheduleThoughtExpiry();
         setOpen(false);
-        showToast(profile.thought ? 'Думку збережено на 4 години' : 'Думку видалено');
+        const result = await syncThoughtNow();
+        if (profile.thought && result.ok) showToast('Думку опубліковано на 4 години');
+        else if (profile.thought) showToast('Думку збережено лише на цьому пристрої — не вдалося опублікувати');
+        else showToast('Думку видалено');
     });
-    remove?.addEventListener('click', () => {
+    remove?.addEventListener('click', async () => {
         input.value = '';
         updateCount();
         persistThought('');
         setOpen(false);
+        await syncThoughtNow();
         showToast('Думку видалено');
     });
     document.addEventListener('click', (event) => {
@@ -579,7 +592,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-profile-thought-v35');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-profile-thought-v36');
         const profile = await getPublicProfile(targetUid);
         if (!profile) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';

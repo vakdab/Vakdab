@@ -52,3 +52,8 @@ The saved cloud now expands to 220px on the tested viewport instead of staying a
 ## v35 public thought sync QA
 
 The thought now persists as `profile.thought`, `profile.thoughtAt`, and `profile.thoughtExpiresAt` in the existing authenticated `users/{uid}` Firestore document through the existing scoped profile sync. The public-profile normalizer exposes the active thought only while `thoughtExpiresAt` is in the future, and the public renderer displays the same cloud over the other user's banner. An in-page timer removes the public cloud at expiry; the owner's timer clears the local profile and syncs the deletion when the owner page is open. Expired data is hidden for public viewers even if the owner is offline.
+
+
+## v36 logout persistence fix
+
+The previous implementation relied only on the 1.5-second debounced profile sync, which could leave the thought local when the user logged out quickly. v36 keeps the local write but then awaits `Auth.syncUserData({ scope: 'profile' })` immediately after save or delete. The UI now reports whether the thought was published or remained device-only. Logout still performs its final full sync before clearing local state. Public profile reading and expiry remain timestamp-based.
