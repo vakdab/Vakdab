@@ -17,3 +17,7 @@ The newly rendered `Бойовики` button correctly had `aria-pressed="true"`
 ## v61 functional fix verification
 
 After adding `only_translated: true` to the homepage anime request body, the local v61 page loaded `Знайдено 4 187 результатів` for the Ukrainian anime catalog. Selecting `Бойовики` through the exact DOM control returned `Показано 24 з 1 708 результатів`, with the fresh button reporting `aria-pressed="true"`; the first result was `Сталевий алхімік: Братерство`. This confirms the homepage genre data request is now sending a distinct Ukrainian result set and the active control survives re-render.
+
+## Live verification
+
+After the successful Pages deploy for commit `5714c32`, the live route `https://vakdab.github.io/Vakdab/?v=20260822-catalog-genre-data-v61#main` loaded the Ukrainian catalog and displayed `Знайдено 4 187 результатів`. The live page contained the full homepage genre rail and the updated Hikka-backed catalog flow was present. The live response remained stable after waiting for the initial asynchronous load.
