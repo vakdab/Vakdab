@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v38';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-profile-thought-v38';
+} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v39';
+import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-telegram-auth-v39';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -2657,6 +2657,11 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 <button type="button" data-mode="register">Реєстрація</button>
               </div>
 
+              <button class="telegram-btn" type="button" id="authTelegramBtn">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.4 3.4-3.1 16.2c-.2 1.1-.8 1.4-1.7.9l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.4-.1-.6-.6-.2L6.2 13.9l-4.6-1.4c-1-.3-1-1 .2-1.5L19.7 3c.8-.3 1.9.2 1.7.4Z"/></svg>
+                Увійти або зареєструватися через Telegram
+              </button>
+
               <button class="google-btn" type="button" id="authGoogleBtn">
                 <svg viewBox="0 0 48 48">
                   <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.3 29.3 35 24 35c-6.1 0-11-4.9-11-11s4.9-11 11-11c2.8 0 5.3 1 7.3 2.8l5.7-5.7C33.6 6.5 29 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z"/>
@@ -2801,6 +2806,23 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 } else {
                     renderProfilePage();
                 }
+            });
+
+            document.getElementById('authTelegramBtn').addEventListener('click', async function() {
+                const telegram = globalThis.Telegram?.WebApp;
+                const errorEl = document.getElementById('authError');
+                if (!telegram?.initData) {
+                    errorEl.textContent = 'Відкрийте VakDab через кнопку Telegram Mini App у VakDabBot.';
+                    return;
+                }
+                telegram.ready?.();
+                this.disabled = true;
+                this.textContent = 'Перевірка Telegram...';
+                const result = await Auth.signInWithTelegram(telegram.initData);
+                this.disabled = false;
+                this.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.4 3.4-3.1 16.2c-.2 1.1-.8 1.4-1.7.9l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.4-.1-.6-.6-.2L6.2 13.9l-4.6-1.4c-1-.3-1 0 .2-1.5L19.7 3c.8-.3 1.9.2 1.7.4Z"/></svg> Увійти або зареєструватися через Telegram`;
+                if (!result.success) errorEl.textContent = result.error || 'Помилка входу через Telegram';
+                else renderProfilePage();
             });
 
             document.getElementById('authGoogleBtn').addEventListener('click', async function() {

@@ -1,8 +1,8 @@
-import { Storage } from '../../core/compat/storage.js?v=20260821-profile-thought-v38';
+import { Storage } from '../../core/compat/storage.js?v=20260821-telegram-auth-v39';
 import { db } from '../../services/firebase/client.js';
-import { Router } from '../../core/compat/router.js?v=20260821-profile-thought-v38';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260821-profile-thought-v38';
-import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260821-profile-thought-v38';
+import { Router } from '../../core/compat/router.js?v=20260821-telegram-auth-v39';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v39';
+import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260821-telegram-auth-v39';
 
         function stickerFaceSvg(variant) {
             const s = 'stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"';

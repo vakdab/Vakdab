@@ -1,5 +1,5 @@
 import { Auth } from './auth.js';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260821-profile-thought-v38';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v39';
         export const Storage = {
             _syncTimer: null,
             _pendingSyncScope: null,

@@ -1,11 +1,12 @@
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, signInAnonymously, sendPasswordResetEmail, deleteUser, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot } from '../../config/firebase.js';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signInWithCustomToken, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, signInAnonymously, sendPasswordResetEmail, deleteUser, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot } from '../../config/firebase.js';
 import { auth, db, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v38';
-import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-profile-thought-v38';
-import { Storage } from './storage.js?v=20260821-profile-thought-v38';
+} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v39';
+import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-telegram-auth-v39';
+import { Storage } from './storage.js?v=20260821-telegram-auth-v39';
+import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
 
         const Auth = {
             _user: null,
@@ -125,6 +126,11 @@ import { Storage } from './storage.js?v=20260821-profile-thought-v38';
                         /* console.log removed */
                         if (data.profile) {
                             const mergedProfile = Object.assign(getDefaultProfile(), data.profile);
+                            const telegramProfile = this._pendingTelegramProfile;
+                            if (telegramProfile && (!mergedProfile.nickname || mergedProfile.nickname === 'Користувач')) {
+                                mergedProfile.nickname = [telegramProfile.first_name, telegramProfile.last_name].filter(Boolean).join(' ') || (telegramProfile.username ? `@${telegramProfile.username}` : mergedProfile.nickname);
+                            }
+                            if (telegramProfile && !mergedProfile.avatar && telegramProfile.photo_url) mergedProfile.avatar = telegramProfile.photo_url;
                             const localThoughtExpiresAt = Number(localProfileBeforeLoad.thoughtExpiresAt || 0);
                             if (!mergedProfile.thought && localProfileBeforeLoad.thought && localThoughtExpiresAt > Date.now()) {
                                 mergedProfile.thought = localProfileBeforeLoad.thought;
@@ -287,6 +293,37 @@ import { Storage } from './storage.js?v=20260821-profile-thought-v38';
                 } catch (e) {
                     console.warn('Register error:', e);
                     return { success: false, error: e.message };
+                }
+            },
+
+            async signInWithTelegram(initData = '') {
+                if (!firebaseInitialized || !auth) return { success: false, error: 'Firebase недоступний' };
+                const rawInitData = String(initData || globalThis.Telegram?.WebApp?.initData || '').trim();
+                if (!rawInitData) return { success: false, error: 'Відкрийте VakDab із Telegram Mini App або скористайтеся іншим способом входу' };
+                try {
+                    const response = await fetch(TELEGRAM_AUTH_ENDPOINT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ initData: rawInitData })
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok || !payload.customToken) throw new Error(payload.error || 'Не вдалося перевірити Telegram');
+                    this._pendingTelegramProfile = payload.telegramUser || null;
+                    const result = await signInWithCustomToken(auth, payload.customToken);
+                    this._user = result.user;
+                    const tg = payload.telegramUser || {};
+                    const displayName = [tg.first_name, tg.last_name].filter(Boolean).join(' ') || (tg.username ? `@${tg.username}` : 'Користувач');
+                    const current = Storage.getProfile() || getDefaultProfile();
+                    if (!current.nickname || current.nickname === 'Користувач') current.nickname = displayName;
+                    if (!current.avatar && tg.photo_url) current.avatar = tg.photo_url;
+                    Storage._setProfile(current);
+                    this._notifyListeners();
+                    showToast('Вхід через Telegram успішний');
+                    return { success: true };
+                } catch (e) {
+                    console.warn('Telegram sign-in error:', e);
+                    this._pendingTelegramProfile = null;
+                    return { success: false, error: e.message || 'Помилка входу через Telegram' };
                 }
             },
 

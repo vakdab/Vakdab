@@ -1,3 +1,3 @@
-import { bootstrap } from './core/bootstrap.js?v=20260821-profile-thought-v38';
+import { bootstrap } from './core/bootstrap.js?v=20260821-telegram-auth-v39';
 
 bootstrap();
