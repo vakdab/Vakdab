@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v34';
+} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v35';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 
@@ -706,7 +706,10 @@ import {
                 atmosphere: 'none',
                 avatarDecoration: 'none',
                 bannerEffect: 'none',
-                bannerFormat: 'narrow'
+                bannerFormat: 'narrow',
+                thought: '',
+                thoughtAt: 0,
+                thoughtExpiresAt: 0
             };
         }
 

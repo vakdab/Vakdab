@@ -4,9 +4,9 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v34';
-import { getProfile, saveProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-profile-thought-v34';
-import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-profile-thought-v34';
+} from '../../legacy/app-legacy.js?v=20260821-profile-thought-v35';
+import { getProfile, saveProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-profile-thought-v35';
+import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-profile-thought-v35';
 
 function bindProfileThought(container) {
     const trigger = container?.querySelector('#profileThoughtTrigger');
@@ -51,13 +51,15 @@ function bindProfileThought(container) {
     const scheduleThoughtExpiry = () => {
         const snapshot = getProfile();
         const createdAt = Number(snapshot.thoughtAt || 0);
-        if (!snapshot.thought || !createdAt) return;
-        const remaining = Math.max(0, (4 * 60 * 60 * 1000) - (Date.now() - createdAt));
+        const expiresAt = Number(snapshot.thoughtExpiresAt || (createdAt + (4 * 60 * 60 * 1000)) || 0);
+        if (!snapshot.thought || !createdAt || !expiresAt) return;
+        const remaining = Math.max(0, expiresAt - Date.now());
         window.setTimeout(() => {
             const latest = getProfile();
             if (!latest.thought || Number(latest.thoughtAt || 0) !== createdAt) return;
             latest.thought = '';
             latest.thoughtAt = 0;
+            latest.thoughtExpiresAt = 0;
             saveProfile(latest);
             input.value = '';
             updateCount();
@@ -86,6 +88,7 @@ function bindProfileThought(container) {
         const profile = getProfile();
         profile.thought = String(value || '').trim().slice(0, 120);
         profile.thoughtAt = profile.thought ? Date.now() : 0;
+        profile.thoughtExpiresAt = profile.thought ? profile.thoughtAt + (4 * 60 * 60 * 1000) : 0;
         saveProfile(profile);
         trigger.classList.toggle('has-thought', Boolean(profile.thought));
         setNote(profile.thought, Boolean(profile.thought));
@@ -150,12 +153,15 @@ export function renderProfilePage() {
             const THOUGHT_TTL_MS = 4 * 60 * 60 * 1000;
             if (profile.thought) {
                 const thoughtAt = Number(profile.thoughtAt || 0);
-                if (!thoughtAt) {
+                const thoughtExpiresAt = Number(profile.thoughtExpiresAt || 0);
+                if (!thoughtAt || !thoughtExpiresAt) {
                     profile.thoughtAt = Date.now();
+                    profile.thoughtExpiresAt = profile.thoughtAt + THOUGHT_TTL_MS;
                     saveProfile(profile);
-                } else if (Date.now() - thoughtAt >= THOUGHT_TTL_MS) {
+                } else if (Date.now() >= thoughtExpiresAt) {
                     profile.thought = '';
                     profile.thoughtAt = 0;
+                    profile.thoughtExpiresAt = 0;
                     saveProfile(profile);
                 }
             }
@@ -573,7 +579,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-profile-thought-v34');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-profile-thought-v35');
         const profile = await getPublicProfile(targetUid);
         if (!profile) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';
@@ -586,6 +592,9 @@ export async function renderPublicProfilePage(uid) {
         });
         const banner = profile.bannerVideo || profile.banner || '';
         const avatar = profile.avatarVideo || profile.avatar || '';
+        const publicThought = String(profile.thought || '').trim();
+        const publicThoughtExpiresAt = Number(profile.thoughtExpiresAt || 0);
+        const hasPublicThought = Boolean(publicThought && publicThoughtExpiresAt > Date.now());
         const bannerClass = `profile-banner ${profile.bannerFormat === 'wide' ? 'profile-banner--wide' : 'profile-banner--narrow'}${profile.bannerEffect && profile.bannerEffect !== 'none' ? ` banner-effect-${escapeHtml(profile.bannerEffect)}` : ''}`;
         const avatarClass = `profile-avatar${isGifUrl(avatar) ? ' is-gif' : ''}`;
         const nickname = escapeHtml(profile.nickname);
@@ -622,6 +631,7 @@ export async function renderPublicProfilePage(uid) {
                     ${avatar ? profileMediaMarkup(avatar, 'profile-avatar-media', 'profile avatar', profile.avatarVideo ? profile.avatarVideoSettings : null) : ''}
                     <span class="avatar-placeholder" style="display:${avatar ? 'none' : 'flex'};">${escapeHtml(profile.nickname.charAt(0).toUpperCase())}</span>
                   </div>
+                  ${hasPublicThought ? `<div class="profile-thought-note profile-thought-note--public is-visible" id="profileThoughtNote" role="status" aria-live="polite"><span class="profile-thought-note__dot" aria-hidden="true"></span><span id="profileThoughtNoteText">${escapeHtml(publicThought)}</span></div>` : ''}
                 </div>
                 <div class="profile-social-summary" aria-label="Соціальні показники">
                   ${canFollow && !social.isFollowing ? `<button type="button" class="profile-follow-icon" id="publicFollowBtn" data-following="0" aria-label="Підписатися на користувача" title="Підписатися">
@@ -645,6 +655,13 @@ export async function renderPublicProfilePage(uid) {
             <div class="profile-panel${initialTab === 'achievements' ? ' active' : ''}" id="publicProfilePanel-achievements">${renderAchievementsPanel(publicAchievements, profile.watchTime, publicHistory.length)}</div>
           </div>`;
         primeProfileMediaPlayback(container);
+        if (hasPublicThought) {
+            const publicThoughtNode = container.querySelector('#profileThoughtNote');
+            const remainingThoughtMs = Math.max(0, publicThoughtExpiresAt - Date.now());
+            window.setTimeout(() => {
+                if (publicThoughtNode?.isConnected) publicThoughtNode.remove();
+            }, remainingThoughtMs);
+        }
         container.querySelectorAll('#publicProfileTabs .profile-tab').forEach(tab => tab.addEventListener('click', () => {
             const target = tab.dataset.tab;
             container.querySelectorAll('#publicProfileTabs .profile-tab').forEach(item => item.classList.toggle('active', item === tab));

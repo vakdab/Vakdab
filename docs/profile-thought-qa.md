@@ -47,3 +47,8 @@ The trigger now uses a modern outline SVG thought icon instead of the previous F
 ## v34 long-message QA
 
 The saved cloud now expands to 220px on the tested viewport instead of staying at the narrow 148px mobile width. Its text uses natural word wrapping (`word-break: normal`, `overflow-wrap: break-word`) and a four-line clamp with ellipsis, so long Ukrainian messages no longer collapse into a narrow column or break every word. A 120-character smoke message was saved locally and rendered inside the cloud without overflow.
+
+
+## v35 public thought sync QA
+
+The thought now persists as `profile.thought`, `profile.thoughtAt`, and `profile.thoughtExpiresAt` in the existing authenticated `users/{uid}` Firestore document through the existing scoped profile sync. The public-profile normalizer exposes the active thought only while `thoughtExpiresAt` is in the future, and the public renderer displays the same cloud over the other user's banner. An in-page timer removes the public cloud at expiry; the owner's timer clears the local profile and syncs the deletion when the owner page is open. Expired data is hidden for public viewers even if the owner is offline.

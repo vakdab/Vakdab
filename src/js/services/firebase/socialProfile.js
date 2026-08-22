@@ -4,6 +4,11 @@ const FIRESTORE_VERSION = 'https://www.gstatic.com/firebasejs/12.16.0/firebase-f
 
 function normalizeProfile(uid, data = {}) {
     const profile = data.profile || {};
+    const now = Date.now();
+    const thought = String(profile.thought || '').trim();
+    const thoughtAt = Number(profile.thoughtAt || 0);
+    const thoughtExpiresAt = Number(profile.thoughtExpiresAt || (thoughtAt + (4 * 60 * 60 * 1000)) || 0);
+    const activeThought = thought && thoughtAt > 0 && thoughtExpiresAt > now ? thought : '';
     return {
         uid,
         nickname: String(profile.nickname || profile.name || 'Користувач').trim() || 'Користувач',
@@ -21,6 +26,9 @@ function normalizeProfile(uid, data = {}) {
         atmosphere: String(profile.atmosphere || 'none'),
         effect: String(profile.effect || 'none'),
         avatarDecoration: String(profile.avatarDecoration || 'none'),
+        thought: activeThought,
+        thoughtAt: activeThought ? thoughtAt : 0,
+        thoughtExpiresAt: activeThought ? thoughtExpiresAt : 0,
         private: profile.private === true,
         hideHistory: profile.hideHistory === true,
         hideBookmarks: profile.hideBookmarks === true,
