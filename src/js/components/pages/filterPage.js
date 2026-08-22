@@ -1,7 +1,7 @@
 import { GENRE_MAP } from '../../config/constants.js?v=20260820-hikka-proxy-fix4';
-import { Router } from '../../core/compat/router.js?v=20260822-player-overlay-v47';
+import { Router } from '../../core/compat/router.js?v=20260822-player-overlay-v49';
 import { fetchHikkaByGenre, fetchHikkaMain } from '../../services/catalog.js';
-import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CARD_PLACEHOLDER } from '../../legacy/app-legacy.js?v=20260822-player-overlay-v47';
+import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CARD_PLACEHOLDER } from '../../legacy/app-legacy.js?v=20260822-player-overlay-v49';
 
         const FILTER_STATUS_OPTIONS = [
             { key: 'anons', label: 'Анонс' },

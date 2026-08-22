@@ -1,11 +1,12 @@
 import { HIKKA_API, GENRE_MAP, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js?v=20260820-menu-pages-fix1';
 import {
-    Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
+    Auth, DailyStats, Router, Storage, escapeHtml,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v47';
-import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from './settingsLegacy.js?v=20260822-player-overlay-v47';
+} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v49';
+import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from './settingsLegacy.js?v=20260822-player-overlay-v49';
 import { debugLog } from '../../utils/debug.js';
+import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260822-player-overlay-v49';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
 import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260818-honey-type-filter-v1';
