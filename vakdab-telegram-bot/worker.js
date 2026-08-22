@@ -6,6 +6,21 @@ const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
 
+const CONTENT_TYPES = Object.freeze({
+  anime: { key: 'anime', label: 'Аніме', endpoint: 'anime' },
+  manga: { key: 'manga', label: 'Манґа', endpoint: 'manga' },
+  novel: { key: 'novel', label: 'Ранобе', endpoint: 'novel' }
+});
+
+function getContentType(value) {
+  const key = String(value || '').toLowerCase();
+  return CONTENT_TYPES[key] || CONTENT_TYPES.anime;
+}
+
+function contentTypeLabel(value) {
+  return getContentType(value).label;
+}
+
 // Скільки останніх повідомлень йде в модель як "жива" пам'ять
 const MAX_CONTEXT_MESSAGES_FOR_API = 50;
 
@@ -35,6 +50,7 @@ export default {
       }
 
       if (request.method === 'POST' && url.pathname === TELEGRAM_WEBHOOK_PATH) {
+        if (!verifyTelegramWebhook(request, env)) return textResponse('Unauthorized', 401);
         const update = await request.json();
         await processUpdate(update, env);
         return textResponse('OK');
@@ -47,6 +63,11 @@ export default {
     }
   }
 };
+
+function verifyTelegramWebhook(request, env) {
+  const expected = String(env.TELEGRAM_WEBHOOK_SECRET_TOKEN || '').trim();
+  return !expected || request.headers.get('X-Telegram-Bot-Api-Secret-Token') === expected;
+}
 
 function textResponse(body, status = 200) {
   return new Response(body, { status, headers: { 'content-type': 'text/plain; charset=utf-8' } });
@@ -71,14 +92,16 @@ async function setWebhook(request, env, url) {
     });
   }
 
-  return jsonResponse(await telegram('setWebhook', { url: webhookUrl }, env));
+  const params = { url: webhookUrl };
+  if (env.TELEGRAM_WEBHOOK_SECRET_TOKEN) params.secret_token = String(env.TELEGRAM_WEBHOOK_SECRET_TOKEN);
+  return jsonResponse(await telegram('setWebhook', params, env));
 }
 
 async function processUpdate(update, env) {
   if (update?.message) {
-    await handleMessage(update.message, env);
+    await handleMessage({ ...update.message, __updateId: update.update_id }, env);
   } else if (update?.callback_query) {
-    await handleCallbackQuery(update.callback_query, env);
+    await handleCallbackQuery({ ...update.callback_query, __updateId: update.update_id }, env);
   }
 }
 
@@ -111,20 +134,20 @@ async function handleMessage(message, env) {
     return;
   }
 
-  if (/^\/(?:makima|ask)(?:@\w+)?(?:\s|$)/i.test(text)) {
-    const prompt = text.replace(/^\/(?:makima|ask)(?:@\w+)?\s*/i, '').trim();
+  if (/^\/(?:makima|luna|ask)(?:@\w+)?(?:\s|$)/i.test(text)) {
+    const prompt = text.replace(/^\/(?:makima|luna|ask)(?:@\w+)?\s*/i, '').trim();
     if (!prompt) {
-      await sendMessage(chatId, 'Напиши запит після команди, наприклад: <code>/makima розкажи про останні новини аніме</code>.', {}, env);
+      await sendMessage(chatId, 'Напиши запит після команди, наприклад: <code>/luna розкажи про останні новини аніме</code>.', {}, env);
       return;
     }
-    await handleMakimaMessage(chatId, memoryKey, prompt, env);
+    await handleLunaMessage(chatId, memoryKey, prompt, env);
     return;
   }
 
-  if (text.toLowerCase().includes('макіма')) {
+  if (/(?:макіма|луна)/i.test(text)) {
     const state = getState(chatId);
-    state.screen = 'makima';
-    await handleMakimaMessage(chatId, memoryKey, text, env);
+    state.screen = 'luna';
+    await handleLunaMessage(chatId, memoryKey, text, env);
     return;
   }
 
@@ -132,22 +155,25 @@ async function handleMessage(message, env) {
 
   const state = getState(chatId);
 
-  if (state.screen === 'waiting_for_makima') {
-    await handleMakimaMessage(chatId, memoryKey, text, env);
+  if (await relayRouletteMessage(message, env)) return;
+
+  if (state.screen === 'waiting_for_luna') {
+    await handleLunaMessage(chatId, memoryKey, text, env);
     return;
   }
 
   if (state.screen === 'waiting_for_search') {
     state.searchQuery = text;
     state.searchPage = 1;
+    state.searchType = getContentType(state.searchType).key;
     state.screen = 'search';
     await sendMessage(chatId, `Шукаю: <b>${escapeHtml(text)}</b>...`, {}, env);
-    await renderSearch(chatId, 1, env);
+    await renderSearch(chatId, 1, env, state.searchType);
     return;
   }
 
-  // За замовчуванням — вільна розмова з Макімою
-  await handleMakimaMessage(chatId, memoryKey, text, env);
+  // За замовчуванням — вільна розмова з Луною
+  await handleLunaMessage(chatId, memoryKey, text, env);
 }
 
 function getMemoryKey(from) {
@@ -157,10 +183,10 @@ function getMemoryKey(from) {
   return id ? `id:${id}` : 'unknown';
 }
 
-// ==================== GROQ / Makima ====================
+// ==================== GROQ / Luna ====================
 const GROQ_API_BASE = 'https://api.groq.com/openai/v1';
 
-const MAKIMA_SYSTEM_PROMPT = `Тебе звати Макіма. Ти — розумна, добра та сучасна AI-помічниця у Telegram-боті VakDab.
+const LUNA_SYSTEM_PROMPT = `Тебе звати Луна. Ти — розумна, добра та сучасна AI-помічниця у Telegram-боті VakDab.
 Ти дівчина, і коли доречно говориш про себе у жіночому роді (наприклад "я рада", "я подумала", "я знайшла").
 
 Ти створена для того, щоб користувачі могли просто й невимушено спілкуватися з тобою на будь-які теми:
@@ -215,7 +241,7 @@ const MAKIMA_SYSTEM_PROMPT = `Тебе звати Макіма. Ти — роз�
 Кожен користувач повинен відчувати, що спілкується з розумною, доброю та уважною подругою-помічницею, яка
 завжди готова допомогти.`;
 
-async function handleMakimaMessage(chatId, memoryKey, userMessage, env) {
+async function handleLunaMessage(chatId, memoryKey, userMessage, env) {
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
 
@@ -231,7 +257,7 @@ async function handleMakimaMessage(chatId, memoryKey, userMessage, env) {
       });
     }
 
-    const responseText = await callMakimaAI(userMessage, fullHistory, profile, summary, env);
+    const responseText = await callLunaAI(userMessage, fullHistory, profile, summary, env);
 
     fullHistory.push({ role: 'user', content: userMessage });
     fullHistory.push({ role: 'assistant', content: responseText });
@@ -250,12 +276,12 @@ async function handleMakimaMessage(chatId, memoryKey, userMessage, env) {
       console.error('[memory] extract/merge failed:', safeError(memError));
     }
   } catch (error) {
-    console.error('[makima] failed:', safeError(error));
-    await sendMessage(chatId, 'Макіма тимчасово не може відповісти. Спробуйте ще раз.', { reply_markup: backHomeKeyboard() }, env);
+    console.error('[luna] failed:', safeError(error));
+    await sendMessage(chatId, 'Луна тимчасово не може відповісти. Спробуйте ще раз.', { reply_markup: backHomeKeyboard() }, env);
   }
 }
 
-async function callMakimaAI(prompt, fullHistory, profile, summary, env) {
+async function callLunaAI(prompt, fullHistory, profile, summary, env) {
   const apiKey = String(env.GROQ_API_KEY || '').trim();
   if (!apiKey) throw new Error('GROQ_API_KEY is not configured');
   const model = String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
@@ -272,8 +298,8 @@ async function callMakimaAI(prompt, fullHistory, profile, summary, env) {
   }
 
   const systemPrompt = memoryBlock
-    ? `${MAKIMA_SYSTEM_PROMPT}\n\n${memoryBlock}ПРАВИЛА ВИКОРИСТАННЯ ЦІЄЇ ІНФОРМАЦІЇ:\nВикористовуй її тільки коли вона реально покращує відповідь і доречна за темою.\nНе згадуй випадкові факти, якщо вони не стосуються поточного питання.\nНе кажи "я пам'ятаю" або подібних фраз.\nГовори природно, ніби добре знайома людина.`
-    : MAKIMA_SYSTEM_PROMPT;
+    ? `${LUNA_SYSTEM_PROMPT}\n\n${memoryBlock}ПРАВИЛА ВИКОРИСТАННЯ ЦІЄЇ ІНФОРМАЦІЇ:\nВикористовуй її тільки коли вона реально покращує відповідь і доречна за темою.\nНе згадуй випадкові факти, якщо вони не стосуються поточного питання.\nНе кажи "я пам'ятаю" або подібних фраз.\nГовори природно, ніби добре знайома людина.`
+    : LUNA_SYSTEM_PROMPT;
 
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -347,7 +373,7 @@ async function updateSummaryIfNeeded(memoryKey, fullHistory, currentSummary, env
   // Формуємо текст для summary (обмежуємо, щоб не перевищити контекст)
   const textForSummary = oldMessages
     .slice(-80) // беремо не більше 80 старих повідомлень
-    .map(m => `${m.role === 'user' ? 'Користувач' : 'Макіма'}: ${m.content}`)
+    .map(m => `${m.role === 'user' ? 'Користувач' : 'Луна'}: ${m.content}`)
     .join('\n');
 
   const summaryPrompt = `Ти — модуль стиснення пам'яті.
@@ -502,7 +528,7 @@ function buildProfileContext(profile) {
   return lines.join('\n');
 }
 
-const MEMORY_EXTRACT_SYSTEM_PROMPT = `Ти — модуль аналізу пам'яті для AI-асистентки Макіми.
+const MEMORY_EXTRACT_SYSTEM_PROMPT = `Ти — модуль аналізу пам'яті для AI-асистентки Луни.
 Твоя єдина задача: проаналізувати ОДНЕ повідомлення користувача і поточний профіль, та повернути ТІЛЬКИ JSON
 з новими або оновленими довготривалими фактами про користувача.
 
@@ -637,9 +663,27 @@ async function handleCallbackQuery(callback, env) {
       return;
     }
 
-    if (data === 'makima:prompt') {
-      state.screen = 'waiting_for_makima';
-      await replaceMessage(chatId, messageId, 'Напишіть своє запитання Макімі.', false, { reply_markup: backHomeKeyboard() }, env);
+    if (data === 'luna:prompt') {
+      state.screen = 'waiting_for_luna';
+      await replaceMessage(chatId, messageId, 'Напишіть своє запитання Луні.', false, { reply_markup: backHomeKeyboard() }, env);
+      return;
+    }
+
+    if (data === 'roulette:start') {
+      await replaceMessage(chatId, messageId, rouletteIntroText(), false, { reply_markup: rouletteStartKeyboard() }, env);
+      return;
+    }
+
+    if (data === 'roulette:join') {
+      const result = await rouletteOperation({ op: 'join', chatId, userId: callback.from?.id || chatId, updateId: callback.__updateId }, env);
+      await deliverRouletteResult(chatId, result, env);
+      return;
+    }
+
+    if (data === 'roulette:next' || data === 'roulette:end' || data === 'roulette:report') {
+      const op = data.slice('roulette:'.length);
+      const result = await rouletteOperation({ op, chatId, userId: callback.from?.id || chatId, updateId: callback.__updateId }, env);
+      await deliverRouletteResult(chatId, result, env);
       return;
     }
 
@@ -664,62 +708,91 @@ async function handleCallbackQuery(callback, env) {
     }
 
     if (data === 'random') {
+      await replaceMessage(chatId, messageId, 'Що хочете отримати випадково?', false, { reply_markup: contentTypeKeyboard('random') }, env);
+      return;
+    }
+
+    if (data === 'random:pick') {
+      await replaceMessage(chatId, messageId, 'Що хочете отримати випадково?', false, { reply_markup: contentTypeKeyboard('random') }, env);
+      return;
+    }
+
+    if (data.startsWith('random:')) {
+      const type = data.slice('random:'.length);
+      if (!CONTENT_TYPES[type]) return;
       state.screen = 'random';
-      state.previous = { kind: 'random' };
-      await replaceMessage(chatId, messageId, 'Шукаю випадкове аніме...', false, {}, env);
-      await renderRandom(chatId, messageId, env);
+      state.contentType = type;
+      state.previous = { kind: 'random', type };
+      await replaceMessage(chatId, messageId, `Шукаю випадкове ${contentTypeLabel(type).toLowerCase()}...`, false, {}, env);
+      await renderRandom(chatId, messageId, env, type);
       return;
     }
 
     if (data === 'search:prompt') {
+      await replaceMessage(chatId, messageId, 'Оберіть тип для пошуку:', false, { reply_markup: contentTypeKeyboard('search') }, env);
+      return;
+    }
+
+    if (data === 'search:pick') {
+      await replaceMessage(chatId, messageId, 'Оберіть тип для пошуку:', false, { reply_markup: contentTypeKeyboard('search') }, env);
+      return;
+    }
+
+    if (/^search:(anime|manga|novel)$/.test(data)) {
+      const type = data.slice('search:'.length);
+      state.searchType = type;
       state.screen = 'waiting_for_search';
-      await replaceMessage(chatId, messageId, 'Введіть назву аніме.', false, { reply_markup: backHomeKeyboard() }, env);
+      await replaceMessage(chatId, messageId, `Введіть назву ${contentTypeLabel(type).toLowerCase()}.`, false, { reply_markup: backHomeKeyboard() }, env);
       return;
     }
 
     if (data === 'search:1') {
-      await renderSearch(chatId, 1, env, messageId);
+      await renderSearch(chatId, 1, env, messageId, state.searchType || 'anime');
       return;
     }
 
     if (data.startsWith('search:')) {
       const page = parsePage(data, 'search:');
-      await renderSearch(chatId, page, env, messageId);
+      await renderSearch(chatId, page, env, messageId, state.searchType || 'anime');
       return;
     }
 
-    if (data.startsWith('anime:')) {
-      const slug = data.slice('anime:'.length).trim();
-      if (!/^[A-Za-z0-9][A-Za-z0-9-]{1,180}$/.test(slug)) {
-        await replaceMessage(chatId, messageId, 'Некоректне посилання на аніме. Спробуйте виконати пошук ще раз.', false, { reply_markup: mainKeyboard() }, env);
+    if (data.startsWith('content:') || data.startsWith('anime:')) {
+      const legacyAnime = data.startsWith('anime:');
+      const parts = data.split(':');
+      const type = legacyAnime ? 'anime' : parts[1];
+      const slug = legacyAnime ? data.slice('anime:'.length).trim() : parts.slice(2).join(':').trim();
+      if (!CONTENT_TYPES[type] || !/^[A-Za-z0-9][A-Za-z0-9-]{1,180}$/.test(slug)) {
+        await replaceMessage(chatId, messageId, 'Некоректне посилання. Спробуйте виконати пошук ще раз.', false, { reply_markup: mainKeyboard() }, env);
         return;
       }
       state.previous = null;
       await replaceMessage(chatId, messageId, 'Завантажую деталі...', false, {}, env);
-      await renderDetails(chatId, messageId, `${HIKKA_API}/anime/${slug}`, env);
+      await renderDetails(chatId, messageId, `${HIKKA_API}/${type}/${slug}`, env, type);
       return;
     }
 
     if (data.startsWith('item:')) {
-      const [, kind, pageText, indexText] = data.split(':');
-      const page = Number(pageText);
-      const index = Number(indexText);
+      const [, kind, typeText, pageText, indexText] = data.split(':');
+      const type = CONTENT_TYPES[typeText] ? typeText : (state.searchType || 'anime');
+      const page = Number(CONTENT_TYPES[typeText] ? pageText : typeText);
+      const index = Number(CONTENT_TYPES[typeText] ? indexText : pageText);
       const list = kind === 'popular' ? state.popularResults : state.searchResults;
       const item = Array.isArray(list) ? list[index] : null;
       if (!item?.url) {
-        await replaceMessage(chatId, messageId, 'Це аніме більше недоступне. Спробуйте виконати запит ще раз.', false, { reply_markup: mainKeyboard() }, env);
+        await replaceMessage(chatId, messageId, 'Цей контент більше недоступний. Спробуйте виконати запит ще раз.', false, { reply_markup: mainKeyboard() }, env);
         return;
       }
-      state.previous = { kind, page };
+      state.previous = { kind, page, type };
       await replaceMessage(chatId, messageId, 'Завантажую деталі...', false, {}, env);
-      await renderDetails(chatId, messageId, item.url, env);
+      await renderDetails(chatId, messageId, item.url, env, type);
       return;
     }
 
     if (data === 'back:list') {
       const previous = state.previous;
       if (previous?.kind === 'search') {
-        await renderSearch(chatId, previous.page, env, messageId);
+        await renderSearch(chatId, previous.page, env, messageId, previous.type || state.searchType || 'anime');
       } else if (previous?.kind === 'popular') {
         await renderPopular(chatId, previous.page, messageId, env);
       } else {
@@ -737,7 +810,7 @@ async function handleCallbackQuery(callback, env) {
 function getState(chatId) {
   let state = userStates.get(chatId);
   if (!state) {
-    state = { screen: 'home', searchQuery: '', searchPage: 1, popularResults: [], searchResults: [], previous: null };
+    state = { screen: 'home', searchQuery: '', searchPage: 1, searchType: 'anime', contentType: 'anime', popularResults: [], searchResults: [], previous: null };
     userStates.set(chatId, state);
   }
   return state;
@@ -756,20 +829,21 @@ async function renderPopular(chatId, page, messageId, env) {
   state.popularResults = pageItems;
   userStates.set(chatId, state);
   await updateOrSend(chatId, messageId, `Популярні аніме — сторінка ${page}`, false, {
-    reply_markup: listKeyboard(pageItems, page, 'popular', all.length)
+    reply_markup: listKeyboard(pageItems, page, 'popular', all.length, 'anime')
   }, env);
 }
 
-async function renderSearch(chatId, page, env, messageId = null) {
+async function renderSearch(chatId, page, env, messageId = null, type = 'anime') {
   const state = getState(chatId);
   const query = (state.searchQuery || '').trim();
   if (!query) {
-    await updateOrSend(chatId, messageId, 'Введіть назву аніме.', false, { reply_markup: backHomeKeyboard() }, env);
+    await updateOrSend(chatId, messageId, `Введіть назву ${contentTypeLabel(type).toLowerCase()}.`, false, { reply_markup: backHomeKeyboard() }, env);
     return;
   }
 
   try {
-    const result = await searchAnime(query, page);
+    const safeType = getContentType(type).key;
+    const result = await searchAnime(query, page, safeType);
     if (!result.items.length) {
       await updateOrSend(chatId, messageId, `За запитом «<b>${escapeHtml(query)}</b>» нічого не знайдено.`, false, {
         reply_markup: backHomeKeyboard()
@@ -778,10 +852,11 @@ async function renderSearch(chatId, page, env, messageId = null) {
     }
     state.screen = 'search';
     state.searchPage = page;
+    state.searchType = safeType;
     state.searchResults = result.items;
     userStates.set(chatId, state);
-    await updateOrSend(chatId, messageId, `Результати пошуку: <b>${escapeHtml(query)}</b> — сторінка ${page}`, false, {
-      reply_markup: listKeyboard(result.items, page, 'search', result.total)
+    await updateOrSend(chatId, messageId, `Результати пошуку (${contentTypeLabel(safeType)}): <b>${escapeHtml(query)}</b> — сторінка ${page}`, false, {
+      reply_markup: listKeyboard(result.items, page, 'search', result.total, safeType)
     }, env);
   } catch (error) {
     console.error('[search] failed:', safeError(error));
@@ -827,29 +902,31 @@ async function fetchMikaiSchedule() {
   return payload?.result || payload;
 }
 
-async function renderRandom(chatId, messageId, env) {
+async function renderRandom(chatId, messageId, env, type = 'anime') {
   try {
-    const pool = await fetchRandomPool();
+    const safeType = getContentType(type).key;
+    const pool = await fetchRandomPool(safeType);
     const item = pool[Math.floor(Math.random() * pool.length)];
     if (!item?.url) throw new Error('RANDOM_EMPTY');
-    await renderDetails(chatId, messageId, item.url, env);
+    await renderDetails(chatId, messageId, item.url, env, safeType);
   } catch (error) {
     console.error('[random] failed:', safeError(error));
-    await updateOrSend(chatId, messageId, 'Не вдалося отримати випадкове аніме. Спробуйте ще раз.', false, { reply_markup: mainKeyboard() }, env);
+    await updateOrSend(chatId, messageId, 'Не вдалося отримати випадковий контент. Спробуйте ще раз.', false, { reply_markup: mainKeyboard() }, env);
   }
 }
 
-async function renderDetails(chatId, messageId, url, env) {
+async function renderDetails(chatId, messageId, url, env, type = 'anime') {
   try {
-    const details = await fetchAnimeDetails(url);
-    if (!details || !details.title) throw new Error('INVALID_ANIME');
+    const safeType = getContentType(type).key;
+    const details = await fetchAnimeDetails(url, safeType);
+    if (!details || !details.title) throw new Error('INVALID_CONTENT');
     const text = detailsText(details);
-    const watchUrl = vakdabWatchUrl(extractAnimeId(details.url));
+    const watchUrl = safeType === 'anime' ? vakdabWatchUrl(extractContentId(details.url, safeType), safeType) : '';
     const state = getState(chatId);
 
     const buttons = [];
     if (state.previous?.kind === 'random') {
-      buttons.push({ text: 'Випадкове', callback_data: 'random' });
+      buttons.push({ text: 'Випадкове', callback_data: `random:${state.previous.type || safeType}` });
     }
     buttons.push({ text: 'Головна', callback_data: 'home' });
 
@@ -876,10 +953,21 @@ async function renderDetails(chatId, messageId, url, env) {
     }
   } catch (error) {
     console.error('[details] failed:', safeError(error));
-    await updateOrSend(chatId, messageId, 'Не вдалося завантажити деталі аніме. Спробуйте ще раз.', false, {
+    await updateOrSend(chatId, messageId, 'Не вдалося завантажити деталі контенту. Спробуйте ще раз.', false, {
       reply_markup: mainKeyboard()
     }, env);
   }
+}
+
+function contentTypeKeyboard(prefix) {
+  return { inline_keyboard: [
+    [
+      { text: 'Аніме', callback_data: `${prefix}:anime` },
+      { text: 'Манґа', callback_data: `${prefix}:manga` },
+      { text: 'Ранобе', callback_data: `${prefix}:novel` }
+    ],
+    [{ text: 'Головна', callback_data: 'home' }]
+  ] };
 }
 
 function mainKeyboard() {
@@ -888,7 +976,8 @@ function mainKeyboard() {
     [{ text: 'Випадкове', callback_data: 'random' }],
     [{ text: 'Пошук', callback_data: 'search:prompt' }],
     [{ text: 'Розклад', callback_data: 'schedule' }],
-    [{ text: 'Запитати Макіму', callback_data: 'makima:prompt' }]
+    [{ text: 'Чат-Рулетка', callback_data: 'roulette:start' }],
+    [{ text: 'Запитати Луну', callback_data: 'luna:prompt' }]
   ] };
 }
 
@@ -896,12 +985,14 @@ function backHomeKeyboard() {
   return { inline_keyboard: [[{ text: 'Головна', callback_data: 'home' }]] };
 }
 
-function listKeyboard(items, page, kind, total) {
-  const keyboard = items.map((item, index) => {
-    const slug = item.slug || extractAnimeId(item.url);
-    const callbackData = slug && `anime:${slug}`.length <= 64
-      ? { text: truncate(item.title, 60), callback_data: `anime:${slug}` }
-      : { text: truncate(item.title, 60), url: vakdabWatchUrl(slug) || SITE_BASE_URL };
+function listKeyboard(items, page, kind, total, type = 'anime') {
+  const safeType = getContentType(type).key;
+  const keyboard = items.map(item => {
+    const slug = item.slug || extractContentId(item.url, safeType);
+    const callback = slug ? `content:${safeType}:${slug}` : '';
+    const callbackData = callback && callback.length <= 64
+      ? { text: truncate(item.title, 60), callback_data: callback }
+      : { text: truncate(item.title, 60), url: safeType === 'anime' ? vakdabWatchUrl(slug, safeType) || SITE_BASE_URL : (item.url || SITE_BASE_URL) };
     return [callbackData];
   });
   const maxPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -913,19 +1004,20 @@ function listKeyboard(items, page, kind, total) {
   return { inline_keyboard: keyboard };
 }
 
-async function hikkaCatalog(page = 1, body = {}) {
-  const response = await fetch(`${HIKKA_API}/anime?page=${Math.max(1, page)}&size=${PAGE_SIZE}`, {
+async function hikkaCatalog(page = 1, body = {}, type = 'anime') {
+  const safeType = getContentType(type).key;
+  const response = await fetch(`${HIKKA_API}/${safeType}?page=${Math.max(1, page)}&size=${PAGE_SIZE}`, {
     method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify(body)
   });
   if (!response.ok) throw new Error(`HIKKA_HTTP_${response.status}`);
   const data = await response.json();
   const items = (data.list || []).map(item => ({
     ...item,
-    title: item.title_ua || item.title_en || item.title_ja || 'Без назви',
+    title: pickContentTitle(item),
     slug: item.slug || '',
     id: item.id || item.hikka_id || item.mal_id || '',
-    url: `${HIKKA_API}/anime/${encodeURIComponent(item.slug || item.id || '')}`, image: item.image || '',
-    score: item.score, year: item.year, episodes: item.episodes_released,
+    url: `${HIKKA_API}/${safeType}/${encodeURIComponent(item.slug || item.id || '')}`, image: item.image || item.poster || item.cover || item.cover_url || '',
+    score: item.score, year: item.year || item.release_year || '', episodes: item.episodes_released || item.chapters_released || item.chapters || item.episodes_total || item.volumes || '',
     genres: normalizeHikkaGenres(item.genres)
   }));
   items.total = Number(data.total || data.count || data.pagination?.total || 0) || (items.length === PAGE_SIZE ? page * PAGE_SIZE + 1 : items.length);
@@ -939,30 +1031,35 @@ async function fetchPopularAnime() {
   return popularCache;
 }
 
-async function fetchCatalogPage(page) { return hikkaCatalog(page, { only_translated: true }); }
+async function fetchCatalogPage(page, type = 'anime') { return hikkaCatalog(page, { only_translated: true }, type); }
 
-async function fetchRandomPool() {
-  const popular = await fetchPopularAnime();
-  if (popular.length) return popular;
-  return fetchCatalogPage(1);
+async function fetchRandomPool(type = 'anime') {
+  const safeType = getContentType(type).key;
+  if (safeType === 'anime') {
+    const popular = await fetchPopularAnime();
+    if (popular.length) return popular;
+  }
+  return fetchCatalogPage(1, safeType);
 }
 
-async function searchAnime(query, page) {
-  const items = await hikkaCatalog(page, { query: normalizeQuery(query), only_translated: true });
+async function searchAnime(query, page, type = 'anime') {
+  const safeType = getContentType(type).key;
+  const items = await hikkaCatalog(page, { query: normalizeQuery(query), only_translated: true }, safeType);
   return { items, total: items.total || items.length };
 }
 
-async function fetchAnimeDetails(url) {
-  const safeUrl = validateAnimeUrl(url);
+async function fetchAnimeDetails(url, type = 'anime') {
+  const safeType = getContentType(type).key;
+  const safeUrl = validateContentUrl(url, safeType);
   const response = await fetch(safeUrl, { headers: { accept: 'application/json' } });
   if (!response.ok) throw new Error(`HIKKA_HTTP_${response.status}`);
   const item = await response.json();
-  return { ...item, title: item.title_ua || item.title_en || item.title_ja || 'Без назви', url: safeUrl,
-    image: item.image, synopsis: item.synopsis_ua || item.synopsis_en || '',
+  return { ...item, contentType: safeType, title: pickContentTitle(item), url: safeUrl,
+    image: item.image || item.poster || item.cover || item.cover_url || '', synopsis: item.synopsis_ua || item.synopsis_en || item.description_ua || item.description_en || '',
     genres: normalizeHikkaGenres(item.genres),
     year: item.year || '',
-    episodes: item.episodes_released || item.episodes_total || '',
-    episodesTotal: item.episodes_total || '',
+    episodes: item.episodes_released || item.chapters_released || item.chapters || item.episodes_total || item.volumes || '',
+    episodesTotal: item.episodes_total || item.chapters_total || item.volumes_total || '',
     status: item.status || '' };
 }
 
@@ -1022,23 +1119,30 @@ function parseDetails(html, url) {
   return { title: title || 'Без назви', image, genres: [...new Set(genres)], year: year || '', episodes: episodes || '', synopsis, url };
 }
 
-function extractAnimeId(animeUrl) {
+function extractContentId(contentUrl, type = 'anime') {
   try {
-    const parsed = new URL(animeUrl);
+    const safeType = getContentType(type).key;
+    const parsed = new URL(contentUrl);
     const newsId = parsed.searchParams.get('newsid');
     if (newsId && /^[A-Za-z0-9][A-Za-z0-9-]{1,180}$/.test(newsId)) return newsId;
-    const match = parsed.pathname.match(/\/anime\/([^/?#]+)/i);
+    const match = parsed.pathname.match(new RegExp(`/${safeType}/([^/?#]+)`, 'i'));
     return match?.[1] || '';
   } catch {
     return '';
   }
 }
 
-function vakdabWatchUrl(animeId) {
-  const value = String(animeId || '').trim();
-  return /^[A-Za-z0-9][A-Za-z0-9-]{1,180}$/.test(value)
+function extractAnimeId(animeUrl) { return extractContentId(animeUrl, 'anime'); }
+
+function vakdabWatchUrl(contentId, type = 'anime') {
+  const value = String(contentId || '').trim();
+  return getContentType(type).key === 'anime' && /^[A-Za-z0-9][A-Za-z0-9-]{1,180}$/.test(value)
     ? `${SITE_BASE_URL}/#anime/${encodeURIComponent(value)}`
     : '';
+}
+
+function pickContentTitle(item = {}) {
+  return item.title_ua || item.name_ua || item.title_en || item.name_en || item.title_ja || item.name || item.slug || 'Без назви';
 }
 
 function normalizeHikkaGenres(genres) {
@@ -1076,7 +1180,8 @@ function detailsText(details) {
     const episodeText = details.episodesTotal && String(details.episodesTotal) !== String(details.episodes)
       ? `${details.episodes} / ${details.episodesTotal}`
       : details.episodes;
-    text += `\nЕпізоди: ${escapeHtml(episodeText)}`;
+    const unit = details.contentType === 'anime' ? 'Епізоди' : 'Розділи';
+    text += `\n${unit}: ${escapeHtml(episodeText)}`;
   }
   if (details.status) text += `\nСтатус: ${escapeHtml(statusLabelUa(details.status))}`;
   if (details.genres.length) text += `\nЖанри: ${escapeHtml(details.genres.join(', '))}`;
@@ -1125,10 +1230,13 @@ function absoluteAnimeUrl(value) {
   return /^https:\/\/api\.hikka\.io\/anime\//i.test(url) ? url : '';
 }
 
-function validateAnimeUrl(value) {
-  const url = absoluteAnimeUrl(value);
-  return /^https:\/\/api\.hikka\.io\/anime\//i.test(url) ? url : '';
+function validateContentUrl(value, type = 'anime') {
+  const safeType = getContentType(type).key;
+  const url = absoluteUrl(value);
+  return new RegExp(`^https://api\\.hikka\\.io/${safeType}/[^/?#]+$`, 'i').test(url) ? url : '';
 }
+
+function validateAnimeUrl(value) { return validateContentUrl(value, 'anime'); }
 
 function escapeHtml(value = '') {
   return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -1194,4 +1302,285 @@ function jsonResponse(data, status = 200) {
 
 function safeError(error) {
   return error instanceof Error ? error.message : String(error);
+}
+
+function rouletteIntroText() {
+  return '<b>Анонімна Чат-Рулетка</b>\n\nТебе випадково зʼєднають з іншим користувачем VakDab. Повідомлення передаються через бота без username та профілю співрозмовника.\n\nНе надсилайте персональні дані, контакти, посилання, інтимний контент або матеріали сексуального характеру за участю неповнолітніх. За порушення можна одразу натиснути «Поскаржитися». Рулетка не є повністю автоматичною модерацією, тому не погоджуйтеся на небезпечні пропозиції та припиняйте чат, якщо вам некомфортно.';
+}
+
+function rouletteStartKeyboard() {
+  return { inline_keyboard: [
+    [{ text: 'Знайти співрозмовника', callback_data: 'roulette:join' }],
+    [{ text: 'Головна', callback_data: 'home' }]
+  ] };
+}
+
+function rouletteChatKeyboard() {
+  return { inline_keyboard: [
+    [{ text: 'Наступний', callback_data: 'roulette:next' }, { text: 'Завершити', callback_data: 'roulette:end' }],
+    [{ text: 'Поскаржитися', callback_data: 'roulette:report' }]
+  ] };
+}
+
+function rouletteOperation(payload, env) {
+  if (!env.CHAT_ROULETTE) return Promise.resolve({ ok: false, unavailable: true });
+  try {
+    const id = env.CHAT_ROULETTE.idFromName('global-matchmaking');
+    return env.CHAT_ROULETTE.get(id).fetch('https://roulette.internal/operation', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload)
+    }).then(response => response.json());
+  } catch (error) {
+    console.error('[roulette] coordinator unavailable:', safeError(error));
+    return Promise.resolve({ ok: false, unavailable: true });
+  }
+}
+
+async function relayRouletteMessage(message, env) {
+  if (message?.chat?.type && message.chat.type !== 'private') return false;
+  if (!message?.message_id || !env.CHAT_ROULETTE) return false;
+  const chatId = message.chat?.id;
+  if (!chatId) return false;
+  const text = String(message.text || message.caption || '');
+  const result = await rouletteOperation({
+    op: 'relay', chatId, userId: message.from?.id || chatId, messageId: message.message_id, updateId: message.__updateId,
+    text, hasSupportedContent: Boolean(message.text || message.photo || message.video || message.audio || message.voice || message.document || message.animation || message.sticker)
+  }, env);
+  if (result.unavailable || !result.handled) return false;
+  await deliverRouletteResult(chatId, result, env);
+  return true;
+}
+
+async function deliverRouletteResult(chatId, result, env) {
+  if (!result || result.unavailable) {
+    await sendMessage(chatId, 'Чат-Рулетка ще не підключена до правильного Cloudflare Worker. Код готовий, але потрібен deploy із Durable Object у потрібному акаунті Cloudflare.', { reply_markup: mainKeyboard() }, env);
+    return;
+  }
+
+  for (const delivery of result.deliveries || []) {
+    if (delivery.kind === 'copy') {
+      const copied = await telegram('copyMessage', {
+        chat_id: delivery.toChatId, from_chat_id: delivery.fromChatId, message_id: delivery.messageId,
+        reply_markup: rouletteChatKeyboard()
+      }, env);
+      if (!copied?.ok) {
+        await rouletteOperation({ op: 'end', chatId: delivery.fromChatId }, env);
+        await sendMessage(delivery.fromChatId, 'Повідомлення не доставлено. Чат завершено — можете знайти нового співрозмовника.', { reply_markup: rouletteStartKeyboard() }, env);
+      }
+    } else if (delivery.kind === 'text') {
+        await sendMessage(delivery.toChatId, delivery.text, { reply_markup: rouletteKeyboardFor(delivery.keyboard) }, env);
+    }
+  }
+
+  if (result.notice) {
+    await sendMessage(chatId, result.notice, { reply_markup: rouletteKeyboardFor(result.keyboard) }, env);
+  }
+}
+
+function rouletteKeyboardFor(kind) {
+  if (kind === 'roulette') return rouletteChatKeyboard();
+  if (kind === 'start') return rouletteStartKeyboard();
+  return mainKeyboard();
+}
+
+function isUnsafeRouletteText(value) {
+  const text = String(value || '');
+  return /(?:https?:\/\/|t\.me\/|@[a-z0-9_]{5,}|(?:\+?\d[\d\s().-]{8,}))/i.test(text)
+    || /(?:докс|доксинг|doxx|порно з неповноліт|child\s*sexual|csam)/i.test(text);
+}
+
+export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText };
+
+export class ChatRouletteRoom {
+  constructor(ctx, env) {
+    this.ctx = ctx;
+    this.env = env;
+    this.initialized = false;
+  }
+
+  async init() {
+    if (this.initialized) return;
+    this.ctx.storage.sql.exec(`
+      CREATE TABLE IF NOT EXISTS waiting (
+        chat_id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        joined_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS sessions (
+        participant_a TEXT PRIMARY KEY,
+        participant_b TEXT UNIQUE NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS rate_limits (
+        chat_id TEXT PRIMARY KEY,
+        window_started INTEGER NOT NULL,
+        message_count INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS processed_updates (
+        update_id TEXT PRIMARY KEY,
+        processed_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        reporter_chat_id TEXT NOT NULL,
+        reported_chat_id TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS reports_created_at_idx ON reports(created_at);
+    `);
+    this.initialized = true;
+  }
+
+  async fetch(request) {
+    let payload;
+    try { payload = await request.json(); } catch { return jsonResponse({ ok: false, error: 'INVALID_JSON' }, 400); }
+    return this.ctx.blockConcurrencyWhile(async () => {
+      await this.init();
+      try {
+        this.prune(Date.now());
+        const result = await this.handle(payload || {});
+        return jsonResponse(result);
+      } catch (error) {
+        console.error('[roulette-do] failed:', safeError(error));
+        return jsonResponse({ ok: false, error: 'ROULETTE_STORAGE_ERROR' }, 500);
+      }
+    });
+  }
+
+  participantKey(value) { return String(value ?? ''); }
+
+  getSession(chatId) {
+    const id = this.participantKey(chatId);
+    const rows = this.ctx.storage.sql.exec(
+      'SELECT participant_a, participant_b FROM sessions WHERE participant_a = ? OR participant_b = ? LIMIT 1', id, id
+    ).toArray();
+    return rows[0] || null;
+  }
+
+  otherParticipant(session, chatId) {
+    const id = this.participantKey(chatId);
+    return session?.participant_a === id ? session.participant_b : session?.participant_a;
+  }
+
+  setSession(first, second, now) {
+    const a = [this.participantKey(first), this.participantKey(second)].sort()[0];
+    const b = [this.participantKey(first), this.participantKey(second)].sort()[1];
+    this.ctx.storage.sql.exec('INSERT OR REPLACE INTO sessions (participant_a, participant_b, created_at, updated_at) VALUES (?, ?, ?, ?)', a, b, now, now);
+  }
+
+  deleteSession(session) {
+    if (!session) return;
+    this.ctx.storage.sql.exec('DELETE FROM sessions WHERE participant_a = ? AND participant_b = ?', session.participant_a, session.participant_b);
+  }
+
+  waitingUser(chatId) {
+    const id = this.participantKey(chatId);
+    const rows = this.ctx.storage.sql.exec('SELECT chat_id, user_id, joined_at FROM waiting WHERE chat_id = ?', id).toArray();
+    return rows[0] || null;
+  }
+
+  prune(now) {
+    this.ctx.storage.sql.exec('DELETE FROM waiting WHERE joined_at < ?', now - 30 * 60 * 1000);
+    this.ctx.storage.sql.exec('DELETE FROM rate_limits WHERE window_started < ?', now - 2 * 60 * 60 * 1000);
+    this.ctx.storage.sql.exec('DELETE FROM reports WHERE created_at < ?', now - 30 * 24 * 60 * 60 * 1000);
+  }
+
+  async handle(payload) {
+    const op = String(payload.op || '');
+    const updateId = payload.updateId;
+    if (updateId !== undefined && updateId !== null) {
+      const key = String(updateId);
+      const duplicate = this.ctx.storage.sql.exec('SELECT update_id FROM processed_updates WHERE update_id = ? LIMIT 1', key).toArray()[0];
+      if (duplicate) return { ok: true, handled: true };
+      this.ctx.storage.sql.exec('INSERT INTO processed_updates (update_id, processed_at) VALUES (?, ?)', key, Date.now());
+      this.ctx.storage.sql.exec('DELETE FROM processed_updates WHERE processed_at < ?', Date.now() - 7 * 24 * 60 * 60 * 1000);
+    }
+    const chatId = this.participantKey(payload.chatId);
+    if (!chatId) return { ok: false, error: 'CHAT_REQUIRED' };
+    if (op === 'join') return this.join(chatId, payload.userId);
+    if (op === 'relay') return this.relay(chatId, payload);
+    if (op === 'next') return this.next(chatId);
+    if (op === 'end') return this.end(chatId, 'Співрозмовник завершив чат.');
+    if (op === 'report') return this.report(chatId);
+    return { ok: false, error: 'UNKNOWN_OPERATION' };
+  }
+
+  join(chatId, userId) {
+    const current = this.getSession(chatId);
+    if (current) return { ok: true, handled: true, notice: 'Ви вже спілкуєтеся. Надсилайте повідомлення або натисніть «Наступний».', keyboard: 'roulette' };
+    this.ctx.storage.sql.exec('DELETE FROM waiting WHERE chat_id = ?', chatId);
+    const candidateRows = this.ctx.storage.sql.exec('SELECT chat_id, user_id, joined_at FROM waiting WHERE chat_id != ? ORDER BY joined_at ASC LIMIT 1', chatId).toArray();
+    const candidate = candidateRows[0];
+    const now = Date.now();
+    if (!candidate) {
+      this.ctx.storage.sql.exec('INSERT OR REPLACE INTO waiting (chat_id, user_id, joined_at) VALUES (?, ?, ?)', chatId, this.participantKey(userId || chatId), now);
+      return { ok: true, handled: true, notice: 'Шукаю співрозмовника… Коли хтось приєднається, я одразу зʼєднаю вас.', keyboard: 'start' };
+    }
+    this.ctx.storage.sql.exec('DELETE FROM waiting WHERE chat_id = ? OR chat_id = ?', chatId, candidate.chat_id);
+    this.setSession(chatId, candidate.chat_id, now);
+    return {
+      ok: true, handled: true, deliveries: [
+        { kind: 'text', toChatId: chatId, text: 'Співрозмовника знайдено. Можете писати анонімно.', keyboard: 'roulette' },
+        { kind: 'text', toChatId: candidate.chat_id, text: 'Співрозмовника знайдено. Можете писати анонімно.', keyboard: 'roulette' }
+      ]
+    };
+  }
+
+  relay(chatId, payload) {
+    const session = this.getSession(chatId);
+    if (!session) return { ok: true, handled: false };
+    const other = this.otherParticipant(session, chatId);
+    const now = Date.now();
+    const rate = this.ctx.storage.sql.exec('SELECT window_started, message_count FROM rate_limits WHERE chat_id = ?', chatId).toArray()[0];
+    const activeRate = rate && now - Number(rate.window_started) < 60_000 ? rate : { window_started: now, message_count: 0 };
+    if (Number(activeRate.message_count) >= 30) {
+      return { ok: true, handled: true, notice: 'Забагато повідомлень за хвилину. Зачекайте трохи.', keyboard: 'roulette' };
+    }
+    this.ctx.storage.sql.exec('INSERT OR REPLACE INTO rate_limits (chat_id, window_started, message_count) VALUES (?, ?, ?)', chatId, activeRate.window_started, Number(activeRate.message_count) + 1);
+    if (!payload.hasSupportedContent) return { ok: true, handled: true, notice: 'Цей тип повідомлення поки не можна передати в рулетці.', keyboard: 'roulette' };
+    if (isUnsafeRouletteText(payload.text)) return { ok: true, handled: true, notice: 'Повідомлення не передано: посилання, контакти або небезпечний контент заборонені правилами рулетки.', keyboard: 'roulette' };
+    this.ctx.storage.sql.exec('UPDATE sessions SET updated_at = ? WHERE participant_a = ? AND participant_b = ?', now, session.participant_a, session.participant_b);
+    return { ok: true, handled: true, deliveries: [{ kind: 'copy', toChatId: other, fromChatId: chatId, messageId: payload.messageId }] };
+  }
+
+  end(chatId, partnerNotice) {
+    const session = this.getSession(chatId);
+    this.ctx.storage.sql.exec('DELETE FROM waiting WHERE chat_id = ?', chatId);
+    if (!session) return { ok: true, handled: true, notice: 'Чат завершено.', keyboard: 'start' };
+    const other = this.otherParticipant(session, chatId);
+    this.deleteSession(session);
+    return {
+      ok: true, handled: true,
+      deliveries: [{ kind: 'text', toChatId: other, text: partnerNotice, keyboard: 'start' }],
+      notice: 'Чат завершено. Можна знайти нового співрозмовника.', keyboard: 'start'
+    };
+  }
+
+  next(chatId) {
+    const session = this.getSession(chatId);
+    if (session) {
+      const other = this.otherParticipant(session, chatId);
+      this.deleteSession(session);
+      const result = this.join(chatId, chatId);
+      result.deliveries = [
+        { kind: 'text', toChatId: other, text: 'Співрозмовник перейшов до наступного чату.', keyboard: 'start' },
+        ...(result.deliveries || [])
+      ];
+      return result;
+    }
+    return this.join(chatId, chatId);
+  }
+
+  report(chatId) {
+    const session = this.getSession(chatId);
+    if (!session) return { ok: true, handled: true, notice: 'Активного чату немає.', keyboard: 'start' };
+    const other = this.otherParticipant(session, chatId);
+    this.ctx.storage.sql.exec('INSERT INTO reports (reporter_chat_id, reported_chat_id, created_at) VALUES (?, ?, ?)', chatId, other, Date.now());
+    this.deleteSession(session);
+    return {
+      ok: true, handled: true,
+      deliveries: [{ kind: 'text', toChatId: other, text: 'Чат завершено.', keyboard: 'start' }],
+      notice: 'Скаргу зафіксовано, чат завершено. Дякуємо, що повідомили.', keyboard: 'start'
+    };
+  }
 }

@@ -1,6 +1,6 @@
 # VakDab Telegram Bot + Site Worker
 
-Один Cloudflare Worker обслуговує і сайт VakDab, і Telegram-бота:
+Один Cloudflare Worker обслуговує сайт VakDab і Telegram-бота:
 
 ```text
 /                    → статичний сайт VakDab
@@ -8,57 +8,57 @@
 /set_webhook         → захищене встановлення webhook
 ```
 
-Worker залишається на існуючій адресі:
-
-`https://vakdab.vakdabpro.workers.dev/`
+Worker має залишатися на адресі `https://vakdab.vakdabpro.workers.dev/`, якщо саме цей домен налаштований у правильному Cloudflare-акаунті.
 
 ## Важливо для Cloudflare Build
 
-GitHub repository: `vakdab/Vakdab`
+GitHub repository: `vakdab/Vakdab`. Root directory залиште порожнім, щоб у deployment були доступні і сайт у корені репозиторію, і `vakdab-telegram-bot/worker.js`.
 
-Root directory залишити порожнім — потрібні і сайт у корені репозиторію, і `vakdab-telegram-bot/worker.js`.
-
-Deploy command (виконувати з каталогу `vakdab-telegram-bot`):
+Deploy command потрібно виконувати з каталогу Worker:
 
 ```bash
 cd vakdab-telegram-bot
 npx wrangler deploy
 ```
 
-`wrangler.toml` використовує:
+`wrangler.toml` містить assets binding, Durable Object binding `CHAT_ROULETTE` і SQLite migration для `ChatRouletteRoom`. Перший deploy із цією migration створює storage для черги та активних сесій. **Публікація коду в GitHub не є deploy-ом Cloudflare Worker.** Перед запуском команди перевірте, що Wrangler авторизований саме в Cloudflare-акаунті, де існує Worker `vakdab` і домен `vakdab.vakdabpro.workers.dev`.
 
-```toml
-name = "vakdab"
-main = "worker.js"
+## Telegram-функції
 
-[assets]
-directory = ".."
-binding = "ASSETS"
-```
+Кнопка **«Випадкове»** спочатку пропонує **Аніме / Манґа / Ранобе**, після чого бот вибирає випадковий запис відповідного типу. Кнопка **«Пошук»** працює аналогічно: спочатку обирається тип, потім користувач вводить назву. Усі три типи використовують allowlisted endpoint-и Hikka `/anime`, `/manga` і `/novel`; для манґи та ранобе бот не показує фальшиве посилання на anime player.
 
-Тому Worker не віддає Telegram-код замість сайту: GET-запити передаються у `ASSETS`, а тільки POST на `/telegram-webhook` обробляється ботом.
+Популярні аніме та розклад залишаються окремими anime-only flows. Для аніме доступна кнопка **«Дивитись на VakDab»**, а для манґи й ранобе бот показує деталі та постер із посиланням на Hikka, якщо Telegram не може відкрити внутрішні деталі.
+
+### Луна
+
+Основна кнопка AI тепер називається **«Запитати Луну»**. Підтримуються команди `/luna <запит>` і `/ask <запит>`. Команда `/makima` тимчасово залишається backward-compatible alias для старих користувачів, але вона не показується в меню. Memory binding збережено під старою технічною назвою `MAKIMA_MEMORY`, тому існуюче сховище пам’яті не втрачається під час перейменування на Луну.
+
+### Анонімна Чат-Рулетка
+
+Після натискання **«Чат-Рулетка»** користувач спочатку бачить правила, а потім може натиснути **«Знайти співрозмовника»**. Pairing виконується всередині одного Durable Object, тому queue/session changes серіалізуються й не залежать від локальної пам’яті процесу Worker. Активна сесія підтримує текст і поширені медіа через Telegram `copyMessage`; одержувач не бачить username або профіль відправника.
+
+Під час розмови доступні **«Наступний»**, **«Завершити»** і **«Поскаржитися»**. Є захист від повторних webhook updates, базовий rate limit, блокування посилань/контактів/доксингу та lazy-retention для старих queue, rate-limit і report записів. Це **не повна автоматична модерація**: користувачам не слід надсилати персональні дані чи погоджуватися на небезпечні пропозиції.
 
 ## Джерела даних VakDab
 
-Telegram-бот використовує ті самі джерела, що й сайт:
-
-- **Hikka API** (`https://api.hikka.io`) — пошук, популярні аніме, каталог, назви, жанри, статус, рік, опис і кількість епізодів.
-- **Mikai API** (`https://api.mikai.me/v1/schedule`) — розклад виходу та посилання на джерело перегляду, якщо воно доступне в Hikka.
-- **VakDab** (`https://vakdab.github.io/Vakdab`) — кнопка «Дивитись на VakDab» відкриває плеєр через `#anime/{hikka-slug}`.
+- **Hikka API** (`https://api.hikka.io`) — Telegram-пошук, випадковий контент, популярні аніме, назви, постери, жанри, статус, рік, описи й кількість епізодів/розділів.
+- **Mikai API** (`https://api.mikai.me/v1/schedule`) — розклад виходу.
+- **VakDab** (`https://vakdab.github.io/VakDab`) — anime deeplink через `#anime/{hikka-slug}`.
 - **Proxy** (`https://monoanime.animegran8.workers.dev`) — залишається доступним для сумісності з іншими запитами Worker.
-
-Сайт підтримує deeplink як для numeric Hikka ID, так і для стабільного Hikka slug.
 
 ## Cloudflare secrets
 
-У Worker `vakdab` додай:
+У Worker потрібно додати secrets:
 
 ```text
 TELEGRAM_BOT_TOKEN
 WEBHOOK_SETUP_SECRET
+TELEGRAM_WEBHOOK_SECRET_TOKEN  # рекомендовано для перевірки X-Telegram-Bot-Api-Secret-Token
 ```
 
-Секрети не зберігаються у GitHub і не записуються в код.
+Для AI-асистентки опційно додайте `GROQ_API_KEY` і змінну `GROQ_MODEL` (за замовчуванням `llama-3.3-70b-versatile`). Якщо memory storage використовується у production, binding KV має залишатися доступним як `MAKIMA_MEMORY`, щоб не втратити стару історію після перейменування на Луну.
+
+Секрети не зберігаються в GitHub і не записуються в код.
 
 ## Встановлення Telegram webhook
 
@@ -68,7 +68,7 @@ Webhook має вести не на корінь сайту, а на Telegram-м
 https://vakdab.vakdabpro.workers.dev/set_webhook?url=https%3A%2F%2Fvakdab.vakdabpro.workers.dev%2Ftelegram-webhook&secret=<WEBHOOK_SETUP_SECRET>
 ```
 
-Перевірка:
+Перевірити стан можна через Telegram Bot API:
 
 ```text
 https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo
@@ -76,10 +76,11 @@ https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo
 
 Після цього сайт відкривається як раніше, а Telegram надсилає updates на `/telegram-webhook`.
 
-## Groq / Makima
+## Перевірка локально
 
-Telegram-команда `/makima <запит>` або `/ask <запит>` передає запит у Groq.
+```bash
+node --test tests/telegram-worker.test.mjs
+node --input-type=module --check < vakdab-telegram-bot/worker.js
+```
 
-У Cloudflare Worker потрібно додати secret `GROQ_API_KEY`; ключ не зберігається в GitHub. Опційно можна задати змінну `GROQ_MODEL`, за замовчуванням використовується `llama-3.3-70b-versatile`.
-
-Команду можна додати через Cloudflare Dashboard → Worker `vakdab` → Settings → Variables and Secrets → Add secret.
+Локальний syntax/test pass або push у GitHub підтверджує лише код у репозиторії. Він не підтверджує, що production Worker уже задеплоєний або що webhook переключено.
