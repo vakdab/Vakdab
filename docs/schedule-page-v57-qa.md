@@ -13,3 +13,7 @@ The hero and schedule cards remain visible in the same mobile layout, and the da
 ## Live verification
 
 Live route `https://vakdab.github.io/Vakdab/?v=20260822-schedule-page-v57#schedule` served `app.js?v=20260822-schedule-page-v57`. The live DOM showed one 940px-wide, 76px-high rounded day panel with seven equal grid columns, active `Сб`, and only the Saturday section visible. This verifies the day-selector fix is deployed.
+
+## Hero edge and character v60
+
+A local headless 375×812 screenshot verified the v60 mobile fix: the dark hero reaches the viewport edges without white side gutters, while the character is positioned lower and smaller inside the hero. The head and full visible silhouette no longer protrude above the hero or overlap the kicker text. The seven-day panel and the first schedule cards remain below the hero in the expected order.

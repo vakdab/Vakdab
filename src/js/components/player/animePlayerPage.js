@@ -1,22 +1,22 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
 import { GENRE_MAP } from '../../config/constants.js?v=20260820-hikka-proxy-fix4';
-import { Router } from '../../core/compat/router.js?v=20260822-schedule-page-v57';
-import { Storage } from '../../core/compat/storage.js?v=20260822-schedule-page-v57';
+import { Router } from '../../core/compat/router.js?v=20260822-schedule-hero-v60';
+import { Storage } from '../../core/compat/storage.js?v=20260822-schedule-hero-v60';
 import { LampaPlayer } from './lampaPlayer.js?v=20260820-player-modern-v1';
-import { DailyStats } from '../rating/ratingSystem.js?v=20260822-schedule-page-v57';
+import { DailyStats } from '../rating/ratingSystem.js?v=20260822-schedule-hero-v60';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, searchHikkaAllTitles, switchProviderSource
-} from '../../services/catalog.js?v=20260822-schedule-page-v57';
+} from '../../services/catalog.js?v=20260822-schedule-hero-v60';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
-} from '../pages/homeLegacy.js?v=20260822-schedule-page-v57';
-import { renderProfilePage } from '../pages/profileLegacy.js?v=20260822-schedule-page-v57';
+} from '../pages/homeLegacy.js?v=20260822-schedule-hero-v60';
+import { renderProfilePage } from '../pages/profileLegacy.js?v=20260822-schedule-hero-v60';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260822-schedule-page-v57';
+} from '../../legacy/app-legacy.js?v=20260822-schedule-hero-v60';
 import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
 
         // ====================================================================

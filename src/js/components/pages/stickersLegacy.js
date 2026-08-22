@@ -1,8 +1,8 @@
-import { Storage } from '../../core/compat/storage.js?v=20260822-schedule-page-v57';
+import { Storage } from '../../core/compat/storage.js?v=20260822-schedule-hero-v60';
 import { db } from '../../services/firebase/client.js';
-import { Router } from '../../core/compat/router.js?v=20260822-schedule-page-v57';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260822-schedule-page-v57';
-import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260822-schedule-page-v57';
+import { Router } from '../../core/compat/router.js?v=20260822-schedule-hero-v60';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260822-schedule-hero-v60';
+import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260822-schedule-hero-v60';
 
         function stickerFaceSvg(variant) {
             const s = 'stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"';

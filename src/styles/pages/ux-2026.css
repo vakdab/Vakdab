@@ -2310,3 +2310,65 @@ body:not(.dark-mode) .header .logo-text span {
         font-size: .78rem;
     }
 }
+
+/* Schedule hero edge fix v58: full-bleed black stage and character safely inside it. */
+@media (max-width: 699px) {
+    #schedulePageContainer .schedule-page-hero {
+        width: calc(100% + (2 * var(--ui-page-gutter)));
+        margin-right: calc(-1 * var(--ui-page-gutter));
+        margin-left: calc(-1 * var(--ui-page-gutter));
+        border-right: 0;
+        border-left: 0;
+        border-radius: 0 0 26px 26px;
+    }
+    #schedulePageContainer .schedule-page-hero__character {
+        top: 14px;
+    }
+}
+@media (max-width: 420px) {
+    #schedulePageContainer .schedule-page-hero {
+        border-radius: 0 0 22px 22px;
+        padding-top: 138px;
+    }
+    #schedulePageContainer .schedule-page-hero__character {
+        top: 16px;
+    }
+}
+
+/* Schedule hero edge fix v59: account for both nested mobile gutters. */
+@media (max-width: 699px) {
+    #schedulePageContainer .schedule-page-hero {
+        width: calc(100% + 28px + (2 * var(--ui-page-gutter)));
+        margin-left: calc(-14px - var(--ui-page-gutter));
+        margin-right: calc(-14px - var(--ui-page-gutter));
+        border-right: 0;
+        border-left: 0;
+    }
+    #schedulePageContainer .schedule-page-hero__character { top: 20px; }
+}
+@media (max-width: 420px) {
+    #schedulePageContainer .schedule-page-hero {
+        width: calc(100% + 20px + (2 * var(--ui-page-gutter)));
+        margin-left: calc(-10px - var(--ui-page-gutter));
+        margin-right: calc(-10px - var(--ui-page-gutter));
+        padding-top: 146px;
+    }
+    #schedulePageContainer .schedule-page-hero__character {
+        top: 20px;
+        height: 150px;
+    }
+}
+
+/* Schedule hero character spacing v60: keep the full silhouette above the copy on narrow screens. */
+@media (max-width: 420px) {
+    #schedulePageContainer .schedule-page-hero__character {
+        top: 16px;
+        width: 150px;
+        height: 128px;
+    }
+    #schedulePageContainer .schedule-page-hero__character img {
+        width: 150px;
+        height: 150px;
+    }
+    #schedulePageContainer .schedule-page-hero { padding-top: 136px; }
+}
