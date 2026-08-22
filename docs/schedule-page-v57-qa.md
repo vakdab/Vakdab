@@ -9,3 +9,7 @@ Clicking `Вт` updated the active state and hid the other day sections; the pag
 The hero and schedule cards remain visible in the same mobile layout, and the day selector is placed between the hero and the selected day content.
 
 Додатково перевірено переключення назад: після `Вт` натискання на `Сб` відновлює суботній список, активний стан повертається на `Сб`. DOM-панель має сім рівних grid columns, висоту 76px і один спільний rounded container.
+
+## Live verification
+
+Live route `https://vakdab.github.io/Vakdab/?v=20260822-schedule-page-v57#schedule` served `app.js?v=20260822-schedule-page-v57`. The live DOM showed one 940px-wide, 76px-high rounded day panel with seven equal grid columns, active `Сб`, and only the Saturday section visible. This verifies the day-selector fix is deployed.
