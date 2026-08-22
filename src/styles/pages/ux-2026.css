@@ -2241,3 +2241,72 @@ body:not(.dark-mode) .header .logo-text span {
 @media (prefers-reduced-motion: reduce) {
     #schedulePageContainer .schedule-week-item { transition: none; }
 }
+
+/* Schedule day selector v57: one compact seven-day rail matching the Mikai reference. */
+#schedulePageContainer .schedule-day-selector {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    align-items: center;
+    gap: 3px;
+    width: 100%;
+    min-height: 76px;
+    margin: 0 0 16px;
+    padding: 6px;
+    border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+    border-radius: 22px;
+    background: color-mix(in srgb, var(--surface) 82%, var(--bg) 18%);
+    box-shadow: var(--shadow-sm);
+}
+#schedulePageContainer .schedule-day-tab {
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 62px;
+    padding: 0 2px;
+    border: 0;
+    border-radius: 16px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: clamp(.76rem, 3.8vw, 1.05rem);
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .18s cubic-bezier(.23,1,.32,1), color .18s ease, transform .16s ease;
+}
+#schedulePageContainer .schedule-day-tab:hover,
+#schedulePageContainer .schedule-day-tab:focus-visible {
+    color: var(--text);
+    background: color-mix(in srgb, var(--surface) 70%, var(--accent) 30%);
+    outline: none;
+}
+#schedulePageContainer .schedule-day-tab.active,
+#schedulePageContainer .schedule-day-tab[aria-selected="true"] {
+    color: var(--accent-text);
+    background: var(--accent);
+    box-shadow: 0 7px 18px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+#schedulePageContainer .schedule-day-tab:active { transform: scale(.95); }
+#schedulePageContainer .schedule-week-day[hidden] { display: none !important; }
+#schedulePageContainer .schedule-day-empty {
+    padding: 28px 12px;
+    color: var(--text-muted);
+    font-size: .88rem;
+    text-align: center;
+}
+#schedulePageContainer .schedule-week-content { min-height: 120px; }
+#schedulePageContainer .schedule-page-kicker { color: rgba(255,255,255,.74); }
+#schedulePageContainer .schedule-page-kicker i { color: var(--accent); }
+@media (max-width: 420px) {
+    #schedulePageContainer .schedule-day-selector {
+        min-height: 72px;
+        margin-bottom: 14px;
+        padding: 5px;
+        border-radius: 20px;
+    }
+    #schedulePageContainer .schedule-day-tab {
+        min-height: 60px;
+        border-radius: 15px;
+        font-size: .78rem;
+    }
+}

@@ -3,10 +3,10 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260822-schedule-page-v56';
-import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from './settingsLegacy.js?v=20260822-schedule-page-v56';
+} from '../../legacy/app-legacy.js?v=20260822-schedule-page-v57';
+import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from './settingsLegacy.js?v=20260822-schedule-page-v57';
 import { debugLog } from '../../utils/debug.js';
-import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260822-schedule-page-v56';
+import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260822-schedule-page-v57';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
 import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260818-honey-type-filter-v1';
