@@ -18,3 +18,5 @@ Next: test date selection/clear, inspect profile display/avatar initials, bump c
 Identity input QA успішний: введення `cool_name` зберегло `nickname: "@cool_name"`, а введення `@Оля` зберегло `realName: "Оля"`; birthdate не змінився. Перехід на `#profile` без авторизації коректно показав україномовний auth gate, тому для avatar/profile header потрібен окремий guest-mode smoke test.
 
 Guest-mode profile smoke test успішний: header показує `Оля` окремим primary рядком і `@cool_name` окремим handle рядком. Після owner avatar fallback patch сторінка лишається функціональною; screenshot route також підтвердив, що identity presentation не змішався.
+
+Live QA після Pages deployment успішний: `https://vakdab.github.io/Vakdab/?profile-identity-v42=1#settings` завантажив налаштування з полями `@username`, plain `Ім'я` та custom trigger `Оберіть дату`. Попередній чорний стан був коротким моментом завантаження; після очікування сторінка повністю відобразила v42 UI.
