@@ -1,5 +1,5 @@
 import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../services/catalog.js';
-import { DailyStats, Storage, openPlayerPage, showToast } from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v40';
+import { DailyStats, Storage, openPlayerPage, showToast } from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v41';
 
         let heroItems = [],
             heroPool = [],

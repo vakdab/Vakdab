@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v40';
+} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v41';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 
@@ -731,7 +731,16 @@ import {
         }
 
         export function saveProfile(data) {
-            Storage.setProfile(data);
+            Storage._setProfile(data);
+            if (Auth.isAuthenticated()) {
+                const syncPromise = Auth.syncUserData({ scope: 'profile' }).catch(error => {
+                    console.warn('[VakDab] profile sync failed:', error);
+                    return { ok: false, error: error?.message || 'Не вдалося зберегти профіль' };
+                });
+                Auth._lastProfileSync = syncPromise;
+                return syncPromise;
+            }
+            return Promise.resolve({ ok: true, localOnly: true });
         }
 
         export function getProfileStats() {

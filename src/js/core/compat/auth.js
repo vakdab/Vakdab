@@ -3,9 +3,9 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v40';
-import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-telegram-auth-v40';
-import { Storage } from './storage.js?v=20260821-telegram-auth-v40';
+} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v41';
+import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-telegram-auth-v41';
+import { Storage } from './storage.js?v=20260821-telegram-auth-v41';
 import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
 
         const Auth = {
@@ -15,6 +15,7 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
             _googleProvider: null,
             _isGuest: false,
             _loadingData: false,
+            _lastProfileSync: null,
             _authResolved: false,
 
             init() {
@@ -355,6 +356,14 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
                 }
 
                 showToast('Збереження даних і вихід...');
+
+                // Спочатку чекаємо останній profile write (nickname, bio, avatar тощо),
+                // який міг бути запущений одразу після натискання кнопки збереження.
+                try {
+                    if (this._lastProfileSync) await this._lastProfileSync;
+                } catch (e) {
+                    console.warn('Logout: profile sync error', e.message);
+                }
 
                 // 2. СПОЧАТКУ синхронізуємо — чекаємо завершення (max 6с)
                 // Storage.clear() викликається ТІЛЬКИ після запису в Firestore

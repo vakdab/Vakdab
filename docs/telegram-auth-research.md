@@ -40,3 +40,8 @@ After clearing the sandbox-only local auth state, the profile auth page displaye
 ## UI v40 verification
 
 The local auth page now renders a blue Telegram button with the Telegram logo. On the login tab the label is `Увійти через Telegram`; after switching to the registration tab it changes to `Зареєструватися через Telegram`. Google, email/password, and guest controls remain available in both modes.
+
+
+## Profile persistence fix v41
+
+Profile edits now write the updated profile to local storage and immediately call `Auth.syncUserData({ scope: 'profile' })` for authenticated users. The auth layer keeps the latest profile-sync promise and waits for it during logout before clearing local state. This prevents nickname, bio, avatar, and other profile edits made in Telegram Mini App from being lost during logout/login.
