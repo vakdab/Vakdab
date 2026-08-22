@@ -1,22 +1,22 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
 import { GENRE_MAP } from '../../config/constants.js?v=20260820-hikka-proxy-fix4';
-import { Router } from '../../core/compat/router.js?v=20260822-player-overlay-v49';
-import { Storage } from '../../core/compat/storage.js?v=20260822-player-overlay-v49';
+import { Router } from '../../core/compat/router.js?v=20260822-player-overlay-v50';
+import { Storage } from '../../core/compat/storage.js?v=20260822-player-overlay-v50';
 import { LampaPlayer } from './lampaPlayer.js?v=20260820-player-modern-v1';
-import { DailyStats } from '../rating/ratingSystem.js?v=20260822-player-overlay-v49';
+import { DailyStats } from '../rating/ratingSystem.js?v=20260822-player-overlay-v50';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, searchHikkaAllTitles, switchProviderSource
-} from '../../services/catalog.js?v=20260822-player-overlay-v49';
+} from '../../services/catalog.js?v=20260822-player-overlay-v50';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
-} from '../pages/homeLegacy.js?v=20260822-player-overlay-v49';
-import { renderProfilePage } from '../pages/profileLegacy.js?v=20260822-player-overlay-v49';
+} from '../pages/homeLegacy.js?v=20260822-player-overlay-v50';
+import { renderProfilePage } from '../pages/profileLegacy.js?v=20260822-player-overlay-v50';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v49';
+} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v50';
 import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
 
         // ====================================================================
@@ -175,12 +175,24 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
                 externalSourceCache = {};
                 playerPageSources = anime.mikaiUrl ? ['Mikai.me'] : anime.animeOnUrl ? ['AnimeON'] : ['Основне'];
                 playerPageCurrentSource = playerPageSources[0];
-                const posterUrl = normalizePosterUrl(anime.images?.jpg?.large_image_url);
-                document.getElementById('playerPosterImg').src = posterUrl;
-                const heroPoster = document.getElementById('playerHeroPoster');
-                if (heroPoster) { heroPoster.src = posterUrl; heroPoster.alt = anime.title || ''; }
+                const hikkaPosterUrl = normalizePosterUrl(anime.images?.jpg?.large_image_url);
+                const mikaiPosterUrl = normalizePosterUrl(anime.mikaiPosterUrl || '', '');
+                const posterUrl = mikaiPosterUrl || hikkaPosterUrl;
+                const posterTargets = [document.getElementById('playerPosterImg'), document.getElementById('playerHeroPoster')];
+                posterTargets.forEach(img => {
+                    if (!img) return;
+                    img.onerror = () => {
+                        if (hikkaPosterUrl && img.src !== hikkaPosterUrl) img.src = hikkaPosterUrl;
+                    };
+                    img.src = posterUrl;
+                    if (img.id === 'playerHeroPoster') img.alt = anime.title || '';
+                });
                 document.getElementById('playerPosterTitle').textContent = anime.title;
-                document.getElementById('playerKicker').textContent = anime.originalTitle || anime.title;
+                const kickerEl = document.getElementById('playerKicker');
+                if (kickerEl) {
+                    kickerEl.textContent = anime.originalTitle || anime.title;
+                    kickerEl.style.display = mikaiPosterUrl ? 'none' : '';
+                }
                 document.getElementById('playerTopbarTitle').textContent = anime.title;
                 document.getElementById('playerBlurBg').style.backgroundImage = `url(${posterUrl})`;
                 const totalEpisodes = Object.values(anime.seasons || {}).reduce((sum, s) => sum + Object.values(s).reduce((s2,

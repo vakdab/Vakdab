@@ -10,7 +10,7 @@ import {
     playerPageCurrentDub, playerPageCurrentSeason, playerPageCurrentSource,
     buildBottomSheetData, buildEpisodeViews, buildSeasonRow,
     showToast, updateFilterChip, updateSourceChip
-} from '../legacy/app-legacy.js?v=20260822-player-overlay-v49';
+} from '../legacy/app-legacy.js?v=20260822-player-overlay-v50';
 
         export const CATALOG_POSTER_FALLBACK = './android-chrome-512x512.png';
         export function normalizeAnimeUrl(href = '') {
@@ -255,7 +255,14 @@ import {
         }
 
         export function parseMikaiSeasonsFromHtml(html) {
-            const match = String(html || '').match(/<script[^>]+id=["']__NUXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+            const htmlText = String(html || '');
+            const posterCandidates = [...htmlText.matchAll(/https?:\/\/images\.mikai\.me\/(?:ua_poster|poster)\/(?:big|medium|small)\/[^"'<>\s]+/gi)]
+                .map(match => match[0].replace(/&amp;/gi, '&'));
+            const mikaiPosterUrl = posterCandidates.find(url => /\/ua_poster\/big\//i.test(url)) ||
+                posterCandidates.find(url => /\/ua_poster\/medium\//i.test(url)) ||
+                posterCandidates.find(url => /\/poster\/big\//i.test(url)) ||
+                posterCandidates.find(url => /\/poster\/medium\//i.test(url)) || '';
+            const match = htmlText.match(/<script[^>]+id=["']__NUXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
             if (!match) throw new Error('Mikai Nuxt payload не знайдено');
             let payload;
             try { payload = JSON.parse(match[1]); } catch { throw new Error('Mikai Nuxt payload пошкоджений'); }
@@ -306,7 +313,8 @@ import {
             return {
                 seasons: Object.keys(dubObject).length ? { '1': dubObject } : {},
                 dubLogos,
-                subtitleLogos
+                subtitleLogos,
+                mikaiPosterUrl
             };
         }
 
@@ -344,7 +352,7 @@ import {
             return Number.isInteger(number) && number > 0 && number < 100 ? String(number) : '1';
         }
         export async function loadMikaiSeasons(mikaiUrl) {
-            if (!mikaiUrl) return { seasons: {}, dubLogos: {}, subtitleLogos: {} };
+            if (!mikaiUrl) return { seasons: {}, dubLogos: {}, subtitleLogos: {}, mikaiPosterUrl: '' };
             const html = await fetchMikaiHtml(mikaiUrl);
             return parseMikaiSeasonsFromHtml(html);
         }
@@ -368,6 +376,7 @@ import {
             let seasons = {};
             let dubLogos = {};
             let subtitleLogos = {};
+            let mikaiPosterUrl = '';
             if (mikaiUrl) {
                 try {
                     const mikaiData = await loadMikaiSeasons(mikaiUrl);
@@ -376,6 +385,7 @@ import {
                     if (sourceSeason !== '1' && seasons['1']) seasons = { [sourceSeason]: seasons['1'] };
                     dubLogos = mikaiData.dubLogos || {};
                     subtitleLogos = mikaiData.subtitleLogos || {};
+                    mikaiPosterUrl = mikaiData.mikaiPosterUrl || '';
                 } catch (error) { console.warn('[Mikai] Не вдалося завантажити ASHDI:', error); }
             }
             if (!Object.keys(seasons).length && animeOnUrl) {
@@ -400,6 +410,7 @@ import {
                 dubLogos,
                 subtitleLogos,
                 mikaiUrl,
+                mikaiPosterUrl,
                 animeOnUrl,
                 from: mikaiUrl ? 'hikka+mikai+ashdi' : animeOnUrl ? 'hikka+animeon+ashdi' : 'hikka',
                 externalIds: extractExternalAnimeIds(d)
