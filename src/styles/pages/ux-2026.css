@@ -1997,3 +1997,84 @@ body:not(.dark-mode) .header .logo-text span {
     .settings-date-day { font-size: .8rem; }
     .settings-date-weekdays { font-size: .6rem; }
 }
+
+
+/* Catalog genres v55: compact touch chips beside the schedule action. */
+.home-catalog-quick-actions--genres {
+    grid-column: 1 / -1;
+    min-width: 0;
+    width: 100%;
+    overflow: hidden;
+    align-items: center;
+    gap: 8px;
+}
+.home-catalog-quick-actions--genres .home-catalog-schedule-btn {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: max-content;
+    min-height: 44px;
+    padding-inline: 12px;
+}
+.home-catalog-quick-actions--genres .home-catalog-schedule-btn span {
+    display: inline !important;
+}
+.home-catalog-genre-rail--inline {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 2px 2px 5px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+}
+.home-catalog-genre-rail--inline::-webkit-scrollbar { display: none; }
+.home-catalog-genre-rail--inline .home-catalog-genre-card {
+    flex: 0 0 auto;
+    min-width: max-content;
+    min-height: 40px;
+    flex-direction: row;
+    gap: 6px;
+    padding: 6px 10px 6px 7px;
+    border-radius: 999px;
+    scroll-snap-align: start;
+}
+.home-catalog-genre-rail--inline .home-catalog-genre-card__icon,
+.home-catalog-genre-rail--inline .home-catalog-genre-card__icon--all {
+    width: 25px;
+    height: 25px;
+    min-width: 25px;
+    min-height: 25px;
+    flex-basis: 25px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: .62rem;
+    letter-spacing: 0;
+}
+.home-catalog-genre-rail--inline .home-catalog-genre-card__icon--all { font-size: .58rem; }
+.home-catalog-genre-rail--inline .home-catalog-genre-card__name {
+    max-width: none;
+    overflow: visible;
+    font-size: .72rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+@media (max-width: 479px) {
+    .home-catalog-quick-actions--genres { gap: 6px; }
+    .home-catalog-quick-actions--genres .home-catalog-schedule-btn {
+        min-height: 44px;
+        padding-inline: 10px;
+        font-size: .7rem;
+    }
+    .home-catalog-genre-rail--inline { gap: 5px; }
+    .home-catalog-genre-rail--inline .home-catalog-genre-card {
+        min-height: 40px;
+        padding: 6px 9px 6px 6px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .home-catalog-genre-rail--inline .home-catalog-genre-card { transition: none; }
+}

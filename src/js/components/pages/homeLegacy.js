@@ -3,10 +3,10 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v54';
-import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from './settingsLegacy.js?v=20260822-player-overlay-v54';
+} from '../../legacy/app-legacy.js?v=20260822-catalog-genres-v55';
+import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from './settingsLegacy.js?v=20260822-catalog-genres-v55';
 import { debugLog } from '../../utils/debug.js';
-import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260822-player-overlay-v54';
+import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260822-catalog-genres-v55';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
 import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260818-honey-type-filter-v1';
@@ -447,6 +447,11 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (homeCatalogSort === 'score') body.sort = ['score:desc', 'scored_by:desc'];
             if (homeCatalogSort === 'newest') body.sort = ['start_date:desc'];
             if (homeCatalogSort === 'title') body.sort = ['title_ua:asc'];
+            if (homeCatalogMode === 'anime' && homeCatalogGenre !== 'all') {
+                const genreSlug = String(homeCatalogGenre || '').trim();
+                if (genreSlug.startsWith('format:')) body.media_type = [genreSlug.slice(7)];
+                else if (genreSlug) body.genres = [genreSlug];
+            }
             if (homeCatalogMode === 'anime' && homeCatalogAge !== 'all') {
                 body.rating = homeCatalogAge === 'adult' ? ['rx', 'r_plus'] : homeCatalogAge === 'teen' ? ['r', 'pg_13'] : ['g', 'pg'];
             }
@@ -774,14 +779,17 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const host = root.querySelector('#homeCatalogGenreRailHost');
             if (!host) return;
             host.innerHTML = homeCatalogGenreHtml();
-            host.querySelectorAll('[data-catalog-genre]').forEach(button => button.addEventListener('click', () => {
-                homeCatalogGenre = button.dataset.catalogGenre || 'all';
-                host.querySelectorAll('[data-catalog-genre]').forEach(item => {
-                    const active = item === button;
-                    item.classList.toggle('active', active);
-                    item.setAttribute('aria-pressed', String(active));
-                });
-                renderHomeCatalogGrid();
+            host.querySelectorAll('[data-catalog-genre]').forEach(button => button.addEventListener('click', async () => {
+                if (homeCatalogLoading) return;
+                const nextGenre = button.dataset.catalogGenre || 'all';
+                if (nextGenre === homeCatalogGenre) return;
+                homeCatalogGenre = nextGenre;
+                // The selected genre must be part of the Hikka request. Reset the
+                // page/cache so genres absent from the first catalog page still work.
+                homeCatalogPage = 1;
+                homeCatalogFilterResultItems = null;
+                homeCatalogFilterResultOffset = 0;
+                await reloadHomeCatalog();
             }));
         }
 
@@ -1228,14 +1236,13 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 <div class="home-catalog-controls">
                     <label class="home-catalog-sort"><select id="homeCatalogSort" aria-label="Сортування"><option value="score"${homeCatalogSort === 'score' ? ' selected' : ''}>За оцінкою</option><option value="newest"${homeCatalogSort === 'newest' ? ' selected' : ''}>Новіші</option><option value="title"${homeCatalogSort === 'title' ? ' selected' : ''}>За назвою</option></select><i class="fas fa-arrow-up-wide-short"></i></label>
                     <div class="home-catalog-view-toggle" role="group" aria-label="Вигляд каталогу"><button type="button" class="home-catalog-view${homeCatalogView === 'grid' ? ' active' : ''}" data-catalog-view="grid" aria-label="Сітка"><i class="fas fa-grip"></i></button><button type="button" class="home-catalog-view${homeCatalogView === 'list' ? ' active' : ''}" data-catalog-view="list" aria-label="Список"><i class="fas fa-list"></i></button></div>
-                    <div class="home-catalog-quick-actions" role="group" aria-label="Швидкі дії каталогу">
+                    <div class="home-catalog-quick-actions${homeCatalogMode === 'anime' ? ' home-catalog-quick-actions--genres' : ''}" role="group" aria-label="Швидкі дії каталогу">
                         <button class="home-catalog-filter-btn home-catalog-schedule-btn" id="homeCatalogScheduleBtn" type="button"><i class="fas fa-calendar-days"></i><span>Розклад виходу</span></button>
-                        ${homeCatalogAgeHtml()}
+                        ${homeCatalogMode === 'anime' ? '<div class="home-catalog-genre-rail home-catalog-genre-rail--inline" id="homeCatalogGenreRailHost" role="list" aria-label="Жанри каталогу"></div>' : homeCatalogAgeHtml()}
                     </div>
                 </div>
 
                 ${homeCatalogModeFilterHtml()}
-                ${homeCatalogMode === 'anime' ? `<section class="home-catalog-genre-browser" aria-labelledby="homeCatalogGenresTitle"><div class="home-catalog-genre-browser__heading"><div><span class="home-catalog-genre-browser__eyebrow">Швидкий вибір</span><h3 id="homeCatalogGenresTitle">Жанри</h3></div><span class="home-catalog-genre-browser__hint">Проведіть убік</span></div><div class="home-catalog-genre-rail" id="homeCatalogGenreRailHost" role="list" aria-label="Жанри каталогу"></div></section>` : ''}
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
                 <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>
@@ -1376,23 +1383,28 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const genreBrowser = section.querySelector('.home-catalog-genre-browser:not(.home-catalog-mode-filter-panel)');
             const quickActions = section.querySelector('.home-catalog-quick-actions');
             const ageHost = section.querySelector('#homeCatalogAgeRailHost');
+            const genreHost = section.querySelector('#homeCatalogGenreRailHost');
             if (homeCatalogMode === 'anime') {
                 panel?.remove();
                 ageHost?.remove();
-                if (!genreBrowser) {
-                    resultsLabel.insertAdjacentHTML('beforebegin', `<section class="home-catalog-genre-browser" aria-labelledby="homeCatalogGenresTitle"><div class="home-catalog-genre-browser__heading"><div><span class="home-catalog-genre-browser__eyebrow">Швидкий вибір</span><h3 id="homeCatalogGenresTitle">Жанри</h3></div><span class="home-catalog-genre-browser__hint">Проведіть убік</span></div><div class="home-catalog-genre-rail" id="homeCatalogGenreRailHost" role="list" aria-label="Жанри каталогу"></div></section>`);
+                genreBrowser?.remove();
+                if (!section.querySelector('#homeCatalogGenreRailHost') && quickActions) {
+                    quickActions.classList.add('home-catalog-quick-actions--genres');
+                    quickActions.insertAdjacentHTML('beforeend', '<div class="home-catalog-genre-rail home-catalog-genre-rail--inline" id="homeCatalogGenreRailHost" role="list" aria-label="Жанри каталогу"></div>');
                 }
                 syncHomeCatalogGenreControl(section);
                 return;
             }
             if (homeCatalogMode === 'manga') {
                 genreBrowser?.remove();
+                genreHost?.remove();
                 panel?.remove();
                 if (!ageHost && quickActions) quickActions.insertAdjacentHTML('beforeend', homeCatalogAgeHtml());
                 syncHomeCatalogAgeControl(section);
                 return;
             }
             ageHost?.remove();
+            genreHost?.remove();
             genreBrowser?.remove();
             const markup = homeCatalogModeFilterHtml();
             if (panel) panel.outerHTML = markup;

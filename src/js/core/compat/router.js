@@ -6,7 +6,7 @@ import {
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
     renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v54';
+} from '../../legacy/app-legacy.js?v=20260822-catalog-genres-v55';
 
         export const Router = {
             currentRoute: 'main',
