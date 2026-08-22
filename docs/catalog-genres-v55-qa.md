@@ -32,3 +32,9 @@ DOM підтвердив правильну структуру: `#homeCatalogGen
 Computed style diagnosis: у браузері markup має `home-catalog-genre-rail--inline`, але chip лишався 116×120 із column layout. Рекурсивна перевірка CSS rules не знайшла v55 selector у завантаженому app.css, тому перевіряю HTTP response/import chain; це cache/import delivery issue, а не помилка markup.
 
 Після bump nested import marker і повного reload computed styles стали правильними: перший genre chip має `height: 40px`, `min-height: 40px`, `border-radius: 999px`, `flex-direction: row`; rail має `display: flex`, `overflow-x: auto`, `scrollWidth: 2180px` при ширині 978px, а кнопка «Розклад виходу» стоїть поруч із rail і має 149×48px. Це підтверджує compact inline layout і доступність genre chips через горизонтальний scroll.
+
+## Live verification
+
+Опублікований URL `https://vakdab.github.io/Vakdab/?v=20260822-catalog-genres-v55#main` віддає `app.js?v=20260822-catalog-genres-v55`, кнопку «Розклад виходу» та всі 18 compact genre controls. На live після click по `action` каталог показав `Показано 24 з 6 132 результатів`, тобто GitHub Pages віддає новий код і серверний genre filter працює після deploy.
+
+GitHub Actions для commit `3a8d902` завершилися успішно: `Deploy static site to GitHub Pages` і `pages-build-deployment` мають conclusion `success`.
