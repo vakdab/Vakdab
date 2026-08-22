@@ -1,6 +1,6 @@
-import { Auth } from '../../core/compat/auth.js?v=20260822-player-overlay-v46';
-import { Router } from '../../core/compat/router.js?v=20260822-player-overlay-v46';
-import { Storage } from '../../core/compat/storage.js?v=20260822-player-overlay-v46';
+import { Auth } from '../../core/compat/auth.js?v=20260822-player-overlay-v47';
+import { Router } from '../../core/compat/router.js?v=20260822-player-overlay-v47';
+import { Storage } from '../../core/compat/storage.js?v=20260822-player-overlay-v47';
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
 
@@ -416,7 +416,7 @@ function isGifUrl(url) {
                         document.body.classList.add('community-active');
                         const nav = document.getElementById('bottomNav');
                         if (nav) nav.classList.add('hidden-nav');
-                        import('../community/legacyCommunity.js?v=20260822-player-overlay-v46')
+                        import('../community/legacyCommunity.js?v=20260822-player-overlay-v47')
                             .then(({ initCommunity }) => {
                                 initCommunity();
                                 setTimeout(() => {

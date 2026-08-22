@@ -1,8 +1,8 @@
-import { Storage } from '../../core/compat/storage.js?v=20260822-player-overlay-v46';
+import { Storage } from '../../core/compat/storage.js?v=20260822-player-overlay-v47';
 import { db } from '../../services/firebase/client.js';
-import { Router } from '../../core/compat/router.js?v=20260822-player-overlay-v46';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260822-player-overlay-v46';
-import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260822-player-overlay-v46';
+import { Router } from '../../core/compat/router.js?v=20260822-player-overlay-v47';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260822-player-overlay-v47';
+import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260822-player-overlay-v47';
 
         function stickerFaceSvg(variant) {
             const s = 'stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"';

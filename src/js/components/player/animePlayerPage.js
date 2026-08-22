@@ -1,22 +1,22 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
 import { GENRE_MAP } from '../../config/constants.js?v=20260820-hikka-proxy-fix4';
-import { Router } from '../../core/compat/router.js?v=20260822-player-overlay-v46';
-import { Storage } from '../../core/compat/storage.js?v=20260822-player-overlay-v46';
+import { Router } from '../../core/compat/router.js?v=20260822-player-overlay-v47';
+import { Storage } from '../../core/compat/storage.js?v=20260822-player-overlay-v47';
 import { LampaPlayer } from './lampaPlayer.js?v=20260820-player-modern-v1';
-import { DailyStats } from '../rating/ratingSystem.js?v=20260822-player-overlay-v46';
+import { DailyStats } from '../rating/ratingSystem.js?v=20260822-player-overlay-v47';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, searchHikkaAllTitles, switchProviderSource
-} from '../../services/catalog.js?v=20260822-player-overlay-v46';
+} from '../../services/catalog.js?v=20260822-player-overlay-v47';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
-} from '../pages/homeLegacy.js?v=20260822-player-overlay-v46';
-import { renderProfilePage } from '../pages/profileLegacy.js?v=20260822-player-overlay-v46';
+} from '../pages/homeLegacy.js?v=20260822-player-overlay-v47';
+import { renderProfilePage } from '../pages/profileLegacy.js?v=20260822-player-overlay-v47';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v46';
+} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v47';
 import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
 
         // ====================================================================
@@ -53,7 +53,6 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
         export let playerPageIsOpen = false;
         let playerPagePreviousBodyOverflow = '';
         let playerPagePreviousActiveElement = null;
-        let playerRatingSourceIsTmdb = false; // TMDB рейтинг має пріоритет над локальним рейтингом глядачів
         let playerJikanData = null;
         let playerCharacterItems = [];
         let playerCharacterExpanded = false;
@@ -164,7 +163,6 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             document.getElementById('mainCharactersMoreBtn').hidden = true;
             const _resetRelatedSection = document.getElementById('relatedSeasonsSection');
             if (_resetRelatedSection) _resetRelatedSection.style.display = 'none';
-            playerRatingSourceIsTmdb = false;
             updateLikeButton();
             updateDislikeButton();
             updateBookmarkButton(url);
@@ -288,11 +286,6 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
                             setTimeout(() => {
                                 if (synopsisEl.scrollHeight > synopsisEl.clientHeight + 2) moreBtn.style.display = 'block';
                             }, 100);
-                        }
-                        if (details.vote_average) {
-                            playerRatingSourceIsTmdb = true;
-                            document.getElementById('playerRatingNum').textContent = details.vote_average.toFixed(1);
-                            document.getElementById('playerRatingLabel').textContent = 'TMDB';
                         }
                         const logoImg = document.getElementById('playerTitleLogo');
                         const kickerEl = document.getElementById('playerKicker');
@@ -1164,7 +1157,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             const next = nextDate ? `${nextEpisode ? `Епізод ${nextEpisode} · ` : ''}${formatNextEpisodeDate(nextDate)}` : (data?.airing ? 'Дата невідома' : '—');
             const studio = data?.studios?.[0]?.name || details?.production_companies?.[0]?.name || '—';
             const studioLogo = data?.studios?.[0]?.logo || (details?.production_companies?.[0]?.logo_path ? tmdbImgUrl(details.production_companies[0].logo_path, 'w185') : '');
-            const rating = data?.rating || (details?.vote_average ? `TMDB ${details.vote_average.toFixed(1)}` : '—');
+            const rating = data?.rating || '—';
             const rows = [
                 ['Тип', typeLabel], ['Статус', `<span class="anime-info-badge">${escapeHtml(status)}</span>`],
                 ['Сезон / рік', seasonYear], ['Епізоди', episodeCount || '—'], ['Наступний епізод', next],
@@ -2153,18 +2146,14 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             const numEl = document.getElementById('playerRatingNum');
             const labelEl = document.getElementById('playerRatingLabel');
             if (!numEl) return;
-            if (!playerRatingSourceIsTmdb) {
-                numEl.textContent = '—';
-                if (labelEl) labelEl.textContent = 'ОЦІНКА ГЛЯДАЧІВ';
-            }
+            numEl.textContent = '—';
+            if (labelEl) labelEl.textContent = 'ОЦІНКА ГЛЯДАЧІВ';
             try {
                 if (!db) return;
                 await ensureFirebaseGuestAuth();
                 const animeId = String(animeUrl.hashCode ? animeUrl.hashCode() : animeUrl);
                 const q = query(collection(db, 'anime_ratings'), where('animeId', '==', animeId));
                 const snap = await getDocs(q);
-                // TMDB-рейтинг має пріоритет — якщо він уже застосований, локальну оцінку глядачів не показуємо в тому ж тайлі
-                if (playerRatingSourceIsTmdb) return;
                 if (snap.empty) { numEl.textContent = '—'; if (labelEl) labelEl.textContent = 'НЕМАЄ ОЦІНОК'; return; }
                 let sum = 0, count = 0;
                 snap.forEach(d => { const v = d.data().value; if (v === 1 || v === -1) { sum += v; count++; } });
