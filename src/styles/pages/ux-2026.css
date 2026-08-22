@@ -1877,3 +1877,62 @@ body:not(.dark-mode) .header .logo-text span {
         padding: 22px 17px 44px 17px;
     }
 }
+
+/* Compact visual polish: short cloud beside the trigger, no text collision with profile content. */
+.profile-thought-note {
+    left: 64px;
+    top: 4px;
+    bottom: auto;
+    width: min(142px, calc(100vw - 82px));
+    min-height: 86px;
+    padding: 23px 16px 31px 19px;
+    font-size: .68rem;
+    line-height: 1.18;
+    font-weight: 750;
+    overflow: hidden;
+}
+.profile-thought-note #profileThoughtNoteText {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    max-height: 3.55em;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+}
+.profile-thought-bubble {
+    left: 64px;
+    top: 4px;
+    bottom: auto;
+    width: min(260px, calc(100vw - 38px));
+    max-width: calc(100vw - 38px);
+    min-height: 196px;
+    padding: 24px 18px 50px 18px;
+}
+.profile-thought-bubble__head strong { font-size: .72rem; }
+.profile-thought-bubble textarea {
+    min-height: 46px;
+    max-height: 58px;
+    margin: 7px 0;
+    padding: 8px 9px;
+    font-size: .72rem;
+    line-height: 1.28;
+}
+.profile-thought-bubble__foot button { min-height: 28px; padding-inline: 11px; font-size: .66rem; }
+@media (max-width: 479px) {
+    .profile-thought-note {
+        left: 48px;
+        top: 4px;
+        width: min(142px, calc(100vw - 78px));
+        min-height: 86px;
+        padding: 23px 15px 31px 18px;
+    }
+    .profile-thought-bubble {
+        left: 48px;
+        top: 4px;
+        width: min(260px, calc(100vw - 28px));
+        max-width: calc(100vw - 28px);
+        min-height: 196px;
+        padding: 24px 17px 49px 17px;
+    }
+}
