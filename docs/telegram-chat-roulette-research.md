@@ -21,3 +21,7 @@ Cloudflare documentation search (22 Aug 2026) confirms that Durable Objects comb
 ## Hikka typed endpoint probe
 
 A live public probe returned `pagination` and `list` for both `POST https://api.hikka.io/manga?page=1&size=1` and `POST https://api.hikka.io/novel?page=1&size=1`. Manga returned fields including `title_ua`, `image`, `chapters`, `volumes`, `status`, and `synopsis_ua`; novel returned the same normalized shape, with `chapters` and `volumes` available. The Worker can therefore use Hikka `/manga` and `/novel` directly for the Telegram picker without falsely linking them to the anime player.
+
+## Telegram media relay verification
+
+The official Telegram Bot API states that an incoming `message` may be a message of any kind including text, photo, and sticker, and `copyMessage` is the appropriate method for copying a message to another chat. The current relay already calls `copyMessage`, so the fix must ensure the Worker recognizes every required media field and does not reject Telegram message variants before that call. Source: https://core.telegram.org/bots/api.

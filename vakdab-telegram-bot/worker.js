@@ -1341,13 +1341,26 @@ async function relayRouletteMessage(message, env) {
   const chatId = message.chat?.id;
   if (!chatId) return false;
   const text = String(message.text || message.caption || '');
+  const media = extractRelayMedia(message);
   const result = await rouletteOperation({
     op: 'relay', chatId, userId: message.from?.id || chatId, messageId: message.message_id, updateId: message.__updateId,
-    text, hasSupportedContent: Boolean(message.text || message.photo || message.video || message.audio || message.voice || message.document || message.animation || message.sticker)
+    text, media, hasSupportedContent: Boolean(message.text || media)
   }, env);
   if (result.unavailable || !result.handled) return false;
   await deliverRouletteResult(chatId, result, env);
   return true;
+}
+
+function extractRelayMedia(message = {}) {
+  if (message.sticker?.file_id) return { method: 'sendSticker', field: 'sticker', fileId: message.sticker.file_id };
+  if (message.animation?.file_id) return { method: 'sendAnimation', field: 'animation', fileId: message.animation.file_id };
+  if (Array.isArray(message.photo) && message.photo.length) return { method: 'sendPhoto', field: 'photo', fileId: message.photo[message.photo.length - 1]?.file_id };
+  if (message.video?.file_id) return { method: 'sendVideo', field: 'video', fileId: message.video.file_id };
+  if (message.video_note?.file_id) return { method: 'sendVideoNote', field: 'video_note', fileId: message.video_note.file_id };
+  if (message.audio?.file_id) return { method: 'sendAudio', field: 'audio', fileId: message.audio.file_id };
+  if (message.voice?.file_id) return { method: 'sendVoice', field: 'voice', fileId: message.voice.file_id };
+  if (message.document?.file_id) return { method: 'sendDocument', field: 'document', fileId: message.document.file_id };
+  return null;
 }
 
 async function deliverRouletteResult(chatId, result, env) {
@@ -1365,6 +1378,15 @@ async function deliverRouletteResult(chatId, result, env) {
       if (!copied?.ok) {
         await rouletteOperation({ op: 'end', chatId: delivery.fromChatId }, env);
         await sendMessage(delivery.fromChatId, 'Повідомлення не доставлено. Чат завершено — можете знайти нового співрозмовника.', { reply_markup: rouletteStartKeyboard() }, env);
+      }
+    } else if (delivery.kind === 'media') {
+      const media = delivery.media || {};
+      const params = { chat_id: delivery.toChatId, [media.field]: media.fileId, reply_markup: rouletteChatKeyboard() };
+      if (media.caption && media.field !== 'sticker' && media.field !== 'video_note') params.caption = truncate(media.caption, 1024);
+      const sent = await telegram(media.method, params, env);
+      if (!sent?.ok) {
+        await rouletteOperation({ op: 'end', chatId: delivery.fromChatId }, env);
+        await sendMessage(delivery.fromChatId, 'Медіа не доставлено. Чат завершено — можете знайти нового співрозмовника.', { reply_markup: rouletteStartKeyboard() }, env);
       }
     } else if (delivery.kind === 'text') {
         await sendMessage(delivery.toChatId, delivery.text, { reply_markup: rouletteKeyboardFor(delivery.keyboard) }, env);
@@ -1388,7 +1410,7 @@ function isUnsafeRouletteText(value) {
     || /(?:докс|доксинг|doxx|порно з неповноліт|child\s*sexual|csam)/i.test(text);
 }
 
-export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText };
+export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia };
 
 export class ChatRouletteRoom {
   constructor(ctx, env) {
@@ -1540,6 +1562,11 @@ export class ChatRouletteRoom {
     if (!payload.hasSupportedContent) return { ok: true, handled: true, notice: 'Цей тип повідомлення поки не можна передати в рулетці.', keyboard: 'roulette' };
     if (isUnsafeRouletteText(payload.text)) return { ok: true, handled: true, notice: 'Повідомлення не передано: посилання, контакти або небезпечний контент заборонені правилами рулетки.', keyboard: 'roulette' };
     this.ctx.storage.sql.exec('UPDATE sessions SET updated_at = ? WHERE participant_a = ? AND participant_b = ?', now, session.participant_a, session.participant_b);
+    if (payload.media?.method && payload.media?.field && payload.media?.fileId) {
+      const allowedMethods = new Set(['sendSticker', 'sendAnimation', 'sendPhoto', 'sendVideo', 'sendVideoNote', 'sendAudio', 'sendVoice', 'sendDocument']);
+      if (!allowedMethods.has(payload.media.method)) return { ok: true, handled: true, notice: 'Цей тип медіа поки не можна передати в рулетці.', keyboard: 'roulette' };
+      return { ok: true, handled: true, deliveries: [{ kind: 'media', toChatId: other, fromChatId: chatId, media: { method: payload.media.method, field: payload.media.field, fileId: String(payload.media.fileId), caption: String(payload.text || '') } }] };
+    }
     return { ok: true, handled: true, deliveries: [{ kind: 'copy', toChatId: other, fromChatId: chatId, messageId: payload.messageId }] };
   }
 
