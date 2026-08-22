@@ -5,14 +5,19 @@ const FIRESTORE_VERSION = 'https://www.gstatic.com/firebasejs/12.16.0/firebase-f
 function normalizeProfile(uid, data = {}) {
     const profile = data.profile || {};
     const now = Date.now();
+    const rawNickname = String(profile.nickname || profile.username || '').trim();
+    const nicknameBase = rawNickname.replace(/^@+/, '').replace(/\s+/g, '_').replace(/[^\p{L}\p{N}._-]/gu, '').slice(0, 24);
+    const normalizedNickname = nicknameBase ? `@${nicknameBase}` : '@user';
+    const rawRealName = String(profile.realName || '').trim();
+    const normalizedRealName = rawRealName.replace(/^@+/, '') || (rawNickname && rawNickname !== 'Користувач' ? rawNickname.replace(/^@+/, '') : '');
     const thought = String(profile.thought || '').trim();
     const thoughtAt = Number(profile.thoughtAt || 0);
     const thoughtExpiresAt = Number(profile.thoughtExpiresAt || (thoughtAt + (4 * 60 * 60 * 1000)) || 0);
     const activeThought = thought && thoughtAt > 0 && thoughtExpiresAt > now ? thought : '';
     return {
         uid,
-        nickname: String(profile.nickname || profile.name || 'Користувач').trim() || 'Користувач',
-        realName: String(profile.realName || ''),
+        nickname: normalizedNickname,
+        realName: normalizedRealName,
         bio: String(profile.bio || ''),
         bioBold: profile.bioBold === true,
         avatar: String(profile.avatar || ''),

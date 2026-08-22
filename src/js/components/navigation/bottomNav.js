@@ -1,6 +1,6 @@
 import { loadFeature } from '../../core/feature-loader.js';
-import { Router } from '../../core/compat/router.js?v=20260821-telegram-auth-v41';
-import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v41';
+import { Router } from '../../core/compat/router.js?v=20260822-profile-identity-v42';
+import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260822-profile-identity-v42';
 
 export function initBottomNav() {
 

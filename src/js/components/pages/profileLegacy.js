@@ -4,9 +4,9 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v41';
-import { getProfile, saveProfile, getProfileStats, getAchievements } from './settingsLegacy.js?v=20260821-telegram-auth-v41';
-import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260821-telegram-auth-v41';
+} from '../../legacy/app-legacy.js?v=20260822-profile-identity-v42';
+import { getProfile, saveProfile, getProfileStats, getAchievements, getProfileDisplayName, getProfileHandle } from './settingsLegacy.js?v=20260822-profile-identity-v42';
+import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260822-profile-identity-v42';
 
 function thoughtSizeClass(text) {
     const length = String(text || '').trim().length;
@@ -198,8 +198,8 @@ export function renderProfilePage() {
             const bannerFormatClass = profile.bannerFormat === 'wide' ? 'profile-banner--wide' : 'profile-banner--narrow';
             const bannerClass = (isGifBanner ? 'profile-banner is-gif' : 'profile-banner') + ` ${bannerFormatClass}` + bannerEffectClass;
             const avatarClass = isGifAvatar ? 'profile-avatar is-gif' : 'profile-avatar';
-            const profileNickname = escapeHtml(profile.nickname);
-            const profileHandle = escapeHtml('@' + profile.nickname.toLowerCase().replace(/\s/g, '_'));
+            const profileNickname = escapeHtml(getProfileDisplayName(profile));
+            const profileHandle = escapeHtml(getProfileHandle(profile));
             const profileBioText = escapeHtml(profile.bio);
             container.innerHTML = `
             <div class="profile-wrapper">
@@ -213,7 +213,7 @@ export function renderProfilePage() {
                   <div class="profile-avatar-wrap${decorationClass}">
                     <div class="${avatarClass}">
                       ${profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, 'profile-avatar-media', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, 'profile-avatar-media', 'avatar') : '')}
-                      <span class="avatar-placeholder" style="display:none;">${escapeHtml(profile.nickname.charAt(0).toUpperCase())}</span>
+                      <span class="avatar-placeholder" style="display:${profile.avatarVideo || profile.avatar ? 'none' : 'flex'};">${escapeHtml(getProfileDisplayName(profile).charAt(0).toUpperCase())}</span>
                     </div>
                     <button type="button" class="profile-thought-trigger${profile.thought ? ' has-thought' : ''}" id="profileThoughtTrigger" aria-label="Відкрити думку" aria-expanded="false" aria-controls="profileThoughtBubble" title="Додати думку">
                       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 5.5h13a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-6.2l-3.8 3v-3H5.5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z"/><path d="M8 11.2h.01M12 11.2h.01M16 11.2h.01"/></svg>
@@ -447,16 +447,16 @@ export function renderProfilePage() {
 
 function socialListProfileMarkup(profile) {
     const media = profile.avatarVideo || profile.avatar || '';
-    const placeholder = escapeHtml((profile.nickname || 'К').charAt(0).toUpperCase());
+    const placeholder = escapeHtml((getProfileDisplayName(profile) || 'К').charAt(0).toUpperCase());
     return `<div class="social-list-avatar">
-        ${media ? profileMediaMarkup(media, 'social-list-avatar-media', `${profile.nickname} avatar`, profile.avatarVideo ? profile.avatarVideoSettings : null) : ''}
+        ${media ? profileMediaMarkup(media, 'social-list-avatar-media', `${getProfileDisplayName(profile)} ${getProfileHandle(profile)} avatar`, profile.avatarVideo ? profile.avatarVideoSettings : null) : ''}
         <span class="social-list-avatar-placeholder" style="display:${media ? 'none' : 'flex'};">${placeholder}</span>
     </div>`;
 }
 
 function socialListCardMarkup(profile, { showUnfollow = false } = {}) {
-    const nickname = escapeHtml(profile.nickname || 'Користувач');
-    const handle = escapeHtml('@' + String(profile.nickname || 'user').toLowerCase().replace(/\\s/g, '_'));
+    const nickname = escapeHtml(getProfileDisplayName(profile));
+    const handle = escapeHtml(getProfileHandle(profile));
     return `<article class="social-list-item" data-social-profile-uid="${escapeHtml(profile.uid)}" tabindex="0" role="link">
         ${socialListProfileMarkup(profile)}
         <div class="social-list-user">
@@ -601,7 +601,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260821-telegram-auth-v41');
+        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260822-profile-identity-v42');
         const isOwnPublicProfile = Boolean(Auth.isAuthenticated() && Auth._user?.uid && String(Auth._user.uid) === targetUid);
         let profile = null;
         try {
@@ -634,8 +634,8 @@ export async function renderPublicProfilePage(uid) {
         const publicThoughtClass = hasPublicThought ? ` ${thoughtSizeClass(publicThought)}` : '';
         const bannerClass = `profile-banner ${profile.bannerFormat === 'wide' ? 'profile-banner--wide' : 'profile-banner--narrow'}${profile.bannerEffect && profile.bannerEffect !== 'none' ? ` banner-effect-${escapeHtml(profile.bannerEffect)}` : ''}`;
         const avatarClass = `profile-avatar${isGifUrl(avatar) ? ' is-gif' : ''}`;
-        const nickname = escapeHtml(profile.nickname);
-        const handle = escapeHtml('@' + profile.nickname.toLowerCase().replace(/\\s/g, '_'));
+        const nickname = escapeHtml(getProfileDisplayName(profile));
+        const handle = escapeHtml(getProfileHandle(profile));
         const canFollow = Boolean(viewerUid && viewerUid !== targetUid && !Auth.isGuest());
         const publicHistory = profile.hideHistory ? [] : profile.history;
         const publicBookmarks = profile.hideBookmarks ? [] : profile.bookmarks;
@@ -666,7 +666,7 @@ export async function renderPublicProfilePage(uid) {
                 <div class="profile-avatar-wrap${profile.avatarDecoration && profile.avatarDecoration !== 'none' ? ` avatar-decoration-${escapeHtml(profile.avatarDecoration)}` : ''}">
                   <div class="${avatarClass}">
                     ${avatar ? profileMediaMarkup(avatar, 'profile-avatar-media', 'profile avatar', profile.avatarVideo ? profile.avatarVideoSettings : null) : ''}
-                    <span class="avatar-placeholder" style="display:${avatar ? 'none' : 'flex'};">${escapeHtml(profile.nickname.charAt(0).toUpperCase())}</span>
+                    <span class="avatar-placeholder" style="display:${avatar ? 'none' : 'flex'};">${escapeHtml(getProfileDisplayName(profile).charAt(0).toUpperCase())}</span>
                   </div>
                   ${hasPublicThought ? `<div class="profile-thought-note profile-thought-note--public is-visible${publicThoughtClass}" id="profileThoughtNote" role="status" aria-live="polite"><span class="profile-thought-note__dot" aria-hidden="true"></span><span id="profileThoughtNoteText">${escapeHtml(publicThought)}</span></div>` : ''}
                 </div>
@@ -727,7 +727,7 @@ export async function renderPublicProfilePage(uid) {
                 const following = container.querySelector('#publicFollowingCount');
                 if (friends) friends.textContent = String(nextSocial.friends);
                 if (following) following.textContent = String(nextSocial.following);
-                showToast(nextValue ? `Ви слідкуєте за ${profile.nickname}` : 'Підписку скасовано');
+                showToast(nextValue ? `Ви слідкуєте за ${getProfileDisplayName(profile) || getProfileHandle(profile)}` : 'Підписку скасовано');
             } catch (error) {
                 console.error('[VakDab] follow update failed:', error);
                 showToast('Не вдалося оновити підписку');

@@ -3,9 +3,9 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v41';
-import { getDefaultProfile } from '../../components/pages/settingsLegacy.js?v=20260821-telegram-auth-v41';
-import { Storage } from './storage.js?v=20260821-telegram-auth-v41';
+} from '../../legacy/app-legacy.js?v=20260822-profile-identity-v42';
+import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../components/pages/settingsLegacy.js?v=20260822-profile-identity-v42';
+import { Storage } from './storage.js?v=20260822-profile-identity-v42';
 import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
 
         const Auth = {
@@ -128,9 +128,16 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
                         if (data.profile) {
                             const mergedProfile = Object.assign(getDefaultProfile(), data.profile);
                             const telegramProfile = this._pendingTelegramProfile;
-                            if (telegramProfile && (!mergedProfile.nickname || mergedProfile.nickname === 'Користувач')) {
-                                mergedProfile.nickname = [telegramProfile.first_name, telegramProfile.last_name].filter(Boolean).join(' ') || (telegramProfile.username ? `@${telegramProfile.username}` : mergedProfile.nickname);
+                            const legacyNickname = String(mergedProfile.nickname || '').trim();
+                            if (!mergedProfile.realName && legacyNickname && legacyNickname !== '@user' && legacyNickname !== 'Користувач') mergedProfile.realName = stripNicknamePrefix(legacyNickname);
+                            if (telegramProfile && (!mergedProfile.nickname || mergedProfile.nickname === '@user' || mergedProfile.nickname === 'Користувач')) {
+                                mergedProfile.nickname = normalizeNickname(telegramProfile.username || `tg_${telegramProfile.id}`, '@user');
                             }
+                            if (telegramProfile && (!mergedProfile.realName || mergedProfile.realName === 'Користувач')) {
+                                mergedProfile.realName = [telegramProfile.first_name, telegramProfile.last_name].filter(Boolean).join(' ') || stripNicknamePrefix(mergedProfile.nickname);
+                            }
+                            mergedProfile.nickname = normalizeNickname(mergedProfile.nickname, '@user');
+                            mergedProfile.realName = stripNicknamePrefix(mergedProfile.realName);
                             if (telegramProfile && !mergedProfile.avatar && telegramProfile.photo_url) mergedProfile.avatar = telegramProfile.photo_url;
                             const localThoughtExpiresAt = Number(localProfileBeforeLoad.thoughtExpiresAt || 0);
                             if (!mergedProfile.thought && localProfileBeforeLoad.thought && localThoughtExpiresAt > Date.now()) {
@@ -139,9 +146,12 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
                                 mergedProfile.thoughtExpiresAt = localThoughtExpiresAt;
                                 Storage._debounceSync('profile');
                             }
-                            // Доповнюємо Google displayName/photoURL якщо в Firestore порожньо
-                            if ((!mergedProfile.nickname || mergedProfile.nickname === 'Користувач') && this._user && this._user.displayName) {
-                                mergedProfile.nickname = this._user.displayName;
+                            // Доповнюємо Google displayName/photoURL, не перезаписуючи вибрані поля.
+                            if ((!mergedProfile.realName || mergedProfile.realName === 'Користувач') && this._user && this._user.displayName) {
+                                mergedProfile.realName = stripNicknamePrefix(this._user.displayName);
+                            }
+                            if ((!mergedProfile.nickname || mergedProfile.nickname === '@user' || mergedProfile.nickname === 'Користувач') && this._user) {
+                                mergedProfile.nickname = normalizeNickname(this._user.email?.split('@')[0] || this._user.displayName, '@user');
                             }
                             if (!mergedProfile.avatar && this._user && this._user.photoURL) {
                                 mergedProfile.avatar = this._user.photoURL;
@@ -180,11 +190,23 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
                             watchTime: Storage.getWatchTime(),
                             stickers: Storage.getStickers()
                         };
-                        if (guestData.profile && guestData.profile.nickname && guestData.profile.nickname !== 'Користувач') {
-                            Storage._setProfile(guestData.profile);
+                        const telegramProfile = this._pendingTelegramProfile;
+                        const hasCustomGuestProfile = guestData.profile && guestData.profile.nickname && guestData.profile.nickname !== '@user' && guestData.profile.nickname !== 'Користувач';
+                        if (hasCustomGuestProfile) {
+                            const guestProfile = { ...guestData.profile };
+                            guestProfile.nickname = normalizeNickname(guestProfile.nickname, '@user');
+                            guestProfile.realName = stripNicknamePrefix(guestProfile.realName);
+                            Storage._setProfile(guestProfile);
+                        } else if (telegramProfile) {
+                            const p = getDefaultProfile();
+                            p.nickname = normalizeNickname(telegramProfile.username || `tg_${telegramProfile.id}`, '@user');
+                            p.realName = [telegramProfile.first_name, telegramProfile.last_name].filter(Boolean).join(' ');
+                            if (telegramProfile.photo_url) p.avatar = telegramProfile.photo_url;
+                            Storage._setProfile(p);
                         } else if (this._user && this._user.displayName) {
                             const p = getDefaultProfile();
-                            p.nickname = this._user.displayName;
+                            p.realName = stripNicknamePrefix(this._user.displayName);
+                            p.nickname = normalizeNickname(this._user.email?.split('@')[0] || this._user.displayName, '@user');
                             if (this._user.photoURL) p.avatar = this._user.photoURL;
                             Storage._setProfile(p);
                         } else {
@@ -200,9 +222,17 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
                 } catch (e) {
                     console.warn('Error loading user data:', e);
                     // При помилці — створюємо мінімальний профіль
-                    if (this._user && this._user.displayName) {
+                    if (this._pendingTelegramProfile) {
                         const p = getDefaultProfile();
-                        p.nickname = this._user.displayName;
+                        const tg = this._pendingTelegramProfile;
+                        p.nickname = normalizeNickname(tg.username || `tg_${tg.id}`, '@user');
+                        p.realName = [tg.first_name, tg.last_name].filter(Boolean).join(' ');
+                        if (tg.photo_url) p.avatar = tg.photo_url;
+                        Storage._setProfile(p);
+                    } else if (this._user && this._user.displayName) {
+                        const p = getDefaultProfile();
+                        p.realName = stripNicknamePrefix(this._user.displayName);
+                        p.nickname = normalizeNickname(this._user.email?.split('@')[0] || this._user.displayName, '@user');
                         if (this._user.photoURL) p.avatar = this._user.photoURL;
                         Storage._setProfile(p);
                     } else {
@@ -217,10 +247,12 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
                 if (!firebaseInitialized || !db) return;
                 try {
                     let profile = Storage.getProfile() || getDefaultProfile();
-                    // Доповнюємо з Google дані
-                    if (this._user && this._user.displayName && (!profile.nickname || profile.nickname === 'Користувач')) {
-                        profile.nickname = this._user.displayName;
+                    // Доповнюємо дані провайдера, не змішуючи display name з @handle.
+                    if (this._user && this._user.displayName && (!profile.realName || profile.realName === 'Користувач')) {
+                        profile.realName = stripNicknamePrefix(this._user.displayName);
                     }
+                    profile.nickname = normalizeNickname(profile.nickname, '@user');
+                    profile.realName = stripNicknamePrefix(profile.realName);
                     if (this._user && this._user.photoURL && !profile.avatar) {
                         profile.avatar = this._user.photoURL;
                     }
@@ -282,7 +314,8 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
                         await updateProfile(cred.user, { displayName });
                     }
                     const profile = getDefaultProfile();
-                    profile.nickname = displayName || email.split('@')[0] || 'Користувач';
+                    profile.realName = stripNicknamePrefix(displayName);
+                    profile.nickname = normalizeNickname(email.split('@')[0] || displayName, '@user');
                     Storage._setProfile(profile);
                     // Явно створюємо документ в Firestore — не покладаємося тільки на onAuthStateChanged
                     // (може бути race condition якщо _loadingData вже true)
@@ -315,7 +348,8 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
                     const tg = payload.telegramUser || {};
                     const displayName = [tg.first_name, tg.last_name].filter(Boolean).join(' ') || (tg.username ? `@${tg.username}` : 'Користувач');
                     const current = Storage.getProfile() || getDefaultProfile();
-                    if (!current.nickname || current.nickname === 'Користувач') current.nickname = displayName;
+                    if (!current.nickname || current.nickname === '@user' || current.nickname === 'Користувач') current.nickname = normalizeNickname(tg.username || `tg_${tg.id}`, '@user');
+                    if (!current.realName || current.realName === 'Користувач') current.realName = stripNicknamePrefix(displayName);
                     if (!current.avatar && tg.photo_url) current.avatar = tg.photo_url;
                     Storage._setProfile(current);
                     this._notifyListeners();

@@ -1818,3 +1818,182 @@ body:not(.dark-mode) .header .logo-text span {
 .telegram-btn:active { transform: scale(.985); }
 .telegram-btn:disabled { opacity: .65; cursor: wait; }
 .auth-card .telegram-btn + .google-btn { margin-top: 0; }
+
+
+/* Profile identity + modern birthdate picker */
+.settings-field input#settingsNicknameInput {
+    letter-spacing: .01em;
+}
+.settings-field input#settingsNicknameInput::placeholder {
+    color: var(--text-muted);
+    opacity: .72;
+}
+.settings-date-picker {
+    position: relative;
+    min-height: 48px;
+    align-items: stretch;
+}
+.settings-date-picker > input[type="date"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+.settings-date-trigger {
+    display: flex;
+    align-items: center;
+    gap: .72rem;
+    width: calc(100% - 48px);
+    min-height: 48px;
+    padding: .75rem .95rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--tag-bg);
+    color: var(--text);
+    font: inherit;
+    font-size: .95rem;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+.settings-date-trigger:hover,
+.settings-date-trigger:focus-visible {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+    outline: none;
+}
+.settings-date-trigger > i:first-child {
+    color: var(--text-muted);
+    font-size: 1rem;
+}
+.settings-date-trigger > span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.settings-date-trigger > i:last-child {
+    color: var(--text-muted);
+    font-size: .78rem;
+}
+.settings-date-picker .settings-date-clear {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 40px;
+    height: 48px;
+}
+.settings-date-popover {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    padding: .9rem;
+    border: 1px solid color-mix(in srgb, var(--border) 88%, var(--text));
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    box-shadow: 0 18px 46px rgba(0,0,0,.18);
+    backdrop-filter: blur(18px);
+}
+.settings-date-popover[hidden] { display: none; }
+.settings-date-popover-head,
+.settings-date-popover-foot,
+.settings-date-nav {
+    display: flex;
+    align-items: center;
+}
+.settings-date-popover-head {
+    justify-content: space-between;
+    gap: .6rem;
+    margin-bottom: .9rem;
+}
+.settings-date-popover-head strong {
+    font-size: 1rem;
+    text-transform: capitalize;
+}
+.settings-date-nav { gap: .25rem; }
+.settings-date-nav button,
+.settings-date-popover-foot button {
+    min-width: 40px;
+    min-height: 38px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+.settings-date-nav button:hover,
+.settings-date-nav button:focus-visible,
+.settings-date-popover-foot button:hover,
+.settings-date-popover-foot button:focus-visible {
+    background: var(--tag-bg);
+    outline: none;
+}
+.settings-date-weekdays,
+.settings-date-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: .22rem;
+}
+.settings-date-weekdays {
+    margin-bottom: .35rem;
+    color: var(--text-muted);
+    font-size: .68rem;
+    font-weight: 800;
+    text-align: center;
+    text-transform: uppercase;
+}
+.settings-date-day,
+.settings-date-empty {
+    aspect-ratio: 1;
+    min-width: 0;
+}
+.settings-date-day {
+    display: grid;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: .86rem;
+    cursor: pointer;
+}
+.settings-date-day:hover,
+.settings-date-day:focus-visible {
+    border-color: var(--accent);
+    background: var(--tag-bg);
+    outline: none;
+}
+.settings-date-day.is-selected {
+    background: var(--accent);
+    color: var(--surface);
+    font-weight: 800;
+}
+.settings-date-day.is-today:not(.is-selected) {
+    border-color: var(--accent);
+    font-weight: 800;
+}
+.settings-date-day:disabled {
+    cursor: not-allowed;
+    opacity: .28;
+}
+.settings-date-popover-foot {
+    justify-content: space-between;
+    margin-top: .75rem;
+    padding-top: .65rem;
+    border-top: 1px solid var(--border);
+}
+.settings-date-popover-foot button:last-child {
+    color: var(--text);
+}
+@media (max-width: 420px) {
+    .settings-date-popover { padding: .72rem; border-radius: 17px; }
+    .settings-date-day { font-size: .8rem; }
+    .settings-date-weekdays { font-size: .6rem; }
+}

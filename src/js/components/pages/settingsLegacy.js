@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v41';
+} from '../../legacy/app-legacy.js?v=20260822-profile-identity-v42';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 
@@ -58,7 +58,7 @@ import {
             if (!panel) return;
             const bannerEffectClass = (profile.bannerEffect && profile.bannerEffect !== 'none') ? ` banner-effect-${profile.bannerEffect}` : '';
             const decorationClass = (profile.avatarDecoration && profile.avatarDecoration !== 'none') ? ` avatar-decoration-${profile.avatarDecoration}` : '';
-            const avatarMarkup = profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, '', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, '', 'avatar') : `<span class="settings-preview-avatar-fallback">${escapeHtml((profile.nickname || 'К').charAt(0).toUpperCase())}</span>`);
+            const avatarMarkup = profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, '', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, '', 'avatar') : `<span class="settings-preview-avatar-fallback">${escapeHtml((getProfileDisplayName(profile) || 'К').charAt(0).toUpperCase())}</span>`);
             panel.innerHTML = `
               <div class="settings-preview-profile">
                 <div class="profile-banner settings-preview-banner profile-banner--${profile.bannerFormat === 'wide' ? 'wide' : 'narrow'}${bannerEffectClass}">
@@ -68,8 +68,8 @@ import {
                 </div>
                 <div class="settings-preview-info">
                   <div class="settings-preview-avatar-wrap${decorationClass}"><div class="profile-avatar">${avatarMarkup}</div></div>
-                  <div class="settings-preview-nick-row"><strong>${escapeHtml(profile.nickname || 'Користувач')}</strong></div>
-                  <div class="settings-preview-handle">@${escapeHtml((profile.nickname || 'user').toLowerCase().replace(/\s/g, '_'))}</div>
+                  <div class="settings-preview-nick-row"><strong>${escapeHtml(getProfileDisplayName(profile))}</strong></div>
+                  <div class="settings-preview-handle">${escapeHtml(getProfileHandle(profile))}</div>
                   <div class="settings-preview-bio${profile.bioBold ? ' is-bold' : ''}">${escapeHtml(profile.bio || 'Опис профілю не додано')}</div>
                   <button type="button" class="settings-preview-bio-btn"><i class="fas fa-align-left"></i> Опис профілю</button>
                   <div class="settings-preview-tabs profile-tabs"><span class="profile-tab active">Профіль</span><span class="profile-tab">Статистика</span><span class="profile-tab">Досягнення</span></div>
@@ -126,8 +126,8 @@ import {
             <div class="settings-hint-text">Зміни зберігаються автоматично.</div>
             <div class="settings-field">
               <label class="settings-field-label">Нікнейм</label>
-              <input type="text" id="settingsNicknameInput" maxlength="24" value="${escapeHtml(profile.nickname)}">
-              <span class="settings-field-hint" id="settingsNicknameCount">${profile.nickname.length}/24</span>
+              <input type="text" id="settingsNicknameInput" maxlength="25" placeholder="@username" value="${escapeHtml(profile.nickname)}">
+              <span class="settings-field-hint" id="settingsNicknameCount">${profile.nickname.length}/25 · починається з @</span>
             </div>
             <div class="settings-field">
               <label class="settings-field-label">Ім'я</label>
@@ -135,9 +135,29 @@ import {
             </div>
             <div class="settings-field">
               <label class="settings-field-label">Дата народження</label>
-              <div class="settings-date-row">
-                <input type="date" id="settingsBirthdateInput" value="${profile.birthdate || ''}">
-                <button class="settings-date-clear" id="settingsBirthdateClear" title="Очистити"><i class="fas fa-times"></i></button>
+              <div class="settings-date-row settings-date-picker" id="settingsBirthdatePicker">
+                <input type="date" id="settingsBirthdateInput" value="${profile.birthdate || ''}" tabindex="-1" aria-hidden="true">
+                <button type="button" class="settings-date-trigger" id="settingsBirthdateTrigger" aria-haspopup="dialog" aria-expanded="false">
+                  <i class="fas fa-calendar-days" aria-hidden="true"></i>
+                  <span id="settingsBirthdateLabel">${profile.birthdate ? new Date(`${profile.birthdate}T12:00:00`).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Оберіть дату'}</span>
+                  <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="settings-date-clear" id="settingsBirthdateClear" title="Очистити" aria-label="Очистити дату"><i class="fas fa-times"></i></button>
+                <div class="settings-date-popover" id="settingsBirthdatePopover" role="dialog" aria-label="Вибір дати" hidden>
+                  <div class="settings-date-popover-head">
+                    <strong id="settingsBirthdateMonth">Місяць</strong>
+                    <div class="settings-date-nav">
+                      <button type="button" id="settingsBirthdatePrev" aria-label="Попередній місяць"><i class="fas fa-chevron-left"></i></button>
+                      <button type="button" id="settingsBirthdateNext" aria-label="Наступний місяць"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                  </div>
+                  <div class="settings-date-weekdays" aria-hidden="true"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Нд</span></div>
+                  <div class="settings-date-grid" id="settingsBirthdateGrid"></div>
+                  <div class="settings-date-popover-foot">
+                    <button type="button" id="settingsBirthdateToday">Сьогодні</button>
+                    <button type="button" id="settingsBirthdateDone">Готово</button>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="settings-card settings-card--nested">
@@ -400,39 +420,118 @@ import {
             const nickInput = document.getElementById('settingsNicknameInput');
             const nickCount = document.getElementById('settingsNicknameCount');
             if (nickInput) {
+                const updateNicknameCounter = () => {
+                    if (nickCount) nickCount.textContent = `${nickInput.value.length}/25 · починається з @`;
+                };
                 nickInput.addEventListener('input', () => {
-                    if (nickCount) nickCount.textContent = `${nickInput.value.length}/24`;
+                    const typed = nickInput.value.trim();
+                    nickInput.value = typed ? normalizeNickname(typed, '@') : '@';
+                    updateNicknameCounter();
                 });
                 nickInput.addEventListener('change', () => {
-                    const val = nickInput.value.trim();
                     const p = getProfile();
-                    if (!val) { nickInput.value = p.nickname; return; }
+                    const typed = nickInput.value.trim();
+                    const val = typed && typed !== '@' ? normalizeNickname(typed, p.nickname || '@user') : (p.nickname || '@user');
                     p.nickname = val;
+                    nickInput.value = val;
+                    updateNicknameCounter();
                     saveProfile(p);
                     if (Router.currentRoute === 'profile') renderProfilePage();
                 });
+                updateNicknameCounter();
             }
 
             const nameInput = document.getElementById('settingsRealNameInput');
             if (nameInput) nameInput.addEventListener('change', () => {
                 const p = getProfile();
-                p.realName = nameInput.value.trim();
+                p.realName = stripNicknamePrefix(nameInput.value);
                 saveProfile(p);
             });
 
             const birthInput = document.getElementById('settingsBirthdateInput');
+            const birthPicker = document.getElementById('settingsBirthdatePicker');
+            const birthTrigger = document.getElementById('settingsBirthdateTrigger');
+            const birthLabel = document.getElementById('settingsBirthdateLabel');
+            const birthPopover = document.getElementById('settingsBirthdatePopover');
+            const birthMonth = document.getElementById('settingsBirthdateMonth');
+            const birthGrid = document.getElementById('settingsBirthdateGrid');
+            const birthPrev = document.getElementById('settingsBirthdatePrev');
+            const birthNext = document.getElementById('settingsBirthdateNext');
+            const birthToday = document.getElementById('settingsBirthdateToday');
+            const birthDone = document.getElementById('settingsBirthdateDone');
             const birthClear = document.getElementById('settingsBirthdateClear');
-            if (birthInput) birthInput.addEventListener('change', () => {
-                const p = getProfile();
-                p.birthdate = birthInput.value;
-                saveProfile(p);
-            });
-            if (birthClear) birthClear.addEventListener('click', () => {
-                if (birthInput) birthInput.value = '';
-                const p = getProfile();
-                p.birthdate = '';
-                saveProfile(p);
-            });
+            if (birthInput && birthPicker && birthTrigger && birthLabel && birthPopover && birthMonth && birthGrid) {
+                const today = new Date();
+                const parsedBirthdate = birthInput.value ? new Date(`${birthInput.value}T12:00:00`) : new Date(2000, 0, 1);
+                let calendarDate = Number.isNaN(parsedBirthdate.getTime()) ? new Date(2000, 0, 1) : parsedBirthdate;
+                calendarDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
+                const formatIso = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                const formatLabel = value => value ? new Date(`${value}T12:00:00`).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Оберіть дату';
+                const closeCalendar = () => {
+                    birthPopover.hidden = true;
+                    birthTrigger.setAttribute('aria-expanded', 'false');
+                };
+                const commitBirthdate = value => {
+                    birthInput.value = value;
+                    birthLabel.textContent = formatLabel(value);
+                    const p = getProfile();
+                    p.birthdate = value;
+                    saveProfile(p);
+                };
+                const renderCalendar = () => {
+                    const year = calendarDate.getFullYear();
+                    const month = calendarDate.getMonth();
+                    birthMonth.textContent = new Date(year, month, 1).toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' });
+                    const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                    const selected = birthInput.value;
+                    const todayIso = formatIso(today);
+                    const cells = [];
+                    for (let i = 0; i < firstDay; i += 1) cells.push('<span class="settings-date-empty" aria-hidden="true"></span>');
+                    for (let day = 1; day <= daysInMonth; day += 1) {
+                        const current = new Date(year, month, day);
+                        const iso = formatIso(current);
+                        const isSelected = iso === selected;
+                        const isToday = iso === todayIso;
+                        const isFuture = current > today;
+                        cells.push(`<button type="button" class="settings-date-day${isSelected ? ' is-selected' : ''}${isToday ? ' is-today' : ''}" data-date="${iso}"${isFuture ? ' disabled' : ''} aria-label="${current.toLocaleDateString('uk-UA')}">${day}</button>`);
+                    }
+                    birthGrid.innerHTML = cells.join('');
+                    birthGrid.querySelectorAll('[data-date]').forEach(dayButton => dayButton.addEventListener('click', () => {
+                        commitBirthdate(dayButton.dataset.date);
+                        renderCalendar();
+                    }));
+                };
+                birthTrigger.addEventListener('click', event => {
+                    event.stopPropagation();
+                    const isOpen = !birthPopover.hidden;
+                    if (isOpen) closeCalendar();
+                    else {
+                        renderCalendar();
+                        birthPopover.hidden = false;
+                        birthTrigger.setAttribute('aria-expanded', 'true');
+                    }
+                });
+                birthPrev?.addEventListener('click', () => { calendarDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1); renderCalendar(); });
+                birthNext?.addEventListener('click', () => {
+                    const next = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1);
+                    if (next <= new Date(today.getFullYear(), today.getMonth(), 1)) { calendarDate = next; renderCalendar(); }
+                });
+                birthToday?.addEventListener('click', () => { commitBirthdate(formatIso(today)); renderCalendar(); });
+                birthDone?.addEventListener('click', closeCalendar);
+                birthClear?.addEventListener('click', () => {
+                    birthInput.value = '';
+                    birthLabel.textContent = 'Оберіть дату';
+                    const p = getProfile();
+                    p.birthdate = '';
+                    saveProfile(p);
+                    renderCalendar();
+                });
+                document.addEventListener('click', event => {
+                    if (!birthPicker.contains(event.target)) closeCalendar();
+                });
+                renderCalendar();
+            }
 
             const hideHistoryToggle = document.getElementById('settingsHideHistoryToggle');
             if (hideHistoryToggle) hideHistoryToggle.addEventListener('change', () => {
@@ -687,9 +786,28 @@ import {
         // ====================================================================
         //  ПРОФІЛЬ
         // ====================================================================
+        export function normalizeNickname(value, fallback = '@user') {
+            const raw = String(value || '').trim().replace(/^@+/, '').replace(/\s+/g, '_').replace(/[^\p{L}\p{N}._-]/gu, '').slice(0, 24);
+            return raw ? `@${raw}` : fallback;
+        }
+
+        export function stripNicknamePrefix(value) {
+            return String(value || '').trim().replace(/^@+/, '');
+        }
+
+        export function getProfileDisplayName(profile) {
+            const name = stripNicknamePrefix(profile?.realName);
+            if (name) return name;
+            return stripNicknamePrefix(profile?.nickname) || 'Користувач';
+        }
+
+        export function getProfileHandle(profile) {
+            return normalizeNickname(profile?.nickname, '@user');
+        }
+
         export function getDefaultProfile() {
             return {
-                nickname: 'Користувач',
+                nickname: '@user',
                 avatar: '',
                 avatarVideo: '',
                 banner: '',
@@ -722,7 +840,10 @@ import {
             ['nickname', 'avatar', 'avatarVideo', 'banner', 'bannerVideo', 'bio', 'realName', 'birthdate', 'effect', 'atmosphere', 'avatarDecoration', 'bannerEffect', 'bannerFormat'].forEach(key => {
                 if (typeof merged[key] !== 'string') merged[key] = def[key];
             });
-            merged.nickname = merged.nickname.trim() || def.nickname;
+            const legacyNickname = String(merged.nickname || '').trim();
+            if (!merged.realName && legacyNickname && legacyNickname !== 'Користувач' && !legacyNickname.startsWith('@')) merged.realName = legacyNickname;
+            merged.nickname = normalizeNickname(legacyNickname, def.nickname);
+            merged.realName = stripNicknamePrefix(merged.realName);
             if (merged.bannerFormat !== 'narrow' && merged.bannerFormat !== 'wide') merged.bannerFormat = def.bannerFormat;
             merged.bioBold = merged.bioBold === true;
             merged.hideHistory = merged.hideHistory === true;

@@ -3,8 +3,8 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml, fetchTmdbCardInfo,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260821-telegram-auth-v41';
-import { getProfile, saveProfile } from './settingsLegacy.js?v=20260821-telegram-auth-v41';
+} from '../../legacy/app-legacy.js?v=20260822-profile-identity-v42';
+import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from './settingsLegacy.js?v=20260822-profile-identity-v42';
 import { debugLog } from '../../utils/debug.js';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog.js';
 import { getProxyUrl } from '../../utils/image.js';
@@ -2995,7 +2995,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         export function profileEditNick() {
             const nickEl = document.getElementById('profileNickText');
             if (!nickEl) return;
-            const current = nickEl.textContent;
+            const profile = getProfile();
+            const current = getProfileDisplayName(profile);
             const input = document.createElement('input');
             input.type = 'text';
             input.value = current;
@@ -3016,14 +3017,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 span.id = 'profileNickText';
                 span.textContent = val;
                 input.replaceWith(span);
-                const profile = getProfile();
-                profile.nickname = val;
+                profile.realName = stripNicknamePrefix(val);
+                span.textContent = getProfileDisplayName(profile);
                 saveProfile(profile);
-                const meta = document.querySelector('.profile-meta');
-                if (meta) {
-                    const first = meta.querySelector('span:first-child');
-                    if (first) first.textContent = '@' + val.toLowerCase().replace(/\s/g, '_');
-                }
                 if (Router.currentRoute === 'profile') renderProfilePage();
             };
             input.addEventListener('blur', save);
