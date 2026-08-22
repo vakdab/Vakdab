@@ -350,7 +350,9 @@ export class LampaPlayer {
                     this.toggleFullscreen();
                 });
                 wrap.addEventListener('mousemove', () => this._showControls());
+                wrap.addEventListener('pointerdown', () => this._showControls(), { passive: true });
                 wrap.addEventListener('touchstart', () => this._showControls(), { passive: true });
+                wrap.addEventListener('touchend', () => this._showControls(), { passive: true });
 
                 // Play button
                 const playBtn = wrap.querySelector('#lpPlayBtn');
@@ -724,7 +726,7 @@ export class LampaPlayer {
                         this._schedulePlaybackError(`Відеофайл не вдалося відкрити на цьому пристрої${detail}.`);
                     };
                     v.addEventListener('error', onNativeError, { once: true });
-                    v.addEventListener('canplay', hideLoading, { once: true });
+                    v.addEventListener('canplay', () => { hideLoading(); safePlay(); }, { once: true });
                     v.src = proxyUrl;
                     v.load();
                     safePlay();
@@ -733,7 +735,7 @@ export class LampaPlayer {
                 } else if (isSafariNativeHls && (v.canPlayType('application/vnd.apple.mpegurl') !== '' || v.canPlayType('audio/mpegurl') !== '')) {
                     const onNativeError = () => this._schedulePlaybackError('HLS-потік не вдалося відкрити на цьому пристрої.');
                     v.addEventListener('error', onNativeError, { once: true });
-                    v.addEventListener('canplay', hideLoading, { once: true });
+                    v.addEventListener('canplay', () => { hideLoading(); safePlay(); }, { once: true });
                     v.src = proxyUrl; v.load();
                     safePlay();
                 } else {
@@ -742,9 +744,16 @@ export class LampaPlayer {
                     sc.onload = () => {
                         if (!isCurrentRequest()) return;
                         if (Hls.isSupported()) _startHls();
-                        else { v.src = proxyUrl; v.load(); hideLoading(); safePlay(); }
+                        else {
+                            v.addEventListener('canplay', () => { hideLoading(); safePlay(); }, { once: true });
+                            v.src = proxyUrl; v.load(); hideLoading(); safePlay();
+                        }
                     };
-                    sc.onerror = () => { if (!isCurrentRequest()) return; v.src = proxyUrl; v.load(); hideLoading(); safePlay(); };
+                    sc.onerror = () => {
+                        if (!isCurrentRequest()) return;
+                        v.addEventListener('canplay', () => { hideLoading(); safePlay(); }, { once: true });
+                        v.src = proxyUrl; v.load(); hideLoading(); safePlay();
+                    };
                     document.head.appendChild(sc);
                 }
             }

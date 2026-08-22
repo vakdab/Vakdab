@@ -763,3 +763,47 @@
 #playerPageModal .player-video-container:has(.lampa-player-container) .video-overlay-topbar .icon-btn {
     display: none;
 }
+
+
+/* Mobile Play button: quiet dark glass, clear white icon, first-tap friendly. */
+#playerPageModal .lp-center-play-btn,
+#playerPageModal .player-preview-play {
+    width: 62px;
+    height: 62px;
+    border: 1px solid rgba(255, 255, 255, .52);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, .68);
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .38), 0 0 0 5px rgba(255, 255, 255, .08);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+#playerPageModal .lp-center-play-btn:hover,
+#playerPageModal .player-preview-play:hover {
+    background: rgba(0, 0, 0, .82);
+    border-color: rgba(255, 255, 255, .82);
+    filter: none;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .45), 0 0 0 7px rgba(255, 255, 255, .1);
+}
+#playerPageModal .lp-center-play-btn:active,
+#playerPageModal .player-preview-play:active {
+    transform: translate(-50%, -50%) scale(.94);
+}
+#playerPageModal .lp-center-play-btn svg,
+#playerPageModal .player-preview-play svg { width: 27%; height: 27%; fill: #fff; }
+@media (max-width: 620px) {
+    #playerPageModal .lp-center-play-btn,
+    #playerPageModal .player-preview-play { width: 56px; height: 56px; }
+}
+
+
+/* On touch devices keep the transport rail visible; there is no reliable hover to reveal it. */
+@media (max-width: 760px) {
+    #playerPageModal .lampa-player-container .lp-controls,
+    #playerPageModal .lampa-player-container .lp-controls.hidden,
+    #playerPageModal .player-video-container.controls-hidden .lampa-player-container .lp-controls {
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+    }
+}

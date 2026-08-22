@@ -1,22 +1,22 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
 import { GENRE_MAP } from '../../config/constants.js?v=20260820-hikka-proxy-fix4';
-import { Router } from '../../core/compat/router.js?v=20260822-player-overlay-v44';
-import { Storage } from '../../core/compat/storage.js?v=20260822-player-overlay-v44';
+import { Router } from '../../core/compat/router.js?v=20260822-player-overlay-v46';
+import { Storage } from '../../core/compat/storage.js?v=20260822-player-overlay-v46';
 import { LampaPlayer } from './lampaPlayer.js?v=20260820-player-modern-v1';
-import { DailyStats } from '../rating/ratingSystem.js?v=20260822-player-overlay-v44';
+import { DailyStats } from '../rating/ratingSystem.js?v=20260822-player-overlay-v46';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, searchHikkaAllTitles, switchProviderSource
-} from '../../services/catalog.js?v=20260822-player-overlay-v44';
+} from '../../services/catalog.js?v=20260822-player-overlay-v46';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
-} from '../pages/homeLegacy.js?v=20260822-player-overlay-v44';
-import { renderProfilePage } from '../pages/profileLegacy.js?v=20260822-player-overlay-v44';
+} from '../pages/homeLegacy.js?v=20260822-player-overlay-v46';
+import { renderProfilePage } from '../pages/profileLegacy.js?v=20260822-player-overlay-v46';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v44';
+} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v46';
 import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
 
         // ====================================================================
@@ -1611,7 +1611,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
             const videoContainer = document.getElementById('playerVideoContainer');
             const videoDiv = document.getElementById('playerPageVideo');
             const previewPlayButton = document.getElementById('playerPreviewPlay');
-            previewPlayButton?.classList.remove('is-hidden');
+            previewPlayButton?.classList.add('is-hidden');
             videoContainer.classList.add('active');
             videoContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const videoTitleEl = document.getElementById('playerTopbarTitle');
@@ -1650,6 +1650,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
                 const hideFrame = () => {
                     hidePlayerFramePoster();
                     document.getElementById('playerPreviewPlay')?.classList.add('is-hidden');
+                    playerPagePlayer?._showControls?.();
                 };
                 const syncPlaybackClock = () => {
                     if (!playerPageIsPlaying) return;
@@ -2058,9 +2059,13 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260818-ranobe-v6';
         }
 
         const previewPlayButton = document.getElementById('playerPreviewPlay');
-        previewPlayButton?.addEventListener('click', () => {
+        previewPlayButton?.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            previewPlayButton.classList.add('is-hidden');
             if (playerPagePlayer?.videoRef) {
                 playerPagePlayer.togglePlay();
+                playerPagePlayer._showControls?.();
                 return;
             }
             const episode = getCurrentEpisodes().find(ep => String(ep.episode) === String(playerPageCurrentEpisodeNum)) || getCurrentEpisodes()[0];

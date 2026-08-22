@@ -3,9 +3,9 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v44';
-import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../components/pages/settingsLegacy.js?v=20260822-player-overlay-v44';
-import { Storage } from './storage.js?v=20260822-player-overlay-v44';
+} from '../../legacy/app-legacy.js?v=20260822-player-overlay-v46';
+import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../components/pages/settingsLegacy.js?v=20260822-player-overlay-v46';
+import { Storage } from './storage.js?v=20260822-player-overlay-v46';
 import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js';
 
         const Auth = {
