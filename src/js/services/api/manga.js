@@ -2,6 +2,7 @@ import { debugLog } from '../../utils/debug.js';
 
 export const HONEY_WEB = 'https://honey-manga.com.ua';
 export const HONEY_API = 'https://data.api.honey-manga.com.ua';
+export const HONEY_SEARCH_API = 'https://search.api.honey-manga.com.ua';
 export const HONEY_CDN = 'https://honeymangastorage-nocache.b-cdn.net/public-resources';
 export const HONEY_CDN_FALLBACK = 'https://hmvolumestorage.b-cdn.net/public-resources';
 export const MANGA_WEB = HONEY_WEB;
@@ -144,8 +145,8 @@ async function fetchWithRetry(url, options = {}, { timeoutMs = 20000, maxAttempt
     throw lastError || new Error('Запит Honey Manga не виконано');
 }
 
-async function fetchJson(path, options = {}) {
-    const url = `${HONEY_API}${path}`;
+async function fetchJson(path, options = {}, baseUrl = HONEY_API) {
+    const url = `${baseUrl}${path}`;
     const cacheKey = `${url}:${options.method || 'GET'}:${options.body || ''}`;
     if (jsonCache.has(cacheKey)) return jsonCache.get(cacheKey);
     const request = fetchWithRetry(url, { credentials: 'omit', cache: 'no-store', headers: { Accept: 'application/json', ...(options.headers || {}) }, ...options })
@@ -234,6 +235,61 @@ export async function getMangaChapters(mangaUrl) {
     } catch {
         return { title: '', description: '', chapters: [] };
     }
+}
+
+function normalizeHoneyTitle(value = '') {
+    return String(value || '').toLocaleLowerCase('uk-UA').normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '').replace(/[’'`]/g, '')
+        .replace(/[^a-z0-9а-яіїєґ]+/gi, ' ').trim();
+}
+
+function honeyTitlesMatch(left, right) {
+    const a = normalizeHoneyTitle(left);
+    const b = normalizeHoneyTitle(right);
+    if (!a || !b) return false;
+    if (a === b) return true;
+    const tokens = a.split(/\s+/).filter(token => token.length >= 2);
+    const candidateTokens = new Set(b.split(/\s+/));
+    return tokens.length >= 2 && tokens.every(token => candidateTokens.has(token));
+}
+
+function honeyTitleMatches(item, titles) {
+    const candidates = [item?.title, item?.alternativeTitle, item?.lowTitle, ...(Array.isArray(item?.titleTags) ? item.titleTags : [])].filter(Boolean);
+    return titles.some(title => candidates.some(candidate => honeyTitlesMatch(title, candidate)));
+}
+
+/** Resolve Hikka metadata to a valid Honey Manga chapter URL for the internal reader. */
+export async function resolveHoneyReaderUrl(titles = []) {
+    const queries = [...new Set((Array.isArray(titles) ? titles : [titles]).map(value => String(value || '').trim()).filter(Boolean))];
+    for (const query of queries) {
+        try {
+            const results = await fetchJson(`/v2/manga/pattern?query=${encodeURIComponent(query)}`, {}, HONEY_SEARCH_API);
+            const manga = (Array.isArray(results) ? results : []).find(item => honeyTitleMatches(item, queries));
+            const mangaId = String(manga?.id || '');
+            if (!mangaId) continue;
+            const payload = await fetchJson('/v2/chapter/cursor-list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ page: 1, pageSize: 100, mangaId, sortOrder: 'DESC' })
+            });
+            const chapters = Array.isArray(payload?.data) ? payload.data : [];
+            const sorted = sortHoneyChaptersForReading(chapters);
+            const candidates = [
+                ...sorted.filter(chapter => chapter?.isMonetized !== true),
+                ...sorted.filter(chapter => chapter?.isMonetized === true)
+            ];
+            for (const chapter of candidates.slice(0, 12)) {
+                if (!chapter?.id) continue;
+                try {
+                    const frames = await fetchJson(`/v2/chapter/frames/${encodeURIComponent(chapter.id)}/${encodeURIComponent(mangaId)}`);
+                    if (hasHoneyPageResources(frames)) return `${HONEY_WEB}/read/${encodeURIComponent(chapter.id)}/${encodeURIComponent(mangaId)}`;
+                } catch { /* The next readable chapter is checked below. */ }
+            }
+            const fallback = selectHoneyReaderChapter(chapters);
+            if (fallback?.id) return `${HONEY_WEB}/read/${encodeURIComponent(fallback.id)}/${encodeURIComponent(mangaId)}`;
+        } catch { /* Try another known title before hiding the reader button. */ }
+    }
+    return '';
 }
 
 export function getReaderBackgroundData(titleId, chapterUrl) {

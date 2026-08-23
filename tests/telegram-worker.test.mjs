@@ -94,7 +94,10 @@ test('manga and novel details use VakDab reader routes and a concise bot button'
   const contentPage = readFileSync(new URL('../content.html', import.meta.url), 'utf8');
 
   assert.match(workerSource, /\{ text: 'VakDab', url: watchUrl \}/);
+  assert.match(contentPage, /resolveHoneyReaderUrl/);
+  assert.match(contentPage, /resolveRanobeReader/);
   assert.match(contentPage, /https:\/\/vakdab\.github\.io\/Vakdab\/#\$\{type\}\?url=/);
   assert.match(contentPage, /type === 'novel' \? `&poster=\$\{encodeURIComponent\(item\.image \|\| ''\)\}` : ''/);
-  assert.doesNotMatch(contentPage, /href="\$\{escape\(readUrl\)\}"/);
+  assert.doesNotMatch(contentPage, /<a class="back"/);
+  assert.doesNotMatch(contentPage, /href="\$\{escape\(externalReadUrl\)\}"/);
 });
