@@ -29,6 +29,17 @@ test('Groq configuration takes priority when both providers are configured', () 
   assert.equal(config.apiKey, 'test-groq-key');
 });
 
+test('Luna persona is a concise all-topic companion rather than a service assistant', () => {
+  const workerSource = readFileSync(new URL('../vakdab-telegram-bot/worker.js', import.meta.url), 'utf8');
+  assert.match(workerSource, /цифрова компанйонка VakDab/);
+  assert.match(workerSource, /Спочатку відповідай прямо на запитання/);
+  assert.match(workerSource, /просте питання — 1–3 речення/);
+  assert.match(workerSource, /Відповідай на запитання не лише про аніме/);
+  assert.match(workerSource, /Не закінчуй кожну відповідь штучним/);
+  assert.match(workerSource, /не службова помічниця/);
+  assert.doesNotMatch(workerSource, /Кожен користувач повинен відчувати.*подругою-помічницею/s);
+});
+
 test('BazaarLink configuration is used when OpenAI is absent', () => {
   const config = getAIProviderConfig({ BAZAARLINK_API_KEY: 'test-bazaarlink-key' });
   assert.equal(config.provider, 'BazaarLink');
