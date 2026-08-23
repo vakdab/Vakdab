@@ -6,7 +6,9 @@ import {
   validateContentUrl,
   extractContentId,
   isUnsafeRouletteText,
-  extractRelayMedia
+  extractRelayMedia,
+  isBotOwner,
+  formatBotUsageReport
 } from '../vakdab-telegram-bot/worker.js';
 
 test('content type descriptor supports anime, manga and novel with anime fallback', () => {
@@ -51,4 +53,22 @@ test('roulette safety filter blocks contact vectors but allows ordinary chat', (
   assert.equal(isUnsafeRouletteText('Мій контакт @some_user'), true);
   assert.equal(isUnsafeRouletteText('Мій номер +380 67 123 45 67'), true);
   assert.equal(isUnsafeRouletteText('доксинг'), true);
+});
+
+test('private statistics access accepts only the configured owner username', () => {
+  assert.equal(isBotOwner({ username: 'vaditx' }), true);
+  assert.equal(isBotOwner({ username: 'VADITX' }), true);
+  assert.equal(isBotOwner({ username: 'another_user' }), false);
+  assert.equal(isBotOwner({}), false);
+});
+
+test('private statistics report presents the usage summary without user IDs', () => {
+  const report = formatBotUsageReport({
+    ok: true,
+    total: 1,
+    users: [{ username: 'example_user', first_name: 'Ім’я', last_name: 'Прізвище', last_seen_at: 1766311200000, user_id: '123456789' }]
+  });
+  assert.match(report, /Унікальних користувачів: <b>1<\/b>/);
+  assert.match(report, /@example_user/);
+  assert.doesNotMatch(report, /123456789/);
 });

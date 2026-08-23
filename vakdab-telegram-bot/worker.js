@@ -35,6 +35,7 @@ let popularCache = null;
 let popularCacheAt = 0;
 let catalogCache = null;
 let catalogCacheAt = 0;
+const BOT_OWNER_USERNAME = 'vaditx';
 
 export default {
   async fetch(request, env) {
@@ -111,6 +112,16 @@ async function handleMessage(message, env) {
 
   const memoryKey = getMemoryKey(message.from);
   const text = (message.text || '').trim();
+  if (message.chat?.type === 'private') await trackBotUser(message.from, chatId, env);
+  if (/^\/f8(?:@\w+)?(?:\s|$)/i.test(text)) {
+    if (message.chat?.type !== 'private' || !isBotOwner(message.from)) {
+      await sendMessage(chatId, 'Ця команда недоступна.', {}, env);
+      return;
+    }
+    const stats = await rouletteOperation({ op: 'stats', chatId }, env);
+    await sendMessage(chatId, formatBotUsageReport(stats), {}, env);
+    return;
+  }
   // Команди рулетки обробляємо до relay, інакше активний чат передасть /next співрозмовнику як звичайний текст.
   const rouletteCommand = text.match(/^\/(next|report)(?:@\w+)?(?:\s|$)/i);
   if (rouletteCommand) {
@@ -186,6 +197,55 @@ function getMemoryKey(from) {
   if (username) return `u:${username}`;
   const id = from?.id;
   return id ? `id:${id}` : 'unknown';
+}
+
+function isBotOwner(from) {
+  return String(from?.username || '').trim().toLowerCase() === BOT_OWNER_USERNAME;
+}
+
+async function trackBotUser(from, chatId, env) {
+  if (!from?.id || !env.CHAT_ROULETTE) return;
+  await rouletteOperation({
+    op: 'track_user',
+    chatId: chatId || from.id,
+    userId: from.id,
+    username: from.username || '',
+    firstName: from.first_name || '',
+    lastName: from.last_name || ''
+  }, env);
+}
+
+function formatBotUsageReport(result) {
+  if (!result || result.unavailable) return 'Статистика тимчасово недоступна. Перевірте binding <code>CHAT_ROULETTE</code>.';
+  if (!result.ok) return 'Не вдалося отримати статистику.';
+  const users = Array.isArray(result.users) ? result.users : [];
+  const lines = [
+    '<b>Статистика VakDabBot</b>',
+    '',
+    `Унікальних користувачів: <b>${Number(result.total || 0)}</b>`,
+    `Показано останніх: <b>${users.length}</b>`,
+    ''
+  ];
+  if (!users.length) {
+    lines.push('Ще немає збережених взаємодій. Статистика почне збиратися після цього оновлення.');
+    return lines.join('\n');
+  }
+  lines.push('<b>Остання активність</b>');
+  for (const [index, user] of users.entries()) {
+    const username = String(user.username || '').trim();
+    const displayName = [user.first_name, user.last_name].filter(Boolean).map(String).join(' ').trim();
+    const label = username ? `@${escapeHtml(username)}` : escapeHtml(displayName || 'Без username');
+    lines.push(`${index + 1}. ${label} — ${formatUsageDate(user.last_seen_at)}`);
+  }
+  return lines.join('\n');
+}
+
+function formatUsageDate(timestamp) {
+  try {
+    return new Intl.DateTimeFormat('uk-UA', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/Kyiv' }).format(new Date(Number(timestamp)));
+  } catch {
+    return new Date(Number(timestamp)).toISOString().slice(0, 16).replace('T', ' ');
+  }
 }
 
 // ==================== GROQ / Luna ====================
@@ -656,6 +716,7 @@ async function handleCallbackQuery(callback, env) {
     return;
   }
 
+  if (message?.chat?.type === 'private') await trackBotUser(callback.from, chatId, env);
   await answerCallback(callbackId, '', env);
   const state = getState(chatId);
 
@@ -1406,7 +1467,7 @@ function isUnsafeRouletteText(value) {
     || /(?:докс|доксинг|doxx|порно з неповноліт|child\s*sexual|csam)/i.test(text);
 }
 
-export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia };
+export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport };
 
 export class ChatRouletteRoom {
   constructor(ctx, env) {
@@ -1444,7 +1505,18 @@ export class ChatRouletteRoom {
         reported_chat_id TEXT NOT NULL,
         created_at INTEGER NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS bot_users (
+        user_id TEXT PRIMARY KEY,
+        last_chat_id TEXT NOT NULL,
+        username TEXT NOT NULL DEFAULT '',
+        first_name TEXT NOT NULL DEFAULT '',
+        last_name TEXT NOT NULL DEFAULT '',
+        first_seen_at INTEGER NOT NULL,
+        last_seen_at INTEGER NOT NULL,
+        interaction_count INTEGER NOT NULL DEFAULT 0
+      );
       CREATE INDEX IF NOT EXISTS reports_created_at_idx ON reports(created_at);
+      CREATE INDEX IF NOT EXISTS bot_users_last_seen_at_idx ON bot_users(last_seen_at DESC);
     `);
     this.initialized = true;
   }
@@ -1515,12 +1587,41 @@ export class ChatRouletteRoom {
     }
     const chatId = this.participantKey(payload.chatId);
     if (!chatId) return { ok: false, error: 'CHAT_REQUIRED' };
+    if (op === 'track_user') return this.trackUser(payload);
+    if (op === 'stats') return this.stats();
     if (op === 'join') return this.join(chatId, payload.userId);
     if (op === 'relay') return this.relay(chatId, payload);
     if (op === 'next') return this.next(chatId);
     if (op === 'end') return this.end(chatId, 'Співрозмовник завершив чат.');
     if (op === 'report') return this.report(chatId);
     return { ok: false, error: 'UNKNOWN_OPERATION' };
+  }
+
+  trackUser(payload) {
+    const userId = this.participantKey(payload.userId);
+    if (!userId) return { ok: false, error: 'USER_REQUIRED' };
+    const now = Date.now();
+    const current = this.ctx.storage.sql.exec('SELECT user_id FROM bot_users WHERE user_id = ? LIMIT 1', userId).toArray()[0];
+    const values = [
+      this.participantKey(payload.chatId),
+      String(payload.username || '').slice(0, 64),
+      String(payload.firstName || '').slice(0, 128),
+      String(payload.lastName || '').slice(0, 128),
+      now,
+      userId
+    ];
+    if (current) {
+      this.ctx.storage.sql.exec('UPDATE bot_users SET last_chat_id = ?, username = ?, first_name = ?, last_name = ?, last_seen_at = ?, interaction_count = interaction_count + 1 WHERE user_id = ?', ...values);
+    } else {
+      this.ctx.storage.sql.exec('INSERT INTO bot_users (user_id, last_chat_id, username, first_name, last_name, first_seen_at, last_seen_at, interaction_count) VALUES (?, ?, ?, ?, ?, ?, ?, 1)', userId, ...values.slice(0, 4), now, now);
+    }
+    return { ok: true, handled: true };
+  }
+
+  stats() {
+    const total = this.ctx.storage.sql.exec('SELECT COUNT(*) AS count FROM bot_users').toArray()[0]?.count || 0;
+    const users = this.ctx.storage.sql.exec('SELECT username, first_name, last_name, last_seen_at FROM bot_users ORDER BY last_seen_at DESC LIMIT 25').toArray();
+    return { ok: true, handled: true, total: Number(total), users };
   }
 
   join(chatId, userId) {
