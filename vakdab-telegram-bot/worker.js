@@ -274,6 +274,14 @@ const LUNA_SYSTEM_PROMPT = `Тебе звати Луна. Ти — цифров�
 доречно: якщо користувач ділиться емоціями, просить пораду або тема справді потребує уточнення.
 5. Не використовуй канцелярські фрази «як AI», «як мовна модель», «я готова допомогти», «звісно, я допоможу»,
 «чим можу бути корисна?» та подібні шаблони. Не пиши так, ніби ти чат підтримки.
+6. КРИТИЧНО: не відповідай переліком своїх можливостей, якщо користувач просто хоче поговорити. Не завершуй
+таку відповідь фразою «Чим можу бути корисною?». Замість цього відповідай живо й конкретно.
+
+ПРИКЛАДИ ПРАВИЛЬНОЇ ПОВЕДІНКИ:
+- Користувач: «Тобою 😊🌸» — відповідай на кшталт: «Та просто зі мною 😊 Можемо побалакати про що завгодно. Як твій вечір?»
+- Користувач: «Що можеш?» — відповідай на кшталт: «Та багато чого, але без офіціозу 🙂 Кажи, що в тебе на думці.»
+- Користувач ставить фактологічне питання — дай відповідь одразу, без переліку того, що ти вмієш.
+Приклади — це орієнтир тону, а не текст для механічного копіювання.
 
 ТОН:
 Говори українською, на «ти», тепло, просто й без пафосу. Підлаштовуйся під стиль користувача: можеш бути легкою,
@@ -294,6 +302,25 @@ const LUNA_SYSTEM_PROMPT = `Тебе звати Луна. Ти — цифров�
 для виділення, зайві декоративні знаки чи службові метакоментарі. Будь живою компанйонкою, але головне — відповідай
 на запитання користувача коротко, точно й по суті.`;
 
+export function getLunaDirectReply(userMessage) {
+  const normalized = String(userMessage || '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (/^(тобою|тобі|з тобою)$/.test(normalized)) {
+    return 'Та просто зі мною 😊 Можемо побалакати про що завгодно. Як твій вечір?';
+  }
+  if (/^(привіт|привіт луна|луна привіт)$/.test(normalized)) {
+    return 'Привіт 😊 Я тут. Розповідай, що в тебе на думці.';
+  }
+  if (/^(чим|що) (ти )?(зможеш|можеш) (мені )?(допомогти|зробити)$/.test(normalized)) {
+    return 'Та багато чим, але без офіціозу 🙂 Кажи, що в тебе на думці.';
+  }
+  return '';
+}
+
 async function handleLunaMessage(chatId, memoryKey, userMessage, env) {
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
@@ -310,7 +337,8 @@ async function handleLunaMessage(chatId, memoryKey, userMessage, env) {
       });
     }
 
-    const responseText = await callLunaAI(userMessage, fullHistory, profile, summary, env);
+    const responseText = getLunaDirectReply(userMessage)
+      || await callLunaAI(userMessage, fullHistory, profile, summary, env);
 
     fullHistory.push({ role: 'user', content: userMessage });
     fullHistory.push({ role: 'assistant', content: responseText });
@@ -479,7 +507,7 @@ async function callLunaAI(prompt, fullHistory, profile, summary, env) {
     { role: 'user', content: String(prompt || '') }
   ];
 
-  return callCompatibleChat(messages, env, { temperature: 0.7, maxTokens: 1024 });
+  return callCompatibleChat(messages, env, { temperature: 0.5, maxTokens: 512 });
 }
 
 // ==================== Summary (довготривала пам'ять розмови) ====================

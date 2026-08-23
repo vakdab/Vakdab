@@ -14,6 +14,7 @@ import {
   vakdabWatchUrl,
   getAIProviderConfig,
   callCompatibleChat,
+  getLunaDirectReply,
   repairMojibake
 } from '../vakdab-telegram-bot/worker.js';
 
@@ -38,6 +39,12 @@ test('Luna persona is a concise all-topic companion rather than a service assist
   assert.match(workerSource, /Не закінчуй кожну відповідь штучним/);
   assert.match(workerSource, /не службова помічниця/);
   assert.doesNotMatch(workerSource, /Кожен користувач повинен відчувати.*подругою-помічницею/s);
+});
+
+test('Luna direct replies handle casual companion greetings without assistant boilerplate', () => {
+  assert.equal(getLunaDirectReply('Тобою 😊🌸'), 'Та просто зі мною 😊 Можемо побалакати про що завгодно. Як твій вечір?');
+  assert.equal(getLunaDirectReply('Чим зможеш допомогти'), 'Та багато чим, але без офіціозу 🙂 Кажи, що в тебе на думці.');
+  assert.equal(getLunaDirectReply('Що таке аніме?'), '');
 });
 
 test('BazaarLink configuration is used when OpenAI is absent', () => {
