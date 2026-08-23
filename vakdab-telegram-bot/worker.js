@@ -372,30 +372,62 @@ function getAIProviderConfig(env) {
   throw new Error('BAZAARLINK_API_KEY is not configured');
 }
 
-async function callCompatibleChat(messages, env, options = {}) {
+export async function callCompatibleChat(messages, env, options = {}) {
   const config = getAIProviderConfig(env);
-  const response = await fetch(`${config.baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`
-    },
-    body: JSON.stringify({
-      model: config.model,
+  const modelsToTry = config.provider === 'BazaarLink' && config.model !== 'auto:free'
+    ? [
+        { model: config.model, models: [config.model, 'auto:free'] },
+        { model: 'auto:free' },
+        { model: config.model }
+      ]
+    : [{ model: config.model }];
+  let lastError = null;
+
+  for (const attempt of modelsToTry) {
+    const payload = {
+      model: attempt.model,
       messages,
       temperature: options.temperature ?? 0.7,
       max_tokens: options.maxTokens ?? 1024,
-      ...(config.provider === 'BazaarLink' && config.model !== 'auto:free'
-        ? { models: [config.model, 'auto:free'] }
-        : {})
-    })
-  });
+      ...(attempt.models ? { models: attempt.models } : {})
+    };
+    try {
+      const response = await fetch(`${config.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.apiKey}`
+        },
+        body: JSON.stringify(payload)
+      });
 
-  if (!response.ok) throw new Error(`${config.provider} API error ${response.status}`);
-  const data = await response.json();
-  const generatedText = data?.choices?.[0]?.message?.content?.trim();
-  if (!generatedText) throw new Error(`${config.provider} returned no text`);
-  return repairMojibake(generatedText);
+      const responseBody = await response.text();
+      if (!response.ok) {
+        lastError = new Error(`${config.provider} API error ${response.status}`);
+        console.error(`[${config.provider}] chat attempt ${attempt.model} failed with status ${response.status}: ${truncate(responseBody, 240)}`);
+        continue;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseBody);
+      } catch {
+        lastError = new Error(`${config.provider} returned invalid JSON`);
+        continue;
+      }
+      const generatedText = data?.choices?.[0]?.message?.content?.trim();
+      if (!generatedText) {
+        lastError = new Error(`${config.provider} returned no text`);
+        continue;
+      }
+      return repairMojibake(generatedText);
+    } catch (error) {
+      lastError = error;
+      console.error(`[${config.provider}] chat attempt ${attempt.model} failed: ${safeError(error)}`);
+    }
+  }
+
+  throw lastError || new Error(`${config.provider} returned no text`);
 }
 
 async function callLunaAI(prompt, fullHistory, profile, summary, env) {

@@ -13,6 +13,7 @@ import {
   scheduleWebAppKeyboard,
   vakdabWatchUrl,
   getAIProviderConfig,
+  callCompatibleChat,
   repairMojibake
 } from '../vakdab-telegram-bot/worker.js';
 
@@ -41,6 +42,34 @@ test('repairMojibake restores Ukrainian UTF-8 text and preserves valid text', ()
   assert.equal(repairMojibake(mojibake), original);
   assert.equal(repairMojibake('Привіт, Луна!'), 'Привіт, Луна!');
   assert.equal(repairMojibake('Hello, world!'), 'Hello, world!');
+});
+
+test('BazaarLink retries through auto:free when the configured model fails', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    requests.push(payload);
+    if (requests.length === 1) {
+      return new Response(JSON.stringify({ error: { message: 'model unavailable' } }), { status: 400 });
+    }
+    return new Response(JSON.stringify({ choices: [{ message: { content: 'Привіт, я Луна!' } }] }), { status: 200 });
+  };
+
+  try {
+    const result = await callCompatibleChat([{ role: 'user', content: 'Привіт' }], {
+      BAZAARLINK_API_KEY: 'test-key',
+      BAZAARLINK_MODEL: 'qwen/qwen3.7-flash:free'
+    });
+    assert.equal(result, 'Привіт, я Луна!');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(requests.length, 2);
+  assert.deepEqual(requests[0].models, ['qwen/qwen3.7-flash:free', 'auto:free']);
+  assert.equal(requests[1].model, 'auto:free');
+  assert.equal(Object.hasOwn(requests[1], 'models'), false);
 });
 
 test('content type descriptor supports anime, manga and novel with anime fallback', () => {
