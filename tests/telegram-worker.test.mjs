@@ -11,8 +11,28 @@ import {
   isBotOwner,
   formatBotUsageReport,
   scheduleWebAppKeyboard,
-  vakdabWatchUrl
+  vakdabWatchUrl,
+  getAIProviderConfig
 } from '../vakdab-telegram-bot/worker.js';
+
+test('BazaarLink configuration takes priority and never exposes a secret in the URL', () => {
+  const config = getAIProviderConfig({ BAZAARLINK_API_KEY: 'test-bazaarlink-key' });
+  assert.equal(config.provider, 'BazaarLink');
+  assert.equal(config.baseUrl, 'https://api.bazaarlink.ai/v1');
+  assert.equal(config.model, 'auto:free');
+  assert.equal(config.apiKey, 'test-bazaarlink-key');
+});
+
+test('legacy Groq configuration remains a fallback when BazaarLink is absent', () => {
+  const config = getAIProviderConfig({ GROQ_API_KEY: 'test-groq-key', GROQ_MODEL: 'test-model' });
+  assert.equal(config.provider, 'Groq');
+  assert.equal(config.baseUrl, 'https://api.groq.com/openai/v1');
+  assert.equal(config.model, 'test-model');
+});
+
+test('missing AI credentials fails with a clear BazaarLink configuration error', () => {
+  assert.throws(() => getAIProviderConfig({}), /BAZAARLINK_API_KEY is not configured/);
+});
 
 test('content type descriptor supports anime, manga and novel with anime fallback', () => {
   assert.equal(getContentType('anime').key, 'anime');

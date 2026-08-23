@@ -58,11 +58,14 @@ Worker зберігає мінімальну технічну статистик
 TELEGRAM_BOT_TOKEN
 WEBHOOK_SETUP_SECRET
 TELEGRAM_WEBHOOK_SECRET_TOKEN  # рекомендовано для перевірки X-Telegram-Bot-Api-Secret-Token
+BAZAARLINK_API_KEY              # для AI-режиму Луни
 ```
 
-Для AI-асистентки опційно додайте `GROQ_API_KEY` і змінну `GROQ_MODEL` (за замовчуванням `llama-3.3-70b-versatile`). Якщо memory storage використовується у production, binding KV має залишатися доступним як `MAKIMA_MEMORY`, щоб не втратити стару історію після перейменування на Луну.
+Для AI-асистентки додайте secret `BAZAARLINK_API_KEY`. Worker використовує OpenAI-сумісний endpoint `https://api.bazaarlink.ai/v1` і модель `auto:free` за замовчуванням; її можна змінити через змінну `BAZAARLINK_MODEL`, наприклад на `openai/gpt-4o`. `auto:free` не є безлімітним: безкоштовні моделі можуть мати обмеження швидкості та доступності. За потреби endpoint можна перевизначити змінною `BAZAARLINK_BASE_URL`.
 
-Секрети не зберігаються в GitHub і не записуються в код.
+`GROQ_API_KEY` і `GROQ_MODEL` залишаються резервним fallback для сумісності: якщо `BAZAARLINK_API_KEY` заданий, він має пріоритет. Якщо memory storage використовується у production, binding KV має залишатися доступним як `MAKIMA_MEMORY`, щоб не втратити стару історію після перейменування на Луну.
+
+Секрети не зберігаються в GitHub і не записуються в код. Додайте ключ до Worker командою `npx wrangler secret put BAZAARLINK_API_KEY` з каталогу `vakdab-telegram-bot`; вставляйте повне значення лише в інтерактивний prompt Wrangler. Не додавайте його до `.env`, комітів, issue або повідомлень чату.
 
 ## Встановлення Telegram webhook
 

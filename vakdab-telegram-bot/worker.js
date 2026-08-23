@@ -250,6 +250,7 @@ function formatUsageDate(timestamp) {
 }
 
 // ==================== GROQ / Luna ====================
+const BAZAARLINK_API_BASE = 'https://api.bazaarlink.ai/v1';
 const GROQ_API_BASE = 'https://api.groq.com/openai/v1';
 
 const LUNA_SYSTEM_PROMPT = `Тебе звати Луна. Ти — розумна, добра та сучасна AI-помічниця у Telegram-боті VakDab.
@@ -347,10 +348,54 @@ async function handleLunaMessage(chatId, memoryKey, userMessage, env) {
   }
 }
 
+function getAIProviderConfig(env) {
+  const bazaarlinkKey = String(env.BAZAARLINK_API_KEY || '').trim();
+  if (bazaarlinkKey) {
+    return {
+      provider: 'BazaarLink',
+      apiKey: bazaarlinkKey,
+      baseUrl: String(env.BAZAARLINK_BASE_URL || BAZAARLINK_API_BASE).replace(/\/+$/, ''),
+      model: String(env.BAZAARLINK_MODEL || 'auto:free').trim()
+    };
+  }
+
+  const groqKey = String(env.GROQ_API_KEY || '').trim();
+  if (groqKey) {
+    return {
+      provider: 'Groq',
+      apiKey: groqKey,
+      baseUrl: GROQ_API_BASE,
+      model: String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim()
+    };
+  }
+
+  throw new Error('BAZAARLINK_API_KEY is not configured');
+}
+
+async function callCompatibleChat(messages, env, options = {}) {
+  const config = getAIProviderConfig(env);
+  const response = await fetch(`${config.baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${config.apiKey}`
+    },
+    body: JSON.stringify({
+      model: config.model,
+      messages,
+      temperature: options.temperature ?? 0.7,
+      max_tokens: options.maxTokens ?? 1024
+    })
+  });
+
+  if (!response.ok) throw new Error(`${config.provider} API error ${response.status}`);
+  const data = await response.json();
+  const generatedText = data?.choices?.[0]?.message?.content?.trim();
+  if (!generatedText) throw new Error(`${config.provider} returned no text`);
+  return generatedText;
+}
+
 async function callLunaAI(prompt, fullHistory, profile, summary, env) {
-  const apiKey = String(env.GROQ_API_KEY || '').trim();
-  if (!apiKey) throw new Error('GROQ_API_KEY is not configured');
-  const model = String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
 
   const recentHistory = fullHistory.slice(-MAX_CONTEXT_MESSAGES_FOR_API);
   const profileContext = buildProfileContext(profile);
@@ -373,25 +418,7 @@ async function callLunaAI(prompt, fullHistory, profile, summary, env) {
     { role: 'user', content: String(prompt || '') }
   ];
 
-  const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.7,
-      max_tokens: 1024
-    })
-  });
-
-  if (!response.ok) throw new Error(`Groq API error ${response.status}`);
-  const data = await response.json();
-  const generatedText = data?.choices?.[0]?.message?.content?.trim();
-  if (!generatedText) throw new Error('Groq returned no text');
-  return generatedText;
+  return callCompatibleChat(messages, env, { temperature: 0.7, maxTokens: 1024 });
 }
 
 // ==================== Summary (довготривала пам'ять розмови) ====================
@@ -432,9 +459,11 @@ async function updateSummaryIfNeeded(memoryKey, fullHistory, currentSummary, env
   const oldMessages = fullHistory.slice(0, -SUMMARY_KEEP_RECENT);
   if (oldMessages.length < 20) return;
 
-  const apiKey = String(env.GROQ_API_KEY || '').trim();
-  if (!apiKey) return;
-  const model = String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
+  try {
+    getAIProviderConfig(env);
+  } catch {
+    return;
+  }
 
   // Формуємо текст для summary (обмежуємо, щоб не перевищити контекст)
   const textForSummary = oldMessages
@@ -458,30 +487,11 @@ ${textForSummary}
 - Відповідай ТІЛЬКИ текстом підсумку, без пояснень.`;
 
   try {
-    const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: 'Ти стискаєш історію розмови в короткий корисний підсумок.' },
-          { role: 'user', content: summaryPrompt }
-        ],
-        temperature: 0.3,
-        max_tokens: 500
-      })
-    });
-
-    if (!response.ok) return;
-
-    const data = await response.json();
-    const newSummary = data?.choices?.[0]?.message?.content?.trim();
-    if (newSummary) {
-      await saveUserSummary(memoryKey, newSummary, env);
-    }
+    const newSummary = await callCompatibleChat([
+      { role: 'system', content: 'Ти стискаєш історію розмови в короткий корисний підсумок.' },
+      { role: 'user', content: summaryPrompt }
+    ], env, { temperature: 0.3, maxTokens: 500 });
+    if (newSummary) await saveUserSummary(memoryKey, newSummary, env);
   } catch (error) {
     console.error('[summary] generation failed:', safeError(error));
   }
@@ -615,37 +625,19 @@ projects (масив), preferences (масив), facts (масив).
 Включай лише ті поля, для яких дійсно є нова інформація.`;
 
 async function extractMemory(userMessage, profile, env) {
-  const apiKey = String(env.GROQ_API_KEY || '').trim();
-  if (!apiKey) return {};
-  const model = String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
+  try {
+    getAIProviderConfig(env);
+  } catch {
+    return {};
+  }
 
   const profileSnapshot = JSON.stringify({ ...defaultProfile(), ...(profile || {}) });
 
   try {
-    const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: MEMORY_EXTRACT_SYSTEM_PROMPT },
-          { role: 'user', content: `Поточний профіль:\n${profileSnapshot}\n\nПовідомлення користувача:\n${String(userMessage || '')}` }
-        ],
-        temperature: 0.1,
-        max_tokens: 400
-      })
-    });
-
-    if (!response.ok) {
-      console.error(`[memory] extract API error ${response.status}`);
-      return {};
-    }
-
-    const data = await response.json();
-    const rawText = data?.choices?.[0]?.message?.content?.trim();
+    const rawText = await callCompatibleChat([
+      { role: 'system', content: MEMORY_EXTRACT_SYSTEM_PROMPT },
+      { role: 'user', content: `Поточний профіль:\n${profileSnapshot}\n\nПовідомлення користувача:\n${String(userMessage || '')}` }
+    ], env, { temperature: 0.1, maxTokens: 400 });
     if (!rawText) return {};
 
     const cleaned = rawText.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
@@ -1462,7 +1454,7 @@ function isUnsafeRouletteText(value) {
     || /(?:докс|доксинг|doxx|порно з неповноліт|child\s*sexual|csam)/i.test(text);
 }
 
-export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, scheduleWebAppKeyboard, vakdabWatchUrl };
+export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, scheduleWebAppKeyboard, vakdabWatchUrl, getAIProviderConfig };
 
 export class ChatRouletteRoom {
   constructor(ctx, env) {
