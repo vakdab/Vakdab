@@ -19,7 +19,7 @@ test('BazaarLink configuration takes priority and never exposes a secret in the 
   const config = getAIProviderConfig({ BAZAARLINK_API_KEY: 'test-bazaarlink-key' });
   assert.equal(config.provider, 'BazaarLink');
   assert.equal(config.baseUrl, 'https://api.bazaarlink.ai/v1');
-  assert.equal(config.model, 'auto:free');
+  assert.equal(config.model, 'qwen/qwen3.7-flash:free');
   assert.equal(config.apiKey, 'test-bazaarlink-key');
 });
 

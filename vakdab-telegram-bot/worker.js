@@ -355,7 +355,7 @@ function getAIProviderConfig(env) {
       provider: 'BazaarLink',
       apiKey: bazaarlinkKey,
       baseUrl: String(env.BAZAARLINK_BASE_URL || BAZAARLINK_API_BASE).replace(/\/+$/, ''),
-      model: String(env.BAZAARLINK_MODEL || 'auto:free').trim()
+      model: String(env.BAZAARLINK_MODEL || 'qwen/qwen3.7-flash:free').trim()
     };
   }
 
@@ -384,7 +384,10 @@ async function callCompatibleChat(messages, env, options = {}) {
       model: config.model,
       messages,
       temperature: options.temperature ?? 0.7,
-      max_tokens: options.maxTokens ?? 1024
+      max_tokens: options.maxTokens ?? 1024,
+      ...(config.provider === 'BazaarLink' && config.model !== 'auto:free'
+        ? { models: [config.model, 'auto:free'] }
+        : {})
     })
   });
 
