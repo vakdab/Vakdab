@@ -10,7 +10,8 @@ import {
   isBotOwner,
   formatBotUsageReport,
   buildScheduleSections,
-  splitScheduleSections
+  splitScheduleSections,
+  buildScheduleCardSvg
 } from '../vakdab-telegram-bot/worker.js';
 
 test('content type descriptor supports anime, manga and novel with anime fallback', () => {
@@ -88,4 +89,16 @@ test('weekly schedule always includes Monday through Sunday and splits long outp
   assert.match(text, /Вівторок[\s\S]*Нових серій у розкладі немає/);
   assert.match(text, /Середа.*Ще одне аніме/s);
   assert.deepEqual(splitScheduleSections(sections, 100).length > 1, true);
+});
+
+test('schedule card SVG reserves the provided header area and contains a full weekly schedule', () => {
+  const card = buildScheduleCardSvg({
+    monday: [{ airing: '2026-08-24 10:00', episode: 4, anime: { details: { names: { name: 'Тестове аніме' } } } }]
+  });
+  assert.match(card, /<rect width="1125" height="\d+" fill="#151515"\/>/);
+  assert.match(card, /<rect x="0" y="902" width="1125" height="42" fill="#151515"\/>/);
+  assert.match(card, /Понеділок.*24\.08/s);
+  assert.match(card, /Тестове аніме/);
+  assert.match(card, /Неділя/);
+  assert.match(card, /height="\d{4,}"/);
 });

@@ -1,8 +1,10 @@
 const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
+import { initWasm, Resvg } from '@resvg/resvg-wasm';
+import { PhotonImage, watermark } from '@cf-wasm/photon';
+
 const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
-const SCHEDULE_BANNER_URL = 'https://vakdab.vakdabpro.workers.dev/schedule-banner.png';
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
@@ -37,6 +39,9 @@ let popularCacheAt = 0;
 let catalogCache = null;
 let catalogCacheAt = 0;
 const BOT_OWNER_USERNAME = 'vaditx';
+let scheduleRendererReady;
+let scheduleHeaderData;
+let scheduleFontData;
 
 export default {
   async fetch(request, env) {
@@ -936,17 +941,9 @@ async function renderSearch(chatId, page, env, messageId = null, type = 'anime')
 async function renderSchedule(chatId, messageId, env) {
   try {
     const schedule = await fetchMikaiSchedule();
-    const chunks = splitScheduleSections(buildScheduleSections(schedule));
     if (messageId) await deleteMessage(chatId, messageId, env);
-
-    const caption = '<b>📅 Тижневий розклад аніме</b>\nПремʼєри та нові серії від понеділка до неділі.';
-    const banner = await sendPhoto(chatId, SCHEDULE_BANNER_URL, caption, {}, env);
-    if (!banner?.ok) await sendMessage(chatId, caption, {}, env);
-
-    for (const [index, chunk] of chunks.entries()) {
-      const isLast = index === chunks.length - 1;
-      await sendMessage(chatId, chunk, isLast ? { reply_markup: backHomeKeyboard() } : {}, env);
-    }
+    const image = await renderScheduleCard(schedule, env);
+    await sendPhotoBuffer(chatId, image, { reply_markup: backHomeKeyboard() }, env);
   } catch (error) {
     console.error('[schedule] failed:', safeError(error));
     await updateOrSend(chatId, messageId, 'Не вдалося завантажити актуальний розклад. Спробуйте ще раз трохи пізніше.', false, { reply_markup: mainKeyboard() }, env);
@@ -1015,6 +1012,103 @@ function splitScheduleSections(sections, limit = 3300) {
   }
   if (current) chunks.push(current);
   return chunks.length ? chunks : ['На цей тиждень нових серій у розкладі немає.'];
+}
+
+async function renderScheduleCard(schedule, env) {
+  const [header, font] = await Promise.all([getScheduleHeader(env), getScheduleFont(env), initializeScheduleRenderer(env)]);
+  const svg = buildScheduleCardSvg(schedule);
+  const renderer = new Resvg(svg, {
+    background: '#151515',
+    font: { fontBuffers: [font], defaultFontFamily: 'DejaVu Sans' },
+    fitTo: { mode: 'width', value: 1125 }
+  });
+  try {
+    const scheduleImage = PhotonImage.new_from_byteslice(renderer.render().asPng());
+    const headerImage = PhotonImage.new_from_byteslice(header);
+    try {
+      watermark(scheduleImage, headerImage, 0n, 0n);
+      return scheduleImage.get_bytes();
+    } finally {
+      headerImage.free();
+      scheduleImage.free();
+    }
+  } finally {
+    renderer.free();
+  }
+}
+
+async function initializeScheduleRenderer(env) {
+  if (!scheduleRendererReady) {
+    scheduleRendererReady = getWorkerAsset(env, '/resvg.wasm').then(buffer => initWasm(buffer));
+  }
+  return scheduleRendererReady;
+}
+
+async function getScheduleHeader(env) {
+  if (!scheduleHeaderData) {
+    scheduleHeaderData = getWorkerAsset(env, '/schedule-header.png');
+  }
+  return scheduleHeaderData;
+}
+
+async function getScheduleFont(env) {
+  if (!scheduleFontData) scheduleFontData = getWorkerAsset(env, '/schedule-font.ttf');
+  return scheduleFontData;
+}
+
+async function getWorkerAsset(env, path) {
+  if (!env.ASSETS) throw new Error('ASSETS_UNAVAILABLE');
+  const response = await env.ASSETS.fetch(new Request(`https://assets.vakdab.internal${path}`));
+  if (!response.ok) throw new Error(`ASSET_${response.status}`);
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+function buildScheduleCardSvg(schedule) {
+  const dayBlocks = SCHEDULE_DAYS.map(([key, label]) => ({
+    label,
+    items: Array.isArray(schedule?.[key]) ? schedule[key].slice().sort((left, right) => String(left?.airing || '').localeCompare(String(right?.airing || ''))) : []
+  }));
+  const rowHeight = 48;
+  const sectionHeight = 74;
+  const cardHeight = 944 + dayBlocks.reduce((total, day) => total + sectionHeight + Math.max(day.items.length, 1) * rowHeight + 24, 0);
+  let cursorY = 960;
+  const blocks = dayBlocks.map(day => {
+    const date = scheduleDateLabel(day.items[0]?.airing);
+    const heading = `<rect x="42" y="${cursorY}" width="1041" height="58" rx="14" fill="#242229"/>
+      <text x="68" y="${cursorY + 38}" class="day">${escapeXml(day.label)}${escapeXml(date)}</text>
+      <text x="1048" y="${cursorY + 38}" text-anchor="end" class="count">${day.items.length ? `${day.items.length} серій` : 'Порожньо'}</text>`;
+    cursorY += sectionHeight;
+    const rows = day.items.length ? day.items.map(item => {
+      const anime = item?.anime || {};
+      const title = truncate(anime?.details?.names?.name || anime?.details?.names?.nameEnglish || anime?.slug || 'Без назви', 58);
+      const episode = item?.episode ? ` · еп. ${item.episode}` : '';
+      const row = `<text x="68" y="${cursorY + 30}" class="time">${escapeXml(scheduleTimeLabel(item?.airing))}</text>
+        <text x="160" y="${cursorY + 30}" class="title">${escapeXml(title)}${escapeXml(episode)}</text>`;
+      cursorY += rowHeight;
+      return row;
+    }).join('') : `<text x="68" y="${cursorY + 30}" class="empty">Нових серій у розкладі немає.</text>`;
+    if (!day.items.length) cursorY += rowHeight;
+    cursorY += 24;
+    return `${heading}${rows}`;
+  }).join('');
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1125" height="${cardHeight}" viewBox="0 0 1125 ${cardHeight}">
+    <style>
+      .day { fill: #ffffff; font: 700 28px 'DejaVu Sans'; }
+      .count { fill: #b7adb8; font: 400 22px 'DejaVu Sans'; }
+      .time { fill: #eebf68; font: 700 23px 'DejaVu Sans'; }
+      .title { fill: #f3f0ec; font: 400 23px 'DejaVu Sans'; }
+      .empty { fill: #b7adb8; font: 400 23px 'DejaVu Sans'; }
+    </style>
+    <rect width="1125" height="${cardHeight}" fill="#151515"/>
+    <rect x="0" y="902" width="1125" height="42" fill="#151515"/>
+    ${blocks}
+    <text x="42" y="${cardHeight - 22}" fill="#847d87" font-family="DejaVu Sans" font-size="17">Час виходу в Японії. Українські адаптації можуть з’явитися пізніше.</text>
+  </svg>`;
+}
+
+function escapeXml(value = '') {
+  return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
 async function renderRandom(chatId, messageId, env, type = 'anime') {
@@ -1389,6 +1483,18 @@ async function sendPhoto(chatId, photo, caption, extra, env) {
   return telegram('sendPhoto', { chat_id: chatId, photo, caption, parse_mode: 'HTML', ...extra }, env);
 }
 
+async function sendPhotoBuffer(chatId, png, extra, env) {
+  if (!env.TELEGRAM_BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not configured');
+  const form = new FormData();
+  form.set('chat_id', String(chatId));
+  form.set('photo', new Blob([png], { type: 'image/png' }), 'weekly-schedule.png');
+  if (extra?.reply_markup) form.set('reply_markup', JSON.stringify(extra.reply_markup));
+  const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`, { method: 'POST', body: form });
+  const data = await response.json();
+  if (!response.ok || !data.ok) console.error(`[telegram] sendPhoto failed with status ${response.status}`);
+  return data;
+}
+
 async function deleteMessage(chatId, messageId, env) {
   return telegram('deleteMessage', { chat_id: chatId, message_id: messageId }, env);
 }
@@ -1516,7 +1622,7 @@ function isUnsafeRouletteText(value) {
     || /(?:докс|доксинг|doxx|порно з неповноліт|child\s*sexual|csam)/i.test(text);
 }
 
-export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, buildScheduleSections, splitScheduleSections };
+export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, buildScheduleSections, splitScheduleSections, buildScheduleCardSvg };
 
 export class ChatRouletteRoom {
   constructor(ctx, env) {

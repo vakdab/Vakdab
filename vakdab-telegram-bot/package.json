@@ -1,0 +1,13 @@
+{
+  "name": "vakdab-telegram-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test ../tests/telegram-worker.test.mjs",
+    "check": "node --input-type=module --check < worker.js"
+  },
+  "dependencies": {
+    "@cf-wasm/photon": "^0.4.0",
+    "@resvg/resvg-wasm": "2.6.2"
+  }
+}
