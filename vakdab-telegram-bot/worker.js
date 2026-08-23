@@ -356,7 +356,7 @@ function getAIProviderConfig(env) {
       provider: 'Groq',
       apiKey: groqKey,
       baseUrl: GROQ_API_BASE,
-      model: String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim()
+      model: String(env.GROQ_MODEL || 'qwen/qwen3.6-27b').trim()
     };
   }
 
@@ -401,7 +401,7 @@ export async function callCompatibleChat(messages, env, options = {}) {
       provider: 'Groq',
       apiKey: groqKey,
       baseUrl: GROQ_API_BASE,
-      model: String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim()
+      model: String(env.GROQ_MODEL || 'qwen/qwen3.6-27b').trim()
     });
   }
   let lastError = null;
@@ -423,6 +423,12 @@ export async function callCompatibleChat(messages, env, options = {}) {
         max_tokens: options.maxTokens ?? 1024,
         ...(attempt.models ? { models: attempt.models } : {})
       };
+      if (config.provider === 'Groq') {
+        delete payload.max_tokens;
+        payload.max_completion_tokens = options.maxTokens ?? 1024;
+        if (config.model.startsWith('openai/gpt-oss')) payload.include_reasoning = false;
+        if (config.model === 'qwen/qwen3.6-27b') payload.reasoning_effort = 'none';
+      }
       try {
         const response = await fetch(`${config.baseUrl}/chat/completions`, {
           method: 'POST',

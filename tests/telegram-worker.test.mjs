@@ -25,7 +25,7 @@ test('Groq configuration takes priority when both providers are configured', () 
   });
   assert.equal(config.provider, 'Groq');
   assert.equal(config.baseUrl, 'https://api.groq.com/openai/v1');
-  assert.equal(config.model, 'llama-3.3-70b-versatile');
+  assert.equal(config.model, 'qwen/qwen3.6-27b');
   assert.equal(config.apiKey, 'test-groq-key');
 });
 
@@ -54,6 +54,27 @@ test('repairMojibake restores Ukrainian UTF-8 text and preserves valid text', ()
   assert.equal(repairMojibake(mojibake), original);
   assert.equal(repairMojibake('Привіт, Луна!'), 'Привіт, Луна!');
   assert.equal(repairMojibake('Hello, world!'), 'Hello, world!');
+});
+
+test('Groq Qwen requests use completion tokens and disable reasoning output', async () => {
+  const originalFetch = globalThis.fetch;
+  let requestPayload;
+  globalThis.fetch = async (_url, init) => {
+    requestPayload = JSON.parse(init.body);
+    return new Response(JSON.stringify({ choices: [{ message: { content: 'Привіт, я Луна!' } }] }), { status: 200 });
+  };
+
+  try {
+    const result = await callCompatibleChat([{ role: 'user', content: 'Привіт' }], { GROQ_API_KEY: 'test-key' }, { maxTokens: 256 });
+    assert.equal(result, 'Привіт, я Луна!');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(requestPayload.model, 'qwen/qwen3.6-27b');
+  assert.equal(requestPayload.max_completion_tokens, 256);
+  assert.equal(requestPayload.reasoning_effort, 'none');
+  assert.equal(Object.hasOwn(requestPayload, 'max_tokens'), false);
 });
 
 test('BazaarLink retries through auto:free when the configured model fails', async () => {
