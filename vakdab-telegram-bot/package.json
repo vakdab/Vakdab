@@ -5,9 +5,5 @@
   "scripts": {
     "test": "node --test ../tests/telegram-worker.test.mjs",
     "check": "node --input-type=module --check < worker.js"
-  },
-  "dependencies": {
-    "@cf-wasm/photon": "^0.4.0",
-    "@cf-wasm/resvg": "^0.4.0"
   }
 }

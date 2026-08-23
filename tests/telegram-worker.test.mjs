@@ -9,9 +9,7 @@ import {
   extractRelayMedia,
   isBotOwner,
   formatBotUsageReport,
-  buildScheduleSections,
-  splitScheduleSections,
-  buildScheduleCardSvg
+  scheduleWebAppKeyboard
 } from '../vakdab-telegram-bot/worker.js';
 
 test('content type descriptor supports anime, manga and novel with anime fallback', () => {
@@ -76,29 +74,8 @@ test('private statistics report presents the usage summary without user IDs', ()
   assert.doesNotMatch(report, /123456789/);
 });
 
-test('weekly schedule always includes Monday through Sunday and splits long output safely', () => {
-  const schedule = {
-    monday: [{ airing: '2026-08-24 10:00', episode: 4, anime: { details: { names: { name: 'Тестове аніме' } } } }],
-    wednesday: [{ airing: '2026-08-26 18:30', episode: 9, anime: { details: { names: { name: 'Ще одне аніме' } } } }]
-  };
-  const sections = buildScheduleSections(schedule);
-  const text = sections.join('\n');
-  assert.equal(sections.length, 7);
-  assert.match(sections[0], /Понеділок.*24\.08/s);
-  assert.match(sections[0], /10:00.*Тестове аніме.*еп\. 4/s);
-  assert.match(text, /Вівторок[\s\S]*Нових серій у розкладі немає/);
-  assert.match(text, /Середа.*Ще одне аніме/s);
-  assert.deepEqual(splitScheduleSections(sections, 100).length > 1, true);
-});
-
-test('schedule card SVG reserves the provided header area and contains a full weekly schedule', () => {
-  const card = buildScheduleCardSvg({
-    monday: [{ airing: '2026-08-24 10:00', episode: 4, anime: { details: { names: { name: 'Тестове аніме' } } } }]
-  });
-  assert.match(card, /<rect width="1125" height="\d+" fill="#151515"\/>/);
-  assert.match(card, /<rect x="0" y="902" width="1125" height="42" fill="#151515"\/>/);
-  assert.match(card, /Понеділок.*24\.08/s);
-  assert.match(card, /Тестове аніме/);
-  assert.match(card, /Неділя/);
-  assert.match(card, /height="\d{4,}"/);
+test('schedule fallback keyboard opens the dedicated Mini App page', () => {
+  const button = scheduleWebAppKeyboard().inline_keyboard[0][0];
+  assert.equal(button.text, 'Відкрити розклад');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/schedule.html');
 });

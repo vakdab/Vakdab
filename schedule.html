@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#151515">
+  <title>Розклад виходу серій — VakDab</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root { --bg:#151515; --panel:#232127; --panel-2:#1c1a20; --text:#f8f6f2; --muted:#b8b0b7; --gold:#eec36c; --line:rgba(255,255,255,.08); }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:320px; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    .app { width:min(100%,760px); margin:0 auto; padding:calc(14px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); }
+    .hero { overflow:hidden; border-radius:22px; border:1px solid var(--line); background:#0e0e10; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+    .hero img { display:block; width:100%; aspect-ratio:1125/902; object-fit:cover; }
+    .heading { display:flex; justify-content:space-between; gap:12px; align-items:end; padding:24px 4px 16px; }
+    h1 { margin:0; font-size:clamp(24px,7vw,38px); line-height:1.08; letter-spacing:-.035em; }
+    .status { margin:0; color:var(--muted); font-size:14px; line-height:1.4; }
+    .tabs { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin:0 -2px 18px; }
+    .tab { border:1px solid var(--line); color:var(--muted); background:var(--panel-2); min-height:48px; border-radius:12px; font:700 13px/1 system-ui,sans-serif; transition:transform .15s ease,background .15s ease,color .15s ease; }
+    .tab:active { transform:scale(.96); }
+    .tab.active { color:#211b11; background:var(--gold); border-color:var(--gold); }
+    .day-card { border:1px solid var(--line); background:linear-gradient(145deg,#242127,#1b191f); border-radius:20px; overflow:hidden; }
+    .day-head { display:flex; justify-content:space-between; gap:16px; align-items:center; padding:18px 18px 15px; border-bottom:1px solid var(--line); }
+    .day-name { margin:0; font-size:22px; letter-spacing:-.02em; }
+    .day-date { margin:5px 0 0; color:var(--muted); font-size:14px; }
+    .count { color:var(--gold); font-size:13px; font-weight:800; white-space:nowrap; }
+    .items { list-style:none; padding:0; margin:0; }
+    .item { display:grid; grid-template-columns:72px minmax(0,1fr); gap:14px; padding:15px 18px; border-bottom:1px solid var(--line); }
+    .item:last-child { border-bottom:0; }
+    .time { color:var(--gold); font-weight:800; font-variant-numeric:tabular-nums; }
+    .title { font-size:15px; font-weight:650; line-height:1.38; }
+    .episode { color:var(--muted); font-size:13px; margin-top:4px; }
+    .empty, .error, .loading { padding:34px 20px; color:var(--muted); line-height:1.55; text-align:center; }
+    .retry { margin-top:14px; border:0; background:var(--gold); color:#201a10; border-radius:12px; padding:12px 16px; font-weight:800; }
+    .note { margin:16px 4px 0; color:#837b83; font-size:12px; line-height:1.45; }
+    @media (min-width:640px) { .app { padding-left:24px; padding-right:24px; } .item { grid-template-columns:84px minmax(0,1fr); } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero" aria-label="Розклад виходу серій"><img src="schedule-header.png" alt="Розклад виходу серій"></section>
+    <header class="heading"><div><h1>Актуальний розклад</h1><p class="status" id="status">Завантажуємо нові серії…</p></div></header>
+    <nav class="tabs" id="tabs" aria-label="Дні тижня"></nav>
+    <section class="day-card" id="schedule" aria-live="polite"><div class="loading">Отримуємо розклад…</div></section>
+    <p class="note">Час виходу в Японії. Українські адаптації можуть з’явитися пізніше.</p>
+  </main>
+  <script>
+    const DAYS = [['monday','Пн','Понеділок'],['tuesday','Вт','Вівторок'],['wednesday','Ср','Середа'],['thursday','Чт','Четвер'],['friday','Пт','Пʼятниця'],['saturday','Сб','Субота'],['sunday','Нд','Неділя']];
+    const api = 'https://api.mikai.me/v1/schedule';
+    const tabs = document.getElementById('tabs');
+    const target = document.getElementById('schedule');
+    const status = document.getElementById('status');
+    let schedule = null;
+    let active = DAYS[(new Date().getDay() + 6) % 7][0];
+    const escape = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[char]));
+    const time = value => String(value || '').match(/\b\d{2}:\d{2}\b/)?.[0] || '—';
+    const date = value => { const found = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return found ? `${found[3]}.${found[2]}.${found[1]}` : 'Цього тижня'; };
+    const titleOf = item => item?.anime?.details?.names?.name || item?.anime?.details?.names?.nameEnglish || item?.anime?.slug || 'Без назви';
+    function dayInfo(key) { return DAYS.find(([value]) => value === key) || DAYS[0]; }
+    function itemsFor(key) { return Array.isArray(schedule?.[key]) ? [...schedule[key]].sort((a,b) => String(a?.airing || '').localeCompare(String(b?.airing || ''))) : []; }
+    function renderTabs() {
+      tabs.innerHTML = DAYS.map(([key, short, label]) => `<button class="tab ${key === active ? 'active' : ''}" type="button" data-day="${key}" aria-label="${label}" aria-pressed="${key === active}">${short}</button>`).join('');
+      tabs.querySelectorAll('[data-day]').forEach(button => button.addEventListener('click', () => { active = button.dataset.day; render(); }));
+    }
+    function render() {
+      renderTabs();
+      const [, , label] = dayInfo(active);
+      const items = itemsFor(active);
+      const rows = items.length ? items.map(item => `<li class="item"><time class="time">${escape(time(item.airing))}</time><div><div class="title">${escape(titleOf(item))}</div>${item.episode ? `<div class="episode">Епізод ${escape(item.episode)}</div>` : ''}</div></li>`).join('') : '<div class="empty">На цей день нових серій у розкладі немає.</div>';
+      target.innerHTML = `<header class="day-head"><div><h2 class="day-name">${label}</h2><p class="day-date">${date(items[0]?.airing)}</p></div><span class="count">${items.length ? `${items.length} серій` : 'Порожньо'}</span></header><ul class="items">${rows}</ul>`;
+      status.textContent = `Оновлено: ${new Date().toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'})}`;
+    }
+    async function load() {
+      try {
+        const response = await fetch(api, { headers:{ accept:'application/json' } });
+        if (!response.ok) throw new Error();
+        const payload = await response.json();
+        schedule = payload?.result || payload;
+        render();
+      } catch {
+        status.textContent = 'Не вдалося завантажити актуальний розклад';
+        target.innerHTML = '<div class="error">Спробуйте оновити сторінку трохи пізніше.<br><button class="retry" type="button" id="retry">Повторити</button></div>';
+        document.getElementById('retry').addEventListener('click', load);
+      }
+    }
+    if (window.Telegram?.WebApp) { Telegram.WebApp.ready(); Telegram.WebApp.expand(); }
+    load();
+  </script>
+</body>
+</html>
