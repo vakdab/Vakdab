@@ -1,5 +1,5 @@
 const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
-import { initWasm, Resvg } from '@resvg/resvg-wasm';
+import { Resvg } from '@cf-wasm/resvg';
 import { PhotonImage, watermark } from '@cf-wasm/photon';
 
 const HIKKA_API = 'https://api.hikka.io';
@@ -39,7 +39,6 @@ let popularCacheAt = 0;
 let catalogCache = null;
 let catalogCacheAt = 0;
 const BOT_OWNER_USERNAME = 'vaditx';
-let scheduleRendererReady;
 let scheduleHeaderData;
 let scheduleFontData;
 
@@ -1015,9 +1014,9 @@ function splitScheduleSections(sections, limit = 3300) {
 }
 
 async function renderScheduleCard(schedule, env) {
-  const [header, font] = await Promise.all([getScheduleHeader(env), getScheduleFont(env), initializeScheduleRenderer(env)]);
+  const [header, font] = await Promise.all([getScheduleHeader(env), getScheduleFont(env)]);
   const svg = buildScheduleCardSvg(schedule);
-  const renderer = new Resvg(svg, {
+  const renderer = await Resvg.async(svg, {
     background: '#151515',
     font: { fontBuffers: [font], defaultFontFamily: 'DejaVu Sans' },
     fitTo: { mode: 'width', value: 1125 }
@@ -1035,13 +1034,6 @@ async function renderScheduleCard(schedule, env) {
   } finally {
     renderer.free();
   }
-}
-
-async function initializeScheduleRenderer(env) {
-  if (!scheduleRendererReady) {
-    scheduleRendererReady = getWorkerAsset(env, '/resvg.wasm').then(buffer => initWasm(buffer));
-  }
-  return scheduleRendererReady;
 }
 
 async function getScheduleHeader(env) {

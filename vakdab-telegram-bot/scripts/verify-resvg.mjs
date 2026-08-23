@@ -1,9 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
-import { initWasm, Resvg } from '@resvg/resvg-wasm';
+import { Resvg } from '@cf-wasm/resvg';
 
-const wasm = await readFile(new URL('../../resvg.wasm', import.meta.url));
 const font = await readFile(new URL('../../schedule-font.ttf', import.meta.url));
-await initWasm(wasm);
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1125" height="420" viewBox="0 0 1125 420">
   <rect width="1125" height="420" fill="#16151b"/>
@@ -11,6 +9,6 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1125" height="420" v
   <text x="56" y="170" fill="#c8c1b6" font-family="DejaVu Sans" font-size="28">Понеділок · 05:00 · Безсмертний Відступник</text>
 </svg>`;
 
-const renderer = new Resvg(svg, { font: { fontBuffers: [font], defaultFontFamily: 'DejaVu Sans' } });
+const renderer = await Resvg.async(svg, { font: { fontBuffers: [font], defaultFontFamily: 'DejaVu Sans' } });
 await writeFile(new URL('../../schedule-render-smoke-test.png', import.meta.url), renderer.render().asPng());
 console.log('PNG_RENDER_OK');

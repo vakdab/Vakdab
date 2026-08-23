@@ -1,5 +1,5 @@
 import { readFile, writeFile } from 'node:fs/promises';
-import { initWasm, Resvg } from '@resvg/resvg-wasm';
+import { Resvg } from '@cf-wasm/resvg';
 import { PhotonImage, watermark } from '@cf-wasm/photon';
 import { buildScheduleCardSvg } from '../worker.js';
 
@@ -7,15 +7,13 @@ const response = await fetch('https://api.mikai.me/v1/schedule');
 if (!response.ok) throw new Error(`Schedule request failed: ${response.status}`);
 const payload = await response.json();
 const schedule = payload?.result || payload;
-const [wasm, font, header] = await Promise.all([
-  readFile(new URL('../../resvg.wasm', import.meta.url)),
+const [font, header] = await Promise.all([
   readFile(new URL('../../schedule-font.ttf', import.meta.url)),
   readFile(new URL('../../schedule-header.png', import.meta.url))
 ]);
 
-await initWasm(wasm);
 const svg = buildScheduleCardSvg(schedule);
-const renderer = new Resvg(svg, {
+const renderer = await Resvg.async(svg, {
   background: '#151515',
   font: { fontBuffers: [font], defaultFontFamily: 'DejaVu Sans' },
   fitTo: { mode: 'width', value: 1125 }

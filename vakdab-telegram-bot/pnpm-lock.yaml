@@ -11,9 +11,9 @@ importers:
       '@cf-wasm/photon':
         specifier: ^0.4.0
         version: 0.4.0
-      '@resvg/resvg-wasm':
-        specifier: 2.6.2
-        version: 2.6.2
+      '@cf-wasm/resvg':
+        specifier: ^0.4.0
+        version: 0.4.0
 
 packages:
 
@@ -22,6 +22,13 @@ packages:
 
   '@cf-wasm/photon@0.4.0':
     resolution: {integrity: sha512-PQcN6sThZAR/V6SH2MQmeFndDDhGfOxvra6UStyaBbkDHrgTPKvB+WapAhh0/TA9LsRAUaX/rEEw6hvY9uphbQ==}
+
+  '@cf-wasm/resvg@0.4.0':
+    resolution: {integrity: sha512-p45IjI5EDYPTsJzhoqJ48f/TcNhR3/F9l2CCFomEHBJ0jbedQQMFB9CQfRaqcqdhDTNy4fSjN8hvOeKDMnz3zA==}
+
+  '@resvg/resvg-wasm@2.4.1':
+    resolution: {integrity: sha512-yi6R0HyHtsoWTRA06Col4WoDs7SvlXU3DLMNP2bdAgs7HK18dTEVl1weXgxRzi8gwLteGUbIg29zulxIB3GSdg==}
+    engines: {node: '>= 10'}
 
   '@resvg/resvg-wasm@2.6.2':
     resolution: {integrity: sha512-FqALmHI8D4o6lk/LRWDnhw95z5eO+eAa6ORjVg09YRR7BkcM6oPHU9uyC0gtQG5vpFLvgpeU4+zEAz2H8APHNw==}
@@ -34,5 +41,12 @@ snapshots:
   '@cf-wasm/photon@0.4.0':
     dependencies:
       '@cf-wasm/internals': 0.2.0
+
+  '@cf-wasm/resvg@0.4.0':
+    dependencies:
+      '@resvg/resvg-wasm': 2.6.2
+      '@resvg/resvg-wasm-legacy': '@resvg/resvg-wasm@2.4.1'
+
+  '@resvg/resvg-wasm@2.4.1': {}
 
   '@resvg/resvg-wasm@2.6.2': {}
