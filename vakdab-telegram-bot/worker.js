@@ -111,6 +111,14 @@ async function handleMessage(message, env) {
 
   const memoryKey = getMemoryKey(message.from);
   const text = (message.text || '').trim();
+  // Команди рулетки обробляємо до relay, інакше активний чат передасть /next співрозмовнику як звичайний текст.
+  const rouletteCommand = text.match(/^\/(next|report)(?:@\w+)?(?:\s|$)/i);
+  if (rouletteCommand) {
+    const op = rouletteCommand[1].toLowerCase();
+    const result = await rouletteOperation({ op, chatId, userId: message.from?.id || chatId, updateId: message.__updateId }, env);
+    await deliverRouletteResult(chatId, result, env);
+    return;
+  }
   // Активна рулетка має перехоплювати і текст, і медіа без text/caption.
   if (await relayRouletteMessage(message, env)) return;
   if (text === '/start') {
@@ -1312,13 +1320,6 @@ function rouletteStartKeyboard() {
   ] };
 }
 
-function rouletteChatKeyboard() {
-  return { inline_keyboard: [
-    [{ text: 'Наступний', callback_data: 'roulette:next' }, { text: 'Завершити', callback_data: 'roulette:end' }],
-    [{ text: 'Поскаржитися', callback_data: 'roulette:report' }]
-  ] };
-}
-
 function rouletteOperation(payload, env) {
   if (!env.CHAT_ROULETTE) return Promise.resolve({ ok: false, unavailable: true });
   try {
@@ -1369,8 +1370,7 @@ async function deliverRouletteResult(chatId, result, env) {
   for (const delivery of result.deliveries || []) {
     if (delivery.kind === 'copy') {
       const copied = await telegram('copyMessage', {
-        chat_id: delivery.toChatId, from_chat_id: delivery.fromChatId, message_id: delivery.messageId,
-        reply_markup: rouletteChatKeyboard()
+        chat_id: delivery.toChatId, from_chat_id: delivery.fromChatId, message_id: delivery.messageId
       }, env);
       if (!copied?.ok) {
         await rouletteOperation({ op: 'end', chatId: delivery.fromChatId }, env);
@@ -1378,7 +1378,7 @@ async function deliverRouletteResult(chatId, result, env) {
       }
     } else if (delivery.kind === 'media') {
       const media = delivery.media || {};
-      const params = { chat_id: delivery.toChatId, [media.field]: media.fileId, reply_markup: rouletteChatKeyboard() };
+      const params = { chat_id: delivery.toChatId, [media.field]: media.fileId };
       if (media.caption && media.field !== 'sticker' && media.field !== 'video_note') params.caption = truncate(media.caption, 1024);
       const sent = await telegram(media.method, params, env);
       if (!sent?.ok) {
@@ -1386,19 +1386,18 @@ async function deliverRouletteResult(chatId, result, env) {
         await sendMessage(delivery.fromChatId, 'Медіа не доставлено. Чат завершено — можете знайти нового співрозмовника.', { reply_markup: rouletteStartKeyboard() }, env);
       }
     } else if (delivery.kind === 'text') {
-        await sendMessage(delivery.toChatId, delivery.text, { reply_markup: rouletteKeyboardFor(delivery.keyboard) }, env);
+        await sendMessage(delivery.toChatId, delivery.text, rouletteDeliveryOptions(delivery.keyboard), env);
     }
   }
 
   if (result.notice) {
-    await sendMessage(chatId, result.notice, { reply_markup: rouletteKeyboardFor(result.keyboard) }, env);
+    await sendMessage(chatId, result.notice, rouletteDeliveryOptions(result.keyboard), env);
   }
 }
 
-function rouletteKeyboardFor(kind) {
-  if (kind === 'roulette') return rouletteChatKeyboard();
-  if (kind === 'start') return rouletteStartKeyboard();
-  return mainKeyboard();
+function rouletteDeliveryOptions(kind) {
+  // У чаті кнопки не прикріплюються до кожного повідомлення. Кнопка пошуку лишається лише після завершення сесії.
+  return kind === 'start' ? { reply_markup: rouletteStartKeyboard() } : {};
 }
 
 function isUnsafeRouletteText(value) {
