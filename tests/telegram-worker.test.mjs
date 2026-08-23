@@ -9,7 +9,8 @@ import {
   extractRelayMedia,
   isBotOwner,
   formatBotUsageReport,
-  scheduleWebAppKeyboard
+  scheduleWebAppKeyboard,
+  vakdabWatchUrl
 } from '../vakdab-telegram-bot/worker.js';
 
 test('content type descriptor supports anime, manga and novel with anime fallback', () => {
@@ -78,4 +79,11 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
   const button = scheduleWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити розклад');
   assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/schedule.html?v=mono-20260823-1540');
+});
+
+test('VakDab links support anime, manga and novels', () => {
+  assert.equal(vakdabWatchUrl('test-anime', 'anime'), 'https://vakdab.github.io/Vakdab/#anime/test-anime');
+  assert.equal(vakdabWatchUrl('berserk-fb9fbd', 'manga'), 'https://vakdab.github.io/Vakdab/content.html?type=manga&slug=berserk-fb9fbd');
+  assert.equal(vakdabWatchUrl('test-novel', 'novel'), 'https://vakdab.github.io/Vakdab/content.html?type=novel&slug=test-novel');
+  assert.equal(vakdabWatchUrl('bad slug', 'manga'), '');
 });

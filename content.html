@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101010">
+  <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
+  <title>VakDab — контент</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root { --bg:#101010; --card:#1d1d20; --card-soft:#18181a; --text:#f7f7f7; --muted:#b8b8be; --line:rgba(255,255,255,.13); }
+    * { box-sizing:border-box; } body { margin:0; min-width:320px; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { width:min(100%,720px); margin:0 auto; padding:calc(18px + env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom)); }
+    .back { display:inline-flex; margin-bottom:18px; color:var(--muted); text-decoration:none; font-weight:700; font-size:14px; }
+    .hero { display:grid; grid-template-columns:112px minmax(0,1fr); gap:18px; align-items:start; padding:16px; border:1px solid var(--line); border-radius:22px; background:var(--card); }
+    .poster { width:112px; aspect-ratio:2/3; object-fit:cover; border-radius:14px; background:#29292d; }
+    .kind { color:var(--muted); font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    h1 { margin:7px 0 10px; font-size:clamp(25px,7vw,37px); line-height:1.05; letter-spacing:-.035em; }
+    .original { margin:0; color:var(--muted); font-size:14px; line-height:1.4; }
+    .metrics { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 0; }
+    .metric { border:1px solid var(--line); background:#151517; border-radius:999px; padding:7px 10px; color:#e9e9e9; font-size:13px; }
+    .section { margin-top:18px; border:1px solid var(--line); border-radius:20px; background:var(--card-soft); padding:18px; }
+    h2 { margin:0 0 10px; font-size:17px; } .synopsis { margin:0; color:#dedee2; font-size:15px; line-height:1.62; white-space:pre-line; }
+    .read { display:flex; justify-content:center; margin-top:18px; border:0; border-radius:14px; padding:14px; background:#f4f4f4; color:#111; text-decoration:none; font-weight:850; }
+    .loading,.error { min-height:45vh; display:grid; place-items:center; color:var(--muted); text-align:center; line-height:1.5; }
+    @media (max-width:390px) { .hero { grid-template-columns:94px minmax(0,1fr); gap:14px; padding:14px; } .poster { width:94px; } }
+  </style>
+</head>
+<body>
+  <main id="app"><div class="loading">Завантажуємо контент…</div></main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const type = ['manga','novel'].includes(params.get('type')) ? params.get('type') : '';
+    const slug = params.get('slug') || '';
+    const app = document.getElementById('app');
+    const escape = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[char]));
+    const title = item => item?.title_ua || item?.title_en || item?.title_original || item?.slug || 'Без назви';
+    const typeLabel = value => value === 'manga' ? 'Манґа' : 'Ранобе';
+    const cleanSynopsis = value => String(value || '').replace(/&#x20;/g, ' ').replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1').replace(/\*\*([^*]+)\*\*/g, '$1');
+    async function load() {
+      if (!type || !/^[A-Za-z0-9][A-Za-z0-9-]{1,180}$/.test(slug)) { app.innerHTML = '<div class="error">Некоректне посилання на контент.</div>'; return; }
+      try {
+        const sourceUrl = `https://api.hikka.io/${type}/${encodeURIComponent(slug)}`;
+        const response = await fetch(`https://vakdab-hikka-proxy.animegran8.workers.dev/?url=${encodeURIComponent(sourceUrl)}`, { headers:{accept:'application/json'} });
+        if (!response.ok) throw new Error();
+        const item = await response.json();
+        const readUrl = Array.isArray(item.external) ? item.external.find(link => link?.type === 'read' && /^https:\/\//.test(link?.url))?.url : '';
+        const synopsis = cleanSynopsis(item.synopsis_ua || item.synopsis_en || 'Опис поки недоступний.');
+        const scores = [item.score ? `Оцінка ${item.score}` : '', item.chapters ? `Розділів ${item.chapters}` : '', item.volumes ? `Томів ${item.volumes}` : '', item.year ? String(item.year) : ''].filter(Boolean);
+        document.title = `${title(item)} — VakDab`;
+        app.innerHTML = `<a class="back" href="./">← До VakDab</a><section class="hero"><img class="poster" src="${escape(item.image || '')}" alt="${escape(title(item))}"><div><div class="kind">${typeLabel(type)}</div><h1>${escape(title(item))}</h1><p class="original">${escape(item.title_original || item.title_en || '')}</p><div class="metrics">${scores.map(value => `<span class="metric">${escape(value)}</span>`).join('')}</div></div></section><section class="section"><h2>Про твір</h2><p class="synopsis">${escape(synopsis).replace(/\n/g,'<br>')}</p></section>${readUrl ? `<a class="read" href="${escape(readUrl)}" target="_blank" rel="noopener">Перейти до читання</a>` : ''}`;
+      } catch { app.innerHTML = '<div class="error">Не вдалося завантажити контент. Спробуйте ще раз пізніше.</div>'; }
+    }
+    if (window.Telegram?.WebApp) { Telegram.WebApp.ready(); Telegram.WebApp.expand(); }
+    load();
+  </script>
+</body>
+</html>

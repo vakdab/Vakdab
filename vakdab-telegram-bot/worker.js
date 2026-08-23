@@ -951,7 +951,7 @@ async function renderDetails(chatId, messageId, url, env, type = 'anime') {
     const details = await fetchAnimeDetails(url, safeType);
     if (!details || !details.title) throw new Error('INVALID_CONTENT');
     const text = detailsText(details);
-    const watchUrl = safeType === 'anime' ? vakdabWatchUrl(extractContentId(details.url, safeType), safeType) : '';
+    const watchUrl = vakdabWatchUrl(extractContentId(details.url, safeType), safeType);
     const state = getState(chatId);
 
     const buttons = [];
@@ -964,7 +964,7 @@ async function renderDetails(chatId, messageId, url, env, type = 'anime') {
     if (watchUrl) {
       keyboard = {
         inline_keyboard: [
-          [{ text: 'Дивитись на VakDab', url: watchUrl }],
+          [{ text: 'Відкрити на VakDab', url: watchUrl }],
           buttons
         ]
       };
@@ -1026,7 +1026,7 @@ function listKeyboard(items, page, kind, total, type = 'anime') {
     const callback = slug ? `content:${safeType}:${slug}` : '';
     const callbackData = callback && callback.length <= 64
       ? { text: truncate(item.title, 60), callback_data: callback }
-      : { text: truncate(item.title, 60), url: safeType === 'anime' ? vakdabWatchUrl(slug, safeType) || SITE_BASE_URL : (item.url || SITE_BASE_URL) };
+      : { text: truncate(item.title, 60), url: vakdabWatchUrl(slug, safeType) || item.url || SITE_BASE_URL };
     return [callbackData];
   });
   const maxPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -1170,9 +1170,10 @@ function extractAnimeId(animeUrl) { return extractContentId(animeUrl, 'anime'); 
 
 function vakdabWatchUrl(contentId, type = 'anime') {
   const value = String(contentId || '').trim();
-  return getContentType(type).key === 'anime' && /^[A-Za-z0-9][A-Za-z0-9-]{1,180}$/.test(value)
-    ? `${SITE_BASE_URL}/#anime/${encodeURIComponent(value)}`
-    : '';
+  if (!/^[A-Za-z0-9][A-Za-z0-9-]{1,180}$/.test(value)) return '';
+  const safeType = getContentType(type).key;
+  if (safeType === 'anime') return `${SITE_BASE_URL}/#anime/${encodeURIComponent(value)}`;
+  return `${SITE_BASE_URL}/content.html?type=${encodeURIComponent(safeType)}&slug=${encodeURIComponent(value)}`;
 }
 
 function pickContentTitle(item = {}) {
@@ -1461,7 +1462,7 @@ function isUnsafeRouletteText(value) {
     || /(?:докс|доксинг|doxx|порно з неповноліт|child\s*sexual|csam)/i.test(text);
 }
 
-export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, scheduleWebAppKeyboard };
+export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, scheduleWebAppKeyboard, vakdabWatchUrl };
 
 export class ChatRouletteRoom {
   constructor(ctx, env) {
