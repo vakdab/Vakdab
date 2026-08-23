@@ -6,10 +6,10 @@ const escapeHtml = value => String(value ?? '')
 
 export async function renderNovelReader(container, chapterUrl, onNavigate = () => {}, novelTitle = '', poster = '') {
     if (!container) return;
-    container.innerHTML = `<section class="novel-reader novel-reader--loading"><div class="novel-reader__loader"><i class="fas fa-spinner fa-pulse"></i><p>Зачекайте…</p><small>Текст перекладається українською</small></div></section>`;
+    container.innerHTML = `<section class="novel-reader novel-reader--loading"><div class="novel-reader__loader"><i class="fas fa-spinner fa-pulse"></i><p>Зачекайте…</p><small>Відкриваємо розділ…</small></div></section>`;
     try {
         const chapter = await fetchRanobeChapter(chapterUrl);
-        const translated = await translateNovelParagraphs(chapter.paragraphs);
+        const translated = chapter.sourceLanguage === 'uk' ? chapter.paragraphs : await translateNovelParagraphs(chapter.paragraphs);
         renderNovelShell(container, chapter, translated.length ? translated : chapter.paragraphs, onNavigate, novelTitle, poster);
     } catch (error) {
         container.innerHTML = `<section class="novel-reader novel-reader--error"><div class="novel-reader__error"><i class="fas fa-triangle-exclamation"></i><h1>Не вдалося завантажити ранобе</h1><p>${escapeHtml(error?.message || 'Перевірте з’єднання та спробуйте ще раз.')}</p><button type="button" id="novelReaderRetry">Спробувати ще раз</button></div></section>`;
@@ -28,7 +28,7 @@ function renderNovelShell(container, chapter, paragraphs, onNavigate, novelTitle
     const posterMarkup = poster ? `<img class="novel-reader__poster" src="${escapeHtml(poster)}" alt="" loading="lazy">` : '';
     const imageMarkup = (chapter.imageUrls || []).map((url, index) => `<figure class="novel-reader__image"><img src="${escapeHtml(url)}" alt="Ілюстрація ${index + 1}" loading="lazy" referrerpolicy="no-referrer"><figcaption>Ілюстрація ${index + 1}</figcaption></figure>`).join('');
     container.innerHTML = `<section class="novel-reader" aria-label="Рідер ранобе">
-        <header class="novel-reader__header"><button class="novel-reader__back" type="button"><i class="fas fa-arrow-left"></i><span>Назад</span></button><div class="novel-reader__heading">${posterMarkup}<div><span>VAKDAB · РАНОБЕ · ПЕРЕКЛАД RU → UK</span><h1>${escapeHtml(title)}</h1><p>${escapeHtml(selectedTitle)}</p></div></div></header>
+        <header class="novel-reader__header"><button class="novel-reader__back" type="button"><i class="fas fa-arrow-left"></i><span>Назад</span></button><div class="novel-reader__heading">${posterMarkup}<div><h1>${escapeHtml(title)}</h1><p>${escapeHtml(selectedTitle)}</p></div></div></header>
         <div class="novel-reader__toolbar" role="toolbar" aria-label="Керування рідером"><button type="button" data-novel-action="smaller" aria-label="Зменшити текст"><i class="fas fa-minus"></i></button><span id="novelReaderFont">100%</span><button type="button" data-novel-action="larger" aria-label="Збільшити текст"><i class="fas fa-plus"></i></button><button type="button" data-novel-action="fullscreen" aria-label="Повний екран"><i class="fas fa-expand"></i></button></div>
         <div class="novel-reader__chapter-select"><label for="novelReaderChapterSelect">Розділ</label><select id="novelReaderChapterSelect">${chapterOptions}</select></div>
         <article class="novel-reader__content" id="novelReaderContent"><h2>${escapeHtml(selectedTitle)}</h2>${imageMarkup}${paragraphs.map(paragraph => `<p>${escapeHtml(paragraph)}</p>`).join('')}</article>

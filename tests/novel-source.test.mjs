@@ -3,6 +3,10 @@ import {
     normalizeNovelTitle,
     scoreNovelTitleMatch,
     proxiedRanobeUrl,
+    isBakaChapterLink,
+    parseBakaChapterList,
+    parseBakaChapterMarkdown,
+    selectBakaStartChapter,
     parseRanobeChapterList,
     parseRanobeChapterHtml,
     RANOBELIB_TOTAL_COUNT
@@ -12,6 +16,8 @@ assert.equal(normalizeNovelTitle('Инструкция по эксплуатац
 assert.equal(scoreNovelTitleMatch('Інструкція по експлуатації Регресора', 'Инструкция по эксплуатации Регрессора (Новелла)') > 0.35, true);
 assert.equal(scoreNovelTitleMatch('Completely Different Title', 'Инструкция по эксплуатации Регрессора') < 0.35, true);
 assert.match(proxiedRanobeUrl('https://ranobelib.me/ru/book/1--demo'), /^https:\/\/corsproxy\.io\/\?url=https%3A%2F%2Franobelib\.me/);
+assert.equal(isBakaChapterLink('https://baka.in.ua/chapters/86-visimdesiat-shist-rozdil-0'), true);
+assert.equal(isBakaChapterLink('https://baka.in.ua/fictions/86-visimdesiat-shist'), false);
 
 const chapterHtml = `<!doctype html><body>
     <a href="/ru/novel/read/v1/c0?bid=7">Том 1 Глава 0</a>
@@ -59,5 +65,25 @@ Markdown Content:
 ✨ Ласкаво просимо до нашої затишної нори!`;
 const parsedNoisy = parseRanobeChapterHtml(noisyMarkdown, 'https://ranobelib.me/ru/demo/read/v1/c1');
 assert.deepEqual(parsedNoisy.paragraphs, ['Основний текст розділу.']);
+
+const bakaMarkdown = `Title: Demo
+URL Source: https://baka.in.ua/chapters/demo-1
+Markdown Content:
+# Розділ 1
+Автор: [Автор](https://baka.in.ua/search?search=author)
+[Попередній розділ](https://baka.in.ua/chapters/demo-0)
+Основний текст Baka.
+Другий абзац.
+[Наступний розділ](https://baka.in.ua/chapters/demo-2)
+## [Demo](https://baka.in.ua/fictions/demo)`;
+const parsedBaka = parseBakaChapterMarkdown(bakaMarkdown, 'https://baka.in.ua/chapters/demo-1');
+assert.deepEqual(parsedBaka.paragraphs, ['Основний текст Baka.', 'Другий абзац.']);
+assert.equal(parsedBaka.prevUrl, 'https://baka.in.ua/chapters/demo-0');
+assert.equal(parsedBaka.nextUrl, 'https://baka.in.ua/chapters/demo-2');
+assert.equal(parseBakaChapterList(bakaMarkdown).length, 2);
+assert.equal(selectBakaStartChapter([
+    { url: 'https://baka.in.ua/chapters/demo-rozdil-0' },
+    { url: 'https://baka.in.ua/chapters/demo-rozdil-1' }
+]).url, 'https://baka.in.ua/chapters/demo-rozdil-1');
 assert.equal(RANOBELIB_TOTAL_COUNT, 23598);
 console.log('novel-source.test.mjs: ok');

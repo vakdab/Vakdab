@@ -2,6 +2,8 @@ const RANOBELIB_ORIGIN = 'https://ranobelib.me';
 const RANOBELIB_PROXY = 'https://corsproxy.io/?url=';
 const RANOBELIB_API = 'https://api.cdnlibs.org/api/manga';
 const RANOBELIB_SITE_ID = 3;
+const BAKA_ORIGIN = 'https://baka.in.ua';
+const JINA_READER_ORIGIN = 'https://r.jina.ai/';
 // Current full RanobeLib catalog size: 393 full pages × 60 + 18 records on the last page.
 // The API does not expose `meta.total`; this value is refreshed when the catalog boundary changes.
 export const RANOBELIB_TOTAL_COUNT = 23598;
@@ -12,6 +14,7 @@ const ranobeTotalCache = new Map();
 // Keep the in-flight resolver alive after a UI timeout so a background prefetch
 // can finish and make the next card activation immediate.
 const ranobeReaderPendingCache = new Map();
+const bakaReaderPendingCache = new Map();
 export const RANOBE_FETCH_TIMEOUT_MS = 10000;
 export const RANOBE_RESOLVE_TIMEOUT_MS = 15000;
 
@@ -29,6 +32,13 @@ export const RANOBELIB_HOME = `${RANOBELIB_ORIGIN}/ru?section=home-updates`;
 
 const absoluteUrl = value => {
     try { return new URL(String(value || ''), RANOBELIB_ORIGIN).href; } catch { return ''; }
+};
+
+const absoluteBakaUrl = value => {
+    try {
+        const url = new URL(String(value || ''), BAKA_ORIGIN);
+        return url.origin === BAKA_ORIGIN ? url.href : '';
+    } catch { return ''; }
 };
 
 export function proxiedRanobeUrl(url) {
@@ -142,6 +152,25 @@ function isChapterLink(url) {
     return /\/read\/v\d+\/c\d+(?:[/?#]|$)/i.test(url);
 }
 
+export function isBakaChapterLink(url) {
+    try {
+        const parsed = new URL(String(url || ''), BAKA_ORIGIN);
+        return parsed.origin === BAKA_ORIGIN && /^\/chapters\/[^/?#]+\/?$/i.test(parsed.pathname);
+    } catch { return false; }
+}
+
+function isBakaFictionLink(url) {
+    try {
+        const parsed = new URL(String(url || ''), BAKA_ORIGIN);
+        return parsed.origin === BAKA_ORIGIN && /^\/fictions\/[^/?#]+\/?$/i.test(parsed.pathname);
+    } catch { return false; }
+}
+
+function bakaSourceUrl(item = {}) {
+    const candidates = [item.readerUrl, item.url, item.externalReadUrl, ...(Array.isArray(item.externalUrls) ? item.externalUrls : [])];
+    return candidates.map(absoluteBakaUrl).find(url => isBakaFictionLink(url) || isBakaChapterLink(url)) || '';
+}
+
 const chapterCommentStartPattern = /^(?:комментарии.*|коментарі.*|новые.*|нові.*|настройки.*|налаштування.*|правила.*|написать комментар.*|написати коментар.*|сказать спасибо.*|сказати дякую.*|оценить перевод.*|оцінити переклад.*|поддержать.*|підтримати.*)$/i;
 
 function isChapterNoiseLine(value, heading = '') {
@@ -215,7 +244,112 @@ export function parseRanobeChapterList(html, currentUrl = '') {
     return items;
 }
 
+export function parseBakaChapterList(markdown, currentUrl = '') {
+    const unique = new Map();
+    for (const match of String(markdown || '').matchAll(/\[([^\]]*)\]\((https:\/\/baka\.in\.ua\/chapters\/[^)]+)\)/gi)) {
+        const url = absoluteBakaUrl(match[2]);
+        if (!isBakaChapterLink(url) || unique.has(url)) continue;
+        unique.set(url, { url, title: normalizeNovelText(match[1]) || 'Розділ' });
+    }
+    const chapters = [...unique.values()];
+    if (currentUrl && isBakaChapterLink(currentUrl) && !unique.has(absoluteBakaUrl(currentUrl))) {
+        chapters.push({ url: absoluteBakaUrl(currentUrl), title: 'Поточний розділ' });
+    }
+    return chapters;
+}
+
+export function selectBakaStartChapter(chapters = []) {
+    const list = Array.isArray(chapters) ? chapters.filter(Boolean) : [];
+    return list.find(chapter => !/\/chapters\/[^/?#]*-rozdil-0(?:[/?#]|$)/i.test(chapter.url || '')) || list[0] || null;
+}
+
+export function parseBakaChapterMarkdown(markdown, chapterUrl = '') {
+    const source = String(markdown || '');
+    const content = source.split(/Markdown Content:\s*/i)[1] || source;
+    const headingMatch = content.match(/^#\s+(.+)$/m);
+    const trailing = content.slice(headingMatch?.index ?? 0);
+    const footerMatch = trailing.match(/\n##\s+\[[^\]]+\]\(https:\/\/baka\.in\.ua\/fictions\//i);
+    const chapterBody = footerMatch ? trailing.slice(0, footerMatch.index) : trailing;
+    const heading = normalizeNovelText(headingMatch?.[1] || 'Розділ');
+    const links = parseBakaChapterList(chapterBody, chapterUrl);
+    const navigation = [...chapterBody.matchAll(/\[([^\]]+)\]\((https:\/\/baka\.in\.ua\/chapters\/[^)]+)\)/gi)]
+        .map(match => ({ label: normalizeNovelText(match[1]), url: absoluteBakaUrl(match[2]) }))
+        .filter(item => isBakaChapterLink(item.url));
+    const imagePattern = /!\[[^\]]*\]\s*\((https?:\/\/[^)\s]+)\)/g;
+    const imageUrls = [...chapterBody.matchAll(imagePattern)]
+        .map(match => absoluteBakaUrl(match[1]))
+        .filter(url => url && !/\/fictions\//i.test(url));
+    const paragraphs = chapterBody.split(/\n+/)
+        .map(line => normalizeNovelText(line
+            .replace(imagePattern, '')
+            .replace(/^#{1,6}\s+/, '')
+            .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')))
+        .filter(line => line && line !== heading && !/^(?:автор:|·|наступний розділ|попередній розділ|налаштування читання|підлаштуйте вигляд|шрифт|розмір шрифту|темна тема|коментарі|дізнатися більше|ресурси|історія|класична музика|книги|законодавство|автозакриття|файли cookie)/i.test(line))
+        .filter(line => !(/^(?:[-+]|\d+px|увімкнено|вимкнено)$/i.test(line)));
+    const chapterAbsolute = absoluteBakaUrl(chapterUrl);
+    return {
+        title: heading,
+        paragraphs,
+        imageUrls: [...new Set(imageUrls)],
+        sourceLanguage: 'uk',
+        chapterUrl: chapterAbsolute,
+        prevUrl: navigation.find(item => /попередній/i.test(item.label))?.url || '',
+        nextUrl: navigation.find(item => /наступний/i.test(item.label))?.url || '',
+        chapterList: links
+    };
+}
+
+async function fetchBakaMarkdown(url, options = {}) {
+    const source = absoluteBakaUrl(url);
+    if (!source) throw new Error('Baka URL відсутній');
+    const response = await fetchRanobeText(`${JINA_READER_ORIGIN}${source}`, { mode: 'cors', credentials: 'omit', cache: 'no-cache', headers: { Accept: 'text/plain,text/markdown' }, ...options });
+    if (!response.ok) throw new Error(`Baka: HTTP ${response.status}`);
+    const text = await response.text();
+    if (!text || text.length < 100) throw new Error('Baka повернула порожню сторінку');
+    return text;
+}
+
+function isBakaIntroChapterUrl(url) {
+    return /\/chapters\/[^/?#]*-rozdil-0(?:[/?#]|$)/i.test(String(url || ''));
+}
+
+async function resolveBakaReaderUrl(sourceUrl) {
+    const source = absoluteBakaUrl(sourceUrl);
+    if (isBakaChapterLink(source)) return source;
+    if (!isBakaFictionLink(source)) return '';
+    if (bakaReaderPendingCache.has(source)) return bakaReaderPendingCache.get(source);
+    const pending = fetchBakaMarkdown(source)
+        .then(async markdown => {
+            const first = selectBakaStartChapter(parseBakaChapterList(markdown))?.url || '';
+            if (!isBakaIntroChapterUrl(first)) return first;
+            const intro = parseBakaChapterMarkdown(await fetchBakaMarkdown(first), first);
+            return intro.nextUrl || first;
+        })
+        .catch(() => '')
+        .finally(() => bakaReaderPendingCache.delete(source));
+    bakaReaderPendingCache.set(source, pending);
+    return pending;
+}
+
 export async function fetchRanobeChapter(chapterUrl, options = {}) {
+    if (isBakaChapterLink(chapterUrl)) {
+        const markdown = await fetchBakaMarkdown(chapterUrl, options);
+        const chapter = parseBakaChapterMarkdown(markdown, chapterUrl);
+        const fictionUrl = [...String(markdown).matchAll(/https:\/\/baka\.in\.ua\/fictions\/[^)\s]+/gi)]
+            .map(match => absoluteBakaUrl(match[0]))
+            .find(isBakaFictionLink) || '';
+        let chapterList = chapter.chapterList || [];
+        if (fictionUrl) {
+            try { chapterList = parseBakaChapterList(await fetchBakaMarkdown(fictionUrl), chapterUrl); } catch { /* Current chapter remains readable without the full list. */ }
+        }
+        const currentIndex = chapterList.findIndex(item => item.url === chapter.chapterUrl);
+        return {
+            ...chapter,
+            chapterList,
+            prevUrl: currentIndex > 0 ? chapterList[currentIndex - 1].url : chapter.prevUrl,
+            nextUrl: currentIndex >= 0 && currentIndex < chapterList.length - 1 ? chapterList[currentIndex + 1].url : chapter.nextUrl
+        };
+    }
     const chapterHtml = await fetchRanobeHtml(chapterUrl, options);
     const chapter = parseRanobeChapterHtml(chapterHtml, chapterUrl);
     const chapterAbsolute = absoluteUrl(chapterUrl);
@@ -494,6 +628,11 @@ async function resolveRanobeReaderInternal(item = {}) {
 }
 
 export async function resolveRanobeReader(item = {}) {
+    const bakaUrl = bakaSourceUrl(item);
+    if (bakaUrl) {
+        const readerUrl = await resolveBakaReaderUrl(bakaUrl);
+        return { ...item, readerAvailable: Boolean(readerUrl), readerUrl };
+    }
     if (isChapterLink(item.readerUrl)) return { ...item, readerAvailable: true };
     const cacheKey = [item.url, item.title, item.title_original, item.title_en, item.originalTitle].filter(Boolean).join('|');
     const fallback = { ...item, readerAvailable: false, readerUrl: '' };
@@ -511,4 +650,4 @@ export async function resolveRanobeReader(item = {}) {
     ]);
 }
 
-export function clearNovelCaches() { htmlCache.clear(); translationCache.clear(); }
+export function clearNovelCaches() { htmlCache.clear(); translationCache.clear(); bakaReaderPendingCache.clear(); }
