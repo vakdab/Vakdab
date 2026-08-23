@@ -17,16 +17,16 @@ import {
   repairMojibake
 } from '../vakdab-telegram-bot/worker.js';
 
-test('OpenAI configuration takes priority when both providers are configured', () => {
+test('Groq configuration takes priority when both providers are configured', () => {
   const config = getAIProviderConfig({
+    GROQ_API_KEY: 'test-groq-key',
     OPENAI_API_KEY: 'test-openai-key',
-    BAZAARLINK_API_KEY: 'test-bazaarlink-key',
-    OPENAI_MODEL: 'gpt-4o-mini'
+    BAZAARLINK_API_KEY: 'test-bazaarlink-key'
   });
-  assert.equal(config.provider, 'OpenAI');
-  assert.equal(config.baseUrl, 'https://api.openai.com/v1');
-  assert.equal(config.model, 'gpt-4o-mini');
-  assert.equal(config.apiKey, 'test-openai-key');
+  assert.equal(config.provider, 'Groq');
+  assert.equal(config.baseUrl, 'https://api.groq.com/openai/v1');
+  assert.equal(config.model, 'llama-3.3-70b-versatile');
+  assert.equal(config.apiKey, 'test-groq-key');
 });
 
 test('BazaarLink configuration is used when OpenAI is absent', () => {
@@ -44,8 +44,8 @@ test('legacy Groq configuration remains a fallback when BazaarLink is absent', (
   assert.equal(config.model, 'test-model');
 });
 
-test('missing AI credentials fails with a clear OpenAI configuration error', () => {
-  assert.throws(() => getAIProviderConfig({}), /OPENAI_API_KEY is not configured/);
+test('missing AI credentials fails with a clear Groq configuration error', () => {
+  assert.throws(() => getAIProviderConfig({}), /GROQ_API_KEY is not configured/);
 });
 
 test('repairMojibake restores Ukrainian UTF-8 text and preserves valid text', () => {

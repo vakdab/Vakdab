@@ -350,6 +350,16 @@ async function handleLunaMessage(chatId, memoryKey, userMessage, env) {
 }
 
 function getAIProviderConfig(env) {
+  const groqKey = String(env.GROQ_API_KEY || '').trim();
+  if (groqKey) {
+    return {
+      provider: 'Groq',
+      apiKey: groqKey,
+      baseUrl: GROQ_API_BASE,
+      model: String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim()
+    };
+  }
+
   const openaiKey = String(env.OPENAI_API_KEY || '').trim();
   if (openaiKey) {
     return {
@@ -370,17 +380,7 @@ function getAIProviderConfig(env) {
     };
   }
 
-  const groqKey = String(env.GROQ_API_KEY || '').trim();
-  if (groqKey) {
-    return {
-      provider: 'Groq',
-      apiKey: groqKey,
-      baseUrl: GROQ_API_BASE,
-      model: String(env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim()
-    };
-  }
-
-  throw new Error('OPENAI_API_KEY is not configured');
+  throw new Error('GROQ_API_KEY is not configured');
 }
 
 export async function callCompatibleChat(messages, env, options = {}) {
