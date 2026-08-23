@@ -395,7 +395,7 @@ async function callCompatibleChat(messages, env, options = {}) {
   const data = await response.json();
   const generatedText = data?.choices?.[0]?.message?.content?.trim();
   if (!generatedText) throw new Error(`${config.provider} returned no text`);
-  return generatedText;
+  return repairMojibake(generatedText);
 }
 
 async function callLunaAI(prompt, fullHistory, profile, summary, env) {
@@ -1270,6 +1270,53 @@ function validateAnimeUrl(value) { return validateContentUrl(value, 'anime'); }
 
 function escapeHtml(value = '') {
   return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+// Виправляє текст, який був помилково прочитаний як Windows-1252 замість UTF-8.
+export function repairMojibake(value = '') {
+  const text = String(value);
+  const cp1252Bytes = new Map([
+    ['€', 0x80], ['‚', 0x82], ['ƒ', 0x83], ['„', 0x84], ['…', 0x85], ['†', 0x86], ['‡', 0x87],
+    ['ˆ', 0x88], ['‰', 0x89], ['Š', 0x8A], ['‹', 0x8B], ['Œ', 0x8C], ['Ž', 0x8E], ['‘', 0x91],
+    ['’', 0x92], ['“', 0x93], ['”', 0x94], ['•', 0x95], ['–', 0x96], ['—', 0x97], ['˜', 0x98],
+    ['™', 0x99], ['š', 0x9A], ['›', 0x9B], ['œ', 0x9C], ['ž', 0x9E], ['Ÿ', 0x9F]
+  ]);
+  const byteFor = character => {
+    const code = character.codePointAt(0);
+    return code <= 0xFF ? code : (cp1252Bytes.get(character) ?? null);
+  };
+
+  let repaired = '';
+  let encodedRun = '';
+  let hasMojibakeMarker = false;
+
+  const flush = () => {
+    if (!encodedRun) return;
+    if (!hasMojibakeMarker) {
+      repaired += encodedRun;
+    } else {
+      try {
+        const bytes = Uint8Array.from([...encodedRun], character => byteFor(character));
+        repaired += new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      } catch {
+        repaired += encodedRun;
+      }
+    }
+    encodedRun = '';
+    hasMojibakeMarker = false;
+  };
+
+  for (const character of text) {
+    if (byteFor(character) !== null) {
+      encodedRun += character;
+      if (/[ÃÂÐÑ]/.test(character)) hasMojibakeMarker = true;
+    } else {
+      flush();
+      repaired += character;
+    }
+  }
+  flush();
+  return repaired;
 }
 
 function truncate(value, max) {

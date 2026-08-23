@@ -12,7 +12,8 @@ import {
   formatBotUsageReport,
   scheduleWebAppKeyboard,
   vakdabWatchUrl,
-  getAIProviderConfig
+  getAIProviderConfig,
+  repairMojibake
 } from '../vakdab-telegram-bot/worker.js';
 
 test('BazaarLink configuration takes priority and never exposes a secret in the URL', () => {
@@ -32,6 +33,14 @@ test('legacy Groq configuration remains a fallback when BazaarLink is absent', (
 
 test('missing AI credentials fails with a clear BazaarLink configuration error', () => {
   assert.throws(() => getAIProviderConfig({}), /BAZAARLINK_API_KEY is not configured/);
+});
+
+test('repairMojibake restores Ukrainian UTF-8 text and preserves valid text', () => {
+  const original = 'Тест: українською';
+  const mojibake = String.fromCharCode(...new TextEncoder().encode(original));
+  assert.equal(repairMojibake(mojibake), original);
+  assert.equal(repairMojibake('Привіт, Луна!'), 'Привіт, Луна!');
+  assert.equal(repairMojibake('Hello, world!'), 'Hello, world!');
 });
 
 test('content type descriptor supports anime, manga and novel with anime fallback', () => {
