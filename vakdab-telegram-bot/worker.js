@@ -250,6 +250,7 @@ function formatUsageDate(timestamp) {
 }
 
 // ==================== GROQ / Luna ====================
+const OPENAI_API_BASE = 'https://api.openai.com/v1';
 const BAZAARLINK_API_BASE = 'https://api.bazaarlink.ai/v1';
 const GROQ_API_BASE = 'https://api.groq.com/openai/v1';
 
@@ -349,6 +350,16 @@ async function handleLunaMessage(chatId, memoryKey, userMessage, env) {
 }
 
 function getAIProviderConfig(env) {
+  const openaiKey = String(env.OPENAI_API_KEY || '').trim();
+  if (openaiKey) {
+    return {
+      provider: 'OpenAI',
+      apiKey: openaiKey,
+      baseUrl: String(env.OPENAI_BASE_URL || OPENAI_API_BASE).replace(/\/+$/, ''),
+      model: String(env.OPENAI_MODEL || 'gpt-4o-mini').trim()
+    };
+  }
+
   const bazaarlinkKey = String(env.BAZAARLINK_API_KEY || '').trim();
   if (bazaarlinkKey) {
     return {
@@ -369,14 +380,23 @@ function getAIProviderConfig(env) {
     };
   }
 
-  throw new Error('BAZAARLINK_API_KEY is not configured');
+  throw new Error('OPENAI_API_KEY is not configured');
 }
 
 export async function callCompatibleChat(messages, env, options = {}) {
   const primaryConfig = getAIProviderConfig(env);
   const providerConfigs = [primaryConfig];
+  const bazaarlinkKey = String(env.BAZAARLINK_API_KEY || '').trim();
+  if (primaryConfig.provider === 'OpenAI' && bazaarlinkKey) {
+    providerConfigs.push({
+      provider: 'BazaarLink',
+      apiKey: bazaarlinkKey,
+      baseUrl: String(env.BAZAARLINK_BASE_URL || BAZAARLINK_API_BASE).replace(/\/+$/, ''),
+      model: String(env.BAZAARLINK_MODEL || 'qwen/qwen3.7-flash:free').trim()
+    });
+  }
   const groqKey = String(env.GROQ_API_KEY || '').trim();
-  if (primaryConfig.provider === 'BazaarLink' && groqKey) {
+  if (['OpenAI', 'BazaarLink'].includes(primaryConfig.provider) && groqKey) {
     providerConfigs.push({
       provider: 'Groq',
       apiKey: groqKey,

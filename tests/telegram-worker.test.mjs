@@ -17,7 +17,19 @@ import {
   repairMojibake
 } from '../vakdab-telegram-bot/worker.js';
 
-test('BazaarLink configuration takes priority and never exposes a secret in the URL', () => {
+test('OpenAI configuration takes priority when both providers are configured', () => {
+  const config = getAIProviderConfig({
+    OPENAI_API_KEY: 'test-openai-key',
+    BAZAARLINK_API_KEY: 'test-bazaarlink-key',
+    OPENAI_MODEL: 'gpt-4o-mini'
+  });
+  assert.equal(config.provider, 'OpenAI');
+  assert.equal(config.baseUrl, 'https://api.openai.com/v1');
+  assert.equal(config.model, 'gpt-4o-mini');
+  assert.equal(config.apiKey, 'test-openai-key');
+});
+
+test('BazaarLink configuration is used when OpenAI is absent', () => {
   const config = getAIProviderConfig({ BAZAARLINK_API_KEY: 'test-bazaarlink-key' });
   assert.equal(config.provider, 'BazaarLink');
   assert.equal(config.baseUrl, 'https://api.bazaarlink.ai/v1');
@@ -32,8 +44,8 @@ test('legacy Groq configuration remains a fallback when BazaarLink is absent', (
   assert.equal(config.model, 'test-model');
 });
 
-test('missing AI credentials fails with a clear BazaarLink configuration error', () => {
-  assert.throws(() => getAIProviderConfig({}), /BAZAARLINK_API_KEY is not configured/);
+test('missing AI credentials fails with a clear OpenAI configuration error', () => {
+  assert.throws(() => getAIProviderConfig({}), /OPENAI_API_KEY is not configured/);
 });
 
 test('repairMojibake restores Ukrainian UTF-8 text and preserves valid text', () => {
