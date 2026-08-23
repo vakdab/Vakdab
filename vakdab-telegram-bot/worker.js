@@ -964,7 +964,7 @@ async function renderDetails(chatId, messageId, url, env, type = 'anime') {
     if (watchUrl) {
       keyboard = {
         inline_keyboard: [
-          [{ text: 'Відкрити на VakDab', url: watchUrl }],
+          [{ text: 'VakDab', url: watchUrl }],
           buttons
         ]
       };

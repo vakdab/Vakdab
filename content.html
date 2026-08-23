@@ -45,10 +45,11 @@
         if (!response.ok) throw new Error();
         const item = await response.json();
         const readUrl = Array.isArray(item.external) ? item.external.find(link => link?.type === 'read' && /^https:\/\//.test(link?.url))?.url : '';
+        const readerUrl = readUrl ? `https://vakdab.github.io/Vakdab/#${type}?url=${encodeURIComponent(readUrl)}&title=${encodeURIComponent(title(item))}${type === 'novel' ? `&poster=${encodeURIComponent(item.image || '')}` : ''}` : '';
         const synopsis = cleanSynopsis(item.synopsis_ua || item.synopsis_en || 'Опис поки недоступний.');
         const scores = [item.score ? `Оцінка ${item.score}` : '', item.chapters ? `Розділів ${item.chapters}` : '', item.volumes ? `Томів ${item.volumes}` : '', item.year ? String(item.year) : ''].filter(Boolean);
         document.title = `${title(item)} — VakDab`;
-        app.innerHTML = `<a class="back" href="./">← До VakDab</a><section class="hero"><img class="poster" src="${escape(item.image || '')}" alt="${escape(title(item))}"><div><div class="kind">${typeLabel(type)}</div><h1>${escape(title(item))}</h1><p class="original">${escape(item.title_original || item.title_en || '')}</p><div class="metrics">${scores.map(value => `<span class="metric">${escape(value)}</span>`).join('')}</div></div></section><section class="section"><h2>Про твір</h2><p class="synopsis">${escape(synopsis).replace(/\n/g,'<br>')}</p></section>${readUrl ? `<a class="read" href="${escape(readUrl)}" target="_blank" rel="noopener">Перейти до читання</a>` : ''}`;
+        app.innerHTML = `<a class="back" href="./">← До VakDab</a><section class="hero"><img class="poster" src="${escape(item.image || '')}" alt="${escape(title(item))}"><div><div class="kind">${typeLabel(type)}</div><h1>${escape(title(item))}</h1><p class="original">${escape(item.title_original || item.title_en || '')}</p><div class="metrics">${scores.map(value => `<span class="metric">${escape(value)}</span>`).join('')}</div></div></section><section class="section"><h2>Про твір</h2><p class="synopsis">${escape(synopsis).replace(/\n/g,'<br>')}</p></section>${readerUrl ? `<a class="read" href="${escape(readerUrl)}">Перейти до читання</a>` : ''}`;
       } catch { app.innerHTML = '<div class="error">Не вдалося завантажити контент. Спробуйте ще раз пізніше.</div>'; }
     }
     if (window.Telegram?.WebApp) { Telegram.WebApp.ready(); Telegram.WebApp.expand(); }

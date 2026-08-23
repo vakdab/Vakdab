@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   getContentType,
   contentTypeLabel,
@@ -86,4 +87,14 @@ test('VakDab links support anime, manga and novels', () => {
   assert.equal(vakdabWatchUrl('berserk-fb9fbd', 'manga'), 'https://vakdab.github.io/Vakdab/content.html?type=manga&slug=berserk-fb9fbd');
   assert.equal(vakdabWatchUrl('test-novel', 'novel'), 'https://vakdab.github.io/Vakdab/content.html?type=novel&slug=test-novel');
   assert.equal(vakdabWatchUrl('bad slug', 'manga'), '');
+});
+
+test('manga and novel details use VakDab reader routes and a concise bot button', () => {
+  const workerSource = readFileSync(new URL('../vakdab-telegram-bot/worker.js', import.meta.url), 'utf8');
+  const contentPage = readFileSync(new URL('../content.html', import.meta.url), 'utf8');
+
+  assert.match(workerSource, /\{ text: 'VakDab', url: watchUrl \}/);
+  assert.match(contentPage, /https:\/\/vakdab\.github\.io\/Vakdab\/#\$\{type\}\?url=/);
+  assert.match(contentPage, /type === 'novel' \? `&poster=\$\{encodeURIComponent\(item\.image \|\| ''\)\}` : ''/);
+  assert.doesNotMatch(contentPage, /href="\$\{escape\(readUrl\)\}"/);
 });
