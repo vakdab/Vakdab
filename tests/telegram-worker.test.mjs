@@ -8,7 +8,9 @@ import {
   isUnsafeRouletteText,
   extractRelayMedia,
   isBotOwner,
-  formatBotUsageReport
+  formatBotUsageReport,
+  buildScheduleSections,
+  splitScheduleSections
 } from '../vakdab-telegram-bot/worker.js';
 
 test('content type descriptor supports anime, manga and novel with anime fallback', () => {
@@ -71,4 +73,19 @@ test('private statistics report presents the usage summary without user IDs', ()
   assert.match(report, /Унікальних користувачів: <b>1<\/b>/);
   assert.match(report, /@example_user/);
   assert.doesNotMatch(report, /123456789/);
+});
+
+test('weekly schedule always includes Monday through Sunday and splits long output safely', () => {
+  const schedule = {
+    monday: [{ airing: '2026-08-24 10:00', episode: 4, anime: { details: { names: { name: 'Тестове аніме' } } } }],
+    wednesday: [{ airing: '2026-08-26 18:30', episode: 9, anime: { details: { names: { name: 'Ще одне аніме' } } } }]
+  };
+  const sections = buildScheduleSections(schedule);
+  const text = sections.join('\n');
+  assert.equal(sections.length, 7);
+  assert.match(sections[0], /Понеділок.*24\.08/s);
+  assert.match(sections[0], /10:00.*Тестове аніме.*еп\. 4/s);
+  assert.match(text, /Вівторок[\s\S]*Нових серій у розкладі немає/);
+  assert.match(text, /Середа.*Ще одне аніме/s);
+  assert.deepEqual(splitScheduleSections(sections, 100).length > 1, true);
 });

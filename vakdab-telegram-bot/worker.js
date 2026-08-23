@@ -2,6 +2,7 @@ const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
+const SCHEDULE_BANNER_URL = 'https://vakdab.vakdabpro.workers.dev/schedule-banner.png';
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
@@ -935,28 +936,20 @@ async function renderSearch(chatId, page, env, messageId = null, type = 'anime')
 async function renderSchedule(chatId, messageId, env) {
   try {
     const schedule = await fetchMikaiSchedule();
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    const labels = { monday: 'Понеділок', tuesday: 'Вівторок', wednesday: 'Середа', thursday: 'Четвер', friday: 'Пʼятниця', saturday: 'Субота', sunday: 'Неділя' };
-    const lines = [];
-    for (const day of days) {
-      const items = Array.isArray(schedule?.[day]) ? schedule[day] : [];
-      if (!items.length) continue;
-      lines.push(`<b>${labels[day]}</b>`);
-      for (const item of items.slice(0, 12)) {
-        const anime = item?.anime || {};
-        const title = anime?.details?.names?.name || anime?.details?.names?.nameEnglish || anime?.slug || 'Без назви';
-        const episode = item?.episode ? ` · серія ${item.episode}` : '';
-        const time = item?.airing ? ` · ${String(item.airing).slice(11, 16)}` : '';
-        lines.push(`• ${escapeHtml(title)}${escapeHtml(episode)}${escapeHtml(time)}`);
-      }
-      lines.push('');
+    const chunks = splitScheduleSections(buildScheduleSections(schedule));
+    if (messageId) await deleteMessage(chatId, messageId, env);
+
+    const caption = '<b>📅 Тижневий розклад аніме</b>\nПремʼєри та нові серії від понеділка до неділі.';
+    const banner = await sendPhoto(chatId, SCHEDULE_BANNER_URL, caption, {}, env);
+    if (!banner?.ok) await sendMessage(chatId, caption, {}, env);
+
+    for (const [index, chunk] of chunks.entries()) {
+      const isLast = index === chunks.length - 1;
+      await sendMessage(chatId, chunk, isLast ? { reply_markup: backHomeKeyboard() } : {}, env);
     }
-    const text = lines.join('\n').trim() || 'На найближчі дні розкладу немає.';
-    const safeText = text.length > 3500 ? `${text.slice(0, 3490)}…` : text;
-    await updateOrSend(chatId, messageId, `Розклад виходу з Mikai:\n\n${safeText}`, false, { reply_markup: backHomeKeyboard() }, env);
   } catch (error) {
     console.error('[schedule] failed:', safeError(error));
-    await updateOrSend(chatId, messageId, 'Не вдалося завантажити розклад Mikai. Спробуйте ще раз.', false, { reply_markup: mainKeyboard() }, env);
+    await updateOrSend(chatId, messageId, 'Не вдалося завантажити актуальний розклад. Спробуйте ще раз трохи пізніше.', false, { reply_markup: mainKeyboard() }, env);
   }
 }
 
@@ -966,6 +959,62 @@ async function fetchMikaiSchedule() {
   const payload = await response.json();
   if (payload?.ok === false) throw new Error(payload.error?.message || 'MIKAI_API_ERROR');
   return payload?.result || payload;
+}
+
+const SCHEDULE_DAYS = [
+  ['monday', 'Понеділок'],
+  ['tuesday', 'Вівторок'],
+  ['wednesday', 'Середа'],
+  ['thursday', 'Четвер'],
+  ['friday', 'Пʼятниця'],
+  ['saturday', 'Субота'],
+  ['sunday', 'Неділя']
+];
+
+function buildScheduleSections(schedule) {
+  return SCHEDULE_DAYS.map(([key, label]) => {
+    const items = Array.isArray(schedule?.[key]) ? schedule[key].slice().sort((left, right) => String(left?.airing || '').localeCompare(String(right?.airing || ''))) : [];
+    const date = scheduleDateLabel(items[0]?.airing);
+    const heading = `<b>📌 ${label}${date}</b>`;
+    if (!items.length) return `${heading}\n— Нових серій у розкладі немає.`;
+
+    const rows = items.map(formatScheduleItem);
+    return `${heading} · <i>${items.length}</i>\n${rows.join('\n')}`;
+  });
+}
+
+function formatScheduleItem(item) {
+  const anime = item?.anime || {};
+  const title = anime?.details?.names?.name || anime?.details?.names?.nameEnglish || anime?.slug || 'Без назви';
+  const time = scheduleTimeLabel(item?.airing);
+  const episode = item?.episode ? ` · еп. ${item.episode}` : '';
+  return `• <code>${time}</code> — ${escapeHtml(truncate(String(title), 88))}${escapeHtml(episode)}`;
+}
+
+function scheduleDateLabel(value) {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? ` · ${match[3]}.${match[2]}` : '';
+}
+
+function scheduleTimeLabel(value) {
+  const match = String(value || '').match(/\b(\d{2}:\d{2})\b/);
+  return match ? match[1] : '—';
+}
+
+function splitScheduleSections(sections, limit = 3300) {
+  const chunks = [];
+  let current = '';
+  for (const section of sections) {
+    const next = current ? `${current}\n\n${section}` : section;
+    if (current && next.length > limit) {
+      chunks.push(current);
+      current = section;
+    } else {
+      current = next;
+    }
+  }
+  if (current) chunks.push(current);
+  return chunks.length ? chunks : ['На цей тиждень нових серій у розкладі немає.'];
 }
 
 async function renderRandom(chatId, messageId, env, type = 'anime') {
@@ -1467,7 +1516,7 @@ function isUnsafeRouletteText(value) {
     || /(?:докс|доксинг|doxx|порно з неповноліт|child\s*sexual|csam)/i.test(text);
 }
 
-export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport };
+export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, buildScheduleSections, splitScheduleSections };
 
 export class ChatRouletteRoom {
   constructor(ctx, env) {
