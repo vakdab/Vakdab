@@ -77,5 +77,5 @@ test('private statistics report presents the usage summary without user IDs', ()
 test('schedule fallback keyboard opens the dedicated Mini App page', () => {
   const button = scheduleWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити розклад');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/schedule.html');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/schedule.html?v=mono-20260823-1540');
 });

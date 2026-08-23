@@ -2,7 +2,7 @@ const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
-const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/schedule.html`;
+const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/schedule.html?v=mono-20260823-1540`;
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
