@@ -801,6 +801,7 @@ function isTikTokUrl(text) {
 }
 
 async function handleMusicText(chatId, memoryKey, text, env) {
+  const keepMusicMode = getState(chatId).screen === 'waiting_for_music';
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
     const result = isTikTokUrl(text)
@@ -809,9 +810,10 @@ async function handleMusicText(chatId, memoryKey, text, env) {
     await sendTrackedMessage(chatId, memoryKey, formatMusicResult(result), {}, env);
   } catch (error) {
     console.error('[music] text request failed:', safeError(error));
-    await sendTrackedMessage(chatId, memoryKey, 'Не змогла знайти трек за цим запитом. Спробуй надіслати коротке відео/аудіо або точнішу назву пісні 🙂', {}, env);
+    await sendTrackedMessage(chatId, memoryKey, 'Не знайшла трек за цим посиланням. Якщо це коротке TikTok-посилання, надішли повну адресу або саме відео — тоді спробую ще раз 🎵', {}, env);
   } finally {
-    getState(chatId).screen = 'home';
+    // Після невдалого запиту не віддаємо наступну репліку в Luna автоматично.
+    getState(chatId).screen = keepMusicMode ? 'waiting_for_music' : 'home';
   }
 }
 
@@ -861,15 +863,27 @@ async function getTelegramFileBytes(fileId, env) {
 async function recognizeTikTokUrl(text, env) {
   const match = String(text || '').match(/https?:\/\/(?:www\.|vm\.|vt\.)?tiktok\.com\/[^\s]+/i);
   if (!match) throw new Error('TikTok URL is missing');
-  const url = match[0].replace(/[)>.,]+$/, '');
-  const response = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
+  const originalUrl = match[0].replace(/[)>.,]+$/, '');
+  let canonicalUrl = originalUrl;
+  try {
+    // Розгортаємо vt./vm. share-link перед викликом oEmbed.
+    const redirect = await fetch(originalUrl, { method: 'GET', redirect: 'follow' });
+    canonicalUrl = redirect.url || originalUrl;
+  } catch (error) {
+    console.error('[music] TikTok short URL expand failed:', safeError(error));
+  }
+
+  let response = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(canonicalUrl)}`);
+  if (!response.ok && canonicalUrl !== originalUrl) {
+    response = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(originalUrl)}`);
+  }
   if (!response.ok) throw new Error(`TikTok oEmbed failed with status ${response.status}`);
   const data = await response.json();
   const soundMatch = String(data?.html || '').match(/title="♬ ([^"]+)"|>♬ ([^<]+)</i);
   const soundName = soundMatch?.[1] || soundMatch?.[2] || '';
   const query = soundName.replace(/^original sound\s*[-–—]\s*/i, '').trim() || String(data?.title || '').slice(0, 120);
   const catalog = query ? await searchMusicCatalog(query, env) : null;
-  return { kind: 'tiktok', tiktokUrl: url, title: data?.title || '', author: data?.author_name || '', soundName, thumbnailUrl: data?.thumbnail_url || '', catalog };
+  return { kind: 'tiktok', tiktokUrl: canonicalUrl, title: data?.title || '', author: data?.author_name || '', soundName, thumbnailUrl: data?.thumbnail_url || '', catalog };
 }
 
 async function searchMusicCatalog(query, env) {

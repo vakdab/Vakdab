@@ -323,3 +323,12 @@ test('music recognition accepts Telegram media, TikTok URLs and catalog searches
   assert.match(workerSource, /itunes\.apple\.com\/search/);
   assert.match(workerSource, /formatMusicResult/);
 });
+
+
+test('music flow expands TikTok short links and does not fall back to Luna on failure', () => {
+  const workerSource = readFileSync(new URL('../vakdab-telegram-bot/worker.js', import.meta.url), 'utf8');
+  assert.match(workerSource, /vt\\\./);
+  assert.match(workerSource, /redirect: 'follow'/);
+  assert.match(workerSource, /const keepMusicMode = getState\(chatId\)\.screen === 'waiting_for_music'/);
+  assert.match(workerSource, /getState\(chatId\)\.screen = keepMusicMode \? 'waiting_for_music' : 'home'/);
+});
