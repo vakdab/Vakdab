@@ -32,7 +32,6 @@ const SUMMARY_TRIGGER_MESSAGES = 60;
 const SUMMARY_KEEP_RECENT = 30; // скільки останніх повідомлень залишаємо без згортання
 
 const PROFILE_ARRAY_MAX_ITEMS = 25;
-const MAX_VISIBLE_MESSAGE_IDS = 160;
 
 const userStates = new Map();
 let popularCache = null;
@@ -148,10 +147,8 @@ async function handleMessage(message, env) {
   }
 
   if (/^\/clear(?:@\w+)?(?:\s|$)/i.test(text)) {
-    const removed = await clearVisibleConversation(chatId, memoryKey, env);
-    await sendMessage(chatId, removed
-      ? `Готово. Видимі повідомлення прибрані (${removed}). Пам’ять про тебе залишилася 🙂`
-      : 'Готово. Видимих повідомлень для очищення не знайшла. Пам’ять про тебе залишилася 🙂', {}, env);
+    // Команда теж уже записана в visible-індексі вище, тому зникне разом із чатом.
+    await clearVisibleConversation(chatId, memoryKey, env);
     return;
   }
 
@@ -808,28 +805,47 @@ async function clearUserHistory(memoryKey, env) {
 async function rememberVisibleMessage(memoryKey, messageId, env) {
   if (!env.MAKIMA_MEMORY || !messageId) return;
   try {
-    const raw = await env.MAKIMA_MEMORY.get(`visible:${memoryKey}`);
-    const current = raw ? JSON.parse(raw) : [];
-    const ids = Array.isArray(current) ? current.filter(Number.isInteger) : [];
-    ids.push(Number(messageId));
-    const unique = [...new Set(ids)].slice(-MAX_VISIBLE_MESSAGE_IDS);
-    await env.MAKIMA_MEMORY.put(`visible:${memoryKey}`, JSON.stringify(unique));
+    // Один KV-ключ на повідомлення: індекс не обмежений останніми 160 записами.
+    await env.MAKIMA_MEMORY.put(`visible:${memoryKey}:${Number(messageId)}`, '1');
   } catch (error) {
     console.error('[visible] message tracking failed:', safeError(error));
   }
 }
 
-async function clearVisibleConversation(chatId, memoryKey, env) {
-  if (!env.MAKIMA_MEMORY) return 0;
-  let ids = [];
+async function listVisibleMessageIds(memoryKey, env) {
+  if (!env.MAKIMA_MEMORY) return [];
+  const ids = new Set();
+  let cursor = undefined;
   try {
-    const raw = await env.MAKIMA_MEMORY.get(`visible:${memoryKey}`);
-    const parsed = raw ? JSON.parse(raw) : [];
-    ids = Array.isArray(parsed) ? [...new Set(parsed.map(Number).filter(Number.isInteger))] : [];
+    do {
+      const page = await env.MAKIMA_MEMORY.list({ prefix: `visible:${memoryKey}:`, limit: 1000, ...(cursor ? { cursor } : {}) });
+      for (const key of page?.keys || []) {
+        const messageId = Number(String(key.name || '').split(':').pop());
+        if (Number.isInteger(messageId)) ids.add(messageId);
+      }
+      cursor = page?.list_complete ? undefined : page?.cursor;
+    } while (cursor);
   } catch (error) {
-    console.error('[visible] message list read failed:', safeError(error));
+    console.error('[visible] message index read failed:', safeError(error));
   }
 
+  // Сумісність зі старим форматом одного масиву visible:<memoryKey>.
+  try {
+    const legacyRaw = await env.MAKIMA_MEMORY.get(`visible:${memoryKey}`);
+    const legacy = legacyRaw ? JSON.parse(legacyRaw) : [];
+    for (const messageId of Array.isArray(legacy) ? legacy : []) {
+      const numericId = Number(messageId);
+      if (Number.isInteger(numericId)) ids.add(numericId);
+    }
+  } catch (error) {
+    console.error('[visible] legacy message index read failed:', safeError(error));
+  }
+  return [...ids];
+}
+
+async function clearVisibleConversation(chatId, memoryKey, env) {
+  if (!env.MAKIMA_MEMORY) return 0;
+  const ids = await listVisibleMessageIds(memoryKey, env);
   let removed = 0;
   for (const messageId of ids) {
     try {
@@ -838,12 +854,17 @@ async function clearVisibleConversation(chatId, memoryKey, env) {
     } catch (error) {
       console.error(`[visible] delete ${messageId} failed:`, safeError(error));
     }
+    try {
+      await env.MAKIMA_MEMORY.delete(`visible:${memoryKey}:${messageId}`);
+    } catch (error) {
+      console.error(`[visible] index delete ${messageId} failed:`, safeError(error));
+    }
   }
 
   try {
     await env.MAKIMA_MEMORY.delete(`visible:${memoryKey}`);
   } catch (error) {
-    console.error('[visible] message list clear failed:', safeError(error));
+    console.error('[visible] legacy message list clear failed:', safeError(error));
   }
   return removed;
 }
