@@ -1143,7 +1143,7 @@ async function handleCallbackQuery(callback, env) {
   try {
     if (data === 'subscription:check') {
       if (!(await isChannelSubscriber(callback.from?.id, env))) {
-        await answerCallback(callbackId, 'Підписку ще не знайдено. Підпишись і натисни ще раз.', env, { show_alert: true });
+        await answerCallback(callbackId, 'Підписка не підтверджена', env, { show_alert: true });
         return;
       }
       await answerCallback(callbackId, '', env);
@@ -1310,13 +1310,14 @@ async function handleCallbackQuery(callback, env) {
 }
 
 function subscriptionGateText() {
-  return '<b>Щоб користуватися ботом, спочатку підпишись на наш канал.</b>\n\nПісля підписки натисни «Я підписався — перевірити». Якщо кнопка не спрацює одразу, відкрий канал у Telegram і повтори перевірку.';
+  // Telegram потребує текст для sendMessage, тому використовуємо невидимий символ — користувач бачить лише кнопки.
+  return '\u200B';
 }
 
 function subscriptionKeyboard() {
   return { inline_keyboard: [
     [{ text: 'Підписатися на канал', url: REQUIRED_CHANNEL_URL }],
-    [{ text: 'Я підписався — перевірити', callback_data: 'subscription:check' }]
+    [{ text: 'Підписався(лась)', callback_data: 'subscription:check' }]
   ] };
 }
 
