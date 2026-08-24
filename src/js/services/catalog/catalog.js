@@ -1,4 +1,4 @@
-import { HIKKA_API, HIKKA_PROXY_URL } from '../../config/constants.js?v=20260822-home-genres-v64';
+import { HIKKA_API, HIKKA_PROXY_URL } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 import { safeQueryAll } from '../../utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from '../../utils/image.js';
 import { debugLog } from '../../utils/debug.js';
@@ -10,7 +10,7 @@ import {
     playerPageCurrentDub, playerPageCurrentSeason, playerPageCurrentSource,
     buildBottomSheetData, buildEpisodeViews, buildSeasonRow,
     showToast, updateFilterChip, updateSourceChip
-} from '../../legacy/app-legacy.js?v=20260822-home-genres-v64';
+} from '../../legacy/app-legacy.js?v=20260824-settings-redesign-v1';
 
         export const CATALOG_POSTER_FALLBACK = './assets/icons/android-chrome-512x512.png';
         export function normalizeAnimeUrl(href = '') {

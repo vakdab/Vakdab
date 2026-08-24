@@ -1,4 +1,4 @@
-import { PROXY_URL } from '../config/constants.js?v=20260822-home-genres-v64';
+import { PROXY_URL } from '../config/constants.js?v=20260824-settings-redesign-v1';
 
 export function getProxyUrl(url, forceUA = 'desktop') {
     if (!url) return null;

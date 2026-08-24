@@ -1,23 +1,23 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
-import { GENRE_MAP } from '../../config/constants.js?v=20260822-home-genres-v64';
-import { Router } from '../../core/compat/router.js?v=20260822-home-genres-v64';
-import { Storage } from '../../core/compat/storage.js?v=20260822-home-genres-v64';
-import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260822-home-genres-v64';
-import { DailyStats } from '../../components/rating/ratingSystem.js?v=20260822-home-genres-v64';
+import { GENRE_MAP } from '../../config/constants.js?v=20260824-settings-redesign-v1';
+import { Router } from '../../core/compat/router.js?v=20260824-settings-redesign-v1';
+import { Storage } from '../../core/compat/storage.js?v=20260824-settings-redesign-v1';
+import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260824-settings-redesign-v1';
+import { DailyStats } from '../../components/rating/ratingSystem.js?v=20260824-settings-redesign-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, searchHikkaAllTitles, switchProviderSource
-} from '../../services/catalog/catalog.js?v=20260822-home-genres-v64';
+} from '../../services/catalog/catalog.js?v=20260824-settings-redesign-v1';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
-} from '../home/homeLegacy.js?v=20260822-home-genres-v64';
-import { renderProfilePage } from '../profile/profileLegacy.js?v=20260822-home-genres-v64';
+} from '../home/homeLegacy.js?v=20260824-settings-redesign-v1';
+import { renderProfilePage } from '../profile/profileLegacy.js?v=20260824-settings-redesign-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260822-home-genres-v64';
-import { loadFeature } from '../../core/feature-loader.js?v=20260822-home-genres-v64';
+} from '../../legacy/app-legacy.js?v=20260824-settings-redesign-v1';
+import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-redesign-v1';
 
         // ====================================================================
         //  ПЛЕЄР

@@ -1,4 +1,4 @@
-import { HIKKA_API } from '../../config/constants.js?v=20260822-home-genres-v64';
+import { HIKKA_API } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 import { getJson } from '../api.js';
 
 export const HIKKA_ENDPOINTS = Object.freeze({

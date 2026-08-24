@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260822-home-genres-v64';
+} from '../../legacy/app-legacy.js?v=20260824-settings-redesign-v1';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 
@@ -187,7 +187,7 @@ import {
             const canResetPassword = authed && Auth.hasPasswordProvider();
 
             return `
-            <div class="settings-card" style="opacity:${authed || guest ? 1 : 0.6};pointer-events:${authed || guest ? 'auto' : 'none'};">
+            <div class="settings-card${authed || guest ? '' : ' settings-card--disabled'}">
               <div class="settings-card-left">
                 <i class="fas fa-id-badge"></i>
                 <div>
@@ -210,7 +210,7 @@ import {
             </div>` : ''}
 
             <div class="settings-section-title">Цей пристрій</div>
-            <div class="settings-card" style="opacity:0.6;pointer-events:none;">
+            <div class="settings-card settings-card--disabled">
               <div class="settings-card-left">
                 <i class="fas fa-desktop"></i>
                 <div>
@@ -299,7 +299,7 @@ import {
             </div>
 
             <div class="settings-section-title">Про сайт</div>
-            <div class="settings-card" style="opacity:0.6;pointer-events:none;">
+            <div class="settings-card settings-card--disabled">
               <div class="settings-card-left">
                 <i class="fas fa-globe"></i>
                 <div>
@@ -307,9 +307,9 @@ import {
                   <div class="desc">hikka.io + mikai.me</div>
                 </div>
               </div>
-              <span style="font-size:0.75rem;color:var(--text-muted);"><i class="fas fa-check"></i></span>
+              <span class="settings-meta-note"><i class="fas fa-check"></i></span>
             </div>
-            <div class="settings-card" style="opacity:0.6;pointer-events:none;">
+            <div class="settings-card settings-card--disabled">
               <div class="settings-card-left">
                 <i class="fas fa-language"></i>
                 <div>
@@ -317,7 +317,7 @@ import {
                   <div class="desc">Українська (завжди)</div>
                 </div>
               </div>
-              <span style="font-size:0.75rem;color:var(--text-muted);"><i class="fas fa-flag"></i></span>
+              <span class="settings-meta-note"><i class="fas fa-flag"></i></span>
             </div>
           `;
         }
@@ -764,7 +764,12 @@ import {
             const profile = getProfile();
             const isDark = Storage.getTheme() === 'dark';
             container.innerHTML = `
-            <div class="settings-page-header"><h2>Налаштування</h2></div>
+            <div class="settings-page-header">
+              <div class="settings-page-heading">
+                <h2>Налаштування</h2>
+                <p class="settings-page-subtitle">Персоналізуйте профіль і застосунок</p>
+              </div>
+            </div>
             <div class="settings-tabs" id="settingsTabs">
               ${SETTINGS_TABS.map(t => `
                 <button class="settings-tab${settingsState.tab === t.id ? ' active' : ''}" data-tab="${t.id}"><i class="fas ${t.icon}"></i> ${t.label}</button>

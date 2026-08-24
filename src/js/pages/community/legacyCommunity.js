@@ -1,12 +1,12 @@
 import { arrayRemove, arrayUnion, addDoc, collection, deleteDoc, doc, getDoc, limit, onSnapshot, query, serverTimestamp, setDoc, updateDoc } from '../../config/firebase.js';
-import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js?v=20260822-home-genres-v64';
+import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 import { db, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import {
     ACHIEVEMENTS, Auth, DailyStats, Router, calcTotalXP, escapeHtml,
     getLevel, isGifUrl, openPlayerPage, profileMediaMarkup, showToast
-} from '../../legacy/app-legacy.js?v=20260822-home-genres-v64';
-import { getProfile } from '../settings/settingsLegacy.js?v=20260822-home-genres-v64';
-import { loadHikkaDetail, searchHikka } from '../../services/catalog/catalog.js?v=20260822-home-genres-v64';
+} from '../../legacy/app-legacy.js?v=20260824-settings-redesign-v1';
+import { getProfile } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
+import { loadHikkaDetail, searchHikka } from '../../services/catalog/catalog.js?v=20260824-settings-redesign-v1';
 
         function _renderReplyBanner() {
             const wrap = document.getElementById('comReplyBannerWrap');

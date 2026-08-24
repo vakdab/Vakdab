@@ -1,12 +1,12 @@
-import { HIKKA_API } from '../../config/constants.js?v=20260822-home-genres-v64';
-import { loadFeature } from '../feature-loader.js?v=20260822-home-genres-v64';
+import { HIKKA_API } from '../../config/constants.js?v=20260824-settings-redesign-v1';
+import { loadFeature } from '../feature-loader.js?v=20260824-settings-redesign-v1';
 import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
     initRatingPage, loadAndDisplayGenreSections, loadMangaReader,
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
     renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260822-home-genres-v64';
+} from '../../legacy/app-legacy.js?v=20260824-settings-redesign-v1';
 
         export const Router = {
             currentRoute: 'main',

@@ -1,5 +1,5 @@
 /* VakDab style entrypoint: existing folders are the single source of truth. */
-@import url('./base/reset.css?v=20260822-home-genres-v64');
+@import url('./base/reset.css?v=20260824-settings-redesign-v1');
 @import url('./base/variables.css');
 @import url('./base/typography.css');
 @import url('./themes/light.css');
@@ -21,26 +21,27 @@
 @import url('./components/pagination.css');
 @import url('./components/loader.css');
 @import url('./pages/search.css');
-@import url('./pages/profile.css?v=20260822-home-genres-v64');
-@import url('./pages/settings.css?v=20260822-home-genres-v64');
+@import url('./pages/profile.css?v=20260824-settings-redesign-v1');
+@import url('./pages/settings.css?v=20260824-settings-redesign-v1');
 @import url('./pages/genre.css');
 @import url('./pages/genres.css');
 @import url('./pages/schedule.css');
 @import url('./pages/filter.css');
-@import url('./pages/stickers.css?v=20260822-home-genres-v64');
-@import url('./pages/manga.css?v=20260822-home-genres-v64');
+@import url('./pages/stickers.css?v=20260824-settings-redesign-v1');
+@import url('./pages/manga.css?v=20260824-settings-redesign-v1');
 @import url('./player/player-modal.css');
 @import url('./player/anime-info.css');
 @import url('./player/video-player.css');
 @import url('./player/episodes.css');
-@import url('./community/chat.css?v=20260822-home-genres-v64');
+@import url('./community/chat.css?v=20260824-settings-redesign-v1');
 @import url('./community/group.css');
-@import url('./community/modern.css?v=20260822-home-genres-v64');
-@import url('./pages/main.css?v=20260822-home-genres-v64');
-@import url('./player/player-polish.css?v=20260822-home-genres-v64');
-@import url('./player/video-overlay.css?v=20260822-home-genres-v64');
-@import url('./pages/design-polish.css?v=20260822-home-genres-v64');
-@import url('./pages/ux-2026.css?v=20260822-home-genres-v64');
+@import url('./community/modern.css?v=20260824-settings-redesign-v1');
+@import url('./pages/main.css?v=20260824-settings-redesign-v1');
+@import url('./player/player-polish.css?v=20260824-settings-redesign-v1');
+@import url('./player/video-overlay.css?v=20260824-settings-redesign-v1');
+@import url('./pages/design-polish.css?v=20260824-settings-redesign-v1');
+@import url('./pages/ux-2026.css?v=20260824-settings-redesign-v1');
+@import url('./pages/settings-2026.css?v=20260824-settings-redesign-v1');
 
 /* Community hierarchy priority overrides */
 .modern-community-category-grid { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 12px !important; margin: 0 0 20px !important; }

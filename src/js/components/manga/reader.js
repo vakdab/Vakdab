@@ -1,5 +1,5 @@
-import { DEFAULT_CHAPTER_URL, getChapterFrames, getReaderBackgroundData, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/manga.js?v=20260822-home-genres-v64';
-import { buildPageMarkup, escapeHtml, normalizeChapterName, pageLabel } from './pages.js?v=20260822-home-genres-v64';
+import { DEFAULT_CHAPTER_URL, getChapterFrames, getReaderBackgroundData, pageImageFallbackUrl, pageImageUrl, parseChapterUrl } from '../../services/api/manga.js?v=20260824-settings-redesign-v1';
+import { buildPageMarkup, escapeHtml, normalizeChapterName, pageLabel } from './pages.js?v=20260824-settings-redesign-v1';
 import { debugLog } from '../../utils/debug.js';
 import { createPagePreloader } from './preload.js';
 

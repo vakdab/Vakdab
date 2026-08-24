@@ -16,7 +16,7 @@ export function bootstrap() {
         }
     });
     startGlobalEvents();
-    bootstrapPromise = import('../legacy/app-legacy.js?v=20260822-home-genres-v64')
+    bootstrapPromise = import('../legacy/app-legacy.js?v=20260824-settings-redesign-v1')
         .then(module => {
             window.VakDabLegacy = module;
             // Expose compatibility services only after the legacy module has fully evaluated.
