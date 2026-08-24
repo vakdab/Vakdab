@@ -807,7 +807,7 @@ async function searchMusicCatalog(query, env) {
   }
 }
 
-async function sendMusicPreviewIfAvailable(chatId, memoryKey, result, env) {
+async function sendMusicPreviewIfAvailable(chatId, memoryKey, result, env, linkTrack) {
   let track = musicPreviewTrack(result);
   if (!track && result?.kind === 'recognized' && result.artist && result.title) {
     try {
@@ -818,11 +818,15 @@ async function sendMusicPreviewIfAvailable(chatId, memoryKey, result, env) {
     }
   }
   if (!track?.previewUrl) return;
+  // linkTrack (коли є) несе точний trackViewUrl обраного варіанту; інакше
+  // намагаємось узяти посилання прямо з track, знайденого вище.
+  const fullVersionUrl = linkTrack?.trackViewUrl || linkTrack?.collectionViewUrl || track?.trackViewUrl || track?.collectionViewUrl || '';
   try {
     const response = await sendAudioBuffer(chatId, track.previewUrl, {
       title: truncate(track.trackName || 'Коротке прев’ю', 64),
       performer: truncate(track.artistName || 'Невідомий виконавець', 64),
-      caption: 'Коротке офіційне прев’ю треку.'
+      caption: 'Коротке офіційне прев’ю треку.',
+      replyMarkup: fullVersionUrl ? { inline_keyboard: [[{ text: '🎧 Слухати повну версію', url: fullVersionUrl }]] } : null
     }, env);
     await rememberVisibleMessage(memoryKey, response?.result?.message_id, env);
     if (!response?.ok) console.error('[music] sendAudio preview failed');
@@ -844,6 +848,7 @@ async function sendAudioBuffer(chatId, previewUrl, details, env) {
   if (details?.title) form.set('title', details.title);
   if (details?.performer) form.set('performer', details.performer);
   if (details?.caption) form.set('caption', details.caption);
+  if (details?.replyMarkup) form.set('reply_markup', JSON.stringify(details.replyMarkup));
   const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendAudio`, { method: 'POST', body: form });
   const data = await response.json();
   if (!response.ok || !data.ok) console.error(`[telegram] sendAudio failed with status ${response.status}`);
@@ -1291,8 +1296,8 @@ async function handleCallbackQuery(callback, env) {
         return;
       }
       const title = `${track.artistName || 'Невідомий виконавець'} — ${track.trackName || 'Невідома назва'}`;
-      await replaceMessage(chatId, messageId, `<b>Обрано трек 🎵</b>\n\n${escapeHtml(title)}${track.trackViewUrl ? `\n\n<a href="${escapeHtml(track.trackViewUrl)}">Відкрити повну версію</a>` : ''}\n\nНадсилаю доступне коротке preview.`, false, {}, env);
-      await sendMusicPreviewIfAvailable(chatId, getMemoryKey(callback.from), { kind: 'catalog', results: [track] }, env);
+      await replaceMessage(chatId, messageId, `<b>Обрано трек 🎵</b>\n\n${escapeHtml(title)}\n\nНадсилаю доступне коротке офіційне прев'ю. Повну версію — кнопкою нижче.`, false, { reply_markup: fullTrackKeyboard(track) }, env);
+      await sendMusicPreviewIfAvailable(chatId, getMemoryKey(callback.from), { kind: 'catalog', results: [track] }, env, track);
       return;
     }
 
@@ -1578,6 +1583,17 @@ function scheduleWebAppKeyboard() {
 
 function backHomeKeyboard() {
   return { inline_keyboard: [[{ text: 'Головна', callback_data: 'home' }]] };
+}
+
+// Deezer/iTunes надають лише офіційний 30-сек. preview (це обмеження їхніх
+// публічних API, не наше) — тож "повна версія" завжди йде окремою кнопкою на
+// легальний стрімінговий сервіс, а не аудіофайлом усередині Telegram.
+function fullTrackKeyboard(track) {
+  const rows = [];
+  const url = track?.trackViewUrl || track?.collectionViewUrl || '';
+  if (url) rows.push([{ text: '🎧 Слухати повну версію', url }]);
+  rows.push([{ text: 'Головна', callback_data: 'home' }]);
+  return { inline_keyboard: rows };
 }
 
 async function saveMusicCandidates(chatId, candidates, env) {
