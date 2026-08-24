@@ -281,7 +281,7 @@ test('private statistics report presents users, reports and bans without user ID
     reportedUsers: [{ username: 'bad_user', report_count: 18, last_reason: 'spam', user_id: '987654321' }],
     bans: [{ user_id: '987654321', banned_until: Date.now() + 86400000, report_count: 18, last_reason: 'spam' }]
   });
-  assert.match(report, /Усі користувачі: <b>1<\/b>/);
+  assert.match(report, /Користувачів у базі: <b>1<\/b>/);
   assert.match(report, /@example_user/);
   assert.match(report, /@bad_user/);
   assert.match(report, /18\/18/);

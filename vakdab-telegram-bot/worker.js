@@ -284,16 +284,16 @@ function formatBotUsageReport(result) {
   const bans = Array.isArray(result.bans) ? result.bans : [];
   const lines = [
     '<b>Статистика VakDabBot</b>',
-    '',
-    `Усі користувачі: <b>${Number(result.total || 0)}</b>`,
-    `У базі скарг: <b>${reportedUsers.length}</b>`,
-    `Активних блокувань: <b>${bans.filter(ban => Number(ban.banned_until) > Date.now()).length}</b>`,
+    '━━━━━━━━━━━━━━━━',
+    `Користувачів у базі: <b>${Number(result.total || 0)}</b>`,
+    `Користувачів зі скаргами: <b>${reportedUsers.length}</b>`,
+    `Активних банів: <b>${bans.filter(ban => Number(ban.banned_until) > Date.now()).length}</b>`,
     ''
   ];
   if (!users.length) {
     lines.push('Ще немає збережених взаємодій.');
   } else {
-    lines.push('<b>Користувачі (список зберігається постійно)</b>');
+    lines.push('<b>КОРИСТУВАЧІ</b>');
     for (const [index, user] of users.slice(0, 25).entries()) {
       const username = String(user.username || '').trim();
       const displayName = [user.first_name, user.last_name].filter(Boolean).map(String).join(' ').trim();
@@ -303,7 +303,7 @@ function formatBotUsageReport(result) {
     if (users.length > 25) lines.push(`… та ще ${users.length - 25}. У базі збережено всіх.`);
   }
   if (reportedUsers.length) {
-    lines.push('', '<b>Користувачі зі скаргами</b>');
+    lines.push('', '━━━━━━━━━━━━━━━━', '<b>СКАРГИ</b>');
     for (const [index, user] of reportedUsers.slice(0, 25).entries()) {
       const username = String(user.username || '').trim();
       const displayName = [user.first_name, user.last_name].filter(Boolean).map(String).join(' ').trim();
@@ -314,13 +314,13 @@ function formatBotUsageReport(result) {
   }
   const activeBans = bans.filter(ban => Number(ban.banned_until) > Date.now());
   if (activeBans.length) {
-    lines.push('', '<b>Заблоковані в чат-рулетці</b>');
+    lines.push('', '━━━━━━━━━━━━━━━━', '<b>БЛОКУВАННЯ ЧАТ-РУЛЕТКИ</b>');
     for (const ban of activeBans.slice(0, 25)) {
       const reason = REPORT_REASONS[ban.last_reason] || REPORT_REASONS.other;
       lines.push(`ID ${escapeHtml(ban.user_id)} — до ${formatUsageDate(ban.banned_until)}, ${Number(ban.report_count || 0)} скарг, ${escapeHtml(reason)}`);
     }
   }
-  return lines.join('\\n').slice(0, 3900);
+  return lines.join('\n').slice(0, 3900);
 }
 
 function formatUsageDate(timestamp) {
