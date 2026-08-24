@@ -20,9 +20,7 @@ import {
   isWarRequest,
   formatLunaMemory,
   buildRecentHistory,
-  repairMojibake,
-  musicPreviewTrack,
-  musicChoiceKeyboard
+  repairMojibake
 } from '../vakdab-telegram-bot/worker.js';
 
 test('Groq configuration takes priority when both providers are configured', () => {
@@ -312,34 +310,4 @@ test('Luna routes Telegram photos through a multimodal vision request', () => {
   assert.match(workerSource, /type: 'image_url'/);
   assert.match(workerSource, /data:image\/jpeg;base64/);
   assert.match(workerSource, /const caption = String\(message\.caption \|\| ''\)/);
-});
-
-
-test('music recognition uses only a text title or artist and builds selectable candidates', () => {
-  const workerSource = readFileSync(new URL('../vakdab-telegram-bot/worker.js', import.meta.url), 'utf8');
-  assert.match(workerSource, /music\|shazam/);
-  assert.match(workerSource, /handleMusicTitle/);
-  assert.match(workerSource, /itunes\.apple\.com\/search/);
-  assert.match(workerSource, /api\.deezer\.com\/search/);
-  assert.match(workerSource, /musicChoiceKeyboard/);
-  assert.match(workerSource, /music:pick:/);
-  assert.match(workerSource, /sendAudioBuffer/);
-  assert.doesNotMatch(workerSource, /TIKTOK_RESOLVER_API|recognizeTikTokUrl|recognizeTelegramMedia|getMusicMedia/);
-});
-
-test('music preview selection uses only an available catalog preview', () => {
-  assert.equal(musicPreviewTrack({ kind: 'catalog', results: [{ trackName: 'No preview' }, { trackName: 'Preview', previewUrl: 'https://example.com/preview.m4a' }] }).trackName, 'Preview');
-  assert.equal(musicPreviewTrack({ kind: 'recognized', artist: 'Artist', title: 'Song' }), null);
-});
-
-test('music choice keyboard keeps callback data short and formats the recognition result', () => {
-  const candidates = [
-    { artistName: 'Artist One', trackName: 'Song One', previewUrl: 'https://example.com/one.m4a' },
-    { artistName: 'Artist Two', trackName: 'Song Two', previewUrl: 'https://example.com/two.m4a' }
-  ];
-  const keyboard = musicChoiceKeyboard(candidates);
-  assert.equal(keyboard.inline_keyboard[0][0].callback_data, 'music:pick:0');
-  assert.equal(keyboard.inline_keyboard[1][0].callback_data, 'music:pick:1');
-  assert.equal(keyboard.inline_keyboard.at(-1)[0].callback_data, 'home');
-  assert.equal(keyboard.inline_keyboard.length, 3);
 });
