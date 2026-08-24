@@ -1310,8 +1310,8 @@ async function handleCallbackQuery(callback, env) {
 }
 
 function subscriptionGateText() {
-  // Telegram потребує текст для sendMessage, тому використовуємо невидимий символ — користувач бачить лише кнопки.
-  return '\u200B';
+  // Telegram потребує непорожній text для sendMessage; Braille Blank візуально не відображається.
+  return '\u2800';
 }
 
 function subscriptionKeyboard() {
@@ -1323,17 +1323,22 @@ function subscriptionKeyboard() {
 
 async function isChannelSubscriber(userId, env) {
   if (!userId) return false;
-  const result = await telegram('getChatMember', {
-    chat_id: REQUIRED_CHANNEL_USERNAME,
-    user_id: userId
-  }, env);
-  if (!result?.ok) {
-    console.error('[subscription] getChatMember failed');
+  try {
+    const result = await telegram('getChatMember', {
+      chat_id: REQUIRED_CHANNEL_USERNAME,
+      user_id: userId
+    }, env);
+    if (!result?.ok) {
+      console.error('[subscription] getChatMember failed');
+      return false;
+    }
+    const status = result.result?.status;
+    return status === 'creator' || status === 'administrator' || status === 'member'
+      || (status === 'restricted' && result.result?.is_member === true);
+  } catch (error) {
+    console.error('[subscription] getChatMember request failed:', safeError(error));
     return false;
   }
-  const status = result.result?.status;
-  return status === 'creator' || status === 'administrator' || status === 'member'
-    || (status === 'restricted' && result.result?.is_member === true);
 }
 
 function getState(chatId) {

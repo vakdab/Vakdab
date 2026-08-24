@@ -322,5 +322,6 @@ test('start flow gates the main menu behind @vakluna subscription', () => {
   assert.match(workerSource, /await sendTrackedMessage\(chatId, memoryKey, subscriptionGateText\(\)/);
   assert.match(workerSource, /Підписатися на канал/);
   assert.match(workerSource, /Підписався\(лась\)/);
-  assert.match(workerSource, /return '\\u200B'/);
+  assert.match(workerSource, /return '\\u2800'/);
+  assert.match(workerSource, /getChatMember request failed/);
 });
