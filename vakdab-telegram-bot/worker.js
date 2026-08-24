@@ -1310,8 +1310,8 @@ async function handleCallbackQuery(callback, env) {
 }
 
 function subscriptionGateText() {
-  // Telegram потребує непорожній text для sendMessage; Word Joiner візуально не відображається.
-  return '\u2060';
+  // Telegram потребує непорожній text для sendMessage; zero-width entity візуально не відображається.
+  return '&#8203;';
 }
 
 function subscriptionKeyboard() {
