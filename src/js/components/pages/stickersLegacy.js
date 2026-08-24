@@ -47,6 +47,25 @@ import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260822-home-genres-v
             return `<span class="sticker-svg-visual" style="color:${escapeHtml(safeColor)};display:block;width:100%;height:100%;">${stickerFaceSvg(s ? s.variant : 0)}</span>`;
         }
 
+        function resolveStickerByKey(data, key) {
+            const safeKey = String(key || '');
+            const singles = Array.isArray(data?.singles) ? data.singles : [];
+            const direct = singles.find(single => stickerKeyFor(single) === safeKey);
+            if (direct) return direct;
+            if (safeKey.startsWith('v:')) {
+                const variant = Number(safeKey.slice(2));
+                if (!Number.isNaN(variant)) return { variant };
+                return null;
+            }
+            if (safeKey.startsWith('img:')) return singles.find(single => `img:${single.id}` === safeKey) || null;
+            return null;
+        }
+
+        export function renderStickerFaceByKey(data, key) {
+            const sticker = resolveStickerByKey(data, key);
+            return sticker ? renderStickerVisual(sticker, data?.colors?.[key]) : '';
+        }
+
         let _everyoneStickersCache = null;
         async function fetchEveryoneStickers() {
             if (_everyoneStickersCache) return _everyoneStickersCache;
@@ -412,6 +431,7 @@ import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260822-home-genres-v
                         if (!s) return '';
                         const sKey = stickerKeyFor(s);
                         const isMedal = d.medals.includes(sKey);
+                        const isNickBadge = d.nickBadge === sKey;
                         return `
                             <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:1.2rem;">
                                 <div style="width:56px;height:56px;background:var(--tag-bg);border-radius:14px;padding:${s.image ? '0' : '0.6rem'};flex-shrink:0;overflow:hidden;">${renderStickerVisual(s)}</div>
@@ -422,6 +442,7 @@ import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260822-home-genres-v
                                 ${s.image ? '<button class="sticker-action-btn" data-act="remove-bg" data-single-id="' + s.id + '">' + sIconRow('fa-wand-magic-sparkles', 'Видалити фон AI') + '</button>' : ''}
                                 <button class="sticker-action-btn" data-act="favorite" data-single-id="${s.id}">${sIconRow(s.favorite ? 'fa-star' : 'fa-star', s.favorite ? 'Прибрати з улюблених' : 'Додати в улюблені')}</button>
                                 <button class="sticker-action-btn" data-act="medal" data-single-id="${s.id}">${sIconRow('fa-medal', isMedal ? 'Прибрати медаль' : 'Додати як медаль')}</button>
+                                <button class="sticker-action-btn" data-act="nick-badge" data-single-id="${s.id}">${sIconRow('fa-tag', isNickBadge ? 'Зняти біля ніку' : 'Встановити біля ніку')}</button>
                                 <button class="sticker-action-btn" data-act="delete" data-single-id="${s.id}" style="border-style:dashed;">${sIconRow('fa-trash', 'Видалити наліпку')}</button>
                             </div>
                         `;
@@ -695,6 +716,14 @@ import { uploadBlobToCloudinary } from './homeLegacy.js?v=20260822-home-genres-v
                             }
                             saveData(cur);
                             showToast('Медалі оновлено');
+                        } else if (act === 'nick-badge') {
+                            const s = cur.singles.find(x => x.id === btn.dataset.singleId);
+                            if (s) {
+                                const sKey = stickerKeyFor(s);
+                                cur.nickBadge = cur.nickBadge === sKey ? null : sKey;
+                                saveData(cur);
+                                showToast(cur.nickBadge ? 'Наліпку встановлено біля ніку' : 'Наліпку біля ніку знято');
+                            }
                         } else if (act === 'delete') {
                             cur.singles = cur.singles.filter(x => x.id !== btn.dataset.singleId);
                             saveData(cur);

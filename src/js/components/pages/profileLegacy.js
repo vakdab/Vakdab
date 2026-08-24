@@ -5,6 +5,8 @@ import {
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
 } from '../../legacy/app-legacy.js?v=20260822-home-genres-v64';
+import { Storage } from '../../core/compat/storage.js?v=20260822-home-genres-v64';
+import { renderStickerFaceByKey } from './stickersLegacy.js?v=20260822-home-genres-v64';
 import { getProfile, saveProfile, getProfileStats, getAchievements, getProfileDisplayName, getProfileHandle } from './settingsLegacy.js?v=20260822-home-genres-v64';
 import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260822-home-genres-v64';
 
@@ -201,6 +203,7 @@ export function renderProfilePage() {
             const profileNickname = escapeHtml(getProfileDisplayName(profile));
             const profileHandle = escapeHtml(getProfileHandle(profile));
             const profileBioText = escapeHtml(profile.bio);
+            const stickerData = Storage.getStickers();
             container.innerHTML = `
             <div class="profile-wrapper">
               <div class="${bannerClass}">
@@ -248,6 +251,7 @@ export function renderProfilePage() {
                 </div>
                 <div class="profile-nick-row">
                   <span class="profile-nick" id="profileNickText">${profileNickname}</span>
+                  ${stickerData.nickBadge ? `<span class="profile-nick-badge" title="Наліпка профілю" aria-label="Наліпка профілю">${renderStickerFaceByKey(stickerData, stickerData.nickBadge)}</span>` : ''}
                 </div>
                 <div class="profile-meta">
                   <span>${profileHandle}</span>

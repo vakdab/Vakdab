@@ -62,7 +62,7 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
         //  СХОВИЩЕ
         // ====================================================================
         export function getDefaultStickers() {
-            return { singles: [], sets: [], medals: [], colors: {} };
+            return { singles: [], sets: [], nickBadge: null, medals: [], colors: {} };
         }
 
         // ====================================================================
