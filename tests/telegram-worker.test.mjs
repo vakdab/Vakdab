@@ -81,6 +81,9 @@ test('Luna commands clear visible chat without using the memory wipe commands', 
   assert.doesNotMatch(workerSource, /Пам’ять про тебе залишилася/);
   assert.match(workerSource, /if \(\/\^\\\/luna/);
   assert.match(workerSource, /Луна активна/);
+  assert.match(workerSource, /\{ command: 'start'/);
+  assert.match(workerSource, /\{ command: 'next'/);
+  assert.match(workerSource, /\{ command: 'report'/);
   assert.match(workerSource, /await sendTrackedMessage\(chatId, memoryKey, escapeHtml\(responseText\), \{\}, env\)/);
   assert.doesNotMatch(workerSource, /sendTrackedMessage\(chatId, memoryKey, escapeHtml\(responseText\), \{ reply_markup:/);
 });

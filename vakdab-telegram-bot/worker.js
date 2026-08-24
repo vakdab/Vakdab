@@ -1691,11 +1691,14 @@ async function setBotCommands(env) {
     await telegram('setMyCommands', {
       scope: { type: 'all_private_chats' },
       commands: [
+        { command: 'start', description: 'Відкрити головне меню' },
         { command: 'luna', description: 'Увімкнути Луну й продовжити чат' },
-        { command: 'clear', description: 'Очистити видимий чат, зберігши пам’ять' },
+        { command: 'clear', description: 'Мовчки очистити чат, зберігши пам’ять' },
         { command: 'memory', description: 'Показати, що Луна пам’ятає' },
         { command: 'forget', description: 'Забути історію розмови' },
-        { command: 'forgetall', description: 'Забути історію та профіль' }
+        { command: 'forgetall', description: 'Забути історію та профіль' },
+        { command: 'next', description: 'Наступний співрозмовник у чат-рулетці' },
+        { command: 'report', description: 'Поскаржитися або завершити рулетку' }
       ]
     }, env);
   } catch (error) {
