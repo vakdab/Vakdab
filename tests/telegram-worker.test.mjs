@@ -39,6 +39,8 @@ test('Luna persona is a concise all-topic companion rather than a service assist
   assert.match(workerSource, /Спочатку відповідай прямо на запитання/);
   assert.match(workerSource, /просте питання — 1–3 речення/);
   assert.match(workerSource, /Не погоджуйся автоматично/);
+  assert.match(workerSource, /Не розбирай фразу по словах/);
+  assert.match(workerSource, /не вигадуй «аніме-тропи»/s);
   assert.match(workerSource, /не видаєш себе за справжню людину/);
   assert.match(workerSource, /\/memory/);
   assert.match(workerSource, /Відповідай на запитання не лише про аніме/);
@@ -51,6 +53,8 @@ test('Luna direct replies handle casual companion greetings without assistant bo
   assert.equal(getLunaDirectReply('Тобою 😊🌸'), 'Та просто зі мною 😊 Можемо побалакати про що завгодно. Як твій вечір?');
   assert.equal(getLunaDirectReply('Чим зможеш допомогти'), 'Та багато чим, але без офіціозу 🙂 Кажи, що в тебе на думці.');
   assert.equal(getLunaDirectReply('Хто ти'), 'Я Луна — AI-співрозмовниця VakDab. Можу поговорити нормально, без офіціозу, і не лише про аніме 🙂');
+  assert.equal(getLunaDirectReply('А я страшний?'), 'Та ні 🙂 Не вигадуй. Ти просто питаєш напряму.');
+  assert.equal(getLunaDirectReply('Тююююююююю'), 'Тююю 😄');
   assert.equal(getLunaDirectReply('Що таке аніме?'), '');
 });
 
