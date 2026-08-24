@@ -243,6 +243,21 @@ test('roulette media extractor maps Telegram message variants to correct send me
   assert.equal(extractRelayMedia({ location: { latitude: 1, longitude: 2 } }), null);
 });
 
+test('roulette moderation keeps permanent users, report reasons and three-day ban rules', () => {
+  const workerSource = readFileSync(new URL('../vakdab-telegram-bot/worker.js', import.meta.url), 'utf8');
+  assert.match(workerSource, /CREATE TABLE IF NOT EXISTS bot_users/);
+  assert.match(workerSource, /CREATE TABLE IF NOT EXISTS reports/);
+  assert.match(workerSource, /CREATE TABLE IF NOT EXISTS roulette_bans/);
+  assert.match(workerSource, /REPORT_REASONS/);
+  assert.match(workerSource, /MAX_ROULETTE_REPORTS = 18/);
+  assert.match(workerSource, /ROULETTE_BAN_MS = 3 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(workerSource, /reportReasonKeyboard/);
+  assert.match(workerSource, /data\.startsWith\('roulette:report:'\)/);
+  assert.match(workerSource, /reportCount >= MAX_ROULETTE_REPORTS/);
+  assert.match(workerSource, /bannedUntil = now \+ ROULETTE_BAN_MS/);
+  assert.doesNotMatch(workerSource, /DELETE FROM reports WHERE created_at/);
+});
+
 test('roulette safety filter blocks contact vectors but allows ordinary chat', () => {
   assert.equal(isUnsafeRouletteText('Привіт, як справи?'), false);
   assert.equal(isUnsafeRouletteText('Напиши мені в https://example.com'), true);
@@ -258,15 +273,21 @@ test('private statistics access accepts only the configured owner username', () 
   assert.equal(isBotOwner({}), false);
 });
 
-test('private statistics report presents the usage summary without user IDs', () => {
+test('private statistics report presents users, reports and bans without user IDs', () => {
   const report = formatBotUsageReport({
     ok: true,
     total: 1,
-    users: [{ username: 'example_user', first_name: 'Ім’я', last_name: 'Прізвище', last_seen_at: 1766311200000, user_id: '123456789' }]
+    users: [{ username: 'example_user', first_name: 'Ім’я', last_name: 'Прізвище', last_seen_at: 1766311200000, user_id: '123456789', interaction_count: 4 }],
+    reportedUsers: [{ username: 'bad_user', report_count: 18, last_reason: 'spam', user_id: '987654321' }],
+    bans: [{ user_id: '987654321', banned_until: Date.now() + 86400000, report_count: 18, last_reason: 'spam' }]
   });
-  assert.match(report, /Унікальних користувачів: <b>1<\/b>/);
+  assert.match(report, /Усі користувачі: <b>1<\/b>/);
   assert.match(report, /@example_user/);
+  assert.match(report, /@bad_user/);
+  assert.match(report, /18\/18/);
+  assert.match(report, /Спам або реклама/);
   assert.doesNotMatch(report, /123456789/);
+  assert.match(report, /ID 987654321/);
 });
 
 test('production Worker declares the persistent Luna memory binding', () => {

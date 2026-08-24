@@ -43,6 +43,15 @@ let popularCacheAt = 0;
 let catalogCache = null;
 let catalogCacheAt = 0;
 const BOT_OWNER_USERNAME = 'vaditx';
+const MAX_ROULETTE_REPORTS = 18;
+const ROULETTE_BAN_MS = 3 * 24 * 60 * 60 * 1000;
+const REPORT_REASONS = Object.freeze({
+  abuse: 'Образи або цькування',
+  spam: 'Спам або реклама',
+  threats: 'Погрози або небезпека',
+  sexual: 'Небажаний інтимний контент',
+  other: 'Інша причина'
+});
 
 export default {
   async fetch(request, env) {
@@ -150,10 +159,14 @@ async function handleMessage(message, env) {
     await sendMessage(chatId, formatBotUsageReport(stats), {}, env);
     return;
   }
-  // Команди рулетки обробляємо до relay, інакше активний чат передасть /next співрозмовнику як звичайний текст.
+  // Команди рулетки обробляємо до relay, інакше активний чат передасть /next як звичайний текст.
   const rouletteCommand = text.match(/^\/(next|report)(?:@\w+)?(?:\s|$)/i);
   if (rouletteCommand) {
     const op = rouletteCommand[1].toLowerCase();
+    if (op === 'report') {
+      await sendTrackedMessage(chatId, memoryKey, 'Оберіть причину скарги:', { reply_markup: reportReasonKeyboard() }, env);
+      return;
+    }
     const result = await rouletteOperation({ op, chatId, userId: message.from?.id || chatId, updateId: message.__updateId }, env);
     await deliverRouletteResult(chatId, result, env);
     return;
@@ -267,25 +280,47 @@ function formatBotUsageReport(result) {
   if (!result || result.unavailable) return 'Статистика тимчасово недоступна. Перевірте binding <code>CHAT_ROULETTE</code>.';
   if (!result.ok) return 'Не вдалося отримати статистику.';
   const users = Array.isArray(result.users) ? result.users : [];
+  const reportedUsers = Array.isArray(result.reportedUsers) ? result.reportedUsers : [];
+  const bans = Array.isArray(result.bans) ? result.bans : [];
   const lines = [
     '<b>Статистика VakDabBot</b>',
     '',
-    `Унікальних користувачів: <b>${Number(result.total || 0)}</b>`,
-    `Показано останніх: <b>${users.length}</b>`,
+    `Усі користувачі: <b>${Number(result.total || 0)}</b>`,
+    `У базі скарг: <b>${reportedUsers.length}</b>`,
+    `Активних блокувань: <b>${bans.filter(ban => Number(ban.banned_until) > Date.now()).length}</b>`,
     ''
   ];
   if (!users.length) {
-    lines.push('Ще немає збережених взаємодій. Статистика почне збиратися після цього оновлення.');
-    return lines.join('\n');
+    lines.push('Ще немає збережених взаємодій.');
+  } else {
+    lines.push('<b>Користувачі (список зберігається постійно)</b>');
+    for (const [index, user] of users.slice(0, 25).entries()) {
+      const username = String(user.username || '').trim();
+      const displayName = [user.first_name, user.last_name].filter(Boolean).map(String).join(' ').trim();
+      const label = username ? `@${escapeHtml(username)}` : escapeHtml(displayName || `ID ${user.user_id || 'невідомий'}`);
+      lines.push(`${index + 1}. ${label} — ${formatUsageDate(user.last_seen_at)} (взаємодій: ${Number(user.interaction_count || 0)})`);
+    }
+    if (users.length > 25) lines.push(`… та ще ${users.length - 25}. У базі збережено всіх.`);
   }
-  lines.push('<b>Остання активність</b>');
-  for (const [index, user] of users.entries()) {
-    const username = String(user.username || '').trim();
-    const displayName = [user.first_name, user.last_name].filter(Boolean).map(String).join(' ').trim();
-    const label = username ? `@${escapeHtml(username)}` : escapeHtml(displayName || 'Без username');
-    lines.push(`${index + 1}. ${label} — ${formatUsageDate(user.last_seen_at)}`);
+  if (reportedUsers.length) {
+    lines.push('', '<b>Користувачі зі скаргами</b>');
+    for (const [index, user] of reportedUsers.slice(0, 25).entries()) {
+      const username = String(user.username || '').trim();
+      const displayName = [user.first_name, user.last_name].filter(Boolean).map(String).join(' ').trim();
+      const label = username ? `@${escapeHtml(username)}` : escapeHtml(displayName || `ID ${user.user_id || 'невідомий'}`);
+      const reason = REPORT_REASONS[user.last_reason] || REPORT_REASONS.other;
+      lines.push(`${index + 1}. ${label} — <b>${Number(user.report_count || 0)}/${MAX_ROULETTE_REPORTS}</b>, ${escapeHtml(reason)}`);
+    }
   }
-  return lines.join('\n');
+  const activeBans = bans.filter(ban => Number(ban.banned_until) > Date.now());
+  if (activeBans.length) {
+    lines.push('', '<b>Заблоковані в чат-рулетці</b>');
+    for (const ban of activeBans.slice(0, 25)) {
+      const reason = REPORT_REASONS[ban.last_reason] || REPORT_REASONS.other;
+      lines.push(`ID ${escapeHtml(ban.user_id)} — до ${formatUsageDate(ban.banned_until)}, ${Number(ban.report_count || 0)} скарг, ${escapeHtml(reason)}`);
+    }
+  }
+  return lines.join('\\n').slice(0, 3900);
 }
 
 function formatUsageDate(timestamp) {
@@ -1183,7 +1218,23 @@ async function handleCallbackQuery(callback, env) {
       return;
     }
 
-    if (data === 'roulette:next' || data === 'roulette:end' || data === 'roulette:report') {
+    if (data === 'roulette:report') {
+      await replaceMessage(chatId, messageId, 'Оберіть причину скарги:', false, { reply_markup: reportReasonKeyboard() }, env);
+      return;
+    }
+
+    if (data.startsWith('roulette:report:')) {
+      const reason = data.slice('roulette:report:'.length);
+      if (!REPORT_REASONS[reason]) {
+        await replaceMessage(chatId, messageId, 'Некоректна причина скарги.', false, {}, env);
+        return;
+      }
+      const result = await rouletteOperation({ op: 'report', reason, chatId, userId: callback.from?.id || chatId, updateId: callback.__updateId }, env);
+      await deliverRouletteResult(chatId, result, env);
+      return;
+    }
+
+    if (data === 'roulette:next' || data === 'roulette:end') {
       const op = data.slice('roulette:'.length);
       const result = await rouletteOperation({ op, chatId, userId: callback.from?.id || chatId, updateId: callback.__updateId }, env);
       await deliverRouletteResult(chatId, result, env);
@@ -1941,6 +1992,12 @@ function rouletteStartKeyboard() {
   ] };
 }
 
+function reportReasonKeyboard() {
+  return { inline_keyboard: Object.entries(REPORT_REASONS).map(([key, label]) => [
+    { text: label, callback_data: `roulette:report:${key}` }
+  ]) };
+}
+
 function rouletteOperation(payload, env) {
   if (!env.CHAT_ROULETTE) return Promise.resolve({ ok: false, unavailable: true });
   try {
@@ -2063,7 +2120,15 @@ export class ChatRouletteRoom {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         reporter_chat_id TEXT NOT NULL,
         reported_chat_id TEXT NOT NULL,
+        reason TEXT NOT NULL DEFAULT 'other',
         created_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS roulette_bans (
+        user_id TEXT PRIMARY KEY,
+        banned_until INTEGER NOT NULL,
+        report_count INTEGER NOT NULL DEFAULT 0,
+        last_reason TEXT NOT NULL DEFAULT 'other',
+        updated_at INTEGER NOT NULL
       );
       CREATE TABLE IF NOT EXISTS bot_users (
         user_id TEXT PRIMARY KEY,
@@ -2078,6 +2143,12 @@ export class ChatRouletteRoom {
       CREATE INDEX IF NOT EXISTS reports_created_at_idx ON reports(created_at);
       CREATE INDEX IF NOT EXISTS bot_users_last_seen_at_idx ON bot_users(last_seen_at DESC);
     `);
+    // Міграція старої таблиці reports, створеної до появи причин скарг.
+    try {
+      this.ctx.storage.sql.exec("ALTER TABLE reports ADD COLUMN reason TEXT NOT NULL DEFAULT 'other'");
+    } catch {
+      // Колонка вже існує.
+    }
     this.initialized = true;
   }
 
@@ -2132,7 +2203,6 @@ export class ChatRouletteRoom {
   prune(now) {
     this.ctx.storage.sql.exec('DELETE FROM waiting WHERE joined_at < ?', now - 30 * 60 * 1000);
     this.ctx.storage.sql.exec('DELETE FROM rate_limits WHERE window_started < ?', now - 2 * 60 * 60 * 1000);
-    this.ctx.storage.sql.exec('DELETE FROM reports WHERE created_at < ?', now - 30 * 24 * 60 * 60 * 1000);
   }
 
   async handle(payload) {
@@ -2153,7 +2223,7 @@ export class ChatRouletteRoom {
     if (op === 'relay') return this.relay(chatId, payload);
     if (op === 'next') return this.next(chatId);
     if (op === 'end') return this.end(chatId, 'Співрозмовник завершив чат.');
-    if (op === 'report') return this.report(chatId);
+    if (op === 'report') return this.report(chatId, payload.reason, payload.userId);
     return { ok: false, error: 'UNKNOWN_OPERATION' };
   }
 
@@ -2180,11 +2250,37 @@ export class ChatRouletteRoom {
 
   stats() {
     const total = this.ctx.storage.sql.exec('SELECT COUNT(*) AS count FROM bot_users').toArray()[0]?.count || 0;
-    const users = this.ctx.storage.sql.exec('SELECT username, first_name, last_name, last_seen_at FROM bot_users ORDER BY last_seen_at DESC LIMIT 25').toArray();
-    return { ok: true, handled: true, total: Number(total), users };
+    const users = this.ctx.storage.sql.exec('SELECT user_id, username, first_name, last_name, first_seen_at, last_seen_at, interaction_count FROM bot_users ORDER BY first_seen_at ASC').toArray();
+    const reportedUsers = this.ctx.storage.sql.exec(`
+      SELECT r.reported_chat_id AS user_id,
+             COALESCE(u.username, '') AS username,
+             COALESCE(u.first_name, '') AS first_name,
+             COALESCE(u.last_name, '') AS last_name,
+             COUNT(*) AS report_count,
+             MAX(r.created_at) AS last_report_at,
+             MAX(r.reason) AS last_reason
+      FROM reports r
+      LEFT JOIN bot_users u ON u.user_id = r.reported_chat_id
+      GROUP BY r.reported_chat_id
+      ORDER BY report_count DESC, last_report_at DESC
+    `).toArray();
+    const bans = this.ctx.storage.sql.exec('SELECT user_id, banned_until, report_count, last_reason, updated_at FROM roulette_bans ORDER BY updated_at DESC').toArray();
+    return { ok: true, handled: true, total: Number(total), users, reportedUsers, bans };
+  }
+
+  activeBan(userId, now = Date.now()) {
+    const id = this.participantKey(userId);
+    if (!id) return null;
+    const row = this.ctx.storage.sql.exec('SELECT user_id, banned_until, report_count FROM roulette_bans WHERE user_id = ? LIMIT 1', id).toArray()[0];
+    return row && Number(row.banned_until) > now ? row : null;
   }
 
   join(chatId, userId) {
+    const participantUserId = this.participantKey(userId || chatId);
+    const ban = this.activeBan(participantUserId);
+    if (ban) {
+      return { ok: true, handled: true, notice: `Чат-Рулетка для вас тимчасово заблокована до ${formatUsageDate(ban.banned_until)}.`, keyboard: 'start' };
+    }
     const current = this.getSession(chatId);
     if (current) return { ok: true, handled: true, notice: 'Ви вже спілкуєтеся. Надсилайте повідомлення або натисніть «Наступний».', keyboard: 'roulette' };
     this.ctx.storage.sql.exec('DELETE FROM waiting WHERE chat_id = ?', chatId);
@@ -2255,16 +2351,31 @@ export class ChatRouletteRoom {
     return this.join(chatId, chatId);
   }
 
-  report(chatId) {
+  report(chatId, reason, reporterUserId) {
     const session = this.getSession(chatId);
     if (!session) return { ok: true, handled: true, notice: 'Активного чату немає.', keyboard: 'start' };
     const other = this.otherParticipant(session, chatId);
-    this.ctx.storage.sql.exec('INSERT INTO reports (reporter_chat_id, reported_chat_id, created_at) VALUES (?, ?, ?)', chatId, other, Date.now());
+    const safeReason = REPORT_REASONS[reason] ? reason : 'other';
+    const now = Date.now();
+    this.ctx.storage.sql.exec('INSERT INTO reports (reporter_chat_id, reported_chat_id, reason, created_at) VALUES (?, ?, ?, ?)', this.participantKey(reporterUserId || chatId), other, safeReason, now);
+    const reportCount = Number(this.ctx.storage.sql.exec('SELECT COUNT(*) AS count FROM reports WHERE reported_chat_id = ?', other).toArray()[0]?.count || 0);
+    let bannedUntil = null;
+    if (reportCount >= MAX_ROULETTE_REPORTS) {
+      bannedUntil = now + ROULETTE_BAN_MS;
+      this.ctx.storage.sql.exec(`
+        INSERT INTO roulette_bans (user_id, banned_until, report_count, last_reason, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET banned_until = excluded.banned_until, report_count = excluded.report_count, last_reason = excluded.last_reason, updated_at = excluded.updated_at
+      `, other, bannedUntil, reportCount, safeReason, now);
+    }
     this.deleteSession(session);
     return {
       ok: true, handled: true,
       deliveries: [{ kind: 'text', toChatId: other, text: 'Чат завершено.', keyboard: 'start' }],
-      notice: 'Скаргу зафіксовано, чат завершено. Дякуємо, що повідомили.', keyboard: 'start'
+      notice: bannedUntil
+        ? `Скаргу зафіксовано. Користувача отримав ${reportCount} скарг і заблоковано в чат-рулетці на 3 дні.`
+        : `Скаргу зафіксовано (${reportCount}/${MAX_ROULETTE_REPORTS}). Чат завершено. Дякуємо, що повідомили.`,
+      keyboard: 'start'
     };
   }
 }
