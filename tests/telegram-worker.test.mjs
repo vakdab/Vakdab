@@ -15,6 +15,9 @@ import {
   getAIProviderConfig,
   callCompatibleChat,
   getLunaDirectReply,
+  isMemoryRequest,
+  formatLunaMemory,
+  buildRecentHistory,
   repairMojibake
 } from '../vakdab-telegram-bot/worker.js';
 
@@ -35,6 +38,9 @@ test('Luna persona is a concise all-topic companion rather than a service assist
   assert.match(workerSource, /цифрова компанйонка VakDab/);
   assert.match(workerSource, /Спочатку відповідай прямо на запитання/);
   assert.match(workerSource, /просте питання — 1–3 речення/);
+  assert.match(workerSource, /Не погоджуйся автоматично/);
+  assert.match(workerSource, /не видаєш себе за справжню людину/);
+  assert.match(workerSource, /\/memory/);
   assert.match(workerSource, /Відповідай на запитання не лише про аніме/);
   assert.match(workerSource, /Не закінчуй кожну відповідь штучним/);
   assert.match(workerSource, /не службова помічниця/);
@@ -44,7 +50,27 @@ test('Luna persona is a concise all-topic companion rather than a service assist
 test('Luna direct replies handle casual companion greetings without assistant boilerplate', () => {
   assert.equal(getLunaDirectReply('Тобою 😊🌸'), 'Та просто зі мною 😊 Можемо побалакати про що завгодно. Як твій вечір?');
   assert.equal(getLunaDirectReply('Чим зможеш допомогти'), 'Та багато чим, але без офіціозу 🙂 Кажи, що в тебе на думці.');
+  assert.equal(getLunaDirectReply('Хто ти'), 'Я Луна — AI-співрозмовниця VakDab. Можу поговорити нормально, без офіціозу, і не лише про аніме 🙂');
   assert.equal(getLunaDirectReply('Що таке аніме?'), '');
+});
+
+test('Luna exposes transparent memory controls without an AI round trip', () => {
+  assert.equal(isMemoryRequest('Що ти про мене пам’ятаєш?'), true);
+  assert.equal(isMemoryRequest('покажи мою пам’ять'), true);
+  assert.equal(isMemoryRequest('Що ти пам’ятаєш про аніме?'), false);
+  assert.match(formatLunaMemory({ name: 'Олег', hobbies: ['музика'] }), /Олег/);
+  assert.match(formatLunaMemory({}), /нічого важливого/);
+});
+
+test('Luna context keeps recent valid messages and clips oversized entries', () => {
+  const history = [
+    { role: 'system', content: 'must not be forwarded' },
+    { role: 'user', content: 'a'.repeat(5000) },
+    { role: 'assistant', content: 'Коротка відповідь' }
+  ];
+  const recent = buildRecentHistory(history);
+  assert.deepEqual(recent.map(message => message.role), ['user', 'assistant']);
+  assert.ok(recent[0].content.length <= 3200);
 });
 
 test('BazaarLink configuration is used when OpenAI is absent', () => {
