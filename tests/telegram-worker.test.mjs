@@ -45,6 +45,8 @@ test('Luna persona is a concise all-topic companion rather than a service assist
   assert.match(workerSource, /\/memory/);
   assert.match(workerSource, /Відповідай на запитання не лише про аніме/);
   assert.match(workerSource, /Не закінчуй кожну відповідь штучним/);
+  assert.match(workerSource, /Це продовження вже наявного чату/);
+  assert.match(workerSource, /Не вітайся повторно/);
   assert.match(workerSource, /не службова помічниця/);
   assert.doesNotMatch(workerSource, /Кожен користувач повинен відчувати.*подругою-помічницею/s);
 });
@@ -213,6 +215,12 @@ test('private statistics report presents the usage summary without user IDs', ()
   assert.match(report, /Унікальних користувачів: <b>1<\/b>/);
   assert.match(report, /@example_user/);
   assert.doesNotMatch(report, /123456789/);
+});
+
+test('production Worker declares the persistent Luna memory binding', () => {
+  const wranglerSource = readFileSync(new URL('../vakdab-telegram-bot/wrangler.toml', import.meta.url), 'utf8');
+  assert.match(wranglerSource, /binding = "MAKIMA_MEMORY"/);
+  assert.match(wranglerSource, /id = "e895b4efdc7941c5915ca6af83879f96"/);
 });
 
 test('schedule fallback keyboard opens the dedicated Mini App page', () => {

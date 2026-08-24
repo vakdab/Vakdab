@@ -6,6 +6,10 @@ compatibility_date = "2026-08-09"
 directory = ".."
 binding = "ASSETS"
 
+[[kv_namespaces]]
+binding = "MAKIMA_MEMORY"
+id = "e895b4efdc7941c5915ca6af83879f96"
+
 [[durable_objects.bindings]]
 name = "CHAT_ROULETTE"
 class_name = "ChatRouletteRoom"
