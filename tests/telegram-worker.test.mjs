@@ -22,8 +22,7 @@ import {
   buildRecentHistory,
   repairMojibake,
   musicPreviewTrack,
-  musicChoiceKeyboard,
-  formatRecognizedMusic
+  musicChoiceKeyboard
 } from '../vakdab-telegram-bot/worker.js';
 
 test('Groq configuration takes priority when both providers are configured', () => {
@@ -316,18 +315,16 @@ test('Luna routes Telegram photos through a multimodal vision request', () => {
 });
 
 
-test('music recognition accepts only Telegram video and builds selectable candidates', () => {
+test('music recognition uses only a text title or artist and builds selectable candidates', () => {
   const workerSource = readFileSync(new URL('../vakdab-telegram-bot/worker.js', import.meta.url), 'utf8');
   assert.match(workerSource, /music\|shazam/);
-  assert.match(workerSource, /message\.video/);
-  assert.match(workerSource, /AUDD_API_TOKEN/);
-  assert.match(workerSource, /api\.audd\.io/);
+  assert.match(workerSource, /handleMusicTitle/);
   assert.match(workerSource, /itunes\.apple\.com\/search/);
   assert.match(workerSource, /api\.deezer\.com\/search/);
   assert.match(workerSource, /musicChoiceKeyboard/);
   assert.match(workerSource, /music:pick:/);
   assert.match(workerSource, /sendAudioBuffer/);
-  assert.doesNotMatch(workerSource, /tiktok\.com|TIKTOK_RESOLVER_API|recognizeTikTokUrl/);
+  assert.doesNotMatch(workerSource, /TIKTOK_RESOLVER_API|recognizeTikTokUrl|recognizeTelegramMedia|getMusicMedia/);
 });
 
 test('music preview selection uses only an available catalog preview', () => {
@@ -344,5 +341,5 @@ test('music choice keyboard keeps callback data short and formats the recognitio
   assert.equal(keyboard.inline_keyboard[0][0].callback_data, 'music:pick:0');
   assert.equal(keyboard.inline_keyboard[1][0].callback_data, 'music:pick:1');
   assert.equal(keyboard.inline_keyboard.at(-1)[0].callback_data, 'home');
-  assert.match(formatRecognizedMusic({ artist: 'Artist One', title: 'Song One' }, candidates), /Обери правильний варіант/);
+  assert.equal(keyboard.inline_keyboard.length, 3);
 });

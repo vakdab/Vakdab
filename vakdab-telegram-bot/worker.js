@@ -148,16 +148,11 @@ async function handleMessage(message, env) {
   if (/^\/(?:music|shazam)(?:@\w+)?(?:\s|$)/i.test(text)) {
     const state = getState(chatId);
     state.screen = 'waiting_for_music';
-    await sendTrackedMessage(chatId, memoryKey, 'Надішли коротке відео — я розпізнаю музику, покажу варіанти, і ти зможеш обрати трек 🎵', {}, env);
-    return;
-  }
-  const musicMedia = getMusicMedia(message);
-  if (musicMedia) {
-    await handleMusicMedia(chatId, memoryKey, musicMedia, env);
+    await sendTrackedMessage(chatId, memoryKey, 'Введи назву пісні або виконавця — я покажу варіанти, і ти зможеш обрати трек 🎵', {}, env);
     return;
   }
   if (getState(chatId).screen === 'waiting_for_music' && text) {
-    await sendTrackedMessage(chatId, memoryKey, 'У режимі музики приймаю лише відео. Надішли короткий відеофрагмент із музикою 🎵', {}, env);
+    await handleMusicTitle(chatId, memoryKey, text, env);
     return;
   }
   if (text === '/start') {
@@ -778,81 +773,6 @@ function arrayBufferToBase64(buffer) {
   return btoa(binary);
 }
 
-function getMusicMedia(message) {
-  if (message?.video?.file_id) return { fileId: message.video.file_id, fileName: message.video.file_name || 'telegram-video.mp4', mimeType: message.video.mime_type || 'video/mp4' };
-  if (message?.document?.file_id && /^video\//i.test(message.document.mime_type || '')) {
-    return { fileId: message.document.file_id, fileName: message.document.file_name || 'telegram-video', mimeType: message.document.mime_type };
-  }
-  return null;
-}
-
-async function handleMusicMedia(chatId, memoryKey, media, env) {
-  try {
-    await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
-    const recognized = await recognizeTelegramMedia(media, env);
-    if (recognized.kind !== 'recognized') {
-      await sendTrackedMessage(chatId, memoryKey, 'Не знайшла музику в цьому відео. Надішли коротший фрагмент, де звук голосніший за шум 🎵', {}, env);
-      return;
-    }
-
-    let candidates = [];
-    try {
-      const catalog = await searchMusicCatalog(`${recognized.artist} ${recognized.title}`, env);
-      candidates = catalog.results.slice(0, 5);
-    } catch (error) {
-      console.error('[music] candidate lookup failed:', safeError(error));
-    }
-    if (!candidates.length) candidates = [{
-      artistName: recognized.artist || '',
-      trackName: recognized.title || '',
-      previewUrl: ''
-    }];
-    const state = getState(chatId);
-    state.musicCandidates = candidates;
-    await saveMusicCandidates(chatId, candidates, env);
-    await sendTrackedMessage(chatId, memoryKey, formatRecognizedMusic(recognized, candidates), { reply_markup: musicChoiceKeyboard(candidates) }, env);
-  } catch (error) {
-    console.error('[music] media request failed:', safeError(error));
-    await sendTrackedMessage(chatId, memoryKey, 'Не змогла розпізнати музику в цьому відео. Спробуй коротший фрагмент із чіткішим звуком 🎵', {}, env);
-  } finally {
-    getState(chatId).screen = 'home';
-  }
-}
-
-async function recognizeTelegramMedia(media, env) {
-  if (!env.AUDD_API_TOKEN) {
-    throw new Error('AUDD_API_TOKEN is not configured');
-  }
-  const file = await getTelegramFileBytes(media.fileId, env);
-  if (file.bytes.byteLength > 10 * 1024 * 1024) {
-    throw new Error('Music recognition file exceeds AudD standard limit');
-  }
-  const form = new FormData();
-  form.set('file', new Blob([file.bytes], { type: media.mimeType }), media.fileName);
-  return recognizeAudDForm(form, env);
-}
-
-async function recognizeAudDForm(form, env) {
-  form.set('api_token', env.AUDD_API_TOKEN);
-  form.set('return', 'apple_music,spotify,deezer,musicbrainz');
-  const response = await fetch('https://api.audd.io/', { method: 'POST', body: form });
-  const data = await response.json();
-  if (!response.ok || data?.status !== 'success') {
-    throw new Error(`AudD recognition failed: ${truncate(JSON.stringify(data), 240)}`);
-  }
-  return data.result ? { kind: 'recognized', ...data.result } : { kind: 'none' };
-}
-
-async function getTelegramFileBytes(fileId, env) {
-  if (!env.TELEGRAM_BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not configured');
-  const fileInfo = await telegram('getFile', { file_id: fileId }, env);
-  const filePath = fileInfo?.result?.file_path;
-  if (!fileInfo?.ok || !filePath) throw new Error('Telegram getFile returned no file_path');
-  const response = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${filePath}`);
-  if (!response.ok) throw new Error(`Telegram file download failed with status ${response.status}`);
-  return { bytes: await response.arrayBuffer(), filePath };
-}
-
 async function searchMusicCatalog(query, env) {
   const term = String(query || '').replace(/^\/(?:music|shazam)(?:@\w+)?\s*/i, '').trim();
   if (!term) throw new Error('Music search query is empty');
@@ -928,6 +848,28 @@ async function sendAudioBuffer(chatId, previewUrl, details, env) {
   const data = await response.json();
   if (!response.ok || !data.ok) console.error(`[telegram] sendAudio failed with status ${response.status}`);
   return data;
+}
+
+async function handleMusicTitle(chatId, memoryKey, text, env) {
+  const query = String(text || '').trim();
+  try {
+    await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
+    const result = await searchMusicCatalog(query, env);
+    const candidates = result.results.slice(0, 5);
+    if (!candidates.length) {
+      await sendTrackedMessage(chatId, memoryKey, `За запитом «${escapeHtml(query)}» нічого не знайшла. Спробуй назву пісні або виконавця точніше.`, {}, env);
+      return;
+    }
+    const state = getState(chatId);
+    state.musicCandidates = candidates;
+    await saveMusicCandidates(chatId, candidates, env);
+    await sendTrackedMessage(chatId, memoryKey, `${formatMusicResult(result)}\n\nОбери потрібний трек кнопкою нижче:`, { reply_markup: musicChoiceKeyboard(candidates) }, env);
+  } catch (error) {
+    console.error('[music] title search failed:', safeError(error));
+    await sendTrackedMessage(chatId, memoryKey, 'Не вдалося виконати пошук. Спробуй ще раз, вказавши назву пісні або виконавця 🎵', {}, env);
+  } finally {
+    getState(chatId).screen = 'home';
+  }
 }
 
 function musicPreviewTrack(result) {
@@ -1333,7 +1275,7 @@ async function handleCallbackQuery(callback, env) {
 
     if (data === 'music:prompt') {
       state.screen = 'waiting_for_music';
-      await replaceMessage(chatId, messageId, 'Надішліть коротке відео з музикою — я розпізнаю трек.', false, { reply_markup: backHomeKeyboard() }, env);
+      await replaceMessage(chatId, messageId, 'Введіть назву пісні або виконавця.', false, { reply_markup: backHomeKeyboard() }, env);
       return;
     }
 
@@ -1345,11 +1287,11 @@ async function handleCallbackQuery(callback, env) {
         : await loadMusicCandidates(chatId, env);
       const track = storedCandidates[index] || null;
       if (!track) {
-        await replaceMessage(chatId, messageId, 'Цей варіант більше недоступний. Надішліть відео ще раз.', false, { reply_markup: mainKeyboard() }, env);
+        await replaceMessage(chatId, messageId, 'Цей варіант більше недоступний. Виконайте пошук ще раз.', false, { reply_markup: mainKeyboard() }, env);
         return;
       }
       const title = `${track.artistName || 'Невідомий виконавець'} — ${track.trackName || 'Невідома назва'}`;
-      await replaceMessage(chatId, messageId, `<b>Обрано трек 🎵</b>\n\n${escapeHtml(title)}${track.trackViewUrl ? `\n\n<a href="${escapeHtml(track.trackViewUrl)}">Відкрити офіційну сторінку</a>` : ''}\n\nНадсилаю доступне коротке preview.`, false, {}, env);
+      await replaceMessage(chatId, messageId, `<b>Обрано трек 🎵</b>\n\n${escapeHtml(title)}${track.trackViewUrl ? `\n\n<a href="${escapeHtml(track.trackViewUrl)}">Відкрити повну версію</a>` : ''}\n\nНадсилаю доступне коротке preview.`, false, {}, env);
       await sendMusicPreviewIfAvailable(chatId, getMemoryKey(callback.from), { kind: 'catalog', results: [track] }, env);
       return;
     }
@@ -1623,7 +1565,7 @@ function mainKeyboard() {
     [{ text: 'Популярні', callback_data: 'popular:1' }],
     [{ text: 'Випадкове', callback_data: 'random' }],
     [{ text: 'Пошук', callback_data: 'search:prompt' }],
-    [{ text: 'Музика', callback_data: 'music:prompt' }],
+    [{ text: 'Знайти музику', callback_data: 'music:prompt' }],
     [{ text: 'Розклад', web_app: { url: SCHEDULE_WEB_APP_URL } }],
     [{ text: 'Чат-Рулетка', callback_data: 'roulette:start' }],
     [{ text: 'Запитати Луну', callback_data: 'luna:prompt' }]
@@ -1666,24 +1608,6 @@ function musicChoiceKeyboard(candidates) {
   }]);
   rows.push([{ text: 'Головна', callback_data: 'home' }]);
   return { inline_keyboard: rows };
-}
-
-function formatRecognizedMusic(result, candidates) {
-  const links = [];
-  if (result.song_link) links.push(`<a href="${escapeHtml(result.song_link)}">Офіційна сторінка</a>`);
-  if (result.spotify?.external_urls?.spotify) links.push(`<a href="${escapeHtml(result.spotify.external_urls.spotify)}">Spotify</a>`);
-  if (result.apple_music?.url) links.push(`<a href="${escapeHtml(result.apple_music.url)}">Apple Music</a>`);
-  const lines = [
-    '<b>Знайшла музику 🎵</b>',
-    '',
-    `<b>${escapeHtml(result.artist || 'Невідомий виконавець')} — ${escapeHtml(result.title || 'Невідома назва')}</b>`,
-    result.album ? `Альбом: ${escapeHtml(result.album)}` : '',
-    result.timecode ? `Фрагмент: ${escapeHtml(result.timecode)}` : '',
-    links.length ? links.join(' · ') : '',
-    '',
-    candidates.length > 1 ? 'Обери правильний варіант нижче:' : 'Обери трек нижче, щоб отримати доступне коротке preview.'
-  ];
-  return lines.filter(Boolean).join('\n');
 }
 
 function listKeyboard(items, page, kind, total, type = 'anime') {
@@ -2048,7 +1972,7 @@ async function setBotCommands(env) {
         { command: 'forgetall', description: 'Забути історію та профіль' },
         { command: 'next', description: 'Наступний співрозмовник у чат-рулетці' },
         { command: 'report', description: 'Поскаржитися або завершити рулетку' },
-        { command: 'music', description: 'Знайти музику за відео' }
+        { command: 'music', description: 'Знайти музику за назвою' }
       ]
     }, env);
   } catch (error) {
@@ -2221,7 +2145,7 @@ function isUnsafeRouletteText(value) {
     || /(?:докс|доксинг|doxx|порно з неповноліт|child\s*sexual|csam)/i.test(text);
 }
 
-export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, scheduleWebAppKeyboard, vakdabWatchUrl, getAIProviderConfig, musicPreviewTrack, searchMusicCatalog, musicChoiceKeyboard, formatRecognizedMusic };
+export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, scheduleWebAppKeyboard, vakdabWatchUrl, getAIProviderConfig, musicPreviewTrack, searchMusicCatalog, musicChoiceKeyboard };
 
 export class ChatRouletteRoom {
   constructor(ctx, env) {
