@@ -967,10 +967,35 @@ async function resolveTikTokAudio(url) {
 async function searchMusicCatalog(query, env) {
   const term = String(query || '').replace(/^\/(?:music|shazam)(?:@\w+)?\s*/i, '').trim();
   if (!term) throw new Error('Music search query is empty');
-  const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=5&country=US`);
-  if (!response.ok) throw new Error(`Music catalog search failed with status ${response.status}`);
-  const data = await response.json();
-  return { kind: 'catalog', query: term, results: Array.isArray(data?.results) ? data.results : [] };
+
+  try {
+    const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=5&country=US`, { headers: { accept: 'application/json' } });
+    if (response.ok) {
+      const data = await response.json();
+      const results = Array.isArray(data?.results) ? data.results : [];
+      if (results.length) return { kind: 'catalog', query: term, results };
+    } else {
+      console.error(`[music] iTunes search failed with status ${response.status}`);
+    }
+  } catch (error) {
+    console.error('[music] iTunes search failed:', safeError(error));
+  }
+
+  try {
+    const response = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(term)}&limit=5`, { headers: { accept: 'application/json' } });
+    if (!response.ok) throw new Error(`Deezer search failed with status ${response.status}`);
+    const data = await response.json();
+    const results = Array.isArray(data?.data) ? data.data.map(song => ({
+      artistName: song?.artist?.name || '',
+      trackName: song?.title || '',
+      trackViewUrl: song?.link || '',
+      previewUrl: song?.preview || ''
+    })) : [];
+    return { kind: 'catalog', query: term, results };
+  } catch (error) {
+    console.error('[music] Deezer search failed:', safeError(error));
+    return { kind: 'catalog', query: term, results: [] };
+  }
 }
 
 async function sendMusicPreviewIfAvailable(chatId, memoryKey, result, env) {
