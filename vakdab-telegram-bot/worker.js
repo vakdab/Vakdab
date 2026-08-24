@@ -126,7 +126,7 @@ async function handleMessage(message, env) {
   }
   if (text === '/start') {
     await ensureBotCommands(env);
-    if (await isChannelSubscriber(message.from?.id, env)) {
+    if (await isSubscriptionSatisfied(message.from, env)) {
       const state = getState(chatId);
       state.screen = 'home';
       await sendMessage(chatId, 'Підписку підтверджено. Оберіть дію:', { reply_markup: mainKeyboard() }, env);
@@ -136,7 +136,7 @@ async function handleMessage(message, env) {
     }
     return;
   }
-  if (!(await isChannelSubscriber(message.from?.id, env))) {
+  if (!(await isSubscriptionSatisfied(message.from, env))) {
     getState(chatId).screen = 'awaiting_subscription';
     await sendTrackedMessage(chatId, memoryKey, subscriptionGateText(), { reply_markup: subscriptionKeyboard() }, env);
     return;
@@ -1134,7 +1134,7 @@ async function handleCallbackQuery(callback, env) {
   if (message?.chat?.type === 'private') await trackBotUser(callback.from, chatId, env);
   if (data !== 'subscription:check') await answerCallback(callbackId, '', env);
   const state = getState(chatId);
-  if (data !== 'subscription:check' && !(await isChannelSubscriber(callback.from?.id, env))) {
+  if (data !== 'subscription:check' && !(await isSubscriptionSatisfied(callback.from, env))) {
     state.screen = 'awaiting_subscription';
     await replaceMessage(chatId, messageId, subscriptionGateText(), false, { reply_markup: subscriptionKeyboard() }, env);
     return;
@@ -1142,7 +1142,7 @@ async function handleCallbackQuery(callback, env) {
 
   try {
     if (data === 'subscription:check') {
-      if (!(await isChannelSubscriber(callback.from?.id, env))) {
+      if (!(await isSubscriptionSatisfied(callback.from, env))) {
         await answerCallback(callbackId, 'Підписка не підтверджена', env, { show_alert: true });
         return;
       }
@@ -1153,7 +1153,7 @@ async function handleCallbackQuery(callback, env) {
     }
 
     if (data === 'home') {
-      if (!(await isChannelSubscriber(callback.from?.id, env))) {
+      if (!(await isSubscriptionSatisfied(callback.from, env))) {
         state.screen = 'awaiting_subscription';
         await replaceMessage(chatId, messageId, subscriptionGateText(), false, { reply_markup: subscriptionKeyboard() }, env);
         return;
@@ -1310,8 +1310,8 @@ async function handleCallbackQuery(callback, env) {
 }
 
 function subscriptionGateText() {
-  // Telegram потребує непорожній text для sendMessage; Braille Blank візуально не відображається.
-  return '\u2800';
+  // Telegram потребує непорожній text для sendMessage; Word Joiner візуально не відображається.
+  return '\u2060';
 }
 
 function subscriptionKeyboard() {
@@ -1319,6 +1319,12 @@ function subscriptionKeyboard() {
     [{ text: 'Підписатися на канал', url: REQUIRED_CHANNEL_URL }],
     [{ text: 'Підписався(лась)', callback_data: 'subscription:check' }]
   ] };
+}
+
+async function isSubscriptionSatisfied(from, env) {
+  // Власник бота не повинен блокуватися власним gate, навіть якщо Telegram тимчасово не повертає membership.
+  if (isBotOwner(from)) return true;
+  return isChannelSubscriber(from?.id, env);
 }
 
 async function isChannelSubscriber(userId, env) {

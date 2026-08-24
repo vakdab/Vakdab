@@ -318,10 +318,11 @@ test('start flow gates the main menu behind @vakluna subscription', () => {
   assert.match(workerSource, /REQUIRED_CHANNEL_URL = 'https:\/\/t\.me\/vakluna'/);
   assert.match(workerSource, /getChatMember/);
   assert.match(workerSource, /subscription:check/);
-  assert.match(workerSource, /await isChannelSubscriber\(message\.from\?\.id, env\)/);
+  assert.match(workerSource, /await isSubscriptionSatisfied\(message\.from, env\)/);
+  assert.match(workerSource, /if \(isBotOwner\(from\)\) return true/);
   assert.match(workerSource, /await sendTrackedMessage\(chatId, memoryKey, subscriptionGateText\(\)/);
   assert.match(workerSource, /Підписатися на канал/);
   assert.match(workerSource, /Підписався\(лась\)/);
-  assert.match(workerSource, /return '\\u2800'/);
+  assert.match(workerSource, /return '\\u2060'/);
   assert.match(workerSource, /getChatMember request failed/);
 });
