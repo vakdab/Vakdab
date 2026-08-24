@@ -16,6 +16,7 @@ import {
   callCompatibleChat,
   getLunaDirectReply,
   isMemoryRequest,
+  isWarRequest,
   formatLunaMemory,
   buildRecentHistory,
   repairMojibake
@@ -58,6 +59,15 @@ test('Luna direct replies handle casual companion greetings without assistant bo
   assert.equal(getLunaDirectReply('А я страшний?'), 'Та ні 🙂 Не вигадуй. Ти просто питаєш напряму.');
   assert.equal(getLunaDirectReply('Тююююююююю'), 'Тююю 😄');
   assert.equal(getLunaDirectReply('Що таке аніме?'), '');
+});
+
+test('Luna accepts broad adult topics while deterministically declining war topics', () => {
+  const workerSource = readFileSync(new URL('../vakdab-telegram-bot/worker.js', import.meta.url), 'utf8');
+  assert.match(workerSource, /стосунки, кохання, флірт, секс, тіло/);
+  assert.match(workerSource, /Не моралізуй і не відштовхуй користувача/);
+  assert.equal(isWarRequest('Розкажи про війну'), true);
+  assert.equal(isWarRequest('Що подивитись сьогодні?'), false);
+  assert.equal(getLunaDirectReply('Розкажи про війну'), 'Про війну я не говорю. Давай краще про будь-що інше.');
 });
 
 test('Luna exposes transparent memory controls without an AI round trip', () => {
