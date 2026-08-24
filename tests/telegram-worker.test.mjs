@@ -20,7 +20,8 @@ import {
   isWarRequest,
   formatLunaMemory,
   buildRecentHistory,
-  repairMojibake
+  repairMojibake,
+  musicPreviewTrack
 } from '../vakdab-telegram-bot/worker.js';
 
 test('Groq configuration takes priority when both providers are configured', () => {
@@ -329,6 +330,15 @@ test('music flow expands TikTok short links and does not fall back to Luna on fa
   const workerSource = readFileSync(new URL('../vakdab-telegram-bot/worker.js', import.meta.url), 'utf8');
   assert.match(workerSource, /vt\\\./);
   assert.match(workerSource, /redirect: 'follow'/);
+  assert.match(workerSource, /TIKTOK_RESOLVER_API/);
+  assert.match(workerSource, /recognizeAudioUrl/);
+  assert.match(workerSource, /sendAudio/);
   assert.match(workerSource, /const keepMusicMode = getState\(chatId\)\.screen === 'waiting_for_music'/);
   assert.match(workerSource, /getState\(chatId\)\.screen = keepMusicMode \? 'waiting_for_music' : 'home'/);
+});
+
+test('music preview selection uses only an available catalog preview', () => {
+  assert.equal(musicPreviewTrack({ kind: 'catalog', results: [{ trackName: 'No preview' }, { trackName: 'Preview', previewUrl: 'https://example.com/preview.m4a' }] }).trackName, 'Preview');
+  assert.equal(musicPreviewTrack({ kind: 'recognized', artist: 'Artist', title: 'Song' }), null);
+  assert.equal(musicPreviewTrack({ kind: 'tiktok', catalog: { kind: 'catalog', results: [{ previewUrl: 'https://example.com/tiktok-preview.m4a' }] } }).previewUrl, 'https://example.com/tiktok-preview.m4a');
 });
