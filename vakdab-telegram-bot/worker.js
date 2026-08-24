@@ -141,6 +141,10 @@ async function handleMessage(message, env) {
   }
   // Активна рулетка має перехоплювати і текст, і медіа без text/caption.
   if (await relayRouletteMessage(message, env)) return;
+  if (message.photo?.length) {
+    await handleLunaPhotoMessage(chatId, memoryKey, message, env);
+    return;
+  }
   if (text === '/start') {
     const state = getState(chatId);
     state.screen = 'home';
@@ -643,7 +647,10 @@ export async function callCompatibleChat(messages, env, options = {}) {
           lastError = new Error(`${config.provider} returned invalid JSON`);
           continue;
         }
-        const generatedText = data?.choices?.[0]?.message?.content?.trim();
+        const rawContent = data?.choices?.[0]?.message?.content;
+        const generatedText = Array.isArray(rawContent)
+          ? rawContent.map(part => typeof part === 'string' ? part : String(part?.text || '')).join('').trim()
+          : String(rawContent || '').trim();
         if (!generatedText) {
           lastError = new Error(`${config.provider} returned no text`);
           continue;
@@ -690,10 +697,70 @@ ${summary || 'Підсумку попередніх розмов немає.'}
   const messages = [
     { role: 'system', content: systemPrompt },
     ...recentHistory,
-    { role: 'user', content: String(prompt || '') }
+    { role: 'user', content: Array.isArray(prompt) ? prompt : String(prompt || '') }
   ];
 
   return callCompatibleChat(messages, env, { temperature: 0.62, maxTokens: 700 });
+}
+
+async function handleLunaPhotoMessage(chatId, memoryKey, message, env) {
+  try {
+    await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
+    const fullHistory = await getUserHistory(memoryKey, env);
+    const profile = await getUserProfile(memoryKey, env);
+    const summary = await getUserSummary(memoryKey, env);
+    const caption = String(message.caption || '').trim();
+    const imageDataUrl = await getTelegramPhotoDataUrl(message.photo, env);
+    const photoPrompt = caption || 'Подивись на це фото й коротко скажи, що на ньому. Якщо доречно, поміть важливі деталі або текст.';
+    const responseText = await callLunaAI([
+      { type: 'text', text: photoPrompt },
+      { type: 'image_url', image_url: { url: imageDataUrl } }
+    ], fullHistory, profile, summary, env);
+
+    fullHistory.push({ role: 'user', content: caption ? `[Фото] ${caption}` : '[Фото]' });
+    fullHistory.push({ role: 'assistant', content: responseText });
+    await saveUserHistory(memoryKey, fullHistory, env);
+    await sendTrackedMessage(chatId, memoryKey, escapeHtml(responseText), {}, env);
+
+    if (caption) {
+      try {
+        const extracted = await extractMemory(caption, profile, env);
+        if (extracted && Object.keys(extracted).length > 0) {
+          await saveUserProfile(memoryKey, mergeProfile(profile, extracted), env);
+        }
+      } catch (error) {
+        console.error('[memory] photo caption extraction failed:', safeError(error));
+      }
+    }
+  } catch (error) {
+    console.error('[luna] photo failed:', safeError(error));
+    await sendTrackedMessage(chatId, memoryKey, 'Фото бачу, але зараз не можу його розібрати. Надішли ще раз або додай коротке питання до нього 🙂', {}, env);
+  }
+}
+
+async function getTelegramPhotoDataUrl(photoSizes, env) {
+  const largest = Array.isArray(photoSizes) ? photoSizes.at(-1) : null;
+  const fileId = largest?.file_id;
+  if (!fileId) throw new Error('Telegram photo file_id is missing');
+  const fileInfo = await telegram('getFile', { file_id: fileId }, env);
+  const filePath = fileInfo?.result?.file_path;
+  if (!fileInfo?.ok || !filePath) throw new Error('Telegram getFile returned no file_path');
+
+  const response = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${filePath}`);
+  if (!response.ok) throw new Error(`Telegram file download failed with status ${response.status}`);
+  const bytes = await response.arrayBuffer();
+  if (bytes.byteLength > 20 * 1024 * 1024) throw new Error('Telegram photo exceeds vision request limit');
+  return `data:image/jpeg;base64,${arrayBufferToBase64(bytes)}`;
+}
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
 }
 
 // ==================== Summary (довготривала пам'ять розмови) ====================

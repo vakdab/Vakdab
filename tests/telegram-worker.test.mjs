@@ -300,3 +300,14 @@ test('manga and novel details use VakDab reader routes and a concise bot button'
   assert.doesNotMatch(contentPage, /<a class="back"/);
   assert.doesNotMatch(contentPage, /href="\$\{escape\(externalReadUrl\)\}"/);
 });
+
+
+test('Luna routes Telegram photos through a multimodal vision request', () => {
+  const workerSource = readFileSync(new URL('../vakdab-telegram-bot/worker.js', import.meta.url), 'utf8');
+  assert.match(workerSource, /if \(message\.photo\?\.length\)/);
+  assert.match(workerSource, /handleLunaPhotoMessage\(chatId, memoryKey, message, env\)/);
+  assert.match(workerSource, /telegram\('getFile'/);
+  assert.match(workerSource, /type: 'image_url'/);
+  assert.match(workerSource, /data:image\/jpeg;base64/);
+  assert.match(workerSource, /const caption = String\(message\.caption \|\| ''\)/);
+});
