@@ -311,3 +311,14 @@ test('Luna routes Telegram photos through a multimodal vision request', () => {
   assert.match(workerSource, /data:image\/jpeg;base64/);
   assert.match(workerSource, /const caption = String\(message\.caption \|\| ''\)/);
 });
+
+test('start flow gates the main menu behind @vakluna subscription', () => {
+  const workerSource = readFileSync(new URL('../vakdab-telegram-bot/worker.js', import.meta.url), 'utf8');
+  assert.match(workerSource, /REQUIRED_CHANNEL_USERNAME = '@vakluna'/);
+  assert.match(workerSource, /REQUIRED_CHANNEL_URL = 'https:\/\/t\.me\/vakluna'/);
+  assert.match(workerSource, /getChatMember/);
+  assert.match(workerSource, /subscription:check/);
+  assert.match(workerSource, /await isChannelSubscriber\(message\.from\?\.id, env\)/);
+  assert.match(workerSource, /await sendTrackedMessage\(chatId, memoryKey, subscriptionGateText\(\)/);
+  assert.match(workerSource, /Підписатися на канал/);
+});

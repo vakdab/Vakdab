@@ -6,6 +6,8 @@ const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/schedule.html?v=mono-20260823-154
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
+const REQUIRED_CHANNEL_USERNAME = '@vakluna';
+const REQUIRED_CHANNEL_URL = 'https://t.me/vakluna';
 
 const CONTENT_TYPES = Object.freeze({
   anime: { key: 'anime', label: 'Аніме', endpoint: 'anime' },
@@ -122,6 +124,23 @@ async function handleMessage(message, env) {
     await rememberVisibleMessage(memoryKey, message.message_id, env);
     void ensureBotCommands(env).catch(error => console.error('[telegram] command sync failed:', safeError(error)));
   }
+  if (text === '/start') {
+    await ensureBotCommands(env);
+    if (await isChannelSubscriber(message.from?.id, env)) {
+      const state = getState(chatId);
+      state.screen = 'home';
+      await sendMessage(chatId, 'Підписку підтверджено. Оберіть дію:', { reply_markup: mainKeyboard() }, env);
+    } else {
+      getState(chatId).screen = 'awaiting_subscription';
+      await sendTrackedMessage(chatId, memoryKey, subscriptionGateText(), { reply_markup: subscriptionKeyboard() }, env);
+    }
+    return;
+  }
+  if (!(await isChannelSubscriber(message.from?.id, env))) {
+    getState(chatId).screen = 'awaiting_subscription';
+    await sendTrackedMessage(chatId, memoryKey, subscriptionGateText(), { reply_markup: subscriptionKeyboard() }, env);
+    return;
+  }
   if (/^\/f8(?:@\w+)?(?:\s|$)/i.test(text)) {
     if (message.chat?.type !== 'private' || !isBotOwner(message.from)) {
       await sendMessage(chatId, 'Ця команда недоступна.', {}, env);
@@ -145,14 +164,6 @@ async function handleMessage(message, env) {
     await handleLunaPhotoMessage(chatId, memoryKey, message, env);
     return;
   }
-  if (text === '/start') {
-    const state = getState(chatId);
-    state.screen = 'home';
-    await ensureBotCommands(env);
-    await sendMessage(chatId, 'Привіт! Оберіть дію:', { reply_markup: mainKeyboard() }, env);
-    return;
-  }
-
   if (/^\/clear(?:@\w+)?(?:\s|$)/i.test(text)) {
     // Команда теж уже записана в visible-індексі вище, тому зникне разом із чатом.
     await clearVisibleConversation(chatId, memoryKey, env);
@@ -1121,11 +1132,32 @@ async function handleCallbackQuery(callback, env) {
   }
 
   if (message?.chat?.type === 'private') await trackBotUser(callback.from, chatId, env);
-  await answerCallback(callbackId, '', env);
+  if (data !== 'subscription:check') await answerCallback(callbackId, '', env);
   const state = getState(chatId);
+  if (data !== 'subscription:check' && !(await isChannelSubscriber(callback.from?.id, env))) {
+    state.screen = 'awaiting_subscription';
+    await replaceMessage(chatId, messageId, subscriptionGateText(), false, { reply_markup: subscriptionKeyboard() }, env);
+    return;
+  }
 
   try {
+    if (data === 'subscription:check') {
+      if (!(await isChannelSubscriber(callback.from?.id, env))) {
+        await answerCallback(callbackId, 'Підписку ще не знайдено. Підпишись і натисни ще раз.', env, { show_alert: true });
+        return;
+      }
+      await answerCallback(callbackId, '', env);
+      state.screen = 'home';
+      await replaceMessage(chatId, messageId, 'Підписку підтверджено. Оберіть дію:', false, { reply_markup: mainKeyboard() }, env);
+      return;
+    }
+
     if (data === 'home') {
+      if (!(await isChannelSubscriber(callback.from?.id, env))) {
+        state.screen = 'awaiting_subscription';
+        await replaceMessage(chatId, messageId, subscriptionGateText(), false, { reply_markup: subscriptionKeyboard() }, env);
+        return;
+      }
       state.screen = 'home';
       state.previous = null;
       await deleteMessage(chatId, messageId, env);
@@ -1275,6 +1307,32 @@ async function handleCallbackQuery(callback, env) {
     console.error('[callback] failed:', safeError(error));
     await replaceMessage(chatId, messageId, 'Не вдалося отримати дані. Спробуйте ще раз.', false, { reply_markup: mainKeyboard() }, env);
   }
+}
+
+function subscriptionGateText() {
+  return '<b>Щоб користуватися ботом, спочатку підпишись на наш канал.</b>\n\nПісля підписки натисни «Я підписався — перевірити». Якщо кнопка не спрацює одразу, відкрий канал у Telegram і повтори перевірку.';
+}
+
+function subscriptionKeyboard() {
+  return { inline_keyboard: [
+    [{ text: 'Підписатися на канал', url: REQUIRED_CHANNEL_URL }],
+    [{ text: 'Я підписався — перевірити', callback_data: 'subscription:check' }]
+  ] };
+}
+
+async function isChannelSubscriber(userId, env) {
+  if (!userId) return false;
+  const result = await telegram('getChatMember', {
+    chat_id: REQUIRED_CHANNEL_USERNAME,
+    user_id: userId
+  }, env);
+  if (!result?.ok) {
+    console.error('[subscription] getChatMember failed');
+    return false;
+  }
+  const status = result.result?.status;
+  return status === 'creator' || status === 'administrator' || status === 'member'
+    || (status === 'restricted' && result.result?.is_member === true);
 }
 
 function getState(chatId) {
@@ -1834,8 +1892,8 @@ async function deleteMessage(chatId, messageId, env) {
   return telegram('deleteMessage', { chat_id: chatId, message_id: messageId }, env);
 }
 
-async function answerCallback(callbackQueryId, text, env) {
-  return telegram('answerCallbackQuery', { callback_query_id: callbackQueryId, text }, env);
+async function answerCallback(callbackQueryId, text, env, extra = {}) {
+  return telegram('answerCallbackQuery', { callback_query_id: callbackQueryId, text, ...extra }, env);
 }
 
 async function telegram(method, params, env) {
