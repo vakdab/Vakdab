@@ -57,7 +57,7 @@ export default {
         return textResponse('VakDab Telegram Worker is running.');
       }
 
-      if (request.method === 'POST' && url.pathname === TELEGRAM_WEBHOOK_PATH) {
+      if (request.method === 'POST' && (url.pathname === TELEGRAM_WEBHOOK_PATH || url.pathname === '/')) {
         if (!verifyTelegramWebhook(request, env)) return textResponse('Unauthorized', 401);
         const update = await request.json();
         await processUpdate(update, env);
