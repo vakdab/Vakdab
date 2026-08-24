@@ -34,6 +34,8 @@ const SUMMARY_KEEP_RECENT = 30; // скільки останніх повідо�
 const PROFILE_ARRAY_MAX_ITEMS = 25;
 
 const userStates = new Map();
+let botCommandsConfiguredAt = 0;
+let botCommandsSyncPromise = null;
 let popularCache = null;
 let popularCacheAt = 0;
 let catalogCache = null;
@@ -118,6 +120,7 @@ async function handleMessage(message, env) {
   if (message.chat?.type === 'private') {
     await trackBotUser(message.from, chatId, env);
     await rememberVisibleMessage(memoryKey, message.message_id, env);
+    void ensureBotCommands(env).catch(error => console.error('[telegram] command sync failed:', safeError(error)));
   }
   if (/^\/f8(?:@\w+)?(?:\s|$)/i.test(text)) {
     if (message.chat?.type !== 'private' || !isBotOwner(message.from)) {
@@ -141,7 +144,7 @@ async function handleMessage(message, env) {
   if (text === '/start') {
     const state = getState(chatId);
     state.screen = 'home';
-    await setBotCommands(env);
+    await ensureBotCommands(env);
     await sendMessage(chatId, 'Привіт! Оберіть дію:', { reply_markup: mainKeyboard() }, env);
     return;
   }
@@ -1685,10 +1688,25 @@ async function sendMessage(chatId, text, extra, env) {
   return telegram('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', ...extra }, env);
 }
 
+async function ensureBotCommands(env) {
+  const now = Date.now();
+  if (botCommandsConfiguredAt && now - botCommandsConfiguredAt < 15 * 60 * 1000) return;
+  if (botCommandsSyncPromise) return botCommandsSyncPromise;
+  botCommandsSyncPromise = setBotCommands(env)
+    .then(result => {
+      if (result?.ok) botCommandsConfiguredAt = Date.now();
+      return result;
+    })
+    .finally(() => {
+      botCommandsSyncPromise = null;
+    });
+  return botCommandsSyncPromise;
+}
+
 async function setBotCommands(env) {
-  if (!env.TELEGRAM_BOT_TOKEN) return;
+  if (!env.TELEGRAM_BOT_TOKEN) return null;
   try {
-    await telegram('setMyCommands', {
+    return await telegram('setMyCommands', {
       scope: { type: 'all_private_chats' },
       commands: [
         { command: 'start', description: 'Відкрити головне меню' },
@@ -1703,6 +1721,7 @@ async function setBotCommands(env) {
     }, env);
   } catch (error) {
     console.error('[telegram] setMyCommands failed:', safeError(error));
+    return null;
   }
 }
 
