@@ -469,8 +469,17 @@ async function handleLunaMessage(chatId, memoryKey, userMessage, env) {
     }
   } catch (error) {
     console.error('[luna] failed:', safeError(error));
-    await sendMessage(chatId, 'Луна тимчасово не може відповісти. Спробуйте ще раз.', { reply_markup: backHomeKeyboard() }, env);
+    await sendMessage(chatId, getLunaTemporaryReply(userMessage), { reply_markup: backHomeKeyboard() }, env);
   }
+}
+
+export function getLunaTemporaryReply(userMessage = '') {
+  if (isWarRequest(userMessage)) return 'Про війну я не говорю. Давай краще про будь-що інше.';
+  const normalized = String(userMessage).trim().toLowerCase();
+  if (/^(?:(?:[ах]){3,}|(?:лол|кек)+|тю+|хм+|мм+)[!.?\s]*$/u.test(normalized)) {
+    return 'Ахах 😄 Я трохи підвисла, але настрій зрозуміла.';
+  }
+  return 'Я тут, просто трохи підвисла. Повтори останнє — підхоплю тему й продовжимо 🙂';
 }
 
 function getAIProviderConfig(env) {
@@ -507,27 +516,51 @@ function getAIProviderConfig(env) {
   throw new Error('GROQ_API_KEY is not configured');
 }
 
-export async function callCompatibleChat(messages, env, options = {}) {
-  const primaryConfig = getAIProviderConfig(env);
-  const providerConfigs = [primaryConfig];
-  const bazaarlinkKey = String(env.BAZAARLINK_API_KEY || '').trim();
-  if (primaryConfig.provider === 'OpenAI' && bazaarlinkKey) {
-    providerConfigs.push({
-      provider: 'BazaarLink',
-      apiKey: bazaarlinkKey,
-      baseUrl: String(env.BAZAARLINK_BASE_URL || BAZAARLINK_API_BASE).replace(/\/+$/, ''),
-      model: String(env.BAZAARLINK_MODEL || 'qwen/qwen3.7-flash:free').trim()
-    });
-  }
+const TRANSIENT_AI_STATUS_CODES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
+const AI_RETRY_DELAYS_MS = [250, 700];
+
+function getConfiguredProviderConfigs(env) {
+  const configs = [];
   const groqKey = String(env.GROQ_API_KEY || '').trim();
-  if (['OpenAI', 'BazaarLink'].includes(primaryConfig.provider) && groqKey) {
-    providerConfigs.push({
+  if (groqKey) {
+    configs.push({
       provider: 'Groq',
       apiKey: groqKey,
       baseUrl: GROQ_API_BASE,
       model: String(env.GROQ_MODEL || 'qwen/qwen3.6-27b').trim()
     });
   }
+
+  const openaiKey = String(env.OPENAI_API_KEY || '').trim();
+  if (openaiKey) {
+    configs.push({
+      provider: 'OpenAI',
+      apiKey: openaiKey,
+      baseUrl: String(env.OPENAI_BASE_URL || OPENAI_API_BASE).replace(/\/+$/, ''),
+      model: String(env.OPENAI_MODEL || 'gpt-4o-mini').trim()
+    });
+  }
+
+  const bazaarlinkKey = String(env.BAZAARLINK_API_KEY || '').trim();
+  if (bazaarlinkKey) {
+    configs.push({
+      provider: 'BazaarLink',
+      apiKey: bazaarlinkKey,
+      baseUrl: String(env.BAZAARLINK_BASE_URL || BAZAARLINK_API_BASE).replace(/\/+$/, ''),
+      model: String(env.BAZAARLINK_MODEL || 'qwen/qwen3.7-flash:free').trim()
+    });
+  }
+
+  return configs;
+}
+
+function wait(milliseconds) {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+export async function callCompatibleChat(messages, env, options = {}) {
+  const providerConfigs = getConfiguredProviderConfigs(env);
+  if (!providerConfigs.length) throw new Error('GROQ_API_KEY is not configured');
   let lastError = null;
 
   for (const config of providerConfigs) {
@@ -540,6 +573,8 @@ export async function callCompatibleChat(messages, env, options = {}) {
       : [{ model: config.model }];
 
     for (const attempt of modelsToTry) {
+      const retryCount = options.retryTransient === false ? 0 : (options.retryCount ?? AI_RETRY_DELAYS_MS.length);
+      for (let retryIndex = 0; retryIndex <= retryCount; retryIndex += 1) {
       const payload = {
         model: attempt.model,
         messages,
@@ -569,7 +604,11 @@ export async function callCompatibleChat(messages, env, options = {}) {
           const detail = truncate(responseBody, 240);
           lastError = new Error(`${config.provider} API error ${response.status}${retryAfter ? ` (retry-after ${retryAfter})` : ''}: ${detail}`);
           console.error(`[${config.provider}] chat attempt ${attempt.model} failed with status ${response.status}${retryAfter ? `; retry-after ${retryAfter}` : ''}: ${detail}`);
-          continue;
+          if (TRANSIENT_AI_STATUS_CODES.has(response.status) && retryIndex < retryCount) {
+            await wait(AI_RETRY_DELAYS_MS[retryIndex] || AI_RETRY_DELAYS_MS.at(-1));
+            continue;
+          }
+          break;
         }
 
         let data;
@@ -588,11 +627,17 @@ export async function callCompatibleChat(messages, env, options = {}) {
       } catch (error) {
         lastError = error;
         console.error(`[${config.provider}] chat attempt ${attempt.model} failed: ${safeError(error)}`);
+        if (retryIndex < retryCount) {
+          await wait(AI_RETRY_DELAYS_MS[retryIndex] || AI_RETRY_DELAYS_MS.at(-1));
+          continue;
+        }
+        break;
+      }
       }
     }
   }
 
-  throw lastError || new Error(`${primaryConfig.provider} returned no text`);
+  throw lastError || new Error('All configured AI providers returned no text');
 }
 
 async function callLunaAI(prompt, fullHistory, profile, summary, env) {

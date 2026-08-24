@@ -15,6 +15,7 @@ import {
   getAIProviderConfig,
   callCompatibleChat,
   getLunaDirectReply,
+  getLunaTemporaryReply,
   isMemoryRequest,
   isWarRequest,
   formatLunaMemory,
@@ -114,6 +115,30 @@ test('repairMojibake restores Ukrainian UTF-8 text and preserves valid text', ()
   assert.equal(repairMojibake(mojibake), original);
   assert.equal(repairMojibake('Привіт, Луна!'), 'Привіт, Луна!');
   assert.equal(repairMojibake('Hello, world!'), 'Hello, world!');
+});
+
+test('Luna gives a conversational temporary reply when the provider is unavailable', () => {
+  assert.match(getLunaTemporaryReply('Привіт'), /підвисла/);
+  assert.match(getLunaTemporaryReply('Ахахах'), /настрій зрозуміла/);
+  assert.equal(getLunaTemporaryReply('Розкажи про війну'), 'Про війну я не говорю. Давай краще про будь-що інше.');
+});
+
+test('Compatible chat retries transient provider failures before succeeding', async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    if (calls < 2) return new Response('busy', { status: 503 });
+    return new Response(JSON.stringify({ choices: [{ message: { content: 'Повернулась 🙂' } }] }), { status: 200 });
+  };
+
+  try {
+    const result = await callCompatibleChat([{ role: 'user', content: 'Продовжимо' }], { GROQ_API_KEY: 'test-key' }, { maxTokens: 64 });
+    assert.equal(result, 'Повернулась 🙂');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.equal(calls, 2);
 });
 
 test('Groq Qwen requests use completion tokens and disable reasoning output', async () => {
