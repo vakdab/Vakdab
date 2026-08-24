@@ -311,3 +311,15 @@ test('Luna routes Telegram photos through a multimodal vision request', () => {
   assert.match(workerSource, /data:image\/jpeg;base64/);
   assert.match(workerSource, /const caption = String\(message\.caption \|\| ''\)/);
 });
+
+
+test('music recognition accepts Telegram media, TikTok URLs and catalog searches', () => {
+  const workerSource = readFileSync(new URL('../vakdab-telegram-bot/worker.js', import.meta.url), 'utf8');
+  assert.match(workerSource, /music\|shazam/);
+  assert.match(workerSource, /getMusicMedia\(message\)/);
+  assert.match(workerSource, /AUDD_API_TOKEN/);
+  assert.match(workerSource, /api\.audd\.io/);
+  assert.match(workerSource, /www\.tiktok\.com\/oembed/);
+  assert.match(workerSource, /itunes\.apple\.com\/search/);
+  assert.match(workerSource, /formatMusicResult/);
+});
