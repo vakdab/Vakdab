@@ -21,7 +21,9 @@ import {
   formatLunaMemory,
   buildRecentHistory,
   repairMojibake,
-  musicPreviewTrack
+  musicPreviewTrack,
+  musicChoiceKeyboard,
+  formatRecognizedMusic
 } from '../vakdab-telegram-bot/worker.js';
 
 test('Groq configuration takes priority when both providers are configured', () => {
@@ -314,32 +316,33 @@ test('Luna routes Telegram photos through a multimodal vision request', () => {
 });
 
 
-test('music recognition accepts Telegram media, TikTok URLs and catalog searches', () => {
+test('music recognition accepts only Telegram video and builds selectable candidates', () => {
   const workerSource = readFileSync(new URL('../vakdab-telegram-bot/worker.js', import.meta.url), 'utf8');
   assert.match(workerSource, /music\|shazam/);
-  assert.match(workerSource, /getMusicMedia\(message\)/);
+  assert.match(workerSource, /message\.video/);
   assert.match(workerSource, /AUDD_API_TOKEN/);
   assert.match(workerSource, /api\.audd\.io/);
-  assert.match(workerSource, /www\.tiktok\.com\/oembed/);
   assert.match(workerSource, /itunes\.apple\.com\/search/);
-  assert.match(workerSource, /formatMusicResult/);
-});
-
-
-test('music flow expands TikTok short links and does not fall back to Luna on failure', () => {
-  const workerSource = readFileSync(new URL('../vakdab-telegram-bot/worker.js', import.meta.url), 'utf8');
-  assert.match(workerSource, /vt\\\./);
-  assert.match(workerSource, /redirect: 'follow'/);
-  assert.match(workerSource, /TIKTOK_RESOLVER_API/);
-  assert.match(workerSource, /recognizeAudioUrl/);
-  assert.match(workerSource, /sendAudio/);
+  assert.match(workerSource, /api\.deezer\.com\/search/);
+  assert.match(workerSource, /musicChoiceKeyboard/);
+  assert.match(workerSource, /music:pick:/);
   assert.match(workerSource, /sendAudioBuffer/);
-  assert.match(workerSource, /const keepMusicMode = getState\(chatId\)\.screen === 'waiting_for_music'/);
-  assert.match(workerSource, /getState\(chatId\)\.screen = keepMusicMode \? 'waiting_for_music' : 'home'/);
+  assert.doesNotMatch(workerSource, /tiktok\.com|TIKTOK_RESOLVER_API|recognizeTikTokUrl/);
 });
 
 test('music preview selection uses only an available catalog preview', () => {
   assert.equal(musicPreviewTrack({ kind: 'catalog', results: [{ trackName: 'No preview' }, { trackName: 'Preview', previewUrl: 'https://example.com/preview.m4a' }] }).trackName, 'Preview');
   assert.equal(musicPreviewTrack({ kind: 'recognized', artist: 'Artist', title: 'Song' }), null);
-  assert.equal(musicPreviewTrack({ kind: 'tiktok', catalog: { kind: 'catalog', results: [{ previewUrl: 'https://example.com/tiktok-preview.m4a' }] } }).previewUrl, 'https://example.com/tiktok-preview.m4a');
+});
+
+test('music choice keyboard keeps callback data short and formats the recognition result', () => {
+  const candidates = [
+    { artistName: 'Artist One', trackName: 'Song One', previewUrl: 'https://example.com/one.m4a' },
+    { artistName: 'Artist Two', trackName: 'Song Two', previewUrl: 'https://example.com/two.m4a' }
+  ];
+  const keyboard = musicChoiceKeyboard(candidates);
+  assert.equal(keyboard.inline_keyboard[0][0].callback_data, 'music:pick:0');
+  assert.equal(keyboard.inline_keyboard[1][0].callback_data, 'music:pick:1');
+  assert.equal(keyboard.inline_keyboard.at(-1)[0].callback_data, 'home');
+  assert.match(formatRecognizedMusic({ artist: 'Artist One', title: 'Song One' }, candidates), /Обери правильний варіант/);
 });

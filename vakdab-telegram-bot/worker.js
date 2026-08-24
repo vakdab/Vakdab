@@ -145,19 +145,10 @@ async function handleMessage(message, env) {
     await handleLunaPhotoMessage(chatId, memoryKey, message, env);
     return;
   }
-  if (isTikTokUrl(text)) {
-    await handleMusicText(chatId, memoryKey, text, env);
-    return;
-  }
   if (/^\/(?:music|shazam)(?:@\w+)?(?:\s|$)/i.test(text)) {
     const state = getState(chatId);
     state.screen = 'waiting_for_music';
-    const query = text.replace(/^\/(?:music|shazam)(?:@\w+)?\s*/i, '').trim();
-    if (query) {
-      await handleMusicText(chatId, memoryKey, query, env);
-    } else {
-      await sendTrackedMessage(chatId, memoryKey, 'Надішли відео, аудіо або TikTok-посилання — я спробую знайти трек 🎵', {}, env);
-    }
+    await sendTrackedMessage(chatId, memoryKey, 'Надішли коротке відео — я розпізнаю музику, покажу варіанти, і ти зможеш обрати трек 🎵', {}, env);
     return;
   }
   const musicMedia = getMusicMedia(message);
@@ -166,7 +157,7 @@ async function handleMessage(message, env) {
     return;
   }
   if (getState(chatId).screen === 'waiting_for_music' && text) {
-    await handleMusicText(chatId, memoryKey, text, env);
+    await sendTrackedMessage(chatId, memoryKey, 'У режимі музики приймаю лише відео. Надішли короткий відеофрагмент із музикою 🎵', {}, env);
     return;
   }
   if (text === '/start') {
@@ -313,7 +304,6 @@ function formatUsageDate(timestamp) {
 const OPENAI_API_BASE = 'https://api.openai.com/v1';
 const BAZAARLINK_API_BASE = 'https://api.bazaarlink.ai/v1';
 const GROQ_API_BASE = 'https://api.groq.com/openai/v1';
-const TIKTOK_RESOLVER_API = 'https://www.tikwm.com/api/';
 
 const LUNA_SYSTEM_PROMPT = `Тебе звати Луна. Ти — цифрова компанйонка VakDab для живого, невимушеного спілкування на будь-які теми.
 Ти дівчина, тому коли говориш про себе, використовуй жіночий рід: «я рада», «я подумала», «я знайшла».
@@ -789,54 +779,41 @@ function arrayBufferToBase64(buffer) {
 }
 
 function getMusicMedia(message) {
-  if (message?.video?.file_id) return { fileId: message.video.file_id, fileName: 'telegram-video.mp4', mimeType: message.video.mime_type || 'video/mp4' };
-  if (message?.audio?.file_id) return { fileId: message.audio.file_id, fileName: message.audio.file_name || 'telegram-audio.mp3', mimeType: message.audio.mime_type || 'audio/mpeg' };
-  if (message?.document?.file_id && /^(audio|video)\//i.test(message.document.mime_type || '')) {
-    return { fileId: message.document.file_id, fileName: message.document.file_name || 'telegram-media', mimeType: message.document.mime_type };
+  if (message?.video?.file_id) return { fileId: message.video.file_id, fileName: message.video.file_name || 'telegram-video.mp4', mimeType: message.video.mime_type || 'video/mp4' };
+  if (message?.document?.file_id && /^video\//i.test(message.document.mime_type || '')) {
+    return { fileId: message.document.file_id, fileName: message.document.file_name || 'telegram-video', mimeType: message.document.mime_type };
   }
   return null;
-}
-
-function isTikTokUrl(text) {
-  return /https?:\/\/(?:www\.|vm\.|vt\.)?tiktok\.com\/[^\s]+/i.test(String(text || ''));
-}
-
-async function handleMusicText(chatId, memoryKey, text, env) {
-  const keepMusicMode = getState(chatId).screen === 'waiting_for_music';
-  try {
-    await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
-    const result = isTikTokUrl(text)
-      ? await recognizeTikTokUrl(text, env)
-      : await searchMusicCatalog(text, env);
-    await sendTrackedMessage(chatId, memoryKey, formatMusicResult(result), {}, env);
-    // Надсилання preview — необов’язковий крок: його збій не має маскувати знайдений трек.
-    try {
-      await sendMusicPreviewIfAvailable(chatId, memoryKey, result, env);
-    } catch (error) {
-      console.error('[music] optional preview failed:', safeError(error));
-    }
-  } catch (error) {
-    console.error('[music] text request failed:', safeError(error));
-    await sendTrackedMessage(chatId, memoryKey, 'Не знайшла трек за цим запитом. Спробуй точнішу назву, коротке відео або аудіо без зайвого шуму 🎵', {}, env);
-  } finally {
-    // Після невдалого запиту не віддаємо наступну репліку в Luna автоматично.
-    getState(chatId).screen = keepMusicMode ? 'waiting_for_music' : 'home';
-  }
 }
 
 async function handleMusicMedia(chatId, memoryKey, media, env) {
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
-    const result = await recognizeTelegramMedia(media, env);
-    await sendTrackedMessage(chatId, memoryKey, formatMusicResult(result), {}, env);
-    try {
-      await sendMusicPreviewIfAvailable(chatId, memoryKey, result, env);
-    } catch (error) {
-      console.error('[music] optional preview failed:', safeError(error));
+    const recognized = await recognizeTelegramMedia(media, env);
+    if (recognized.kind !== 'recognized') {
+      await sendTrackedMessage(chatId, memoryKey, 'Не знайшла музику в цьому відео. Надішли коротший фрагмент, де звук голосніший за шум 🎵', {}, env);
+      return;
     }
+
+    let candidates = [];
+    try {
+      const catalog = await searchMusicCatalog(`${recognized.artist} ${recognized.title}`, env);
+      candidates = catalog.results.slice(0, 5);
+    } catch (error) {
+      console.error('[music] candidate lookup failed:', safeError(error));
+    }
+    if (!candidates.length) candidates = [{
+      artistName: recognized.artist || '',
+      trackName: recognized.title || '',
+      previewUrl: ''
+    }];
+    const state = getState(chatId);
+    state.musicCandidates = candidates;
+    await saveMusicCandidates(chatId, candidates, env);
+    await sendTrackedMessage(chatId, memoryKey, formatRecognizedMusic(recognized, candidates), { reply_markup: musicChoiceKeyboard(candidates) }, env);
   } catch (error) {
     console.error('[music] media request failed:', safeError(error));
-    await sendTrackedMessage(chatId, memoryKey, 'Не змогла розпізнати музику в цьому файлі. Спробуй коротший фрагмент із чіткішим звуком 🙂', {}, env);
+    await sendTrackedMessage(chatId, memoryKey, 'Не змогла розпізнати музику в цьому відео. Спробуй коротший фрагмент із чіткішим звуком 🎵', {}, env);
   } finally {
     getState(chatId).screen = 'home';
   }
@@ -855,22 +832,15 @@ async function recognizeTelegramMedia(media, env) {
   return recognizeAudDForm(form, env);
 }
 
-async function recognizeAudioUrl(url, env) {
-  if (!env.AUDD_API_TOKEN) throw new Error('AUDD_API_TOKEN is not configured');
-  const form = new FormData();
-  form.set('url', url);
-  return recognizeAudDForm(form, env);
-}
-
 async function recognizeAudDForm(form, env) {
   form.set('api_token', env.AUDD_API_TOKEN);
   form.set('return', 'apple_music,spotify,deezer,musicbrainz');
   const response = await fetch('https://api.audd.io/', { method: 'POST', body: form });
   const data = await response.json();
-  if (!response.ok || data?.status !== 'success' || !data?.result) {
+  if (!response.ok || data?.status !== 'success') {
     throw new Error(`AudD recognition failed: ${truncate(JSON.stringify(data), 240)}`);
   }
-  return { kind: 'recognized', ...data.result };
+  return data.result ? { kind: 'recognized', ...data.result } : { kind: 'none' };
 }
 
 async function getTelegramFileBytes(fileId, env) {
@@ -881,87 +851,6 @@ async function getTelegramFileBytes(fileId, env) {
   const response = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${filePath}`);
   if (!response.ok) throw new Error(`Telegram file download failed with status ${response.status}`);
   return { bytes: await response.arrayBuffer(), filePath };
-}
-
-async function recognizeTikTokUrl(text, env) {
-  const match = String(text || '').match(/https?:\/\/(?:www\.|vm\.|vt\.)?tiktok\.com\/[^\s]+/i);
-  if (!match) throw new Error('TikTok URL is missing');
-  const originalUrl = match[0].replace(/[)>.,]+$/, '');
-  let canonicalUrl = originalUrl;
-  try {
-    // Розгортаємо vt./vm. share-link перед викликом oEmbed.
-    const redirect = await fetch(originalUrl, { method: 'GET', redirect: 'follow' });
-    canonicalUrl = redirect.url || originalUrl;
-  } catch (error) {
-    console.error('[music] TikTok short URL expand failed:', safeError(error));
-  }
-
-  const [oembedResult, resolvedResult] = await Promise.all([
-    getTikTokOEmbed(canonicalUrl, originalUrl).catch(error => {
-      console.error('[music] TikTok oEmbed failed:', safeError(error));
-      return null;
-    }),
-    resolveTikTokAudio(originalUrl).catch(error => {
-      console.error('[music] TikTok audio resolver failed:', safeError(error));
-      return null;
-    })
-  ]);
-  const oembed = oembedResult || {};
-  const resolved = resolvedResult || {};
-  if (!oembedResult && !resolvedResult) throw new Error('TikTok metadata unavailable');
-  const soundMatch = String(oembed?.html || '').match(/title="♬ ([^"]+)"|>♬ ([^<]+)</i);
-  const soundName = resolved?.soundName || soundMatch?.[1] || soundMatch?.[2] || '';
-  const normalizedSound = soundName.replace(/^original sound\s*[-–—]\s*/i, '').trim();
-  let recognized = null;
-  if (resolved?.audioUrl && env.AUDD_API_TOKEN) {
-    try {
-      recognized = await recognizeAudioUrl(resolved.audioUrl, env);
-    } catch (error) {
-      console.error('[music] TikTok audio recognition failed:', safeError(error));
-    }
-  }
-  const query = normalizedSound || (recognized ? '' : String(oembed?.title || '').slice(0, 120));
-  const catalog = query ? await searchMusicCatalog(query, env) : null;
-  return {
-    kind: 'tiktok',
-    tiktokUrl: canonicalUrl,
-    title: oembed?.title || resolved?.title || '',
-    author: oembed?.author_name || resolved?.author || '',
-    soundName,
-    thumbnailUrl: oembed?.thumbnail_url || '',
-    recognized,
-    catalog
-  };
-}
-
-async function getTikTokOEmbed(canonicalUrl, originalUrl) {
-  let response = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(canonicalUrl)}`);
-  if (!response.ok && canonicalUrl !== originalUrl) {
-    response = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(originalUrl)}`);
-  }
-  if (!response.ok) throw new Error(`TikTok oEmbed failed with status ${response.status}`);
-  return response.json();
-}
-
-async function resolveTikTokAudio(url) {
-  const form = new URLSearchParams({ url, hd: '0' });
-  const response = await fetch(TIKTOK_RESOLVER_API, {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: form
-  });
-  const data = await response.json();
-  if (!response.ok || data?.code !== 0 || !data?.data) {
-    throw new Error(`TikTok resolver failed with status ${response.status}`);
-  }
-  const music = data.data.music_info || {};
-  return {
-    audioUrl: data.data.music || music.play || '',
-    soundName: music.title || '',
-    musicAuthor: music.author || '',
-    title: data.data.title || '',
-    author: data.data.author?.nickname || data.data.author?.unique_id || ''
-  };
 }
 
 async function searchMusicCatalog(query, env) {
@@ -1045,24 +934,18 @@ function musicPreviewTrack(result) {
   if (!result) return null;
   if (result.kind === 'catalog') return result.results?.find(song => song?.previewUrl) || null;
   if (result.kind === 'recognized') return result.previewUrl ? result : null;
-  if (result.kind === 'tiktok') return musicPreviewTrack(result.recognized) || musicPreviewTrack(result.catalog);
   return null;
 }
 
 function formatMusicResult(result) {
   if (!result) return 'Нічого не знайшла.';
+  if (result.kind === 'none') return 'Не знайшла музику в цьому відео. Спробуй коротший фрагмент із чіткішим звуком 🎵';
   if (result.kind === 'recognized') {
     const links = [];
     if (result.song_link) links.push(`<a href="${escapeHtml(result.song_link)}">Відкрити трек</a>`);
     if (result.spotify?.external_urls?.spotify) links.push(`<a href="${escapeHtml(result.spotify.external_urls.spotify)}">Spotify</a>`);
     if (result.apple_music?.url) links.push(`<a href="${escapeHtml(result.apple_music.url)}">Apple Music</a>`);
     return `<b>Знайшла трек 🎵</b>\n\n<b>${escapeHtml(result.artist || 'Невідомий виконавець')} — ${escapeHtml(result.title || 'Невідома назва')}</b>${result.album ? `\nАльбом: ${escapeHtml(result.album)}` : ''}${result.timecode ? `\nФрагмент: ${escapeHtml(result.timecode)}` : ''}${links.length ? `\n\n${links.join(' · ')}` : ''}`;
-  }
-  if (result.kind === 'tiktok') {
-    const recognizedText = result.recognized ? formatMusicResult(result.recognized) : '';
-    const catalogText = result.catalog ? formatMusicResult(result.catalog) : '';
-    const trackText = recognizedText || catalogText;
-    return `<b>TikTok-відео</b>\n${result.author ? `Автор: ${escapeHtml(result.author)}\n` : ''}${result.soundName ? `Звук: <b>${escapeHtml(result.soundName)}</b>\n` : ''}${result.title ? `Опис: ${escapeHtml(result.title)}\n` : ''}<a href="${escapeHtml(result.tiktokUrl)}">Відкрити відео в TikTok</a>${trackText ? `\n\n${trackText}` : '\n\nТочний трек за цим звуком не визначився.'}`;
   }
   const results = Array.isArray(result.results) ? result.results.slice(0, 5) : [];
   if (!results.length) return `За запитом «${escapeHtml(result.query || '')}» нічого не знайшла. Спробуй назву виконавця або пісні.`;
@@ -1448,6 +1331,29 @@ async function handleCallbackQuery(callback, env) {
       return;
     }
 
+    if (data === 'music:prompt') {
+      state.screen = 'waiting_for_music';
+      await replaceMessage(chatId, messageId, 'Надішліть коротке відео з музикою — я розпізнаю трек.', false, { reply_markup: backHomeKeyboard() }, env);
+      return;
+    }
+
+    const musicPick = data.match(/^music:pick:(\d+)$/);
+    if (musicPick) {
+      const index = Number(musicPick[1]);
+      const storedCandidates = Array.isArray(state.musicCandidates) && state.musicCandidates.length
+        ? state.musicCandidates
+        : await loadMusicCandidates(chatId, env);
+      const track = storedCandidates[index] || null;
+      if (!track) {
+        await replaceMessage(chatId, messageId, 'Цей варіант більше недоступний. Надішліть відео ще раз.', false, { reply_markup: mainKeyboard() }, env);
+        return;
+      }
+      const title = `${track.artistName || 'Невідомий виконавець'} — ${track.trackName || 'Невідома назва'}`;
+      await replaceMessage(chatId, messageId, `<b>Обрано трек 🎵</b>\n\n${escapeHtml(title)}${track.trackViewUrl ? `\n\n<a href="${escapeHtml(track.trackViewUrl)}">Відкрити офіційну сторінку</a>` : ''}\n\nНадсилаю доступне коротке preview.`, false, {}, env);
+      await sendMusicPreviewIfAvailable(chatId, getMemoryKey(callback.from), { kind: 'catalog', results: [track] }, env);
+      return;
+    }
+
     if (data === 'roulette:start') {
       await replaceMessage(chatId, messageId, rouletteIntroText(), false, { reply_markup: rouletteStartKeyboard() }, env);
       return;
@@ -1588,7 +1494,7 @@ async function handleCallbackQuery(callback, env) {
 function getState(chatId) {
   let state = userStates.get(chatId);
   if (!state) {
-    state = { screen: 'home', searchQuery: '', searchPage: 1, searchType: 'anime', contentType: 'anime', popularResults: [], searchResults: [], previous: null };
+    state = { screen: 'home', searchQuery: '', searchPage: 1, searchType: 'anime', contentType: 'anime', popularResults: [], searchResults: [], musicCandidates: [], previous: null };
     userStates.set(chatId, state);
   }
   return state;
@@ -1717,6 +1623,7 @@ function mainKeyboard() {
     [{ text: 'Популярні', callback_data: 'popular:1' }],
     [{ text: 'Випадкове', callback_data: 'random' }],
     [{ text: 'Пошук', callback_data: 'search:prompt' }],
+    [{ text: 'Музика', callback_data: 'music:prompt' }],
     [{ text: 'Розклад', web_app: { url: SCHEDULE_WEB_APP_URL } }],
     [{ text: 'Чат-Рулетка', callback_data: 'roulette:start' }],
     [{ text: 'Запитати Луну', callback_data: 'luna:prompt' }]
@@ -1729,6 +1636,54 @@ function scheduleWebAppKeyboard() {
 
 function backHomeKeyboard() {
   return { inline_keyboard: [[{ text: 'Головна', callback_data: 'home' }]] };
+}
+
+async function saveMusicCandidates(chatId, candidates, env) {
+  if (!env.MAKIMA_MEMORY) return;
+  try {
+    await env.MAKIMA_MEMORY.put(`music:candidates:${chatId}`, JSON.stringify(candidates.slice(0, 5)), { expirationTtl: 900 });
+  } catch (error) {
+    console.error('[music] candidate storage failed:', safeError(error));
+  }
+}
+
+async function loadMusicCandidates(chatId, env) {
+  if (!env.MAKIMA_MEMORY) return [];
+  try {
+    const raw = await env.MAKIMA_MEMORY.get(`music:candidates:${chatId}`);
+    const candidates = raw ? JSON.parse(raw) : [];
+    return Array.isArray(candidates) ? candidates : [];
+  } catch (error) {
+    console.error('[music] candidate storage read failed:', safeError(error));
+    return [];
+  }
+}
+
+function musicChoiceKeyboard(candidates) {
+  const rows = candidates.slice(0, 5).map((track, index) => [{
+    text: truncate(`${index + 1}. ${track.artistName || 'Невідомий виконавець'} — ${track.trackName || 'Невідома назва'}`, 58),
+    callback_data: `music:pick:${index}`
+  }]);
+  rows.push([{ text: 'Головна', callback_data: 'home' }]);
+  return { inline_keyboard: rows };
+}
+
+function formatRecognizedMusic(result, candidates) {
+  const links = [];
+  if (result.song_link) links.push(`<a href="${escapeHtml(result.song_link)}">Офіційна сторінка</a>`);
+  if (result.spotify?.external_urls?.spotify) links.push(`<a href="${escapeHtml(result.spotify.external_urls.spotify)}">Spotify</a>`);
+  if (result.apple_music?.url) links.push(`<a href="${escapeHtml(result.apple_music.url)}">Apple Music</a>`);
+  const lines = [
+    '<b>Знайшла музику 🎵</b>',
+    '',
+    `<b>${escapeHtml(result.artist || 'Невідомий виконавець')} — ${escapeHtml(result.title || 'Невідома назва')}</b>`,
+    result.album ? `Альбом: ${escapeHtml(result.album)}` : '',
+    result.timecode ? `Фрагмент: ${escapeHtml(result.timecode)}` : '',
+    links.length ? links.join(' · ') : '',
+    '',
+    candidates.length > 1 ? 'Обери правильний варіант нижче:' : 'Обери трек нижче, щоб отримати доступне коротке preview.'
+  ];
+  return lines.filter(Boolean).join('\n');
 }
 
 function listKeyboard(items, page, kind, total, type = 'anime') {
@@ -2093,7 +2048,7 @@ async function setBotCommands(env) {
         { command: 'forgetall', description: 'Забути історію та профіль' },
         { command: 'next', description: 'Наступний співрозмовник у чат-рулетці' },
         { command: 'report', description: 'Поскаржитися або завершити рулетку' },
-        { command: 'music', description: 'Знайти музику за аудіо, відео або TikTok' }
+        { command: 'music', description: 'Знайти музику за відео' }
       ]
     }, env);
   } catch (error) {
@@ -2266,7 +2221,7 @@ function isUnsafeRouletteText(value) {
     || /(?:докс|доксинг|doxx|порно з неповноліт|child\s*sexual|csam)/i.test(text);
 }
 
-export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, scheduleWebAppKeyboard, vakdabWatchUrl, getAIProviderConfig, musicPreviewTrack, searchMusicCatalog, recognizeTikTokUrl, formatMusicResult };
+export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, scheduleWebAppKeyboard, vakdabWatchUrl, getAIProviderConfig, musicPreviewTrack, searchMusicCatalog, musicChoiceKeyboard, formatRecognizedMusic };
 
 export class ChatRouletteRoom {
   constructor(ctx, env) {
