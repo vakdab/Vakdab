@@ -1,0 +1,9 @@
+{
+  "name": "vakdab-telegram-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test ../../tests/telegram/telegram-worker.test.mjs",
+    "check": "node --input-type=module --check < worker.js"
+  }
+}

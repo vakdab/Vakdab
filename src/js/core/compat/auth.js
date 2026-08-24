@@ -4,7 +4,7 @@ import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
 } from '../../legacy/app-legacy.js?v=20260822-home-genres-v64';
-import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../components/pages/settingsLegacy.js?v=20260822-home-genres-v64';
+import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../pages/settings/settingsLegacy.js?v=20260822-home-genres-v64';
 import { Storage } from './storage.js?v=20260822-home-genres-v64';
 import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260822-home-genres-v64';
 

@@ -416,7 +416,7 @@ function isGifUrl(url) {
                         document.body.classList.add('community-active');
                         const nav = document.getElementById('bottomNav');
                         if (nav) nav.classList.add('hidden-nav');
-                        import('../community/legacyCommunity.js?v=20260822-home-genres-v64')
+                        import('../../pages/community/legacyCommunity.js?v=20260822-home-genres-v64')
                             .then(({ initCommunity }) => {
                                 initCommunity();
                                 setTimeout(() => {
@@ -520,7 +520,7 @@ function isGifUrl(url) {
         let _lbSortKey = 'xp';
         let _lbUsersCache = [];
 
-        const TOP_BADGES = Object.freeze({ p1: 'src/assets/rating/top-1.png', p2: 'src/assets/rating/top-2.png', p3: 'src/assets/rating/top-3.png' });
+        const TOP_BADGES = Object.freeze({ p1: 'assets/rating/top-1.png', p2: 'assets/rating/top-2.png', p3: 'assets/rating/top-3.png' });
         const LB_SORT_CONFIG = {
             xp:        { unit: 'XP',    getVal: u => u.xp },
             episodes:  { unit: 'сер.',  getVal: u => u.episodes },

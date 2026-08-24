@@ -1,6 +1,6 @@
 import { PROXY_URL } from '../../config/constants.js?v=20260822-home-genres-v64';
 import { getProxyUrl, isEmbedUrl } from '../../utils/image.js';
-import { normalizePosterUrl } from '../../services/catalog.js?v=20260822-home-genres-v64';
+import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260822-home-genres-v64';
 
         // ====================================================================
         //  ПЛЕЄР — ПОВНИЙ КАСТОМНИЙ ПЛЕЄР З КОНТРОЛЯМИ

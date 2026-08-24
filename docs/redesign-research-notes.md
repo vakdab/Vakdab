@@ -5,7 +5,7 @@ Redesign Vakdab's existing static anime catalog, with special focus on the home 
 
 ## Current repository signals
 - Plain static HTML/CSS/JavaScript project, not React.
-- Main entry: `index.html`.
+- Main entry: `app/index.html`.
 - Global CSS: `src/styles/app.css`, split into base, components, pages, themes and utilities.
 - Relevant surfaces: `src/styles/components/hero.css`, `anime-card.css`, `header.css`, `bottom-nav.css`, and `src/styles/pages/main.css`.
 - Latest repository commit already introduced visible watch/favorite actions and shared bookmark state; redesign must preserve those working behaviors.

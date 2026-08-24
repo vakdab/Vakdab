@@ -1,4 +1,4 @@
-import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../services/catalog.js?v=20260822-home-genres-v64';
+import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../services/catalog/catalog.js?v=20260822-home-genres-v64';
 import { DailyStats, Storage, openPlayerPage, showToast } from '../../legacy/app-legacy.js?v=20260822-home-genres-v64';
 
         let heroItems = [],
