@@ -333,6 +333,7 @@ test('music flow expands TikTok short links and does not fall back to Luna on fa
   assert.match(workerSource, /TIKTOK_RESOLVER_API/);
   assert.match(workerSource, /recognizeAudioUrl/);
   assert.match(workerSource, /sendAudio/);
+  assert.match(workerSource, /sendAudioBuffer/);
   assert.match(workerSource, /const keepMusicMode = getState\(chatId\)\.screen === 'waiting_for_music'/);
   assert.match(workerSource, /getState\(chatId\)\.screen = keepMusicMode \? 'waiting_for_music' : 'home'/);
 });

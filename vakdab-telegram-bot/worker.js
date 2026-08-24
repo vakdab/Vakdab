@@ -809,7 +809,12 @@ async function handleMusicText(chatId, memoryKey, text, env) {
       ? await recognizeTikTokUrl(text, env)
       : await searchMusicCatalog(text, env);
     await sendTrackedMessage(chatId, memoryKey, formatMusicResult(result), {}, env);
-    await sendMusicPreviewIfAvailable(chatId, memoryKey, result, env);
+    // Надсилання preview — необов’язковий крок: його збій не має маскувати знайдений трек.
+    try {
+      await sendMusicPreviewIfAvailable(chatId, memoryKey, result, env);
+    } catch (error) {
+      console.error('[music] optional preview failed:', safeError(error));
+    }
   } catch (error) {
     console.error('[music] text request failed:', safeError(error));
     await sendTrackedMessage(chatId, memoryKey, 'Не знайшла трек за цим запитом. Спробуй точнішу назву, коротке відео або аудіо без зайвого шуму 🎵', {}, env);
@@ -824,7 +829,11 @@ async function handleMusicMedia(chatId, memoryKey, media, env) {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
     const result = await recognizeTelegramMedia(media, env);
     await sendTrackedMessage(chatId, memoryKey, formatMusicResult(result), {}, env);
-    await sendMusicPreviewIfAvailable(chatId, memoryKey, result, env);
+    try {
+      await sendMusicPreviewIfAvailable(chatId, memoryKey, result, env);
+    } catch (error) {
+      console.error('[music] optional preview failed:', safeError(error));
+    }
   } catch (error) {
     console.error('[music] media request failed:', safeError(error));
     await sendTrackedMessage(chatId, memoryKey, 'Не змогла розпізнати музику в цьому файлі. Спробуй коротший фрагмент із чіткішим звуком 🙂', {}, env);
@@ -887,13 +896,19 @@ async function recognizeTikTokUrl(text, env) {
     console.error('[music] TikTok short URL expand failed:', safeError(error));
   }
 
-  const [oembed, resolved] = await Promise.all([
-    getTikTokOEmbed(canonicalUrl, originalUrl),
+  const [oembedResult, resolvedResult] = await Promise.all([
+    getTikTokOEmbed(canonicalUrl, originalUrl).catch(error => {
+      console.error('[music] TikTok oEmbed failed:', safeError(error));
+      return null;
+    }),
     resolveTikTokAudio(originalUrl).catch(error => {
       console.error('[music] TikTok audio resolver failed:', safeError(error));
       return null;
     })
   ]);
+  const oembed = oembedResult || {};
+  const resolved = resolvedResult || {};
+  if (!oembedResult && !resolvedResult) throw new Error('TikTok metadata unavailable');
   const soundMatch = String(oembed?.html || '').match(/title="♬ ([^"]+)"|>♬ ([^<]+)</i);
   const soundName = resolved?.soundName || soundMatch?.[1] || soundMatch?.[2] || '';
   const normalizedSound = soundName.replace(/^original sound\s*[-–—]\s*/i, '').trim();
@@ -910,8 +925,8 @@ async function recognizeTikTokUrl(text, env) {
   return {
     kind: 'tiktok',
     tiktokUrl: canonicalUrl,
-    title: oembed?.title || '',
-    author: oembed?.author_name || '',
+    title: oembed?.title || resolved?.title || '',
+    author: oembed?.author_name || resolved?.author || '',
     soundName,
     thumbnailUrl: oembed?.thumbnail_url || '',
     recognized,
@@ -943,7 +958,9 @@ async function resolveTikTokAudio(url) {
   return {
     audioUrl: data.data.music || music.play || '',
     soundName: music.title || '',
-    musicAuthor: music.author || ''
+    musicAuthor: music.author || '',
+    title: data.data.title || '',
+    author: data.data.author?.nickname || data.data.author?.unique_id || ''
   };
 }
 
@@ -968,9 +985,7 @@ async function sendMusicPreviewIfAvailable(chatId, memoryKey, result, env) {
   }
   if (!track?.previewUrl) return;
   try {
-    const response = await telegram('sendAudio', {
-      chat_id: chatId,
-      audio: track.previewUrl,
+    const response = await sendAudioBuffer(chatId, track.previewUrl, {
       title: truncate(track.trackName || 'Коротке прев’ю', 64),
       performer: truncate(track.artistName || 'Невідомий виконавець', 64),
       caption: 'Коротке офіційне прев’ю треку.'
@@ -981,6 +996,24 @@ async function sendMusicPreviewIfAvailable(chatId, memoryKey, result, env) {
     // Preview є додатковим: помилка Telegram не повинна приховувати знайдений трек.
     console.error('[music] preview delivery failed:', safeError(error));
   }
+}
+
+async function sendAudioBuffer(chatId, previewUrl, details, env) {
+  if (!env.TELEGRAM_BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not configured');
+  const preview = await fetch(previewUrl, { redirect: 'follow' });
+  if (!preview.ok) throw new Error(`Music preview download failed with status ${preview.status}`);
+  const bytes = await preview.arrayBuffer();
+  if (bytes.byteLength > 10 * 1024 * 1024) throw new Error('Music preview exceeds Telegram upload limit');
+  const form = new FormData();
+  form.set('chat_id', String(chatId));
+  form.set('audio', new Blob([bytes], { type: preview.headers.get('content-type') || 'audio/mp4' }), 'music-preview.m4a');
+  if (details?.title) form.set('title', details.title);
+  if (details?.performer) form.set('performer', details.performer);
+  if (details?.caption) form.set('caption', details.caption);
+  const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendAudio`, { method: 'POST', body: form });
+  const data = await response.json();
+  if (!response.ok || !data.ok) console.error(`[telegram] sendAudio failed with status ${response.status}`);
+  return data;
 }
 
 function musicPreviewTrack(result) {
@@ -2208,7 +2241,7 @@ function isUnsafeRouletteText(value) {
     || /(?:докс|доксинг|doxx|порно з неповноліт|child\s*sexual|csam)/i.test(text);
 }
 
-export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, scheduleWebAppKeyboard, vakdabWatchUrl, getAIProviderConfig, musicPreviewTrack };
+export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, scheduleWebAppKeyboard, vakdabWatchUrl, getAIProviderConfig, musicPreviewTrack, searchMusicCatalog, recognizeTikTokUrl, formatMusicResult };
 
 export class ChatRouletteRoom {
   constructor(ctx, env) {
