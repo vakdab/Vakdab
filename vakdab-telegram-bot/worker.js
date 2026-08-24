@@ -32,6 +32,7 @@ const SUMMARY_TRIGGER_MESSAGES = 60;
 const SUMMARY_KEEP_RECENT = 30; // скільки останніх повідомлень залишаємо без згортання
 
 const PROFILE_ARRAY_MAX_ITEMS = 25;
+const MAX_VISIBLE_MESSAGE_IDS = 160;
 
 const userStates = new Map();
 let popularCache = null;
@@ -115,7 +116,10 @@ async function handleMessage(message, env) {
 
   const memoryKey = getMemoryKey(message.from);
   const text = (message.text || '').trim();
-  if (message.chat?.type === 'private') await trackBotUser(message.from, chatId, env);
+  if (message.chat?.type === 'private') {
+    await trackBotUser(message.from, chatId, env);
+    await rememberVisibleMessage(memoryKey, message.message_id, env);
+  }
   if (/^\/f8(?:@\w+)?(?:\s|$)/i.test(text)) {
     if (message.chat?.type !== 'private' || !isBotOwner(message.from)) {
       await sendMessage(chatId, 'Ця команда недоступна.', {}, env);
@@ -138,7 +142,16 @@ async function handleMessage(message, env) {
   if (text === '/start') {
     const state = getState(chatId);
     state.screen = 'home';
+    await setBotCommands(env);
     await sendMessage(chatId, 'Привіт! Оберіть дію:', { reply_markup: mainKeyboard() }, env);
+    return;
+  }
+
+  if (/^\/clear(?:@\w+)?(?:\s|$)/i.test(text)) {
+    const removed = await clearVisibleConversation(chatId, memoryKey, env);
+    await sendMessage(chatId, removed
+      ? `Готово. Видимі повідомлення прибрані (${removed}). Пам’ять про тебе залишилася 🙂`
+      : 'Готово. Видимих повідомлень для очищення не знайшла. Пам’ять про тебе залишилася 🙂', {}, env);
     return;
   }
 
@@ -150,7 +163,7 @@ async function handleMessage(message, env) {
   if (/^\/forget(?:@\w+)?(?:\s|$)/i.test(text)) {
     await clearUserHistory(memoryKey, env);
     await clearUserSummary(memoryKey, env);
-    await sendMessage(chatId, 'Гаразд, я забула нашу попередню розмову. Починаємо з чистого аркуша 🙂', { reply_markup: backHomeKeyboard() }, env);
+    await sendMessage(chatId, 'Гаразд, я забула нашу попередню розмову. Починаємо з чистого аркуша 🙂', {}, env);
     return;
   }
 
@@ -158,14 +171,26 @@ async function handleMessage(message, env) {
     await clearUserHistory(memoryKey, env);
     await clearUserSummary(memoryKey, env);
     await clearUserProfile(memoryKey, env);
-    await sendMessage(chatId, 'Я повністю забула і нашу розмову, і все, що знала про тебе. Знайомимось заново 🙂', { reply_markup: backHomeKeyboard() }, env);
+    await sendMessage(chatId, 'Я повністю забула і нашу розмову, і все, що знала про тебе. Знайомимось заново 🙂', {}, env);
     return;
   }
 
-  if (/^\/(?:makima|luna|ask)(?:@\w+)?(?:\s|$)/i.test(text)) {
-    const prompt = text.replace(/^\/(?:makima|luna|ask)(?:@\w+)?\s*/i, '').trim();
+  if (/^\/luna(?:@\w+)?(?:\s|$)/i.test(text)) {
+    const state = getState(chatId);
+    state.screen = 'waiting_for_luna';
+    const prompt = text.replace(/^\/luna(?:@\w+)?\s*/i, '').trim();
     if (!prompt) {
-      await sendMessage(chatId, 'Напиши запит після команди, наприклад: <code>/luna розкажи про останні новини аніме</code>.', {}, env);
+      await sendTrackedMessage(chatId, memoryKey, 'Луна активна. Пиши сюди — я підхоплю розмову 🙂', {}, env);
+      return;
+    }
+    await handleLunaMessage(chatId, memoryKey, prompt, env);
+    return;
+  }
+
+  if (/^\/(?:makima|ask)(?:@\w+)?(?:\s|$)/i.test(text)) {
+    const prompt = text.replace(/^\/(?:makima|ask)(?:@\w+)?\s*/i, '').trim();
+    if (!prompt) {
+      await sendTrackedMessage(chatId, memoryKey, 'Напиши запит після команди, наприклад: <code>/luna розкажи про останні новини аніме</code>.', {}, env);
       return;
     }
     await handleLunaMessage(chatId, memoryKey, prompt, env);
@@ -455,7 +480,7 @@ async function handleLunaMessage(chatId, memoryKey, userMessage, env) {
     fullHistory.push({ role: 'assistant', content: responseText });
     await saveUserHistory(memoryKey, fullHistory, env);
 
-    await sendMessage(chatId, escapeHtml(responseText), { reply_markup: backHomeKeyboard() }, env);
+    await sendTrackedMessage(chatId, memoryKey, escapeHtml(responseText), {}, env);
 
     // Оновлення профілю після відповіді
     try {
@@ -469,7 +494,7 @@ async function handleLunaMessage(chatId, memoryKey, userMessage, env) {
     }
   } catch (error) {
     console.error('[luna] failed:', safeError(error));
-    await sendMessage(chatId, getLunaTemporaryReply(userMessage), { reply_markup: backHomeKeyboard() }, env);
+    await sendTrackedMessage(chatId, memoryKey, getLunaTemporaryReply(userMessage), {}, env);
   }
 }
 
@@ -780,6 +805,50 @@ async function clearUserHistory(memoryKey, env) {
   }
 }
 
+async function rememberVisibleMessage(memoryKey, messageId, env) {
+  if (!env.MAKIMA_MEMORY || !messageId) return;
+  try {
+    const raw = await env.MAKIMA_MEMORY.get(`visible:${memoryKey}`);
+    const current = raw ? JSON.parse(raw) : [];
+    const ids = Array.isArray(current) ? current.filter(Number.isInteger) : [];
+    ids.push(Number(messageId));
+    const unique = [...new Set(ids)].slice(-MAX_VISIBLE_MESSAGE_IDS);
+    await env.MAKIMA_MEMORY.put(`visible:${memoryKey}`, JSON.stringify(unique));
+  } catch (error) {
+    console.error('[visible] message tracking failed:', safeError(error));
+  }
+}
+
+async function clearVisibleConversation(chatId, memoryKey, env) {
+  if (!env.MAKIMA_MEMORY) return 0;
+  let ids = [];
+  try {
+    const raw = await env.MAKIMA_MEMORY.get(`visible:${memoryKey}`);
+    const parsed = raw ? JSON.parse(raw) : [];
+    ids = Array.isArray(parsed) ? [...new Set(parsed.map(Number).filter(Number.isInteger))] : [];
+  } catch (error) {
+    console.error('[visible] message list read failed:', safeError(error));
+  }
+
+  let removed = 0;
+  for (const messageId of ids) {
+    try {
+      const result = await deleteMessage(chatId, messageId, env);
+      if (result?.ok) removed += 1;
+    } catch (error) {
+      console.error(`[visible] delete ${messageId} failed:`, safeError(error));
+    }
+  }
+
+  try {
+    await env.MAKIMA_MEMORY.delete(`visible:${memoryKey}`);
+  } catch (error) {
+    console.error('[visible] message list clear failed:', safeError(error));
+  }
+  return removed;
+}
+
+
 function defaultProfile() {
   return {
     name: '',
@@ -975,7 +1044,7 @@ async function handleCallbackQuery(callback, env) {
 
     if (data === 'luna:prompt') {
       state.screen = 'waiting_for_luna';
-      await replaceMessage(chatId, messageId, 'Напишіть своє запитання Луні.', false, { reply_markup: backHomeKeyboard() }, env);
+      await replaceMessage(chatId, messageId, 'Напишіть своє запитання Луні.', false, {}, env);
       return;
     }
 
@@ -1593,6 +1662,31 @@ async function replaceMessage(chatId, messageId, text, isPhoto, extra, env) {
 
 async function sendMessage(chatId, text, extra, env) {
   return telegram('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', ...extra }, env);
+}
+
+async function setBotCommands(env) {
+  if (!env.TELEGRAM_BOT_TOKEN) return;
+  try {
+    await telegram('setMyCommands', {
+      scope: { type: 'all_private_chats' },
+      commands: [
+        { command: 'luna', description: 'Увімкнути Луну й продовжити чат' },
+        { command: 'clear', description: 'Очистити видимий чат, зберігши пам’ять' },
+        { command: 'memory', description: 'Показати, що Луна пам’ятає' },
+        { command: 'forget', description: 'Забути історію розмови' },
+        { command: 'forgetall', description: 'Забути історію та профіль' }
+      ]
+    }, env);
+  } catch (error) {
+    console.error('[telegram] setMyCommands failed:', safeError(error));
+  }
+}
+
+async function sendTrackedMessage(chatId, memoryKey, text, extra, env) {
+  const result = await sendMessage(chatId, text, extra, env);
+  const messageId = result?.result?.message_id;
+  await rememberVisibleMessage(memoryKey, messageId, env);
+  return result;
 }
 
 async function sendPhoto(chatId, photo, caption, extra, env) {

@@ -71,6 +71,18 @@ test('Luna accepts broad adult topics while deterministically declining war topi
   assert.equal(getLunaDirectReply('Розкажи про війну'), 'Про війну я не говорю. Давай краще про будь-що інше.');
 });
 
+test('Luna commands clear visible chat without using the memory wipe commands', () => {
+  const workerSource = readFileSync(new URL('../vakdab-telegram-bot/worker.js', import.meta.url), 'utf8');
+  assert.match(workerSource, /if \(\/\^\\\/clear/);
+  assert.match(workerSource, /clearVisibleConversation\(chatId, memoryKey, env\)/);
+  assert.match(workerSource, /Видимі повідомлення прибрані/);
+  assert.match(workerSource, /Пам’ять про тебе залишилася/);
+  assert.match(workerSource, /if \(\/\^\\\/luna/);
+  assert.match(workerSource, /Луна активна/);
+  assert.match(workerSource, /await sendTrackedMessage\(chatId, memoryKey, escapeHtml\(responseText\), \{\}, env\)/);
+  assert.doesNotMatch(workerSource, /sendTrackedMessage\(chatId, memoryKey, escapeHtml\(responseText\), \{ reply_markup:/);
+});
+
 test('Luna exposes transparent memory controls without an AI round trip', () => {
   assert.equal(isMemoryRequest('Що ти про мене пам’ятаєш?'), true);
   assert.equal(isMemoryRequest('покажи мою пам’ять'), true);
