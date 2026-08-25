@@ -288,12 +288,6 @@ export async function handleMusicApiRequest(request, env) {
       await deleteTrack(env, track);
       return json({ ok: true }, 200, origin);
     }
-    if (request.method === 'POST' && path[0] === 'tracks' && path[1] && path[2] === 'telegram') {
-      const track = await getTrack(env, decodeURIComponent(path[1]));
-      if (!track || String(track.ownerId) !== String(user.id)) return json({ error: 'Трек не знайдено у твоїй бібліотеці' }, 404, origin);
-      await sendTelegramAudio(user.id, track, env);
-      return json({ ok: true }, 200, origin);
-    }
     if (request.method === 'POST' && path[0] === 'playlists' && path[1] === 'list') {
       const ids = await getJson(env, `${PLAYLIST_INDEX_PREFIX}${user.id}`, []);
       const playlists = await Promise.all(ids.map(id => getJson(env, `${PLAYLIST_PREFIX}${id}`, null)));
@@ -320,22 +314,6 @@ async function telegramApi(method, params, env) {
 
 async function sendTelegramMessage(chatId, text, env) {
   return telegramApi('sendMessage', { chat_id: chatId, text, disable_web_page_preview: true }, env);
-}
-
-async function sendTelegramAudio(chatId, track, env) {
-  const chunks = await Promise.all(Array.from({ length: Number(track.chunkCount || 0) }, (_, index) => env.MAKIMA_MEMORY.get(`${track.storagePrefix}${index}`, 'arrayBuffer')));
-  const bytes = new Uint8Array(Number(track.size || 0));
-  let cursor = 0;
-  chunks.forEach(chunk => { const value = new Uint8Array(chunk || 0); bytes.set(value, cursor); cursor += value.byteLength; });
-  const form = new FormData();
-  form.set('chat_id', String(chatId));
-  form.set('audio', new File([bytes], `${String(track.title || 'VakDab track').slice(0, 120)}.mp3`, { type: track.mimeType || 'audio/mpeg' }));
-  form.set('title', String(track.title || 'VakDab track').slice(0, 120));
-  form.set('performer', String(track.artist || 'Невідомий виконавець').slice(0, 120));
-  const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendAudio`, { method: 'POST', body: form });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok || !payload.ok) throw new Error(payload.description || 'Telegram sendAudio failed');
-  return payload.result;
 }
 
 export async function handleTelegramAudioUpload(message, env) {

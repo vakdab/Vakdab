@@ -3,7 +3,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { TELEGRAM_AUTH_ENDPOINT } from './config/constants.js';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const APP_VERSION = '20260825-shazam-v25';
+const APP_VERSION = '20260825-shazam-v26';
 const MUSIC_API_BASE = 'https://vakdab.animegran8.workers.dev/telegram-webhook';
 const API_TIMEOUT_MS = 7000;
 const EQ_BANDS = [31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
@@ -307,24 +307,6 @@ function syncMediaSession(track) {
   state.mediaHandlersBound = true;
 }
 
-async function sendCurrentToTelegram() {
-  const track = state.currentTrack;
-  if (!track) { toast('Спочатку запусти трек'); return; }
-  if (!await ensureAuth()) return;
-  const button = $('backgroundBtn');
-  if (button) { button.disabled = true; button.textContent = '…'; }
-  try {
-    await musicApi(`/tracks/${encodeURIComponent(track.id)}/telegram`, { method: 'POST' });
-    toast('Трек надіслано в Telegram. Тепер його можна слухати у фоні.');
-    setTimeout(() => tg?.close?.(), 650);
-  } catch (error) {
-    console.warn('[Shazam] Telegram background fallback:', error);
-    toast('Не вдалося відкрити фонове прослуховування');
-  } finally {
-    if (button) { button.disabled = false; button.textContent = 'Фон'; }
-  }
-}
-
 async function playTrack(track) {
   if (!track?.audioUrl) { toast('У цього треку немає аудіопосилання'); return; }
   state.audioContext?.resume?.();
@@ -401,7 +383,6 @@ function bindEvents() {
   $('progressRange').addEventListener('input', event => { if (state.audio.duration) state.audio.currentTime = state.audio.duration * (Number(event.target.value) / 100); });
   $('volumeRange').addEventListener('input', event => { state.audio.volume = Number(event.target.value); if (state.gain) state.gain.gain.value = 1; });
   $('equalizerBtn').addEventListener('click', () => { $('equalizerPanel').hidden = !$('equalizerPanel').hidden; }); $('closeEqualizer').addEventListener('click', () => { $('equalizerPanel').hidden = true; });
-  $('backgroundBtn')?.addEventListener('click', sendCurrentToTelegram);
   document.querySelectorAll('[data-preset]').forEach(button => button.addEventListener('click', () => applyPreset(button.dataset.preset)));
   $('eqSliders').addEventListener('input', event => { const input = event.target.closest('[data-eq-index]'); if (!input) return; ensureAudioGraph(); const index = Number(input.dataset.eqIndex); const value = Number(input.value); state.eqValues[index] = value; try { globalThis.localStorage?.setItem(EQ_STORAGE_KEY, JSON.stringify(state.eqValues)); } catch {} if (state.filters[index]) state.filters[index].gain.value = value; input.nextElementSibling.textContent = `${value > 0 ? '+' : ''}${value} dB`; document.querySelectorAll('[data-preset]').forEach(button => button.classList.remove('is-active')); });
   document.addEventListener('click', event => { const action = event.target.closest('[data-action]')?.dataset.action; const row = event.target.closest('[data-track-id]'); if (!action || !row) return; const track = [...state.library, ...state.publicTracks].find(item => item.id === row.dataset.trackId); if (!track) return; if (action === 'play') playTrack(track); if (action === 'playlist') addToPlaylist(track); if (action === 'delete') removeTrack(track); });
