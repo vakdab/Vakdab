@@ -1,4 +1,5 @@
 import { handleMusicApiRequest, handleTelegramAudioUpload, isTelegramAudioMessage } from './music-store.js';
+import { handleWatchPartyRequest } from './watch-party.js';
 
 const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const HIKKA_API = 'https://api.hikka.io';
@@ -6,6 +7,7 @@ const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
 const MUSIC_WEB_APP_URL = 'https://vakdab.animegran8.workers.dev/app/music?v=20260825-shazam-v26';
+const WATCH_PARTY_WEB_APP_URL = 'https://vakdab.animegran8.workers.dev/app/watch-party?v=20260825-watchparty-v1';
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
@@ -72,6 +74,8 @@ export default {
       const url = new URL(request.url);
       const musicResponse = await handleMusicApiRequest(request, env);
       if (musicResponse) return musicResponse;
+      const watchPartyResponse = await handleWatchPartyRequest(request, env);
+      if (watchPartyResponse) return watchPartyResponse;
 
       if (request.method === 'GET') {
         if (url.pathname === '/set_webhook') {
@@ -1562,6 +1566,7 @@ function mainKeyboard() {
     [{ text: 'Пошук', callback_data: 'search:prompt' }],
     [{ text: 'Розклад', web_app: { url: SCHEDULE_WEB_APP_URL } }],
     [{ text: 'Shazam', web_app: { url: MUSIC_WEB_APP_URL } }],
+    [{ text: 'Аніме Live', web_app: { url: WATCH_PARTY_WEB_APP_URL } }],
     [{ text: 'Чат-Рулетка', callback_data: 'roulette:start' }],
     [{ text: 'Запитати Луну', callback_data: 'luna:prompt' }]
   ] };

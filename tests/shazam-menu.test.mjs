@@ -12,6 +12,8 @@ const telegramAuthWorker = fs.readFileSync(new URL('../backend/workers/telegram-
 test('main bot menu opens the Shazam Mini App', () => {
   assert.match(worker, /MUSIC_WEB_APP_URL = 'https:\/\/vakdab\.animegran8\.workers\.dev\/app\/music\?v=20260825-shazam-v26'/);
   assert.match(worker, /\{ text: 'Shazam', web_app: \{ url: MUSIC_WEB_APP_URL \} \}/);
+  assert.match(worker, /WATCH_PARTY_WEB_APP_URL = 'https:\/\/vakdab\.animegran8\.workers\.dev\/app\/watch-party\?v=20260825-watchparty-v1'/);
+  assert.match(worker, /\{ text: 'Аніме Live', web_app: \{ url: WATCH_PARTY_WEB_APP_URL \} \}/);
 });
 
 test('Telegram auth allows the live Cloudflare Mini App origin', () => {

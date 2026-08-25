@@ -45,7 +45,7 @@ function constantTimeEqual(left, right) {
   return result === 0;
 }
 
-async function validateTelegramInitData(raw, botToken) {
+export async function validateTelegramInitData(raw, botToken) {
   if (!botToken || typeof raw !== 'string' || raw.length < 20 || raw.length > 8192) throw new Error('Некоректні дані Telegram');
   const params = new URLSearchParams(raw);
   const receivedHash = String(params.get('hash') || '').toLowerCase();

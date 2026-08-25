@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <title>Аніме Live • VakDab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../src/styles/watch-party.css?v=20260825-watchparty-v1" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div class="watch-shell">
+    <header class="watch-header">
+      <a class="brand" href="#" aria-label="VakDab Аніме Live"><span class="brand-mark">V</span><span><strong>VakDab</strong><small>Anime Live</small></span></a>
+      <div class="header-actions"><span class="room-state" id="roomState">Підключення…</span><button class="profile-pill" id="profileButton" type="button"><span class="avatar" id="profileAvatar">♪</span><span id="profileName">Відкрити в Telegram</span></button></div>
+    </header>
+
+    <main>
+      <section class="hero-card">
+        <div class="hero-copy"><span class="eyebrow">Watch Party</span><h1>Дивимось<br /><em>разом.</em></h1><p>Голосуй за наступне аніме, заходь у спільну кімнату та спілкуйся під час трансляції.</p><div class="hero-meta"><span class="live-dot"></span><span id="heroStatus">Голосування триває</span><span class="meta-separator">•</span><span id="heroTime">Час за Києвом</span></div></div>
+        <div class="hero-art" aria-hidden="true"><div class="orb orb-a"></div><div class="orb orb-b"></div><div class="orb orb-c"></div><span>▶</span></div>
+      </section>
+
+      <section class="vote-layout">
+        <div class="panel vote-panel"><div class="panel-heading"><div><span class="eyebrow">01 · Голосування</span><h2 id="pollQuestion">Що дивимось сьогодні?</h2></div><button class="icon-button" id="refreshButton" type="button" title="Оновити">↻</button></div><div class="vote-list" id="voteOptions"><div class="state-card">Завантажую голосування…</div></div><p class="panel-note" id="voteNote">Один користувач — один голос. Твій вибір можна змінити до старту трансляції.</p></div>
+        <aside class="panel schedule-panel"><span class="eyebrow">02 · Розклад</span><h2>Найближча трансляція</h2><div class="schedule-time" id="scheduleTime">—</div><div class="schedule-label">за київським часом</div><div class="schedule-divider"></div><div class="schedule-row"><span>Статус</span><strong id="scheduleStatus">Голосування</strong></div><div class="schedule-row"><span>Серії</span><strong id="scheduleEpisodes">—</strong></div><div class="schedule-row"><span>Глядачів</span><strong id="viewerCount">—</strong></div></aside>
+      </section>
+
+      <section class="panel admin-panel" id="adminPanel" hidden><div class="panel-heading"><div><span class="eyebrow">Admin Control</span><h2>Керування ефіром</h2></div><span class="admin-badge">Тільки для власника</span></div><form class="admin-form" id="optionForm"><input id="optionTitle" required maxlength="160" placeholder="Назва аніме" /><input id="optionEpisodes" type="number" min="1" max="999" value="12" placeholder="Серій" /><input id="optionStartsAt" type="datetime-local" /><input id="optionSiteUrl" type="url" placeholder="Посилання на сторінку аніме на сайті" /><input id="optionVideoUrl" type="url" placeholder="Пряме відео MP4/HLS із сайту" /><input id="optionPosterUrl" type="url" placeholder="Посилання на постер" /><button class="primary-button" type="submit">＋ Додати варіант</button></form><div class="admin-actions"><button class="secondary-button" id="publishButton" type="button">Опублікувати голосування</button><button class="secondary-button" id="startButton" type="button">Запустити переможця</button><button class="secondary-button" id="nextEpisodeButton" type="button">Наступна серія</button><button class="secondary-button danger-button" id="finishButton" type="button">Завершити</button><button class="text-button" id="resetButton" type="button">Очистити кімнату</button></div><div class="admin-option-list" id="adminOptionList"></div></section>
+
+      <section class="party-layout" id="partySection" hidden>
+        <div class="panel stream-panel"><div class="panel-heading"><div><span class="eyebrow">03 · Спільний ефір</span><h2 id="streamTitle">Трансляція ще не запущена</h2></div><span class="sync-badge" id="syncBadge">Очікуємо старт</span></div><div class="video-frame"><video id="partyVideo" controls playsinline preload="metadata"></video><div class="video-empty" id="videoEmpty"><span class="empty-play">▶</span><strong>Чекаємо на старт ефіру</strong><small>Коли адміністратор запустить переможця, відео з’явиться тут.</small></div></div><div class="stream-footer"><div><strong id="episodeLabel">—</strong><span id="sourceLabel">Відео з VakDab</span></div><a id="siteLink" class="secondary-button" href="#" target="_blank" rel="noreferrer" hidden>Відкрити на сайті ↗</a></div></div>
+        <div class="panel chat-panel"><div class="panel-heading"><div><span class="eyebrow">04 · Live chat</span><h2>Чат кімнати</h2></div><span class="online-pill"><span class="live-dot"></span> Live</span></div><div class="chat-messages" id="chatMessages"><div class="chat-empty">Повідомлення з’являться тут під час ефіру.</div></div><form class="chat-form" id="chatForm"><input id="chatInput" maxlength="400" autocomplete="off" placeholder="Напиши повідомлення…" /><button type="submit" aria-label="Надіслати">↗</button></form></div>
+      </section>
+    </main>
+    <footer class="watch-footer"><span>VakDab Watch Party</span><span>Відео й розклад надаються сайтом VakDab</span></footer>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="../src/js/watch-party.js?v=20260825-watchparty-v1"></script>
+</body>
+</html>
