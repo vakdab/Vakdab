@@ -76,7 +76,7 @@ export async function handleWatchPartyRequest(request, env) {
       if (!admin) return error('Тільки власник може зафіксувати переможця', 403, origin); if (state.status !== 'anime_voting') return error('Голосування за аніме вже завершене', 409, origin); if (!Object.keys(state.animeVotes).length) return error('Спочатку дочекайся голосів', 400, origin);
       const winnerId = winnerFor(countValues(state.animeVotes), state.candidates[0]?.id); state.anime = { ...(state.candidates.find(candidate => candidate.id === winnerId) || state.candidates[0]), dubs: [] }; state.status = 'dub_voting'; state.dubVotes = {};
     } else if (action === 'catalog_meta') {
-      if (!state.anime || state.status !== 'dub_voting') return error('Озвучки можна оновити після вибору аніме', 409, origin);
+      if (!admin) return error('Тільки власник може оновлювати метадані кімнати', 403, origin); if (!state.anime || state.status !== 'dub_voting') return error('Озвучки можна оновити після вибору аніме', 409, origin);
       const dubs = Array.isArray(payload.dubs) ? [...new Set(payload.dubs.map(value => String(value || '').trim().slice(0, 120)).filter(Boolean))].slice(0, MAX_DUBS) : []; if (dubs.length) state.anime.dubs = dubs;
       const total = Number(payload.episodesTotal); if (Number.isInteger(total) && total >= 1 && total <= MAX_EPISODES && total !== 999) state.anime.episodesTotal = total;
     } else if (action === 'vote_dub') {
