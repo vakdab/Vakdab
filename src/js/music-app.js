@@ -3,7 +3,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { TELEGRAM_AUTH_ENDPOINT } from './config/constants.js';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const APP_VERSION = '20260825-shazam-v24';
+const APP_VERSION = '20260825-shazam-v25';
 const MUSIC_API_BASE = 'https://vakdab.animegran8.workers.dev/telegram-webhook';
 const API_TIMEOUT_MS = 7000;
 const EQ_BANDS = [31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
@@ -73,8 +73,10 @@ const state = {
   eqValues: readEqValues(),
   mediaHandlersBound: false
 };
-state.audio.preload = 'metadata';
+state.audio.preload = 'auto';
 state.audio.crossOrigin = 'anonymous';
+state.audio.setAttribute('playsinline', '');
+state.audio.setAttribute('webkit-playsinline', '');
 
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -325,7 +327,6 @@ async function sendCurrentToTelegram() {
 
 async function playTrack(track) {
   if (!track?.audioUrl) { toast('У цього треку немає аудіопосилання'); return; }
-  ensureAudioGraph();
   state.audioContext?.resume?.();
   state.currentTrack = track;
   syncMediaSession(track);
@@ -377,6 +378,7 @@ function renderEq() {
 }
 function applyPreset(name) {
   const values = EQ_PRESETS[name] || EQ_PRESETS.flat;
+  ensureAudioGraph();
   state.eqValues = [...values];
   try { globalThis.localStorage?.setItem(EQ_STORAGE_KEY, JSON.stringify(state.eqValues)); } catch {}
   document.querySelectorAll('[data-eq-index]').forEach((input, index) => { input.value = values[index]; input.nextElementSibling.textContent = `${values[index] > 0 ? '+' : ''}${values[index]} dB`; if (state.filters[index]) state.filters[index].gain.value = values[index]; });
@@ -394,14 +396,14 @@ function bindEvents() {
   $('trackFile').addEventListener('change', event => { const file = event.target.files?.[0]; if (file) { $('fileLabel').textContent = file.name; if (!$('trackTitle').value) $('trackTitle').value = file.name.replace(/\.[^.]+$/, ''); } });
   ['modalClose', 'modalBackdrop'].forEach(id => $(id)?.addEventListener('click', event => { if (id === 'modalClose' || event.target.id === id) closeTrackModal(); }));
   ['playlistModalClose', 'playlistModalBackdrop'].forEach(id => $(id)?.addEventListener('click', event => { if (id === 'playlistModalClose' || event.target.id === id) closePlaylistModal(); }));
-  $('playBtn').addEventListener('click', () => { if (!state.currentTrack) return; if (state.audio.paused) { ensureAudioGraph(); state.audioContext?.resume?.(); state.audio.play(); } else state.audio.pause(); updatePlayerUi(); });
+  $('playBtn').addEventListener('click', () => { if (!state.currentTrack) return; if (state.audio.paused) { state.audioContext?.resume?.(); state.audio.play(); } else state.audio.pause(); updatePlayerUi(); });
   $('prevBtn').addEventListener('click', () => nextTrack(-1)); $('nextBtn').addEventListener('click', () => nextTrack(1));
   $('progressRange').addEventListener('input', event => { if (state.audio.duration) state.audio.currentTime = state.audio.duration * (Number(event.target.value) / 100); });
   $('volumeRange').addEventListener('input', event => { state.audio.volume = Number(event.target.value); if (state.gain) state.gain.gain.value = 1; });
   $('equalizerBtn').addEventListener('click', () => { $('equalizerPanel').hidden = !$('equalizerPanel').hidden; }); $('closeEqualizer').addEventListener('click', () => { $('equalizerPanel').hidden = true; });
   $('backgroundBtn')?.addEventListener('click', sendCurrentToTelegram);
   document.querySelectorAll('[data-preset]').forEach(button => button.addEventListener('click', () => applyPreset(button.dataset.preset)));
-  $('eqSliders').addEventListener('input', event => { const input = event.target.closest('[data-eq-index]'); if (!input) return; const index = Number(input.dataset.eqIndex); const value = Number(input.value); state.eqValues[index] = value; try { globalThis.localStorage?.setItem(EQ_STORAGE_KEY, JSON.stringify(state.eqValues)); } catch {} if (state.filters[index]) state.filters[index].gain.value = value; input.nextElementSibling.textContent = `${value > 0 ? '+' : ''}${value} dB`; document.querySelectorAll('[data-preset]').forEach(button => button.classList.remove('is-active')); });
+  $('eqSliders').addEventListener('input', event => { const input = event.target.closest('[data-eq-index]'); if (!input) return; ensureAudioGraph(); const index = Number(input.dataset.eqIndex); const value = Number(input.value); state.eqValues[index] = value; try { globalThis.localStorage?.setItem(EQ_STORAGE_KEY, JSON.stringify(state.eqValues)); } catch {} if (state.filters[index]) state.filters[index].gain.value = value; input.nextElementSibling.textContent = `${value > 0 ? '+' : ''}${value} dB`; document.querySelectorAll('[data-preset]').forEach(button => button.classList.remove('is-active')); });
   document.addEventListener('click', event => { const action = event.target.closest('[data-action]')?.dataset.action; const row = event.target.closest('[data-track-id]'); if (!action || !row) return; const track = [...state.library, ...state.publicTracks].find(item => item.id === row.dataset.trackId); if (!track) return; if (action === 'play') playTrack(track); if (action === 'playlist') addToPlaylist(track); if (action === 'delete') removeTrack(track); });
   state.audio.addEventListener('timeupdate', updatePlayerUi); state.audio.addEventListener('loadedmetadata', updatePlayerUi); state.audio.addEventListener('play', () => { if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'; updatePlayerUi(); }); state.audio.addEventListener('pause', () => { if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'; updatePlayerUi(); }); state.audio.addEventListener('ended', () => nextTrack(1));
 }
