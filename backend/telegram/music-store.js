@@ -12,7 +12,7 @@ const MAX_PLAYLISTS_PER_USER = 100;
 const TELEGRAM_INIT_MAX_AGE_SECONDS = 24 * 60 * 60;
 
 function corsHeaders(origin = '') {
-  const allowed = new Set(['https://vakdab.github.io', 'http://127.0.0.1:4173', 'http://localhost:4173']);
+  const allowed = new Set(['https://vakdab.github.io', 'https://vakdab.animegran8.workers.dev', 'http://127.0.0.1:4173', 'http://localhost:4173']);
   return {
     'Access-Control-Allow-Origin': allowed.has(origin) ? origin : 'https://vakdab.github.io',
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
