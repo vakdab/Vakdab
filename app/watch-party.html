@@ -1,12 +1,12 @@
 <!doctype html>
-<!-- Watch Party v10 static asset -->
+<!-- Watch Party v11 static asset -->
 <html lang="uk">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#000" />
   <title>Аніме Live • VakDab</title>
-  <link rel="stylesheet" href="../src/styles/watch-party.css?v=20260825-watchparty-v10" />
+  <link rel="stylesheet" href="../src/styles/watch-party.css?v=20260825-watchparty-v11" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -29,12 +29,12 @@
         </article>
         <aside class="panel schedule-panel"><div class="section-kicker">03 · Результат</div><h2>Сьогодні дивимось</h2><div class="schedule-time" id="scheduleTime">20:00</div><div class="schedule-label">за київським часом</div><div class="schedule-divider"></div><div class="schedule-row"><span>Аніме</span><strong id="scheduleAnime">—</strong></div><div class="schedule-row"><span>Озвучка</span><strong id="scheduleDub">Очікуємо</strong></div><div class="schedule-row"><span>Прогрес</span><strong id="scheduleProgress">—</strong></div><div class="schedule-row"><span>Статус</span><strong id="scheduleStatus">Голосування</strong></div><div class="choice-results"><span class="results-title">Голоси</span><div id="resultsContent" class="muted">Обери аніме, щоб побачити результат.</div></div></aside>
       </section>
-      <section class="panel admin-panel" id="adminPanel" hidden><div class="panel-heading"><div><div class="section-kicker">ADMIN CONTROL</div><h2>Керування ефіром</h2><p class="muted">Власник фіксує переможця кожного етапу. Новий random недоступний до повного завершення аніме.</p></div><span class="admin-badge">Тільки для власника</span></div><p id="adminStatus" class="muted">Перевіряємо стан кімнати…</p><p id="startHint" class="muted" hidden>Після голосування за озвучку натисни «Почати ефір».</p><div class="admin-actions"><button id="lockAnimeButton" class="primary-button" type="button">Зафіксувати аніме</button><button id="startButton" class="primary-button" type="button" aria-label="Почати ефір">Почати ефір</button><button id="nextEpisodeButton" class="secondary-button" type="button">Наступна серія</button><button id="resetButton" class="text-button" type="button">Скинути після завершення</button></div></section>
+      <section class="panel admin-panel" id="adminPanel" hidden><div class="panel-heading"><div><div class="section-kicker">ADMIN CONTROL</div><h2>Керування ефіром</h2><p class="muted">Власник фіксує переможця кожного етапу. Новий random недоступний до повного завершення аніме.</p></div><span class="admin-badge">Тільки для власника</span></div><p id="adminStatus" class="muted">Перевіряємо стан кімнати…</p><p id="startHint" class="muted" hidden>Можеш проголосувати за озвучку або одразу натиснути «Почати ефір». Без голосів обереться перша доступна озвучка.</p><div class="admin-actions"><button id="lockAnimeButton" class="primary-button" type="button">Зафіксувати аніме</button><button id="startButton" class="primary-button" type="button" aria-label="Почати ефір">Почати ефір</button><button id="nextEpisodeButton" class="secondary-button" type="button">Наступна серія</button><button id="resetButton" class="text-button" type="button">Скинути після завершення</button></div></section>
       <section class="party-layout" id="partySection" hidden><article class="panel stream-panel"><div class="panel-heading"><div><div class="section-kicker">04 · Спільний ефір</div><h2 id="streamTitle">Трансляція</h2></div><span id="syncBadge" class="sync-badge">Синхронізовано</span></div><div class="video-frame"><video id="partyVideo" playsinline preload="auto" controls></video><div id="videoEmpty" class="video-empty"><span class="empty-play">▶</span><strong>Готуємо відео</strong><small>Серія з каталогу VakDab завантажиться автоматично.</small></div></div><div class="stream-footer"><div><strong id="episodeLabel">Серія 1</strong><span id="streamSourceLabel">Джерело VakDab</span></div><a id="siteLink" class="secondary-button" href="#" target="_blank" rel="noopener" hidden>Сторінка аніме ↗</a></div></article><aside class="panel chat-panel"><div class="panel-heading"><div><div class="section-kicker">05 · Live chat</div><h2>Чат кімнати</h2></div><span class="online-pill">● Live</span></div><div id="chatMessages" class="chat-messages"></div><form id="chatForm" class="chat-form"><input id="chatInput" maxlength="400" autocomplete="off" placeholder="Напиши повідомлення…" /><button type="submit" aria-label="Надіслати">↗</button></form></aside></section>
     </main>
     <footer class="watch-footer"><span>VakDab Watch Party</span><span>Глобальна кімната · відео з VakDab</span></footer>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="../src/js/watch-party.js?v=20260825-watchparty-v10"></script>
+  <script type="module" src="../src/js/watch-party.js?v=20260825-watchparty-v11"></script>
 </body>
 </html>

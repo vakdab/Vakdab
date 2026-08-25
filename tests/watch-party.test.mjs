@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { handleWatchPartyRequest } from '../backend/telegram/watch-party.js';
+import { handleWatchPartyRequest, __watchPartyTest } from '../backend/telegram/watch-party.js';
 
 class MockKV { constructor() { this.data = new Map(); } async get(key) { return this.data.get(key) ?? null; } async put(key, value) { this.data.set(key, value); } }
 async function initData(botToken, user) { const params = new URLSearchParams({ auth_date: String(Math.floor(Date.now() / 1000)), user: JSON.stringify(user), query_id: 'watch-party-test' }); const secret = await crypto.subtle.sign('HMAC', await crypto.subtle.importKey('raw', new TextEncoder().encode('WebAppData'), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']), new TextEncoder().encode(botToken)); const key = await crypto.subtle.importKey('raw', secret, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']); const check = [...params.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([keyName, value]) => `${keyName}=${value}`).join('\n'); const hash = [...new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(check)))].map(value => value.toString(16).padStart(2, '0')).join(''); params.set('hash', hash); return params.toString(); }
@@ -19,6 +19,18 @@ test('users vote for anime and then separately vote for dub', async () => {
     response = await handleWatchPartyRequest(request(adminInit, 'lock_anime', {}), env); assert.equal(response.status, 200); let state = (await response.json()).state; assert.equal(state.status, 'dub_voting'); assert.equal(state.anime.id, winnerId); assert.equal(state.candidates.length, 4);
     response = await handleWatchPartyRequest(request(viewerInit, 'catalog_meta', { dubs: ['AniLibria', 'UkrDub'], episodesTotal: 2 }), env); assert.equal(response.status, 200); response = await handleWatchPartyRequest(request(viewerInit, 'vote_dub', { dub: 'UkrDub' }), env); assert.equal(response.status, 200); response = await handleWatchPartyRequest(request(adminInit, 'vote_dub', { dub: 'UkrDub' }), env); assert.equal(response.status, 200);
     response = await handleWatchPartyRequest(request(viewerInit, 'vote_anime', { candidateId: candidates[0].id }), env); assert.equal(response.status, 409); response = await handleWatchPartyRequest(request(adminInit, 'start', {}), env); assert.equal(response.status, 200); state = (await response.json()).state; assert.equal(state.status, 'live'); assert.deepEqual(state.selection, { time: '20:00', dub: 'UkrDub', episodes: 1 });
+  } finally { global.fetch = previousFetch; }
+});
+
+test('owner can start a test stream without a dub vote and uses the first available dub', async () => {
+  const previousFetch = global.fetch; global.fetch = mockCatalog();
+  try { const token = '123456:test-token'; const adminInit = await initData(token, { id: 1, first_name: 'Admin', username: 'vaditx' }); const env = { TELEGRAM_BOT_TOKEN: token, MAKIMA_MEMORY: new MockKV() }; const initial = await handleWatchPartyRequest(request(adminInit, '', {}), env); const candidate = (await initial.json()).state.candidates[0].id; await handleWatchPartyRequest(request(adminInit, 'vote_anime', { candidateId: candidate }), env); await handleWatchPartyRequest(request(adminInit, 'lock_anime', {}), env); await handleWatchPartyRequest(request(adminInit, 'catalog_meta', { dubs: ['UkrDub'], episodesTotal: 18 }), env); const start = await handleWatchPartyRequest(request(adminInit, 'start', {}), env); assert.equal(start.status, 200); const state = (await start.json()).state; assert.equal(state.status, 'live'); assert.equal(state.selection.dub, 'UkrDub'); assert.equal(state.anime.episodesTotal, 18);
+  } finally { global.fetch = previousFetch; }
+});
+
+test('stale 999 episode metadata is sanitized and valid metadata is preserved', async () => {
+  const previousFetch = global.fetch; global.fetch = mockCatalog();
+  try { const token = '123456:test-token'; const adminInit = await initData(token, { id: 1, first_name: 'Admin', username: 'vaditx' }); const env = { TELEGRAM_BOT_TOKEN: token, MAKIMA_MEMORY: new MockKV() }; const day = __watchPartyTest.kyivDay(); const candidates = [{ id: 'a1', title: 'Current Anime', episodesTotal: 18 }, { id: 'a2', title: 'Second Anime', episodesTotal: 8 }]; await env.MAKIMA_MEMORY.put('watch-party:global:state', JSON.stringify({ roomId: 'global-anime-live', day, status: 'dub_voting', candidates, animeVotes: {}, dubVotes: {}, anime: { ...candidates[0], episodesTotal: 999, dubs: ['UkrDub'] }, selection: null, episode: 1, position: 0, playing: false, startedAt: null, finishedAt: null, messages: [] })); let response = await handleWatchPartyRequest(request(adminInit, '', {}), env); assert.equal(response.status, 200); assert.equal((await response.json()).state.anime.episodesTotal, 18); response = await handleWatchPartyRequest(request(adminInit, 'catalog_meta', { dubs: ['UkrDub'], episodesTotal: 999 }), env); assert.equal(response.status, 200); assert.equal((await response.json()).state.anime.episodesTotal, 18);
   } finally { global.fetch = previousFetch; }
 });
 
