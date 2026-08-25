@@ -9,7 +9,7 @@ const musicCss = fs.readFileSync(new URL('../src/styles/music.css', import.meta.
 const musicStore = fs.readFileSync(new URL('../backend/telegram/music-store.js', import.meta.url), 'utf8');
 
 test('main bot menu opens the Shazam Mini App', () => {
-  assert.match(worker, /MUSIC_WEB_APP_URL = .*\/music\.html\?v=20260825-shazam-v7/);
+  assert.match(worker, /MUSIC_WEB_APP_URL = .*\/music\.html\?v=20260825-shazam-v8/);
   assert.match(worker, /\{ text: 'Shazam', web_app: \{ url: MUSIC_WEB_APP_URL \} \}/);
 });
 
