@@ -4,6 +4,7 @@ import fs from 'node:fs';
 
 const worker = fs.readFileSync(new URL('../backend/telegram/worker.js', import.meta.url), 'utf8');
 const musicHtml = fs.readFileSync(new URL('../app/music.html', import.meta.url), 'utf8');
+const appHtml = fs.readFileSync(new URL('../app/index.html', import.meta.url), 'utf8');
 const musicJs = fs.readFileSync(new URL('../src/js/music-app.js', import.meta.url), 'utf8');
 const musicCss = fs.readFileSync(new URL('../src/styles/music.css', import.meta.url), 'utf8');
 const musicStore = fs.readFileSync(new URL('../backend/telegram/music-store.js', import.meta.url), 'utf8');
@@ -17,6 +18,14 @@ test('main bot menu opens the Shazam Mini App', () => {
   assert.match(worker, /\{ text: 'Shazam', web_app: \{ url: MUSIC_WEB_APP_URL \} \}/);
   assert.match(worker, /WATCH_PARTY_WEB_APP_URL = 'https:\/\/vakdab\.animegran8\.workers\.dev\/app\/watch-party\?v=20260825-watchparty-v6'/);
   assert.match(worker, /\{ text: 'Аніме Live', web_app: \{ url: WATCH_PARTY_WEB_APP_URL \} \}/);
+});
+
+test('Main catalog includes Firebase storage in its import map', () => {
+  assert.match(appHtml, /"firebase\/app":/);
+  assert.match(appHtml, /"firebase\/auth":/);
+  assert.match(appHtml, /"firebase\/firestore":/);
+  assert.match(appHtml, /"firebase\/storage":/);
+  assert.match(appHtml, /src\/js\/app\.js/);
 });
 
 test('Watch Party uses multi-anime vote, separate dub vote and locked continuation', () => {
