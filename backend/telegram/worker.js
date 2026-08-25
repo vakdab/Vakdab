@@ -5,7 +5,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const MUSIC_WEB_APP_URL = `${SITE_BASE_URL}/app/music.html?v=20260825-shazam-v18`;
+const MUSIC_WEB_APP_URL = `${SITE_BASE_URL}/app/music.html?v=20260825-shazam-v19`;
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
@@ -70,19 +70,8 @@ export default {
   async fetch(request, env) {
     try {
       const url = new URL(request.url);
-      if (url.pathname === TELEGRAM_WEBHOOK_PATH && (url.searchParams.get('music') === 'debug' || request.headers.get('X-Music-Debug') === '1')) {
-        return new Response(JSON.stringify({ pathname: url.pathname, query: url.searchParams.get('music'), musicHeader: request.headers.get('X-Music-Path'), origin: request.headers.get('Origin') }), { headers: { 'content-type': 'application/json; charset=utf-8' } });
-      }
-      let musicResponse;
-      try {
-        musicResponse = await handleMusicApiRequest(request, env);
-      } catch (musicError) {
-        return new Response(JSON.stringify({ error: safeError(musicError), stage: 'music-dispatch' }), { status: 500, headers: { 'content-type': 'application/json; charset=utf-8' } });
-      }
+      const musicResponse = await handleMusicApiRequest(request, env);
       if (musicResponse) return musicResponse;
-      if (url.pathname === TELEGRAM_WEBHOOK_PATH && (request.headers.has('X-Music-Path') || url.searchParams.has('music'))) {
-        return new Response(JSON.stringify({ error: 'music-handler-returned-null', path: url.pathname }), { status: 500, headers: { 'content-type': 'application/json; charset=utf-8' } });
-      }
 
       if (request.method === 'GET') {
         if (url.pathname === '/set_webhook') {
@@ -113,7 +102,7 @@ export default {
       return textResponse('Not Found', 404);
     } catch (error) {
       console.error('[worker] request failed:', safeError(error));
-      return new Response(JSON.stringify({ error: safeError(error), stage: 'outer' }), { status: 500, headers: { 'content-type': 'application/json; charset=utf-8' } });
+      return textResponse('Internal Server Error', 500);
     }
   }
 };
