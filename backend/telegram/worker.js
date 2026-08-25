@@ -7,7 +7,7 @@ const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
 const MUSIC_WEB_APP_URL = 'https://vakdab.animegran8.workers.dev/app/music?v=20260825-shazam-v26';
-const WATCH_PARTY_WEB_APP_URL = 'https://vakdab.animegran8.workers.dev/app/watch-party?v=20260825-watchparty-v7';
+const WATCH_PARTY_WEB_APP_URL = 'https://vakdab.animegran8.workers.dev/app/watch-party?v=20260825-watchparty-v8';
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
