@@ -1,4 +1,4 @@
-import { FIREBASE_CONFIG, initializeApp, getAuth, onAuthStateChanged, signInWithCustomToken, getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from './config/firebase.js';
+import { FIREBASE_CONFIG, initializeApp, getAuth, onAuthStateChanged, signInWithCustomToken, getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from './config/firebase.js';
 import { TELEGRAM_AUTH_ENDPOINT } from './config/constants.js';
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
@@ -163,6 +163,38 @@ function closeTrackModal() { $('modalBackdrop').hidden = true; }
 function openPlaylistModal() { $('playlistModalBackdrop').hidden = false; $('playlistForm').reset(); $('playlistName').focus(); }
 function closePlaylistModal() { $('playlistModalBackdrop').hidden = true; }
 
+function uploadAudioWithProgress(fileRef, file, metadata, onProgress) {
+  return new Promise((resolve, reject) => {
+    const task = uploadBytesResumable(fileRef, file, metadata);
+    const timeout = setTimeout(() => {
+      task.cancel();
+      const error = new Error('Завантаження перевищило ліміт часу');
+      error.code = 'storage/timeout';
+      reject(error);
+    }, 90000);
+    task.on('state_changed', snapshot => {
+      const progress = snapshot.totalBytes ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100) : 0;
+      onProgress?.(progress);
+    }, error => {
+      clearTimeout(timeout);
+      reject(error);
+    }, () => {
+      clearTimeout(timeout);
+      resolve(task.snapshot);
+    });
+  });
+}
+
+function uploadErrorMessage(error) {
+  const code = String(error?.code || '');
+  if (code === 'storage/unauthorized') return 'Firebase не дозволив завантаження. Перевір вхід через Telegram.';
+  if (code === 'storage/canceled') return 'Завантаження скасовано.';
+  if (code === 'storage/timeout') return 'Завантаження зависло. Перевір інтернет і спробуй ще раз.';
+  if (code === 'storage/quota-exceeded') return 'Сховище музики тимчасово переповнене.';
+  if (code === 'storage/retry-limit-exceeded') return 'Не вдалося завершити upload. Спробуй ще раз.';
+  return 'Не вдалося завантажити трек. Спробуй ще раз.';
+}
+
 async function saveTrack(event) {
   event.preventDefault();
   if (state.uploading) return;
@@ -180,7 +212,9 @@ async function saveTrack(event) {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-90);
     const path = `music/${state.user.uid}/${crypto.randomUUID()}-${safeName}`;
     const fileRef = ref(storage, path);
-    await uploadBytes(fileRef, file, { contentType: file.type || 'audio/mpeg', customMetadata: { ownerId: state.user.uid } });
+    await uploadAudioWithProgress(fileRef, file, { contentType: file.type || 'audio/mpeg', customMetadata: { ownerId: state.user.uid } }, progress => {
+      if (submit) submit.textContent = `Завантажую ${progress}%…`;
+    });
     const audioUrl = await getDownloadURL(fileRef);
     const title = $('trackTitle').value.trim() || file.name.replace(/\.[^.]+$/, '');
     const artist = $('trackArtist').value.trim() || 'Невідомий виконавець';
@@ -191,7 +225,7 @@ async function saveTrack(event) {
     renderLibrary(); renderPublic(); closeTrackModal(); toast(isPublic ? 'Трек додано у спільну стрічку' : 'Трек збережено приватно');
   } catch (error) {
     console.error('[Shazam] upload:', error);
-    toast('Не вдалося завантажити трек. Перевір Firebase Storage rules.');
+    toast(uploadErrorMessage(error));
   } finally {
     state.uploading = false;
     if (submit) { submit.disabled = false; submit.textContent = 'Зберегти трек'; }
