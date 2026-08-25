@@ -2,8 +2,9 @@ import { FIREBASE_CONFIG, initializeApp, getAuth, signInWithCustomToken } from '
 import { TELEGRAM_AUTH_ENDPOINT } from './config/constants.js';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const APP_VERSION = '20260825-shazam-v19';
+const APP_VERSION = '20260825-shazam-v21';
 const MUSIC_API_BASE = 'https://vakdab.animegran8.workers.dev/telegram-webhook';
+const API_TIMEOUT_MS = 7000;
 const tg = globalThis.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); tg.setHeaderColor?.('#ffffff'); tg.setBackgroundColor?.('#f4f7fb'); }
 
@@ -21,10 +22,16 @@ async function musicApi(path, options = {}) {
   headers.set('X-Telegram-Init-Data', String(tg?.initData || ''));
   headers.set('X-Music-Path', String(path || '').replace(/^\/+/, ''));
   if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
-  const response = await fetch(`${MUSIC_API_BASE}${path}`, { ...options, headers });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || `Music API ${response.status}`);
-  return payload;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${MUSIC_API_BASE}${path}`, { ...options, headers, signal: controller.signal });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `Music API ${response.status}`);
+    return payload;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 const state = {
@@ -151,11 +158,15 @@ async function loadPrivateData() {
   if (!state.user) { renderLibrary(); renderPlaylists(); return; }
   setLoading($('libraryTrackList'), 'Завантажую бібліотеку…');
   setLoading($('playlistGrid'), 'Завантажую плейлисти…');
-  try {
-    const [tracks, lists] = await Promise.all([musicApi('/library', { method: 'POST' }), musicApi('/playlists/list', { method: 'POST' })]);
-    state.library = sortNewest(tracks.tracks || []);
-    state.playlists = sortNewest(lists.playlists || []);
-  } catch (error) { console.warn('[Shazam] private data:', error); toast('Не вдалося завантажити бібліотеку'); }
+  const [tracksResult, playlistsResult] = await Promise.allSettled([
+    musicApi('/library', { method: 'POST' }),
+    musicApi('/playlists/list', { method: 'POST' })
+  ]);
+  if (tracksResult.status === 'fulfilled') state.library = sortNewest(tracksResult.value.tracks || []);
+  else console.warn('[Shazam] library:', tracksResult.reason);
+  if (playlistsResult.status === 'fulfilled') state.playlists = sortNewest(playlistsResult.value.playlists || []);
+  else console.warn('[Shazam] playlists:', playlistsResult.reason);
+  if (tracksResult.status === 'rejected' && playlistsResult.status === 'rejected') toast('Бібліотека не відповіла. Натисни Shazam ще раз.');
   renderLibrary(); renderPlaylists();
 }
 
