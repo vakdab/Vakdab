@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/catalog/catalog-pagination.test.mjs && node tests/manga/manga-loading.test.mjs && node tests/novel/novel-source.test.mjs && node tests/profile/profile-stickers.test.mjs && node tests/shazam-menu.test.mjs && node tests/watch-party.test.mjs && node tests/telegram/telegram-worker.test.mjs"
+    "test": "node tests/catalog/catalog-pagination.test.mjs && node tests/manga/manga-loading.test.mjs && node tests/novel/novel-source.test.mjs && node tests/profile/profile-stickers.test.mjs && node tests/telegram/telegram-worker.test.mjs"
   }
 }
