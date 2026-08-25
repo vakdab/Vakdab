@@ -109,7 +109,7 @@ async function listTracks(env, ids) {
 function publicTrack(track, origin) {
   return {
     ...track,
-    audioUrl: `${origin}/music/api/stream/${encodeURIComponent(track.id)}`
+    audioUrl: `${origin}/telegram-webhook?music=stream/${encodeURIComponent(track.id)}`
   };
 }
 
@@ -247,11 +247,16 @@ export async function handleMusicApiRequest(request, env) {
   const apiMarkers = ['/music-api/', '/music/api/'];
   const apiMarker = apiMarkers.find(marker => url.pathname.includes(marker));
   const apiStart = apiMarker ? url.pathname.indexOf(apiMarker) : -1;
-  if (apiStart < 0) return null;
+  const webhookMusicPath = url.pathname === '/telegram-webhook' && url.searchParams.has('music')
+    ? String(url.searchParams.get('music') || '')
+    : '';
+  if (apiStart < 0 && !webhookMusicPath) return null;
   const origin = request.headers.get('Origin') || '';
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(origin) });
   try {
-    const path = url.pathname.slice(apiStart + apiMarker.length).split('/').filter(Boolean);
+    const path = webhookMusicPath
+      ? webhookMusicPath.split('/').filter(Boolean)
+      : url.pathname.slice(apiStart + apiMarker.length).split('/').filter(Boolean);
     if ((request.method === 'GET' || request.method === 'POST') && path[0] === 'public') {
       const ids = await getJson(env, PUBLIC_INDEX_KEY, []);
       const tracks = await listTracks(env, ids);

@@ -2,8 +2,8 @@ import { FIREBASE_CONFIG, initializeApp, getAuth, signInWithCustomToken } from '
 import { TELEGRAM_AUTH_ENDPOINT } from './config/constants.js';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const APP_VERSION = '20260825-shazam-v7';
-const MUSIC_API_BASE = 'https://vakdab.vakdabpro.workers.dev/music-api';
+const APP_VERSION = '20260825-shazam-v9';
+const MUSIC_API_BASE = 'https://vakdab.vakdabpro.workers.dev/telegram-webhook?music=';
 const tg = globalThis.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); tg.setHeaderColor?.('#ffffff'); tg.setBackgroundColor?.('#f4f7fb'); }
 
