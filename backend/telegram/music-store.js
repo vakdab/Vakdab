@@ -244,11 +244,13 @@ async function addPlaylistTrack(request, env, user, playlistId, origin) {
 
 export async function handleMusicApiRequest(request, env) {
   const url = new URL(request.url);
-  if (!url.pathname.startsWith('/music/api/')) return null;
+  const apiMarker = '/music/api/';
+  const apiStart = url.pathname.indexOf(apiMarker);
+  if (apiStart < 0) return null;
   const origin = request.headers.get('Origin') || '';
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(origin) });
   try {
-    const path = url.pathname.slice('/music/api/'.length).split('/').filter(Boolean);
+    const path = url.pathname.slice(apiStart + apiMarker.length).split('/').filter(Boolean);
     if ((request.method === 'GET' || request.method === 'POST') && path[0] === 'public') {
       const ids = await getJson(env, PUBLIC_INDEX_KEY, []);
       const tracks = await listTracks(env, ids);
