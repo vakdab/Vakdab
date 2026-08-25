@@ -20,8 +20,28 @@ import worker, {
   isWarRequest,
   formatLunaMemory,
   buildRecentHistory,
-  repairMojibake
+  repairMojibake,
+  aboutUsText
 } from '../../backend/telegram/worker.js';
+
+test('about us help explains VakDab usage and links back to the site', () => {
+  const text = aboutUsText();
+  assert.match(text, /Про нас — VakDab/);
+  assert.match(text, /Як користуватися ботом/);
+  assert.match(text, /Популярні/);
+  assert.match(text, /Випадкове/);
+  assert.match(text, /Пошук/);
+  assert.match(text, /Чат-Рулетка/);
+  assert.match(text, /Запитати Луну/);
+  assert.match(text, /<a href="https:\/\/[^\"]+">https:\/\/[^\"]+<\/a>/);
+});
+
+test('main menu contains the about button and removed features stay absent', () => {
+  const source = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
+  assert.match(source, /text: 'Про нас', callback_data: 'about'/);
+  assert.doesNotMatch(source, /text: 'Shazam'/);
+  assert.doesNotMatch(source, /text: 'Аніме Live'/);
+});
 
 test('Groq configuration takes priority when both providers are configured', () => {
   const config = getAIProviderConfig({

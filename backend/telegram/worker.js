@@ -1212,6 +1212,12 @@ async function handleCallbackQuery(callback, env) {
       return;
     }
 
+    if (data === 'about') {
+      state.screen = 'about';
+      await replaceMessage(chatId, messageId, aboutUsText(), false, { reply_markup: aboutUsKeyboard() }, env);
+      return;
+    }
+
     if (data === 'home') {
       if (!(await isSubscriptionSatisfied(callback.from, env))) {
         state.screen = 'awaiting_subscription';
@@ -1550,12 +1556,21 @@ function contentTypeKeyboard(prefix) {
   ] };
 }
 
+export function aboutUsText() {
+  return `<b>Про нас — VakDab</b>\n\nVakDab — це сайт і Telegram-бот для зручного пошуку аніме, манґи та ранобе. Тут можна швидко знайти потрібний тайтл, переглянути опис, жанри, статус і перейти до доступного перегляду або читання.\n\n<b>Як користуватися ботом</b>\n\n<b>Популярні</b> — показує популярні аніме та дозволяє відкрити деталі.\n<b>Випадкове</b> — пропонує випадкове аніме, манґу або ранобе.\n<b>Пошук</b> — введіть назву, щоб знайти потрібний тайтл.\n<b>Розклад</b> — відкриває розклад виходу нових епізодів.\n<b>Чат-Рулетка</b> — анонімний пошук співрозмовника для спілкування. Не надсилайте персональні дані та контакти.\n<b>Запитати Луну</b> — можна поставити запитання AI-співрозмовниці або продовжити діалог.\n\n<b>Корисні команди</b>\n/start — відкрити головне меню.\n/luna — перейти в режим Луни.\n/memory — переглянути збережені факти про себе.\n/forget — очистити історію діалогу з Луною.\n/forgetall — очистити історію та профіль.\n/clear — прибрати видимі повідомлення бота й Луни.\n\nСайт VakDab: <a href="${SITE_BASE_URL}">${SITE_BASE_URL}</a>`;
+}
+
+function aboutUsKeyboard() {
+  return { inline_keyboard: [[{ text: 'Відкрити сайт VakDab', url: SITE_BASE_URL }], [{ text: 'Головна', callback_data: 'home' }]] };
+}
+
 function mainKeyboard() {
   return { inline_keyboard: [
     [{ text: 'Популярні', callback_data: 'popular:1' }],
     [{ text: 'Випадкове', callback_data: 'random' }],
     [{ text: 'Пошук', callback_data: 'search:prompt' }],
     [{ text: 'Розклад', web_app: { url: SCHEDULE_WEB_APP_URL } }],
+    [{ text: 'Про нас', callback_data: 'about' }],
     [{ text: 'Чат-Рулетка', callback_data: 'roulette:start' }],
     [{ text: 'Запитати Луну', callback_data: 'luna:prompt' }]
   ] };
