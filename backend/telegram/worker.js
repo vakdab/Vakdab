@@ -5,7 +5,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const MUSIC_WEB_APP_URL = `${SITE_BASE_URL}/app/music.html?v=20260825-shazam-v4`;
+const MUSIC_WEB_APP_URL = `${SITE_BASE_URL}/app/music.html?v=20260825-shazam-v5`;
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
@@ -90,6 +90,10 @@ export default {
           return env.ASSETS.fetch(request);
         }
         return textResponse('VakDab Telegram Worker is running.');
+      }
+
+      if (url.pathname.includes('/music/api/')) {
+        return new Response(JSON.stringify({ error: 'Music route did not match', pathname: url.pathname }), { status: 503, headers: { 'content-type': 'application/json; charset=utf-8' } });
       }
 
       if (request.method === 'POST' && (url.pathname === TELEGRAM_WEBHOOK_PATH || url.pathname === '/')) {
