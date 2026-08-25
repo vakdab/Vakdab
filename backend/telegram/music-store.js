@@ -16,7 +16,7 @@ function corsHeaders(origin = '') {
   return {
     'Access-Control-Allow-Origin': allowed.has(origin) ? origin : 'https://vakdab.github.io',
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Telegram-Init-Data',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Telegram-Init-Data, X-Music-Path',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin'
   };
@@ -247,10 +247,12 @@ export async function handleMusicApiRequest(request, env) {
   const apiMarkers = ['/music-api/', '/music/api/'];
   const apiMarker = apiMarkers.find(marker => url.pathname.includes(marker));
   const apiStart = apiMarker ? url.pathname.indexOf(apiMarker) : -1;
-  const webhookMusicPath = url.pathname === '/telegram-webhook' && url.searchParams.has('music')
-    ? String(url.searchParams.get('music') || '')
+  const requestedMusicPath = String(request.headers.get('X-Music-Path') || '').replace(/^\/+/, '');
+  const musicPreflight = request.method === 'OPTIONS' && /(^|,|\\s)x-music-path(,|\\s|$)/i.test(String(request.headers.get('Access-Control-Request-Headers') || ''));
+  const webhookMusicPath = url.pathname === '/telegram-webhook'
+    ? (requestedMusicPath || String(url.searchParams.get('music') || '') || (musicPreflight ? 'public' : ''))
     : '';
-  if (apiStart < 0 && !webhookMusicPath) return null;
+  if (apiStart < 0 && !webhookMusicPath && !musicPreflight) return null;
   const origin = request.headers.get('Origin') || '';
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(origin) });
   try {
