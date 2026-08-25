@@ -244,8 +244,9 @@ async function addPlaylistTrack(request, env, user, playlistId, origin) {
 
 export async function handleMusicApiRequest(request, env) {
   const url = new URL(request.url);
-  const apiMarker = '/music/api/';
-  const apiStart = url.pathname.indexOf(apiMarker);
+  const apiMarkers = ['/music-api/', '/music/api/'];
+  const apiMarker = apiMarkers.find(marker => url.pathname.includes(marker));
+  const apiStart = apiMarker ? url.pathname.indexOf(apiMarker) : -1;
   if (apiStart < 0) return null;
   const origin = request.headers.get('Origin') || '';
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(origin) });
