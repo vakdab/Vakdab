@@ -4,6 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
+const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
@@ -68,6 +69,7 @@ export default {
   async fetch(request, env) {
     try {
       const url = new URL(request.url);
+      if (REMOVED_FEATURE_PATHS.has(url.pathname)) return textResponse('Not Found', 404);
 
       if (request.method === 'GET') {
         if (url.pathname === '/set_webhook') {
