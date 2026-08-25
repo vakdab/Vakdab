@@ -1,9 +1,11 @@
+import { handleMusicApiRequest, handleTelegramAudioUpload, isTelegramAudioMessage } from './music-store.js';
+
 const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const MUSIC_WEB_APP_URL = `${SITE_BASE_URL}/app/music.html?v=20260825-shazam-v2`;
+const MUSIC_WEB_APP_URL = `${SITE_BASE_URL}/app/music.html?v=20260825-shazam-v3`;
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
@@ -68,6 +70,8 @@ export default {
   async fetch(request, env) {
     try {
       const url = new URL(request.url);
+      const musicResponse = await handleMusicApiRequest(request, env);
+      if (musicResponse) return musicResponse;
 
       if (request.method === 'GET') {
         if (url.pathname === '/set_webhook') {
@@ -195,6 +199,10 @@ async function handleMessage(message, env) {
   }
   // Активна рулетка має перехоплювати і текст, і медіа без text/caption.
   if (await relayRouletteMessage(message, env)) return;
+  if (isTelegramAudioMessage(message)) {
+    await handleTelegramAudioUpload(message, env);
+    return;
+  }
   if (message.photo?.length) {
     await handleLunaPhotoMessage(chatId, memoryKey, message, env);
     return;

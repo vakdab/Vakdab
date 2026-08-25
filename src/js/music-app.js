@@ -1,22 +1,29 @@
-import { FIREBASE_CONFIG, initializeApp, getAuth, onAuthStateChanged, signInWithCustomToken, getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, serverTimestamp, getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from './config/firebase.js';
+import { FIREBASE_CONFIG, initializeApp, getAuth, signInWithCustomToken } from './config/firebase.js';
 import { TELEGRAM_AUTH_ENDPOINT } from './config/constants.js';
 
-const MAX_FILE_BYTES = 50 * 1024 * 1024;
-const APP_VERSION = '20260825-shazam-v1';
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const APP_VERSION = '20260825-shazam-v3';
+const MUSIC_API_BASE = 'https://vakdab.vakdabpro.workers.dev/music/api';
 const tg = globalThis.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); tg.setHeaderColor?.('#ffffff'); tg.setBackgroundColor?.('#f4f7fb'); }
 
 let firebaseApp;
 let auth;
-let db;
-let storage;
 try {
   firebaseApp = initializeApp(FIREBASE_CONFIG, 'vakdab-music');
   auth = getAuth(firebaseApp);
-  db = getFirestore(firebaseApp);
-  storage = getStorage(firebaseApp);
 } catch (error) {
   console.warn('[Shazam] Firebase init failed:', error);
+}
+
+async function musicApi(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  headers.set('X-Telegram-Init-Data', String(tg?.initData || ''));
+  if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
+  const response = await fetch(`${MUSIC_API_BASE}${path}`, { ...options, headers });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `Music API ${response.status}`);
+  return payload;
 }
 
 const state = {
@@ -34,6 +41,7 @@ const state = {
   filters: [],
   source: null,
   gain: null,
+  audioObjectUrl: '',
   uploading: false
 };
 state.audio.preload = 'metadata';
@@ -60,7 +68,7 @@ function userLabel() {
 }
 
 async function signInTelegram() {
-  if (!auth || !db) { toast('Firebase поки недоступний'); return false; }
+  if (!auth) { toast('Авторизація поки недоступна'); return false; }
   if (auth.currentUser) { state.user = auth.currentUser; return true; }
   const initData = String(tg?.initData || '').trim();
   if (!initData) { toast('Відкрий Shazam через Telegram Mini App'); return false; }
@@ -133,8 +141,8 @@ async function loadPublic() {
   const grid = $('publicTrackGrid');
   setLoading(grid, 'Завантажую музику…');
   try {
-    const snapshot = await getDocs(query(collection(db, 'musicTracks'), where('isPublic', '==', true)));
-    state.publicTracks = sortNewest(snapshot.docs.map(item => ({ id: item.id, ...item.data() })));
+    const payload = await musicApi('/public');
+    state.publicTracks = sortNewest(payload.tracks || []);
   } catch (error) { console.warn('[Shazam] public feed:', error); state.publicTracks = []; }
   renderPublic();
 }
@@ -143,12 +151,9 @@ async function loadPrivateData() {
   setLoading($('libraryTrackList'), 'Завантажую бібліотеку…');
   setLoading($('playlistGrid'), 'Завантажую плейлисти…');
   try {
-    const [tracks, lists] = await Promise.all([
-      getDocs(query(collection(db, 'musicTracks'), where('ownerId', '==', state.user.uid))),
-      getDocs(query(collection(db, 'musicPlaylists'), where('ownerId', '==', state.user.uid)))
-    ]);
-    state.library = sortNewest(tracks.docs.map(item => ({ id: item.id, ...item.data() })));
-    state.playlists = sortNewest(lists.docs.map(item => ({ id: item.id, ...item.data() })));
+    const [tracks, lists] = await Promise.all([musicApi('/library'), musicApi('/playlists')]);
+    state.library = sortNewest(tracks.tracks || []);
+    state.playlists = sortNewest(lists.playlists || []);
   } catch (error) { console.warn('[Shazam] private data:', error); toast('Не вдалося завантажити бібліотеку'); }
   renderLibrary(); renderPlaylists();
 }
@@ -163,36 +168,12 @@ function closeTrackModal() { $('modalBackdrop').hidden = true; }
 function openPlaylistModal() { $('playlistModalBackdrop').hidden = false; $('playlistForm').reset(); $('playlistName').focus(); }
 function closePlaylistModal() { $('playlistModalBackdrop').hidden = true; }
 
-function uploadAudioWithProgress(fileRef, file, metadata, onProgress) {
-  return new Promise((resolve, reject) => {
-    const task = uploadBytesResumable(fileRef, file, metadata);
-    const timeout = setTimeout(() => {
-      task.cancel();
-      const error = new Error('Завантаження перевищило ліміт часу');
-      error.code = 'storage/timeout';
-      reject(error);
-    }, 90000);
-    task.on('state_changed', snapshot => {
-      const progress = snapshot.totalBytes ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100) : 0;
-      onProgress?.(progress);
-    }, error => {
-      clearTimeout(timeout);
-      reject(error);
-    }, () => {
-      clearTimeout(timeout);
-      resolve(task.snapshot);
-    });
-  });
-}
-
 function uploadErrorMessage(error) {
-  const code = String(error?.code || '');
-  if (code === 'storage/unauthorized') return 'Firebase не дозволив завантаження. Перевір вхід через Telegram.';
-  if (code === 'storage/canceled') return 'Завантаження скасовано.';
-  if (code === 'storage/timeout') return 'Завантаження зависло. Перевір інтернет і спробуй ще раз.';
-  if (code === 'storage/quota-exceeded') return 'Сховище музики тимчасово переповнене.';
-  if (code === 'storage/retry-limit-exceeded') return 'Не вдалося завершити upload. Спробуй ще раз.';
-  return 'Не вдалося завантажити трек. Спробуй ще раз.';
+  const code = String(error?.message || error?.code || '');
+  if (/10 MB|завеликий/i.test(code)) return 'Файл завеликий: максимум 10 MB.';
+  if (/Telegram|auth|дані/i.test(code)) return 'Відкрий Shazam через Telegram ще раз.';
+  if (/rights|права/i.test(code)) return 'Підтвердь права на цей файл.';
+  return 'Не вдалося зберегти трек. Спробуй ще раз.';
 }
 
 async function saveTrack(event) {
@@ -210,18 +191,17 @@ async function saveTrack(event) {
   if (submit) { submit.disabled = true; submit.textContent = 'Завантажую…'; }
   try {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-90);
-    const path = `music/${state.user.uid}/${crypto.randomUUID()}-${safeName}`;
-    const fileRef = ref(storage, path);
-    await uploadAudioWithProgress(fileRef, file, { contentType: file.type || 'audio/mpeg', customMetadata: { ownerId: state.user.uid } }, progress => {
-      if (submit) submit.textContent = `Завантажую ${progress}%…`;
-    });
-    const audioUrl = await getDownloadURL(fileRef);
-    const title = $('trackTitle').value.trim() || file.name.replace(/\.[^.]+$/, '');
-    const artist = $('trackArtist').value.trim() || 'Невідомий виконавець';
-    const payload = { ownerId: state.user.uid, ownerName: userLabel(), title, artist, audioUrl, storagePath: path, mimeType: file.type || 'audio/mpeg', size: file.size, isPublic, rightsConfirmed: rights, createdAt: serverTimestamp() };
-    const created = await addDoc(collection(db, 'musicTracks'), payload);
-    state.library.unshift({ id: created.id, ...payload, createdAt: Date.now() });
-    if (isPublic) state.publicTracks.unshift({ id: created.id, ...payload, createdAt: Date.now() });
+    const form = new FormData();
+    form.set('file', file);
+    form.set('title', $('trackTitle').value.trim() || file.name.replace(/\.[^.]+$/, ''));
+    form.set('artist', $('trackArtist').value.trim() || 'Невідомий виконавець');
+    form.set('isPublic', String(isPublic));
+    form.set('rightsConfirmed', String(rights));
+    if (submit) submit.textContent = 'Завантажую…';
+    const response = await musicApi('/upload', { method: 'POST', body: form });
+    const created = response.track;
+    state.library.unshift(created);
+    if (created.isPublic) state.publicTracks.unshift(created);
     renderLibrary(); renderPublic(); closeTrackModal(); toast(isPublic ? 'Трек додано у спільну стрічку' : 'Трек збережено приватно');
   } catch (error) {
     console.error('[Shazam] upload:', error);
@@ -238,9 +218,8 @@ async function createPlaylist(event) {
   const name = $('playlistName').value.trim();
   if (!name) return;
   try {
-    const payload = { ownerId: state.user.uid, name, trackIds: [], createdAt: serverTimestamp() };
-    const created = await addDoc(collection(db, 'musicPlaylists'), payload);
-    state.playlists.unshift({ id: created.id, ...payload, createdAt: Date.now() });
+    const response = await musicApi('/playlists', { method: 'POST', body: JSON.stringify({ name }) });
+    state.playlists.unshift(response.playlist);
     renderPlaylists(); closePlaylistModal(); toast('Плейлист створено');
   } catch (error) { console.error('[Shazam] playlist:', error); toast('Не вдалося створити плейлист'); }
 }
@@ -254,9 +233,9 @@ async function addToPlaylist(track) {
   if (!list) return;
   if (list.trackIds?.includes(track.id)) { toast('Трек уже є в цьому плейлисті'); return; }
   try {
-    const trackIds = [...(list.trackIds || []), track.id];
-    await updateDoc(doc(db, 'musicPlaylists', list.id), { trackIds });
-    list.trackIds = trackIds; renderPlaylists(); toast('Додано до плейлиста');
+    const response = await musicApi(`/playlists/${encodeURIComponent(list.id)}/tracks`, { method: 'POST', body: JSON.stringify({ trackId: track.id }) });
+    list.trackIds = response.playlist?.trackIds || list.trackIds;
+    renderPlaylists(); toast('Додано до плейлиста');
   } catch (error) { console.warn('[Shazam] add playlist:', error); toast('Не вдалося додати трек'); }
 }
 
@@ -264,8 +243,7 @@ async function removeTrack(track) {
   if (!await ensureAuth()) return;
   if (!globalThis.confirm(`Видалити «${track.title}» з бібліотеки?`)) return;
   try {
-    await deleteDoc(doc(db, 'musicTracks', track.id));
-    if (track.storagePath) await deleteObject(ref(storage, track.storagePath)).catch(() => {});
+    await musicApi(`/tracks/${encodeURIComponent(track.id)}`, { method: 'DELETE' });
     state.library = state.library.filter(item => item.id !== track.id);
     state.publicTracks = state.publicTracks.filter(item => item.id !== track.id);
     state.playlists.forEach(list => { list.trackIds = (list.trackIds || []).filter(id => id !== track.id); });
@@ -286,20 +264,43 @@ function ensureAudioGraph() {
   state.filters.forEach(filter => { chain.connect(filter); chain = filter; });
   chain.connect(state.gain); state.gain.connect(state.audioContext.destination);
 }
-function playTrack(track) {
+async function playTrack(track) {
   if (!track?.audioUrl) { toast('У цього треку немає аудіопосилання'); return; }
   ensureAudioGraph();
   state.audioContext?.resume?.();
   state.currentTrack = track;
   state.queue = allPlayableTracks();
   state.queueIndex = state.queue.findIndex(item => item.id === track.id);
-  state.audio.src = track.audioUrl;
-  state.audio.volume = Number($('volumeRange')?.value || .85);
-  state.audio.play().then(() => updatePlayerUi()).catch(error => { console.warn('[Shazam] play:', error); toast('Браузер заблокував відтворення — натисни ▶ ще раз'); });
   $('playerDock').hidden = false;
   updatePlayerUi();
+  try {
+    let audioUrl = track.audioUrl;
+    if (!track.isPublic) {
+      const response = await fetch(track.audioUrl, { headers: { 'X-Telegram-Init-Data': String(tg?.initData || '') } });
+      if (!response.ok) throw new Error(`Private stream ${response.status}`);
+      const blob = await response.blob();
+      if (state.currentTrack?.id !== track.id) return;
+      if (state.audioObjectUrl) URL.revokeObjectURL(state.audioObjectUrl);
+      state.audioObjectUrl = URL.createObjectURL(blob);
+      audioUrl = state.audioObjectUrl;
+    }
+    if (state.currentTrack?.id !== track.id) return;
+    state.audio.src = audioUrl;
+    state.audio.volume = Number($('volumeRange')?.value || .85);
+    await state.audio.play();
+    updatePlayerUi();
+  } catch (error) {
+    console.warn('[Shazam] play:', error);
+    toast('Не вдалося відтворити трек. Спробуй відкрити Mini App через Telegram ще раз.');
+  }
 }
-function stopTrack() { state.audio.pause(); state.audio.currentTime = 0; state.currentTrack = null; $('playerDock').hidden = true; }
+function stopTrack() {
+  state.audio.pause();
+  state.audio.currentTime = 0;
+  if (state.audioObjectUrl) { URL.revokeObjectURL(state.audioObjectUrl); state.audioObjectUrl = ''; }
+  state.currentTrack = null;
+  $('playerDock').hidden = true;
+}
 function nextTrack(direction = 1) { if (!state.queue.length) return; const next = (state.queueIndex + direction + state.queue.length) % state.queue.length; playTrack(state.queue[next]); }
 function updatePlayerUi() {
   const track = state.currentTrack;
