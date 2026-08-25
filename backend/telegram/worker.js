@@ -7,7 +7,7 @@ const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
 const MUSIC_WEB_APP_URL = 'https://vakdab.animegran8.workers.dev/app/music?v=20260825-shazam-v26';
-const WATCH_PARTY_WEB_APP_URL = 'https://vakdab.animegran8.workers.dev/app/watch-party?v=20260825-watchparty-v12';
+const WATCH_PARTY_WEB_APP_URL = 'https://vakdab.animegran8.workers.dev/app/watch-party?v=20260825-watchparty-v13';
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
@@ -76,6 +76,7 @@ export default {
       if (musicResponse) return musicResponse;
       const watchPartyResponse = await handleWatchPartyRequest(request, env);
       if (watchPartyResponse) return watchPartyResponse;
+      if (url.pathname === '/watch-party-source') return await handleWatchPartySource(request, url);
 
       if (request.method === 'GET') {
         if (url.pathname === '/set_webhook') {
@@ -118,6 +119,31 @@ function verifyTelegramWebhook(request, env) {
 
 function textResponse(body, status = 200) {
   return new Response(body, { status, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+}
+
+async function handleWatchPartySource(request, url) {
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS', 'Access-Control-Allow-Headers': '*', 'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges' } });
+  if (!['GET', 'HEAD'].includes(request.method)) return textResponse('Method Not Allowed', 405);
+  const target = url.searchParams.get('url');
+  if (!target || !/^https?:\/\//i.test(target)) return textResponse('Missing or invalid source URL', 400);
+  let targetUrl;
+  try { targetUrl = new URL(target); } catch { return textResponse('Invalid source URL', 400); }
+  const forceUA = url.searchParams.get('force_ua');
+  const userAgent = forceUA === 'mobile' ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+  const headers = new Headers({ 'User-Agent': userAgent, Referer: `${targetUrl.origin}/`, Origin: targetUrl.origin, Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' });
+  const range = request.headers.get('Range'); if (range) headers.set('Range', range);
+  let upstream;
+  try { upstream = await fetch(targetUrl.href, { method: request.method, headers }); } catch (error) { return textResponse(`Source fetch failed: ${error?.message || 'unknown error'}`, 502); }
+  const contentType = (upstream.headers.get('Content-Type') || '').toLowerCase();
+  const responseHeaders = new Headers({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges', 'Cache-Control': 'no-store' });
+  ['Content-Type', 'Content-Length', 'Content-Range', 'Accept-Ranges'].forEach(name => { const value = upstream.headers.get(name); if (value) responseHeaders.set(name, value); });
+  if (contentType.includes('mpegurl') || contentType.includes('m3u8') || /\.m3u8(?:$|\?)/i.test(targetUrl.pathname + targetUrl.search)) {
+    const playlist = await upstream.text();
+    const rewritten = playlist.split('\n').map(line => { const trimmed = line.trim(); if (!trimmed || trimmed.startsWith('#')) return line; try { const absolute = new URL(trimmed, targetUrl).href; return `${url.origin}/watch-party-source?url=${encodeURIComponent(absolute)}&force_ua=${encodeURIComponent(forceUA || 'desktop')}`; } catch { return line; } }).join('\n');
+    responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
+    return new Response(rewritten, { status: upstream.status, headers: responseHeaders });
+  }
+  return new Response(request.method === 'HEAD' ? null : upstream.body, { status: upstream.status, headers: responseHeaders });
 }
 
 async function setWebhook(request, env, url) {

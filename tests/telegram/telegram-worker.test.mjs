@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import {
+import worker, {
   getContentType,
   contentTypeLabel,
   validateContentUrl,
@@ -22,6 +22,13 @@ import {
   buildRecentHistory,
   repairMojibake
 } from '../../backend/telegram/worker.js';
+
+test('same-origin Watch Party source route rewrites HLS playlists', async () => {
+  const previousFetch = global.fetch;
+  global.fetch = async input => { const target = String(input); assert.match(target, /^https:\/\/ashdi\.vip\/video\/index\.m3u8$/); return new Response(`#EXTM3U\nsegment-001.ts\n`, { status: 200, headers: { 'content-type': 'application/vnd.apple.mpegurl' } }); };
+  try { const target = encodeURIComponent('https://ashdi.vip/video/index.m3u8'); const response = await worker.fetch(new Request(`https://vakdab.animegran8.workers.dev/watch-party-source?url=${target}&force_ua=mobile`), {}); assert.equal(response.status, 200); assert.equal(response.headers.get('content-type'), 'application/vnd.apple.mpegurl'); assert.equal(response.headers.get('access-control-allow-origin'), '*'); const playlist = await response.text(); assert.match(playlist, /#EXTM3U/); assert.match(playlist, /watch-party-source\?url=/); assert.match(playlist, /segment-001\.ts/); }
+  finally { global.fetch = previousFetch; }
+});
 
 test('Groq configuration takes priority when both providers are configured', () => {
   const config = getAIProviderConfig({
