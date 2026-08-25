@@ -249,12 +249,12 @@ export async function handleMusicApiRequest(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(origin) });
   try {
     const path = url.pathname.slice('/music/api/'.length).split('/').filter(Boolean);
-    if (request.method === 'GET' && path[0] === 'public') {
+    if ((request.method === 'GET' || request.method === 'POST') && path[0] === 'public') {
       const ids = await getJson(env, PUBLIC_INDEX_KEY, []);
       const tracks = await listTracks(env, ids);
       return json({ tracks: tracks.filter(track => track.isPublic).map(track => publicTrack(track, url.origin)) }, 200, origin);
     }
-    if (request.method === 'GET' && path[0] === 'stream' && path[1]) {
+    if ((request.method === 'GET' || request.method === 'POST') && path[0] === 'stream' && path[1]) {
       const track = await getTrack(env, decodeURIComponent(path[1]));
       if (!track) return new Response('Not Found', { status: 404 });
       if (!track.isPublic) {
@@ -264,7 +264,7 @@ export async function handleMusicApiRequest(request, env) {
       return streamTrack(request, env, track, origin);
     }
     const user = await requireUser(request, env);
-    if (request.method === 'GET' && path[0] === 'library') {
+    if ((request.method === 'GET' || request.method === 'POST') && path[0] === 'library') {
       const ids = await getJson(env, `${OWNER_INDEX_PREFIX}${user.id}`, []);
       const tracks = await listTracks(env, ids);
       return json({ tracks: tracks.map(track => publicTrack(track, url.origin)) }, 200, origin);
@@ -278,7 +278,7 @@ export async function handleMusicApiRequest(request, env) {
       await deleteTrack(env, track);
       return json({ ok: true }, 200, origin);
     }
-    if (request.method === 'GET' && path[0] === 'playlists') {
+    if (request.method === 'POST' && path[0] === 'playlists' && path[1] === 'list') {
       const ids = await getJson(env, `${PLAYLIST_INDEX_PREFIX}${user.id}`, []);
       const playlists = await Promise.all(ids.map(id => getJson(env, `${PLAYLIST_PREFIX}${id}`, null)));
       return json({ playlists: playlists.filter(Boolean) }, 200, origin);

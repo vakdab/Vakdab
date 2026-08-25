@@ -141,7 +141,7 @@ async function loadPublic() {
   const grid = $('publicTrackGrid');
   setLoading(grid, 'Завантажую музику…');
   try {
-    const payload = await musicApi('/public');
+    const payload = await musicApi('/public', { method: 'POST' });
     state.publicTracks = sortNewest(payload.tracks || []);
   } catch (error) { console.warn('[Shazam] public feed:', error); state.publicTracks = []; }
   renderPublic();
@@ -151,7 +151,7 @@ async function loadPrivateData() {
   setLoading($('libraryTrackList'), 'Завантажую бібліотеку…');
   setLoading($('playlistGrid'), 'Завантажую плейлисти…');
   try {
-    const [tracks, lists] = await Promise.all([musicApi('/library'), musicApi('/playlists')]);
+    const [tracks, lists] = await Promise.all([musicApi('/library', { method: 'POST' }), musicApi('/playlists/list', { method: 'POST' })]);
     state.library = sortNewest(tracks.tracks || []);
     state.playlists = sortNewest(lists.playlists || []);
   } catch (error) { console.warn('[Shazam] private data:', error); toast('Не вдалося завантажити бібліотеку'); }
@@ -275,15 +275,13 @@ async function playTrack(track) {
   updatePlayerUi();
   try {
     let audioUrl = track.audioUrl;
-    if (!track.isPublic) {
-      const response = await fetch(track.audioUrl, { headers: { 'X-Telegram-Init-Data': String(tg?.initData || '') } });
-      if (!response.ok) throw new Error(`Private stream ${response.status}`);
-      const blob = await response.blob();
-      if (state.currentTrack?.id !== track.id) return;
-      if (state.audioObjectUrl) URL.revokeObjectURL(state.audioObjectUrl);
-      state.audioObjectUrl = URL.createObjectURL(blob);
-      audioUrl = state.audioObjectUrl;
-    }
+    const response = await fetch(track.audioUrl, { method: 'POST', headers: { 'X-Telegram-Init-Data': String(tg?.initData || '') } });
+    if (!response.ok) throw new Error(`Stream ${response.status}`);
+    const blob = await response.blob();
+    if (state.currentTrack?.id !== track.id) return;
+    if (state.audioObjectUrl) URL.revokeObjectURL(state.audioObjectUrl);
+    state.audioObjectUrl = URL.createObjectURL(blob);
+    audioUrl = state.audioObjectUrl;
     if (state.currentTrack?.id !== track.id) return;
     state.audio.src = audioUrl;
     state.audio.volume = Number($('volumeRange')?.value || .85);
