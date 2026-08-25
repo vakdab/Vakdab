@@ -5,7 +5,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const MUSIC_WEB_APP_URL = `${SITE_BASE_URL}/app/music.html?v=20260825-shazam-v14`;
+const MUSIC_WEB_APP_URL = `${SITE_BASE_URL}/app/music.html?v=20260825-shazam-v15`;
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
@@ -70,8 +70,16 @@ export default {
   async fetch(request, env) {
     try {
       const url = new URL(request.url);
-      const musicResponse = await handleMusicApiRequest(request, env);
+      let musicResponse;
+      try {
+        musicResponse = await handleMusicApiRequest(request, env);
+      } catch (musicError) {
+        return new Response(JSON.stringify({ error: safeError(musicError), stage: 'music-dispatch' }), { status: 500, headers: { 'content-type': 'application/json; charset=utf-8' } });
+      }
       if (musicResponse) return musicResponse;
+      if (url.pathname === TELEGRAM_WEBHOOK_PATH && (request.headers.has('X-Music-Path') || url.searchParams.has('music'))) {
+        return new Response(JSON.stringify({ error: 'music-handler-returned-null', path: url.pathname }), { status: 500, headers: { 'content-type': 'application/json; charset=utf-8' } });
+      }
 
       if (request.method === 'GET') {
         if (url.pathname === '/set_webhook') {
