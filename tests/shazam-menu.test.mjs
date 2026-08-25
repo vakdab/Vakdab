@@ -15,17 +15,19 @@ const watchPartyCss = fs.readFileSync(new URL('../src/styles/watch-party.css', i
 test('main bot menu opens the Shazam Mini App', () => {
   assert.match(worker, /MUSIC_WEB_APP_URL = 'https:\/\/vakdab\.animegran8\.workers\.dev\/app\/music\?v=20260825-shazam-v26'/);
   assert.match(worker, /\{ text: 'Shazam', web_app: \{ url: MUSIC_WEB_APP_URL \} \}/);
-  assert.match(worker, /WATCH_PARTY_WEB_APP_URL = 'https:\/\/vakdab\.animegran8\.workers\.dev\/app\/watch-party\?v=20260825-watchparty-v5'/);
+  assert.match(worker, /WATCH_PARTY_WEB_APP_URL = 'https:\/\/vakdab\.animegran8\.workers\.dev\/app\/watch-party\?v=20260825-watchparty-v6'/);
   assert.match(worker, /\{ text: 'Аніме Live', web_app: \{ url: WATCH_PARTY_WEB_APP_URL \} \}/);
 });
 
-test('Watch Party uses daily random, user preferences and locked continuation', () => {
-  assert.match(watchPartyHtml, /choiceTime/);
-  assert.match(watchPartyHtml, /choiceEpisodes/);
-  assert.match(watchPartyHtml, /choiceDub/);
-  assert.match(watchPartyJs, /loadCatalogDetails/);
-  assert.match(watchPartyJs, /saveChoice/);
-  assert.match(watchPartyHtml, /Наступний random відкриється після завершення/);
+test('Watch Party uses multi-anime vote, separate dub vote and locked continuation', () => {
+  assert.match(watchPartyHtml, /candidateList/);
+  assert.match(watchPartyHtml, /dubVoteBlock/);
+  assert.match(watchPartyHtml, /lockAnimeButton/);
+  assert.match(watchPartyJs, /vote_anime/);
+  assert.match(watchPartyJs, /vote_dub/);
+  assert.doesNotMatch(watchPartyHtml, /choiceTime/);
+  assert.doesNotMatch(watchPartyHtml, /choiceEpisodes/);
+  assert.match(watchPartyJs, /Наступний пул не відкриється/);
   assert.match(watchPartyCss, /--bg:#000/);
   assert.match(watchPartyCss, /--text:#fff/);
 });
