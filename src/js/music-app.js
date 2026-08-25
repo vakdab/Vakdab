@@ -2,7 +2,7 @@ import { FIREBASE_CONFIG, initializeApp, getAuth, signInWithCustomToken } from '
 import { TELEGRAM_AUTH_ENDPOINT } from './config/constants.js';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const APP_VERSION = '20260825-shazam-v21';
+const APP_VERSION = '20260825-shazam-v22';
 const MUSIC_API_BASE = 'https://vakdab.animegran8.workers.dev/telegram-webhook';
 const API_TIMEOUT_MS = 7000;
 const tg = globalThis.Telegram?.WebApp;
