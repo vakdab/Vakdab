@@ -25,7 +25,7 @@ async function musicApi(path, options = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
   try {
-    const response = await fetch(`${MUSIC_API_BASE}${path}`, { ...options, headers, signal: controller.signal });
+    const response = await fetch(MUSIC_API_BASE, { ...options, headers, signal: controller.signal });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `Music API ${response.status}`);
     return payload;
@@ -194,7 +194,7 @@ async function saveTrack(event) {
   if (!await ensureAuth()) return;
   const file = $('trackFile').files?.[0];
   if (!file) { toast('Обери аудіофайл'); return; }
-  if (file.size > MAX_FILE_BYTES) { toast('Файл завеликий: максимум 50 MB'); return; }
+  if (file.size > MAX_FILE_BYTES) { toast('Файл завеликий: максимум 10 MB'); return; }
   const rights = $('rightsConfirmed').checked;
   const isPublic = $('trackPublic').checked;
   if (!rights || (isPublic && !rights)) { toast('Підтвердь права на цей файл'); return; }

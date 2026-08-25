@@ -22,12 +22,16 @@ test('Shazam Mini App provides Telegram login, upload, playlists, player and equ
   assert.match(musicJs, /MUSIC_API_BASE/);
   assert.match(musicJs, /musicApi\('\/upload'|musicApi\("\/upload"/);
   assert.match(musicJs, /X-Music-Path/);
+  assert.match(musicJs, /fetch\(MUSIC_API_BASE/);
+  assert.doesNotMatch(musicJs, /fetch\(`\$\{MUSIC_API_BASE\}\$\{path\}/);
   assert.match(musicJs, /API_TIMEOUT_MS = 7000/);
   assert.match(musicJs, /Promise\.allSettled/);
   assert.match(musicJs, /vakdab\.animegran8\.workers\.dev/);
   assert.match(musicStore, /X-Music-Path/);
   assert.match(musicJs, /musicApi\('\/library', \{ method: 'POST' \}\)/);
   assert.match(musicJs, /10 \* 1024 \* 1024/);
+  assert.match(musicJs, /максимум 10 MB/);
+  assert.doesNotMatch(musicJs, /максимум 50 MB/);
   assert.match(worker, /handleMusicApiRequest/);
   assert.match(worker, /handleTelegramAudioUpload/);
   assert.match(musicStore, /MAKIMA_MEMORY/);
