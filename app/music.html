@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../src/styles/music.css?v=20260825-shazam-v23" />
+  <link rel="stylesheet" href="../src/styles/music.css?v=20260825-shazam-v24" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script type="importmap">
     {"imports":{"firebase/app":"https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js","firebase/auth":"https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js","firebase/firestore":"https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js","firebase/storage":"https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js"}}
@@ -69,10 +69,10 @@
       <div class="now-playing"><div class="cover-art" id="playerCover">♫</div><div class="now-copy"><strong id="playerTitle">Нічого не відтворюється</strong><span id="playerArtist">VakDab Music</span></div></div>
       <div class="player-controls"><button class="icon-btn" id="prevBtn" type="button" aria-label="Попередній">‹</button><button class="play-btn" id="playBtn" type="button" aria-label="Відтворити">▶</button><button class="icon-btn" id="nextBtn" type="button" aria-label="Наступний">›</button></div>
       <div class="player-progress"><span id="currentTime">0:00</span><input id="progressRange" type="range" min="0" max="100" value="0" step="0.1" /><span id="duration">0:00</span></div>
-      <div class="player-tools"><label class="volume-control" aria-label="Гучність">⌁<input id="volumeRange" type="range" min="0" max="1" value="0.85" step="0.01" /></label><button class="equalizer-btn" id="equalizerBtn" type="button">EQ</button></div>
+      <div class="player-tools"><label class="volume-control" aria-label="Гучність">⌁<input id="volumeRange" type="range" min="0" max="1" value="0.85" step="0.01" /></label><button class="background-btn" id="backgroundBtn" type="button" title="Надіслати трек у Telegram для фонового прослуховування">Фон</button><button class="equalizer-btn" id="equalizerBtn" type="button">EQ</button></div>
     </section>
 
-    <aside class="equalizer-panel" id="equalizerPanel" hidden><div class="panel-title"><div><span class="eyebrow">Audio Lab</span><h3>Еквалайзер</h3></div><button class="close-btn" id="closeEqualizer" type="button">×</button></div><p>Налаштуй звучання локально для свого плеєра.</p><div class="eq-presets"><button data-preset="flat" class="is-active">Flat</button><button data-preset="bass">Bass</button><button data-preset="vocal">Vocal</button><button data-preset="night">Night</button></div><div class="eq-sliders" id="eqSliders"></div></aside>
+    <aside class="equalizer-panel" id="equalizerPanel" hidden><div class="panel-title"><div><span class="eyebrow">Audio Lab</span><h3>Еквалайзер</h3></div><button class="close-btn" id="closeEqualizer" type="button">×</button></div><p>Налаштуй звучання локально для свого плеєра.</p><div class="eq-presets"><button data-preset="flat" class="is-active">Flat</button><button data-preset="bass">Bass Boost</button><button data-preset="treble">Treble</button><button data-preset="vocal">Vocal</button><button data-preset="vshape">V-Shape</button><button data-preset="rock">Rock</button><button data-preset="electronic">Electronic</button></div><div class="eq-sliders" id="eqSliders"></div></aside>
 
     <div class="modal-backdrop" id="modalBackdrop" hidden><section class="music-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><button class="close-btn modal-close" id="modalClose" type="button">×</button><span class="eyebrow" id="modalEyebrow">Shazam</span><h2 id="modalTitle">Додати трек</h2><p id="modalDescription">Збережи аудіо у своїй бібліотеці VakDab.</p><form id="trackForm"><label class="file-drop" for="trackFile"><input id="trackFile" type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac" /><span class="file-icon">↥</span><strong id="fileLabel">Обери аудіофайл</strong><small>MP3, M4A, WAV, OGG або FLAC до 10 MB</small></label><label>Назва треку<input id="trackTitle" type="text" maxlength="120" placeholder="Наприклад, My Song" required /></label><label>Виконавець<input id="trackArtist" type="text" maxlength="100" placeholder="Ім’я виконавця" /></label><label class="check-row"><input id="trackPublic" type="checkbox" /><span><strong>Опублікувати на головній</strong><small>Тільки якщо ти маєш права або дозвіл на цей трек.</small></span></label><label class="check-row rights-row"><input id="rightsConfirmed" type="checkbox" required /><span>Я підтверджую, що маю право зберігати цей файл і, якщо обрано публікацію, показувати його іншим.</span></label><button class="primary-btn full-btn" type="submit" id="trackSubmit">Зберегти трек</button></form></section></div>
 
@@ -81,6 +81,6 @@
     <input id="hiddenAudioInput" type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac" hidden />
     <div class="toast" id="musicToast" role="status" aria-live="polite"></div>
   </div>
-  <script type="module" src="../src/js/music-app.js?v=20260825-shazam-v23"></script>
+  <script type="module" src="../src/js/music-app.js?v=20260825-shazam-v24"></script>
 </body>
 </html>

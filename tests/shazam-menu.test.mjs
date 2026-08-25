@@ -10,7 +10,7 @@ const musicStore = fs.readFileSync(new URL('../backend/telegram/music-store.js',
 const telegramAuthWorker = fs.readFileSync(new URL('../backend/workers/telegram-auth-worker.js', import.meta.url), 'utf8');
 
 test('main bot menu opens the Shazam Mini App', () => {
-  assert.match(worker, /MUSIC_WEB_APP_URL = 'https:\/\/vakdab\.animegran8\.workers\.dev\/app\/music\?v=20260825-shazam-v23'/);
+  assert.match(worker, /MUSIC_WEB_APP_URL = 'https:\/\/vakdab\.animegran8\.workers\.dev\/app\/music\?v=20260825-shazam-v24'/);
   assert.match(worker, /\{ text: 'Shazam', web_app: \{ url: MUSIC_WEB_APP_URL \} \}/);
 });
 
@@ -33,6 +33,10 @@ test('Shazam Mini App provides Telegram login, upload, playlists, player and equ
   assert.doesNotMatch(musicJs, /fetch\(`\$\{MUSIC_API_BASE\}\$\{path\}/);
   assert.match(musicJs, /API_TIMEOUT_MS = 7000/);
   assert.match(musicJs, /Promise\.allSettled/);
+  assert.match(musicJs, /EQ_BANDS = \[31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000\]/);
+  assert.match(musicJs, /MediaMetadata/);
+  assert.match(musicJs, /tracks\/\$\{encodeURIComponent\(track\.id\)\}\/telegram/);
+  assert.match(musicHtml, /id="backgroundBtn"/);
   assert.match(musicJs, /vakdab\.animegran8\.workers\.dev/);
   assert.match(musicStore, /X-Music-Path/);
   assert.match(musicJs, /musicApi\('\/library', \{ method: 'POST' \}\)/);
@@ -44,6 +48,8 @@ test('Shazam Mini App provides Telegram login, upload, playlists, player and equ
   assert.match(musicStore, /MAKIMA_MEMORY/);
   assert.match(musicStore, /MAX_AUDIO_BYTES = 10 \* 1024 \* 1024/);
   assert.match(musicStore, /handleMusicApiRequest/);
+  assert.match(musicStore, /sendTelegramAudio/);
+  assert.match(musicStore, /path\[2\] === 'telegram'/);
   assert.match(musicJs, /createBiquadFilter/);
   assert.match(musicJs, /MUSIC_API_BASE/);
   assert.match(musicJs, /rightsConfirmed/);

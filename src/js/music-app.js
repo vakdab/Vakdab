@@ -3,9 +3,20 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { TELEGRAM_AUTH_ENDPOINT } from './config/constants.js';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const APP_VERSION = '20260825-shazam-v23';
+const APP_VERSION = '20260825-shazam-v24';
 const MUSIC_API_BASE = 'https://vakdab.animegran8.workers.dev/telegram-webhook';
 const API_TIMEOUT_MS = 7000;
+const EQ_BANDS = [31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+const EQ_STORAGE_KEY = 'vakdab.shazam.eq.v1';
+const EQ_PRESETS = Object.freeze({
+  flat: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  bass: [8, 6, 4, 2, 1, 0, 0, 0, 0, 0],
+  treble: [0, 0, 0, 0, 0, 2, 4, 6, 8, 8],
+  vocal: [-2, -1, 0, 2, 4, 5, 4, 2, 0, -1],
+  vshape: [6, 4, 2, 0, -2, -2, 0, 2, 4, 6],
+  rock: [5, 4, 3, 1, -1, 0, 2, 4, 5, 5],
+  electronic: [6, 4, 1, 0, -2, 2, 4, 3, 4, 5]
+});
 const tg = globalThis.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); tg.setHeaderColor?.('#ffffff'); tg.setBackgroundColor?.('#f4f7fb'); }
 
@@ -35,6 +46,13 @@ async function musicApi(path, options = {}) {
   }
 }
 
+function readEqValues() {
+  try {
+    const saved = JSON.parse(globalThis.localStorage?.getItem(EQ_STORAGE_KEY) || 'null');
+    return Array.isArray(saved) && saved.length === EQ_BANDS.length ? saved.map(value => Math.max(-12, Math.min(12, Number(value) || 0))) : [...EQ_PRESETS.flat];
+  } catch { return [...EQ_PRESETS.flat]; }
+}
+
 const state = {
   user: null,
   telegramUser: null,
@@ -51,7 +69,9 @@ const state = {
   source: null,
   gain: null,
   audioObjectUrl: '',
-  uploading: false
+  uploading: false,
+  eqValues: readEqValues(),
+  mediaHandlersBound: false
 };
 state.audio.preload = 'metadata';
 state.audio.crossOrigin = 'anonymous';
@@ -270,18 +290,45 @@ function ensureAudioGraph() {
   const Context = globalThis.AudioContext || globalThis.webkitAudioContext;
   state.audioContext = new Context();
   state.source = state.audioContext.createMediaElementSource(state.audio);
-  const frequencies = [60, 170, 350, 1000, 3000];
-  state.filters = frequencies.map((frequency, index) => { const filter = state.audioContext.createBiquadFilter(); filter.type = index === 0 ? 'lowshelf' : index === frequencies.length - 1 ? 'highshelf' : 'peaking'; filter.frequency.value = frequency; filter.Q.value = 1; filter.gain.value = 0; return filter; });
+  state.filters = EQ_BANDS.map((frequency, index) => { const filter = state.audioContext.createBiquadFilter(); filter.type = index === 0 ? 'lowshelf' : index === EQ_BANDS.length - 1 ? 'highshelf' : 'peaking'; filter.frequency.value = frequency; filter.Q.value = 1; filter.gain.value = state.eqValues[index]; return filter; });
   state.gain = state.audioContext.createGain();
   let chain = state.source;
   state.filters.forEach(filter => { chain.connect(filter); chain = filter; });
   chain.connect(state.gain); state.gain.connect(state.audioContext.destination);
 }
+function syncMediaSession(track) {
+  if (!('mediaSession' in navigator) || !track) return;
+  if ('MediaMetadata' in globalThis) navigator.mediaSession.metadata = new MediaMetadata({ title: track.title, artist: track.artist || 'Невідомий виконавець', album: 'VakDab Music', artwork: track.coverUrl ? [{ src: track.coverUrl }] : [] });
+  if (state.mediaHandlersBound) return;
+  const handlers = { play: () => state.audio.play(), pause: () => state.audio.pause(), previoustrack: () => nextTrack(-1), nexttrack: () => nextTrack(1), seekbackward: () => { state.audio.currentTime = Math.max(0, state.audio.currentTime - 10); }, seekforward: () => { state.audio.currentTime = Math.min(state.audio.duration || Infinity, state.audio.currentTime + 10); }, seekto: event => { if (event.seekTime != null) state.audio.currentTime = event.seekTime; } };
+  Object.entries(handlers).forEach(([action, handler]) => { try { navigator.mediaSession.setActionHandler(action, handler); } catch {} });
+  state.mediaHandlersBound = true;
+}
+
+async function sendCurrentToTelegram() {
+  const track = state.currentTrack;
+  if (!track) { toast('Спочатку запусти трек'); return; }
+  if (!await ensureAuth()) return;
+  const button = $('backgroundBtn');
+  if (button) { button.disabled = true; button.textContent = '…'; }
+  try {
+    await musicApi(`/tracks/${encodeURIComponent(track.id)}/telegram`, { method: 'POST' });
+    toast('Трек надіслано в Telegram. Тепер його можна слухати у фоні.');
+    setTimeout(() => tg?.close?.(), 650);
+  } catch (error) {
+    console.warn('[Shazam] Telegram background fallback:', error);
+    toast('Не вдалося відкрити фонове прослуховування');
+  } finally {
+    if (button) { button.disabled = false; button.textContent = 'Фон'; }
+  }
+}
+
 async function playTrack(track) {
   if (!track?.audioUrl) { toast('У цього треку немає аудіопосилання'); return; }
   ensureAudioGraph();
   state.audioContext?.resume?.();
   state.currentTrack = track;
+  syncMediaSession(track);
   state.queue = allPlayableTracks();
   state.queueIndex = state.queue.findIndex(item => item.id === track.id);
   $('playerDock').hidden = false;
@@ -324,12 +371,14 @@ function updatePlayerUi() {
   $('duration').textContent = formatTime(state.audio.duration);
   $('progressRange').value = state.audio.duration ? (state.audio.currentTime / state.audio.duration) * 100 : 0;
 }
+function formatEqFrequency(frequency) { return frequency >= 1000 ? `${frequency / 1000}k` : String(frequency); }
 function renderEq() {
-  const labels = ['60', '170', '350', '1k', '3k'];
-  $('eqSliders').innerHTML = labels.map((label, index) => `<label class="eq-band"><span>${label}</span><input type="range" min="-12" max="12" step="1" value="0" data-eq-index="${index}" orient="vertical" /><small>0 dB</small></label>`).join('');
+  $('eqSliders').innerHTML = EQ_BANDS.map((frequency, index) => `<label class="eq-band"><span>${formatEqFrequency(frequency)}</span><input type="range" min="-12" max="12" step="1" value="${state.eqValues[index]}" data-eq-index="${index}" orient="vertical" aria-label="${frequency} Hz" /><small>${state.eqValues[index] > 0 ? '+' : ''}${state.eqValues[index]} dB</small></label>`).join('');
 }
 function applyPreset(name) {
-  const values = { flat: [0, 0, 0, 0, 0], bass: [8, 5, 2, -1, 1], vocal: [-2, 1, 4, 5, 2], night: [-4, -2, 1, 2, -2] }[name] || [0, 0, 0, 0, 0];
+  const values = EQ_PRESETS[name] || EQ_PRESETS.flat;
+  state.eqValues = [...values];
+  try { globalThis.localStorage?.setItem(EQ_STORAGE_KEY, JSON.stringify(state.eqValues)); } catch {}
   document.querySelectorAll('[data-eq-index]').forEach((input, index) => { input.value = values[index]; input.nextElementSibling.textContent = `${values[index] > 0 ? '+' : ''}${values[index]} dB`; if (state.filters[index]) state.filters[index].gain.value = values[index]; });
   document.querySelectorAll('[data-preset]').forEach(button => button.classList.toggle('is-active', button.dataset.preset === name));
 }
@@ -350,10 +399,11 @@ function bindEvents() {
   $('progressRange').addEventListener('input', event => { if (state.audio.duration) state.audio.currentTime = state.audio.duration * (Number(event.target.value) / 100); });
   $('volumeRange').addEventListener('input', event => { state.audio.volume = Number(event.target.value); if (state.gain) state.gain.gain.value = 1; });
   $('equalizerBtn').addEventListener('click', () => { $('equalizerPanel').hidden = !$('equalizerPanel').hidden; }); $('closeEqualizer').addEventListener('click', () => { $('equalizerPanel').hidden = true; });
+  $('backgroundBtn')?.addEventListener('click', sendCurrentToTelegram);
   document.querySelectorAll('[data-preset]').forEach(button => button.addEventListener('click', () => applyPreset(button.dataset.preset)));
-  $('eqSliders').addEventListener('input', event => { const input = event.target.closest('[data-eq-index]'); if (!input) return; const index = Number(input.dataset.eqIndex); const value = Number(input.value); if (state.filters[index]) state.filters[index].gain.value = value; input.nextElementSibling.textContent = `${value > 0 ? '+' : ''}${value} dB`; document.querySelectorAll('[data-preset]').forEach(button => button.classList.remove('is-active')); });
+  $('eqSliders').addEventListener('input', event => { const input = event.target.closest('[data-eq-index]'); if (!input) return; const index = Number(input.dataset.eqIndex); const value = Number(input.value); state.eqValues[index] = value; try { globalThis.localStorage?.setItem(EQ_STORAGE_KEY, JSON.stringify(state.eqValues)); } catch {} if (state.filters[index]) state.filters[index].gain.value = value; input.nextElementSibling.textContent = `${value > 0 ? '+' : ''}${value} dB`; document.querySelectorAll('[data-preset]').forEach(button => button.classList.remove('is-active')); });
   document.addEventListener('click', event => { const action = event.target.closest('[data-action]')?.dataset.action; const row = event.target.closest('[data-track-id]'); if (!action || !row) return; const track = [...state.library, ...state.publicTracks].find(item => item.id === row.dataset.trackId); if (!track) return; if (action === 'play') playTrack(track); if (action === 'playlist') addToPlaylist(track); if (action === 'delete') removeTrack(track); });
-  state.audio.addEventListener('timeupdate', updatePlayerUi); state.audio.addEventListener('loadedmetadata', updatePlayerUi); state.audio.addEventListener('play', updatePlayerUi); state.audio.addEventListener('pause', updatePlayerUi); state.audio.addEventListener('ended', () => nextTrack(1));
+  state.audio.addEventListener('timeupdate', updatePlayerUi); state.audio.addEventListener('loadedmetadata', updatePlayerUi); state.audio.addEventListener('play', () => { if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'; updatePlayerUi(); }); state.audio.addEventListener('pause', () => { if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'; updatePlayerUi(); }); state.audio.addEventListener('ended', () => nextTrack(1));
 }
 
 async function init() {
