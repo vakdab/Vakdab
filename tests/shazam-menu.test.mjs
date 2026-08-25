@@ -9,7 +9,7 @@ const musicCss = fs.readFileSync(new URL('../src/styles/music.css', import.meta.
 const musicStore = fs.readFileSync(new URL('../backend/telegram/music-store.js', import.meta.url), 'utf8');
 
 test('main bot menu opens the Shazam Mini App', () => {
-  assert.match(worker, /MUSIC_WEB_APP_URL = 'https:\/\/vakdab\.animegran8\.workers\.dev\/app\/music\?v=20260825-shazam-v22'/);
+  assert.match(worker, /MUSIC_WEB_APP_URL = 'https:\/\/vakdab\.animegran8\.workers\.dev\/app\/music\?v=20260825-shazam-v23'/);
   assert.match(worker, /\{ text: 'Shazam', web_app: \{ url: MUSIC_WEB_APP_URL \} \}/);
 });
 
@@ -19,6 +19,7 @@ test('Shazam Mini App provides Telegram login, upload, playlists, player and equ
   assert.match(musicHtml, /id="playlistForm"/);
   assert.match(musicHtml, /id="equalizerPanel"/);
   assert.match(musicJs, /signInWithCustomToken/);
+  assert.match(musicJs, /onAuthStateChanged/);
   assert.match(musicJs, /MUSIC_API_BASE/);
   assert.match(musicJs, /musicApi\('\/upload'|musicApi\("\/upload"/);
   assert.match(musicJs, /X-Music-Path/);

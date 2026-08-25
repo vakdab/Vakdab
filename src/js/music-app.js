@@ -1,8 +1,9 @@
 import { FIREBASE_CONFIG, initializeApp, getAuth, signInWithCustomToken } from './config/firebase.js';
+import { onAuthStateChanged } from 'firebase/auth';
 import { TELEGRAM_AUTH_ENDPOINT } from './config/constants.js';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const APP_VERSION = '20260825-shazam-v22';
+const APP_VERSION = '20260825-shazam-v23';
 const MUSIC_API_BASE = 'https://vakdab.animegran8.workers.dev/telegram-webhook';
 const API_TIMEOUT_MS = 7000;
 const tg = globalThis.Telegram?.WebApp;
@@ -363,4 +364,8 @@ async function init() {
   setProfileUi();
   await loadPrivateData();
 }
-init();
+init().catch(error => {
+  console.error('[Shazam] init failed:', error);
+  renderPublic(); renderLibrary(); renderPlaylists();
+  toast('Shazam не зміг завантажити бібліотеку. Відкрий Mini App ще раз.');
+});

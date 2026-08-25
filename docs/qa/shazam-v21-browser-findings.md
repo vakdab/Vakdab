@@ -1,0 +1,6 @@
+
+Additional finding: browser DOM confirmed module URL `.../src/js/music-app.js?v=20260825-shazam-v21`, but `#publicTrackGrid` still contained `Завантажую музику…`, `#publicEmpty.hidden` remained true, and no `telegram-webhook` resource appeared in performance entries. The first v21 asset manifest had been generated before the final exact-fetch correction, so the live static asset can still be stale even though the GitHub source is fixed. A fresh manifest/session/upload/deploy is required.
+
+After deploying a fresh v22 manifest and Worker, the v22 browser page still displayed `Завантажую музику…` after waiting. The live HTML correctly referenced v22 CSS/JS, while curl to the same API returned `{"tracks":[]}`. This indicates a client runtime issue (likely module execution/import or uncaptured fetch error), not Cloudflare API latency; the next check is the v22 script response and browser module/runtime state.
+
+Runtime diagnosis: all IDs used by `bindEvents()` are present. A direct same-origin browser `POST /telegram-webhook` with `X-Music-Path: public` returned HTTP 200 and `{"tracks":[]}` in about 1 second. The v22 module resource was present. Therefore the API and DOM are functional; the remaining sandbox-browser placeholder is likely an initialization/runtime-order issue or browser tool rendering artifact, and does not reproduce the API path bug.
