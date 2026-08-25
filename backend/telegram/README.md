@@ -51,7 +51,7 @@ Worker зберігає постійний список користувачів
 
 - **Hikka API** (`https://api.hikka.io`) — Telegram-пошук, випадковий контент, популярні аніме, назви, постери, жанри, статус, рік, описи й кількість епізодів/розділів.
 - **Mikai API** (`https://api.mikai.me/v1/schedule`) — розклад виходу.
-- **VakDab** (`https://vakdab.github.io/VakDab`) — anime deeplink через `#anime/{hikka-slug}`.
+- **VakDab** (`https://vakdab.github.io/Vakdab`) — anime deeplink через `#anime/{hikka-slug}`.
 - **Proxy** (`https://monoanime.animegran8.workers.dev`) — залишається доступним для сумісності з іншими запитами Worker.
 
 ## Cloudflare secrets

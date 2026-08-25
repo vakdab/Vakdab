@@ -6,7 +6,7 @@ const MAX_DUBS = 24;
 const MAX_CANDIDATES = 4;
 const ADMIN_USERNAME = 'vaditx';
 const HIKKA_API = 'https://api.hikka.io';
-const SITE_BASE_URL = 'https://vakdab.github.io/VakDab';
+const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const TIME_OPTIONS = ['20:00'];
 const FALLBACK_ANIME = [
   { id: 'one-piece', slug: 'one-piece', title: 'One Piece' },
