@@ -4,6 +4,7 @@ const FIREBASE_AUDIENCE = 'https://identitytoolkit.googleapis.com/google.identit
 function corsHeaders(origin) {
   const allowed = new Set([
     'https://vakdab.github.io',
+    'https://vakdab.animegran8.workers.dev',
     'http://127.0.0.1:4173',
     'http://localhost:4173'
   ]);
