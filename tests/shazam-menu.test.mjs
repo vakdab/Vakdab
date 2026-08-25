@@ -8,12 +8,26 @@ const musicJs = fs.readFileSync(new URL('../src/js/music-app.js', import.meta.ur
 const musicCss = fs.readFileSync(new URL('../src/styles/music.css', import.meta.url), 'utf8');
 const musicStore = fs.readFileSync(new URL('../backend/telegram/music-store.js', import.meta.url), 'utf8');
 const telegramAuthWorker = fs.readFileSync(new URL('../backend/workers/telegram-auth-worker.js', import.meta.url), 'utf8');
+const watchPartyHtml = fs.readFileSync(new URL('../app/watch-party.html', import.meta.url), 'utf8');
+const watchPartyJs = fs.readFileSync(new URL('../src/js/watch-party.js', import.meta.url), 'utf8');
+const watchPartyCss = fs.readFileSync(new URL('../src/styles/watch-party.css', import.meta.url), 'utf8');
 
 test('main bot menu opens the Shazam Mini App', () => {
   assert.match(worker, /MUSIC_WEB_APP_URL = 'https:\/\/vakdab\.animegran8\.workers\.dev\/app\/music\?v=20260825-shazam-v26'/);
   assert.match(worker, /\{ text: 'Shazam', web_app: \{ url: MUSIC_WEB_APP_URL \} \}/);
-  assert.match(worker, /WATCH_PARTY_WEB_APP_URL = 'https:\/\/vakdab\.animegran8\.workers\.dev\/app\/watch-party\?v=20260825-watchparty-v4'/);
+  assert.match(worker, /WATCH_PARTY_WEB_APP_URL = 'https:\/\/vakdab\.animegran8\.workers\.dev\/app\/watch-party\?v=20260825-watchparty-v5'/);
   assert.match(worker, /\{ text: 'Аніме Live', web_app: \{ url: WATCH_PARTY_WEB_APP_URL \} \}/);
+});
+
+test('Watch Party uses daily random, user preferences and locked continuation', () => {
+  assert.match(watchPartyHtml, /choiceTime/);
+  assert.match(watchPartyHtml, /choiceEpisodes/);
+  assert.match(watchPartyHtml, /choiceDub/);
+  assert.match(watchPartyJs, /loadCatalogDetails/);
+  assert.match(watchPartyJs, /saveChoice/);
+  assert.match(watchPartyHtml, /Наступний random відкриється після завершення/);
+  assert.match(watchPartyCss, /--bg:#000/);
+  assert.match(watchPartyCss, /--text:#fff/);
 });
 
 test('Telegram auth allows the live Cloudflare Mini App origin', () => {

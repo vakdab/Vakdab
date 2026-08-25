@@ -17,44 +17,72 @@ async function initData(botToken, user) {
   params.set('hash', hash);
   return params.toString();
 }
+function request(init, action, payload) { return new Request('https://vakdab.animegran8.workers.dev/watch-party-api', { method: action ? 'POST' : 'GET', headers: { Origin: 'https://vakdab.animegran8.workers.dev', 'content-type': 'application/json', 'X-Telegram-Init-Data': init }, body: action ? JSON.stringify({ action, ...payload }) : undefined }); }
+function mockCatalog() { return async () => new Response(JSON.stringify({ list: [{ id: 'a1', slug: 'demo-anime', title_ua: 'Demo Anime', image: 'https://img.example/demo.jpg', episodes_total: 12 }, { id: 'a2', slug: 'second-anime', title_ua: 'Second Anime', episodes_total: 8 }, { id: 'a3', slug: 'third-anime', title_ua: 'Third Anime', episodes_total: 10 }] }), { status: 200, headers: { 'content-type': 'application/json' } }); }
 
-function request(init, action, payload) {
-  return new Request('https://vakdab.animegran8.workers.dev/watch-party-api', { method: action ? 'POST' : 'GET', headers: { Origin: 'https://vakdab.animegran8.workers.dev', 'content-type': 'application/json', 'X-Telegram-Init-Data': init }, body: action ? JSON.stringify({ action, ...payload }) : undefined });
-}
-
-test('Watch Party poll, live state and chat persist in KV', async () => {
-  const token = '123456:test-token';
-  const admin = { id: 1, first_name: 'Admin', username: 'vaditx' };
-  const viewer = { id: 2, first_name: 'Viewer', username: 'viewer' };
-  const adminInit = await initData(token, admin);
-  const viewerInit = await initData(token, viewer);
-  const env = { TELEGRAM_BOT_TOKEN: token, MAKIMA_MEMORY: new MockKV() };
-
-  let response = await handleWatchPartyRequest(request(adminInit, 'add_option', { title: 'Demo Anime', episodes: 12, startsAt: '2026-08-25T20:00:00.000Z', siteUrl: 'https://vakdab.github.io/VakDab/', videoUrl: 'https://cdn.example/demo.m3u8' }), env);
-  assert.equal(response.status, 200);
-  const optionId = (await response.json()).state.options[0].id;
-  response = await handleWatchPartyRequest(request(viewerInit, 'vote', { optionId }), env);
-  assert.equal(response.status, 200);
-  response = await handleWatchPartyRequest(request(adminInit, 'start', {}), env);
-  assert.equal(response.status, 200);
-  assert.equal((await response.json()).state.status, 'live');
-  response = await handleWatchPartyRequest(request(adminInit, 'control', { playing: true, position: 42, episode: 2 }), env);
-  assert.equal(response.status, 200);
-  response = await handleWatchPartyRequest(request(viewerInit, 'chat', { text: 'Дивимось разом!' }), env);
-  assert.equal(response.status, 200);
-  response = await handleWatchPartyRequest(request(viewerInit, '', {}), env);
-  const snapshot = await response.json();
-  assert.equal(snapshot.state.position, 42);
-  assert.equal(snapshot.state.episode, 2);
-  assert.equal(snapshot.state.myVote, optionId);
-  assert.equal(snapshot.state.messages[0].text, 'Дивимось разом!');
-  assert.equal(snapshot.user.isAdmin, false);
+ test('daily random anime is created automatically and persists', async () => {
+  const previousFetch = global.fetch;
+  global.fetch = mockCatalog();
+  try {
+    const token = '123456:test-token';
+    const adminInit = await initData(token, { id: 1, first_name: 'Admin', username: 'vaditx' });
+    const env = { TELEGRAM_BOT_TOKEN: token, MAKIMA_MEMORY: new MockKV() };
+    const response = await handleWatchPartyRequest(request(adminInit, '', {}), env);
+    assert.equal(response.status, 200);
+    const snapshot = await response.json();
+    assert.match(snapshot.state.day, /^\d{4}-\d{2}-\d{2}$/);
+    assert.ok(snapshot.state.anime.title);
+    assert.match(snapshot.state.anime.catalogUrl, /api\.hikka\.io\/anime/);
+    assert.match(snapshot.state.anime.siteUrl, /vakdab\.github\.io\/VakDab/);
+    const second = await handleWatchPartyRequest(request(adminInit, '', {}), env);
+    assert.equal((await second.json()).state.day, snapshot.state.day);
+  } finally { global.fetch = previousFetch; }
 });
 
-test('Watch Party blocks non-admin controls', async () => {
+test('users choose time, episode count and dub; next anime is locked until finish', async () => {
+  const previousFetch = global.fetch;
+  global.fetch = mockCatalog();
+  try {
+    const token = '123456:test-token';
+    const adminInit = await initData(token, { id: 1, first_name: 'Admin', username: 'vaditx' });
+    const viewerInit = await initData(token, { id: 2, first_name: 'Viewer', username: 'viewer' });
+    const env = { TELEGRAM_BOT_TOKEN: token, MAKIMA_MEMORY: new MockKV() };
+    await handleWatchPartyRequest(request(viewerInit, '', {}), env);
+    let response = await handleWatchPartyRequest(request(viewerInit, 'catalog_meta', { dubs: ['AniLibria', 'UkrDub'], episodesTotal: 2 }), env);
+    assert.equal(response.status, 200);
+    response = await handleWatchPartyRequest(request(viewerInit, 'choose', { time: '20:00', episodes: 1, dub: 'UkrDub' }), env);
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).state.myChoices.dub, 'UkrDub');
+    response = await handleWatchPartyRequest(request(adminInit, 'choose', { time: '20:00', episodes: 1, dub: 'UkrDub' }), env);
+    assert.equal(response.status, 200);
+    response = await handleWatchPartyRequest(request(adminInit, 'start', {}), env);
+    assert.equal(response.status, 200);
+    const live = (await response.json()).state;
+    assert.equal(live.status, 'live');
+    assert.deepEqual(live.selection, { time: '20:00', episodes: 1, dub: 'UkrDub' });
+    response = await handleWatchPartyRequest(request(viewerInit, 'choose', { time: '22:00', episodes: 1, dub: 'AniLibria' }), env);
+    assert.equal(response.status, 409);
+    response = await handleWatchPartyRequest(request(adminInit, 'next_episode', {}), env);
+    assert.equal(response.status, 409);
+    response = await handleWatchPartyRequest(request(adminInit, 'next_episode', { completed: true }), env);
+    const pausedForVote = (await response.json()).state;
+    assert.equal(pausedForVote.episode, 2);
+    assert.equal(pausedForVote.status, 'voting');
+    response = await handleWatchPartyRequest(request(adminInit, 'choose', { time: '20:00', episodes: 1, dub: 'UkrDub' }), env);
+    assert.equal(response.status, 200);
+    response = await handleWatchPartyRequest(request(adminInit, 'start', {}), env);
+    assert.equal((await response.json()).state.status, 'live');
+    response = await handleWatchPartyRequest(request(adminInit, 'next_episode', { completed: true }), env);
+    assert.equal((await response.json()).state.status, 'finished');
+    const finished = await handleWatchPartyRequest(request(viewerInit, '', {}), env);
+    assert.equal((await finished.json()).state.status, 'finished');
+  } finally { global.fetch = previousFetch; }
+});
+
+test('non-admin users cannot start, reset or manage the room', async () => {
   const token = '123456:test-token';
   const viewerInit = await initData(token, { id: 2, first_name: 'Viewer', username: 'viewer' });
   const env = { TELEGRAM_BOT_TOKEN: token, MAKIMA_MEMORY: new MockKV() };
-  const response = await handleWatchPartyRequest(request(viewerInit, 'add_option', { title: 'Not allowed' }), env);
-  assert.equal(response.status, 403);
+  assert.equal((await handleWatchPartyRequest(request(viewerInit, 'start', {}), env)).status, 403);
+  assert.equal((await handleWatchPartyRequest(request(viewerInit, 'reset', {}), env)).status, 403);
 });
