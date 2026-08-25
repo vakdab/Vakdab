@@ -5,7 +5,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const MUSIC_WEB_APP_URL = `${SITE_BASE_URL}/app/music.html?v=20260825-shazam-v13`;
+const MUSIC_WEB_APP_URL = `${SITE_BASE_URL}/app/music.html?v=20260825-shazam-v14`;
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
@@ -70,21 +70,7 @@ export default {
   async fetch(request, env) {
     try {
       const url = new URL(request.url);
-      const requestedMusicHeader = String(request.headers.get('X-Music-Path') || '').replace(/^\/+/, '');
-      const isMusicPreflight = request.method === 'OPTIONS' && /(^|,|\\s)x-music-path(,|\\s|$)/i.test(String(request.headers.get('Access-Control-Request-Headers') || ''));
-      const musicPath = url.pathname === TELEGRAM_WEBHOOK_PATH
-        ? (String(url.searchParams.get('music') || '').replace(/^\/+/, '') || requestedMusicHeader || (isMusicPreflight ? 'public' : ''))
-        : '';
-      const musicRequest = musicPath
-        ? new Request(new URL(`/music/api/${musicPath}`, request.url), {
-            method: request.method,
-            headers: request.headers,
-            ...(request.body && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)
-              ? { body: request.body, duplex: 'half' }
-              : {})
-          })
-        : request;
-      const musicResponse = await handleMusicApiRequest(musicRequest, env);
+      const musicResponse = await handleMusicApiRequest(request, env);
       if (musicResponse) return musicResponse;
 
       if (request.method === 'GET') {

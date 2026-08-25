@@ -248,7 +248,7 @@ export async function handleMusicApiRequest(request, env) {
   const apiMarker = apiMarkers.find(marker => url.pathname.includes(marker));
   const apiStart = apiMarker ? url.pathname.indexOf(apiMarker) : -1;
   const requestedMusicPath = String(request.headers.get('X-Music-Path') || '').replace(/^\/+/, '');
-  const musicPreflight = request.method === 'OPTIONS' && /(^|,|\\s)x-music-path(,|\\s|$)/i.test(String(request.headers.get('Access-Control-Request-Headers') || ''));
+  const musicPreflight = request.method === 'OPTIONS' && String(request.headers.get('Access-Control-Request-Headers') || '').toLowerCase().includes('x-music-path');
   const webhookMusicPath = url.pathname === '/telegram-webhook'
     ? (requestedMusicPath || String(url.searchParams.get('music') || '') || (musicPreflight ? 'public' : ''))
     : '';
