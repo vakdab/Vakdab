@@ -47,13 +47,18 @@ function episodeLabel(state) {
 }
 
 function renderVideoStage(state) {
-    if (!state.animeUrl) return '';
-    const poster = escapeHtml(state.poster || '');
     const videoUrl = String(state.videoUrl || '');
+    if (!state.animeUrl && !videoUrl) {
+        return `<div class="live-video-stage live-video-stage--missing"><div class="live-video-stage__missing">Відео трансляції готується…</div><div class="live-video-stage__live"><i></i>LIVE</div></div>`;
+    }
+    const poster = escapeHtml(state.poster || '');
     const directVideo = /\.(?:m3u8|mp4)(?:[?#].*)?$/i.test(videoUrl) || /[?&]url=[^&]*(?:m3u8|mp4)/i.test(videoUrl);
+    const embeddablePage = /^https?:\/\//i.test(videoUrl) && !directVideo;
     const media = directVideo
         ? `<video class="live-video-stage__video" controls playsinline preload="metadata"${poster ? ` poster="${poster}"` : ''} src="${escapeHtml(videoUrl)}"></video>`
-        : `<button type="button" class="live-video-stage__open" id="liveWatchButton"${poster ? ` style="background-image:linear-gradient(180deg,rgba(0,0,0,.04),rgba(0,0,0,.82)),url('${poster}')"` : ''}><span class="live-video-stage__play">▶</span><span>Відкрити відео у плеєрі VakDab</span></button>`;
+        : embeddablePage
+            ? `<iframe class="live-video-stage__frame" src="${escapeHtml(videoUrl)}" title="${escapeHtml(state.animeTitle || 'VakDab Live')}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="eager"></iframe>`
+            : `<button type="button" class="live-video-stage__open" id="liveWatchButton"${poster ? ` style="background-image:linear-gradient(180deg,rgba(0,0,0,.04),rgba(0,0,0,.82)),url('${poster}')"` : ''}><span class="live-video-stage__play">▶</span><span>Відкрити відео у плеєрі VakDab</span></button>`;
     return `<div class="live-video-stage${directVideo ? ' live-video-stage--direct' : ''}">${media}<div class="live-video-stage__live"><i></i>${state.status === 'running' ? 'LIVE' : 'ПРЕВʼЮ'}</div><div class="live-video-stage__caption"><strong>${escapeHtml(state.animeTitle)}</strong><span>${escapeHtml(episodeLabel(state))} · ${escapeHtml(state.dub || 'Озвучка не вказана')}</span></div></div>`;
 }
 
@@ -70,11 +75,11 @@ function renderState(host, state) {
     const selected = state.animeTitle ? `<div class="live-selection"><strong>${escapeHtml(state.animeTitle)}</strong><span>${escapeHtml(range)}${season} · ${escapeHtml(state.dub || 'Озвучка не вказана')}${duration}</span>${state.availableEpisodeCount ? `<small>Доступно серій: ${escapeHtml(state.availableEpisodeCount)}</small>` : ''}</div>` : '';
     const countdownTarget = isRunning ? state.endsAt : state.startsAt;
     const countdown = countdownTarget ? `<span class="live-countdown" data-live-countdown="${Number(countdownTarget)}">${formatRemaining(countdownTarget)}</span>` : '';
-    const videoStage = hasWatch ? renderVideoStage(state) : '';
+    const videoStage = (isRunning || hasWatch) ? renderVideoStage(state) : '';
     host.innerHTML = `<section class="live-stream-card${isRunning ? ' is-running' : ''}" aria-labelledby="liveStreamTitle"><div class="live-stream-card__header"><div><span class="live-kicker">LIVE VAKDAB</span><h2 id="liveStreamTitle">${isRunning ? 'Зараз дивимося разом' : 'Готуємо наступний стрім'}</h2></div><span class="live-status">${escapeHtml(statusLabel(state.status))}</span></div>${videoStage}${selected}<div class="live-stream-card__meta">${poll.stageLabel ? `<span>${escapeHtml(poll.stageLabel)}</span>` : ''}${countdown ? `<span>${isRunning ? 'До завершення' : 'До старту'}: ${countdown}</span>` : ''}</div>${poll.question ? `<div class="live-poll"><div class="live-poll__title">${escapeHtml(poll.question)}</div>${renderOptions(poll)}</div>` : ''}<div class="live-stream-card__actions">${telegramLink}</div></section>`;
     host.querySelector('#liveWatchButton')?.addEventListener('click', () => {
         if (typeof window.openPlayerPage !== 'function') return;
-        window.openPlayerPage(state.animeUrl, { liveEpisode: state.episodeStart || state.episode || '1', liveDub: state.dub, liveMode: true });
+        if (state.animeUrl) window.openPlayerPage(state.animeUrl, { liveEpisode: state.episodeStart || state.episode || '1', liveDub: state.dub, liveMode: true });
     });
 }
 

@@ -2557,8 +2557,36 @@ async function liveTelegramUrl(env) {
   }
 }
 
+async function repairLiveVideoState(state, env) {
+  if (!state?.selected?.anime?.label) return state;
+  const episodeStart = Number(state.selected?.episodeStart || String(state.selected?.episode?.value || '').match(/^(\d+)/)?.[1] || 1) || 1;
+  try {
+    if (!state.selected.anime.url) {
+      const match = await resolveLiveAnimeByTitle(state.selected.anime.label);
+      if (match?.url) state.selected.anime = { ...state.selected.anime, url: match.url, image: state.selected.anime.image || match.image || match.poster || '' };
+    }
+    if (state.selected.anime.url && (!state.playLinksByDub || !Object.keys(state.playLinksByDub).length)) {
+      const meta = await fetchLiveAnimeMeta(state.selected.anime.url);
+      state.availableEpisodeCount = Number(state.availableEpisodeCount || meta.availableEpisodeCount || 0) || 0;
+      state.playLinksByDub = meta.playLinksByDub || {};
+      state.dubOptions = meta.dubs || state.dubOptions || [];
+      state.seasonOptions = meta.seasonOptions || state.seasonOptions || [];
+      if (!state.selected.season) state.selected.season = state.seasonOptions[0] || liveOption(state.selected.anime.label, state.selected.anime.url);
+    }
+    const playLink = state.playLinksByDub?.[String(state.selected?.dub?.value)]?.[String(episodeStart)] || '';
+    if (!state.videoUrl && playLink) state.videoUrl = await resolveLivePlaybackUrl(playLink);
+    state.selected.episodeStart = episodeStart;
+    if (!state.selected.episodeEnd) state.selected.episodeEnd = episodeStart + Math.max(0, Number(state.selected?.episodeCount?.value || 1) - 1);
+    state.updatedAt = Date.now();
+    await writeLiveState(state, env);
+  } catch (error) {
+    console.warn('[live] video state repair failed:', safeError(error));
+  }
+  return state;
+}
 async function publicLiveState(state, env) {
   if (!state) return { status: 'idle' };
+  if (state.status === 'running' && (!state.selected?.anime?.url || !state.videoUrl)) state = await repairLiveVideoState(state, env);
   const poll = state.poll ? {
     question: state.poll.question,
     stage: state.poll.stage,
@@ -2654,7 +2682,7 @@ async function resolveLivePlaybackUrl(playLink) {
   let manifest = source;
   if (!/\.(?:m3u8|mp4)(?:[?#].*)?$/i.test(source)) {
     try {
-      const response = await fetch(source, { headers: { accept: 'text/html,application/xhtml+xml', 'user-agent': 'VakDabLive/1.0' } });
+      const response = await fetch(`${LIVE_VIDEO_PROXY_URL}?url=${encodeURIComponent(source)}&force_ua=mobile`, { headers: { accept: 'text/html,application/xhtml+xml', 'user-agent': 'VakDabLive/1.0' } });
       if (response.ok) {
         const html = String(await response.text()).replace(/\\u002F/g, '/').replace(/\\\//g, '/');
         manifest = (html.match(/https?:\/\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?/i) || [])[0] || source;
