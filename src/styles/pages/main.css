@@ -15,7 +15,7 @@
             }
         }
         @media (min-width:1024px) {
-            .popular-list { grid-template-columns: repeat(3, 1fr); gap: 4rem 1.8rem; }
+            .popular-list { grid-template-columns: repeat(4, 1fr); gap: 4rem 1.8rem; }
         }
         .popular-card {
             position: relative;
@@ -401,7 +401,7 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     }
 }
 @media (min-width:1024px) {
-    .popular-list--home { grid-template-columns: repeat(3, 1fr); }
+    .popular-list--home { grid-template-columns: repeat(4, 1fr); }
 }
 
 
