@@ -1279,7 +1279,7 @@ async function handleCallbackQuery(callback, env) {
       liveState.inputStage = null;
       liveState.updatedAt = Date.now();
       await writeLiveState(liveState, env);
-      await sendMessage(chatId, `Озвучку обрано: ${dub.label}. Натисни кнопку, щоб почати трансляцію.`, { reply_markup: { inline_keyboard: [[{ text: 'Почати трансляцію', callback_data: 'live:broadcast' }]] } }, env);
+      await sendMessage(chatId, `${liveOwnerSummary(liveState)}\n\nНатисни кнопку, щоб почати трансляцію.`, { reply_markup: { inline_keyboard: [[{ text: 'Почати трансляцію', callback_data: 'live:broadcast' }]] } }, env);
       return;
     }
     if (data === 'live:broadcast') {
@@ -2737,6 +2737,15 @@ function parseLiveEpisodeRange(value) {
 function liveOwnerKeyboard(buttons) {
   return { inline_keyboard: [buttons.map(button => ({ text: button.text, callback_data: button.callback_data }))] };
 }
+function liveOwnerSummary(state) {
+  return [
+    'Live налаштовано:',
+    `Аніме: ${state.selected?.anime?.label || '—'}`,
+    `Сезон: ${state.selected?.season?.label || '—'}`,
+    `Серії: ${state.selected?.episode?.label || '—'}`,
+    `Озвучка: ${state.selected?.dub?.label || '—'}`
+  ].join('\n');
+}
 async function prepareLiveNextRange(chatId, env) {
   const state = await readLiveState(env);
   if (!state || state.chatId !== String(chatId) || !state.selected?.anime) {
@@ -2807,7 +2816,7 @@ async function handleLiveOwnerText(message, env) {
     if (state.inputStage === 'dub') {
       await sendMessage(state.chatId, 'Вибери озвучку кнопкою:', { reply_markup: liveOwnerKeyboard(state.dubOptions.map((item, index) => ({ text: item.label, callback_data: `live:dub:${index}` }))) }, env);
     } else {
-      await sendMessage(state.chatId, 'Діапазон оновлено. Натисни кнопку запуску трансляції.', { reply_markup: liveOwnerKeyboard([{ text: 'Запустити трансляцію', callback_data: 'live:broadcast' }]) }, env);
+      await sendMessage(state.chatId, `${liveOwnerSummary(state)}\n\nНатисни кнопку запуску трансляції.`, { reply_markup: liveOwnerKeyboard([{ text: 'Запустити трансляцію', callback_data: 'live:broadcast' }]) }, env);
     }
     return true;
   }
