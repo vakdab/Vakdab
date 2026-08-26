@@ -56,3 +56,6 @@
 .live-video-stage__missing { color:rgba(255,255,255,.78); font-weight:800; }
 
 .live-video-stage__frame { display:block; width:100%; height:100%; min-height:inherit; border:0; background:#000; }
+
+.live-video-stage__connecting { display:grid; width:100%; min-height:inherit; place-items:center; color:#fff; background-color:#171717; background-position:center; background-size:cover; background-repeat:no-repeat; font-weight:800; }
+.live-video-stage__video { pointer-events:none; }

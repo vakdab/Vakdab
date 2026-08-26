@@ -78,8 +78,8 @@ function renderVideoStage(state) {
     const poster = escapeHtml(state.poster || '');
     const directVideo = /\.(?:m3u8|mp4)(?:[?#].*)?$/i.test(videoUrl) || /[?&]url=[^&]*(?:m3u8|mp4)/i.test(videoUrl);
     const media = directVideo
-        ? `<video class="live-video-stage__video" controls playsinline preload="metadata"${poster ? ` poster="${poster}"` : ''} src="${escapeHtml(videoUrl)}"></video>`
-        : `<button type="button" class="live-video-stage__open" id="liveWatchButton"${poster ? ` style="background-image:linear-gradient(180deg,rgba(0,0,0,.04),rgba(0,0,0,.82)),url('${poster}')"` : ''}><span class="live-video-stage__play">▶</span><span>Відкрити чисте відео VakDab</span></button>`;
+        ? `<video id="liveVideoElement" class="live-video-stage__video" autoplay muted playsinline preload="auto"${poster ? ` poster="${poster}"` : ''} src="${escapeHtml(videoUrl)}"></video>`
+        : `<div class="live-video-stage__connecting"${poster ? ` style="background-image:linear-gradient(180deg,rgba(0,0,0,.04),rgba(0,0,0,.82)),url('${poster}')"` : ''}>Підключення до трансляції…</div>`;
     return `<div class="live-video-stage${directVideo ? ' live-video-stage--direct' : ''}">${media}<div class="live-video-stage__live"><i></i>${state.status === 'running' ? 'LIVE' : 'ПРЕВʼЮ'}</div><div class="live-video-stage__caption"><strong>${escapeHtml(state.animeTitle)}</strong><span>${escapeHtml(episodeLabel(state))} · ${escapeHtml(state.dub || 'Озвучка не вказана')}</span></div></div>`;
 }
 
@@ -98,10 +98,13 @@ function renderState(host, state) {
     const countdown = countdownTarget ? `<span class="live-countdown" data-live-countdown="${Number(countdownTarget)}">${formatRemaining(countdownTarget)}</span>` : '';
     const videoStage = (isRunning || hasWatch) ? renderVideoStage(state) : '';
     host.innerHTML = `<section class="live-stream-card${isRunning ? ' is-running' : ''}" aria-labelledby="liveStreamTitle"><div class="live-stream-card__header"><div><span class="live-kicker">LIVE VAKDAB</span><h2 id="liveStreamTitle">${isRunning ? 'Зараз дивимося разом' : 'Готуємо наступний стрім'}</h2></div><span class="live-status">${escapeHtml(statusLabel(state.status))}</span></div>${videoStage}${selected}<div class="live-stream-card__meta">${poll.stageLabel ? `<span>${escapeHtml(poll.stageLabel)}</span>` : ''}${countdown ? `<span>${isRunning ? 'До завершення' : 'До старту'}: ${countdown}</span>` : ''}</div>${poll.question ? `<div class="live-poll"><div class="live-poll__title">${escapeHtml(poll.question)}</div>${renderOptions(poll)}</div>` : ''}<div class="live-stream-card__actions">${telegramLink}</div></section>`;
-    host.querySelector('#liveWatchButton')?.addEventListener('click', () => {
-        if (typeof window.openPlayerPage !== 'function') return;
-        if (state.animeUrl) window.openPlayerPage(state.animeUrl, { liveEpisode: state.episodeStart || state.episode || '1', liveDub: state.dub, liveMode: true });
-    });
+    const liveVideo = host.querySelector('#liveVideoElement');
+    if (liveVideo) {
+        const startVideo = () => liveVideo.play().catch(error => console.warn('[VakDab] autoplay blocked:', error));
+        liveVideo.addEventListener('loadedmetadata', startVideo, { once: true });
+        liveVideo.addEventListener('canplay', startVideo, { once: true });
+        startVideo();
+    }
 }
 
 function tickCountdown(host) {
