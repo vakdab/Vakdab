@@ -2679,7 +2679,12 @@ async function startLiveSession(chatId, env, messageId = null) {
   await writeLiveState(state, env);
   if (messageId) await deleteMessage(chatId, messageId, env);
   await sendMessage(chatId, '𝗩𝗮𝗸𝗗𝗮𝗯𝗕𝗼𝘁 Запускає Опитування', {}, env);
-  await sendLivePollBatch(state, env);
+  try {
+    await sendLivePollBatch(state, env);
+  } catch (error) {
+    console.error('[live] first poll failed:', safeError(error));
+    await env.MAKIMA_MEMORY.delete(LIVE_STATE_KEY);
+  }
 }
 
 function countLivePollVotes(votes, optionCount) {
