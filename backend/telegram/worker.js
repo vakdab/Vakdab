@@ -12,10 +12,8 @@ const LIVE_STATE_KEY = 'live:current';
 const LIVE_POLL_PREFIX = 'live:poll:';
 const LIVE_VOTE_PREFIX = 'live:vote:';
 const LIVE_POLL_MAX_OPTIONS = 10;
-const LIVE_POLL_CLOSE_SECONDS = 300;
-const LIVE_ANIME_POLL_CLOSE_SECONDS = 5 * 60;
-const LIVE_EPISODE_COUNT_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 10];
 const LIVE_OWNER_DURATION_HOURS = 2;
+const LIVE_EPISODE_COUNT_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 10];
 const LIVE_API_ORIGINS = new Set(['https://vakdab.github.io', 'https://vakdab.web.app']);
 const REQUIRED_CHANNEL_USERNAME = '@vakluna';
 const REQUIRED_CHANNEL_URL = 'https://t.me/vakluna';
@@ -208,6 +206,23 @@ async function handleMessage(message, env) {
       return;
     }
     await startLiveSession(chatId, env);
+    return;
+  }
+  if (/^\/livenext(?:@\w+)?(?:\s|$)/i.test(text)) {
+    if (!isBotOwner(message.from)) {
+      await sendMessage(chatId, 'Ця команда доступна лише власнику бота.', {}, env);
+      return;
+    }
+    await finishLivePollManually(chatId, env);
+    return;
+  }
+  const liveStartMatch = text.match(/^\/livestart(?:@\w+)?(?:\s+(\d+(?:\.\d+)?))?$/i);
+  if (liveStartMatch) {
+    if (!isBotOwner(message.from)) {
+      await sendMessage(chatId, 'Запустити трансляцію може лише власник бота.', {}, env);
+      return;
+    }
+    await startLiveBroadcast(chatId, env, liveStartMatch[1]);
     return;
   }
   // Команди рулетки обробляємо до relay, інакше активний чат передасть /next як звичайний текст.
@@ -1982,7 +1997,9 @@ async function setBotCommands(env) {
         { command: 'forgetall', description: 'Забути історію та профіль' },
         { command: 'next', description: 'Наступний співрозмовник у чат-рулетці' },
         { command: 'report', description: 'Поскаржитися або завершити рулетку' },
-        { command: 'live', description: 'Запустити live-опитування (власник)' }
+        { command: 'live', description: 'Запустити live-опитування (власник)' },
+        { command: 'livenext', description: 'Завершити поточний live-етап (власник)' },
+        { command: 'livestart', description: 'Запустити готову live-трансляцію (власник)' }
       ]
     }, env);
   } catch (error) {
@@ -2521,6 +2538,7 @@ async function publicLiveState(state, env) {
     animeTitle: state.selected?.anime?.label || '',
     animeUrl: state.selected?.anime?.url || '',
     isMovie: Boolean(state.isMovie),
+    season: state.selected?.season?.label || '',
     episode: state.selected?.episode?.value || '',
     episodeCount: Number(state.selected?.episodeCount?.value || 0) || 0,
     dub: state.selected?.dub?.value || '',
@@ -2558,6 +2576,40 @@ function findMikaiId(value) {
   return match?.[1] || '';
 }
 
+async function fetchLiveSeasonOptions(details) {
+  const current = liveOption(`${details.title}${details.season ? ` · ${details.season}` : ''}${details.year ? ` ${details.year}` : ''}`, details.url);
+  const external = Array.isArray(details.external) ? details.external : [];
+  const malId = Number(external.map(item => typeof item === 'string' ? '' : item?.mal_id).find(value => Number(value)) || 0);
+  if (!malId) return [current];
+  try {
+    const response = await fetch('https://graphql.anilist.co', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ query: 'query ($id: Int) { Media(idMal: $id, type: ANIME) { relations { edges { relationType node { type format title { romaji english } startDate { year } } } } } }', variables: { id: malId } })
+    });
+    if (!response.ok) throw new Error(`ANILIST_HTTP_${response.status}`);
+    const payload = await response.json();
+    const relations = payload?.data?.Media?.relations?.edges || [];
+    const options = [current];
+    for (const relation of relations) {
+      const node = relation?.node;
+      if (node?.type !== 'ANIME' || !['TV', 'TV_SHORT', 'MOVIE'].includes(String(node.format || '').toUpperCase())) continue;
+      const title = node.title?.english || node.title?.romaji;
+      if (!title) continue;
+      try {
+        const found = await hikkaCatalog(1, { query: title, only_translated: true });
+        const match = found.find(item => String(item.title || '').toLowerCase() === String(title).toLowerCase()) || found[0];
+        if (match?.url) options.push(liveOption(`${match.title}${node.startDate?.year ? ` · ${node.startDate.year}` : ''}`, match.url, { relation: relation.relationType }));
+      } catch (error) {
+        console.warn('[live] season Hikka lookup failed:', safeError(error));
+      }
+    }
+    return uniqueLiveOptions(options).slice(0, LIVE_POLL_MAX_OPTIONS);
+  } catch (error) {
+    console.warn('[live] season relations failed:', safeError(error));
+    return [current];
+  }
+}
 async function fetchLiveAnimeMeta(animeUrl) {
   const details = await fetchAnimeDetails(animeUrl, 'anime');
   const external = Array.isArray(details.external) ? details.external : [];
@@ -2590,9 +2642,11 @@ async function fetchLiveAnimeMeta(animeUrl) {
   const episodeCountOptions = countValues.map(count => liveOption(`${count} ${count === 1 ? 'серія' : 'серій'}`, count));
   const mediaType = String(details.media_type || details.type || details.format || '').toLowerCase();
   const isMovie = mediaType === 'movie' || mediaType === 'film' || /фільм|movie|film/i.test(String(details.title || ''));
+  const seasonOptions = isMovie ? [liveOption(details.title, details.url)] : await fetchLiveSeasonOptions(details);
   return {
     title: details.title,
     isMovie,
+    seasonOptions,
     episodes: episodeNumbers.length ? episodeNumbers : fallbackEpisodes,
     episodeCountOptions: episodeCountOptions.length ? episodeCountOptions : [liveOption('1 серія', 1)],
     dubs: dubs.length ? dubs.slice(0, LIVE_POLL_MAX_OPTIONS) : [liveOption('Основна озвучка', 'Основна озвучка')],
@@ -2601,10 +2655,13 @@ async function fetchLiveAnimeMeta(animeUrl) {
 }
 
 function liveStageDefinitions(state) {
-  const totalSteps = state.isMovie ? 2 : 3;
-  const stages = [{ stage: 'anime', stageLabel: `Крок 1 із ${totalSteps} — оберіть аніме`, question: 'Яке аніме дивимося разом?', options: state.animeOptions || [], closeSeconds: LIVE_POLL_CLOSE_SECONDS }];
-  if (!state.isMovie) stages.push({ stage: 'episode_count', stageLabel: `Крок 2 із ${totalSteps} — оберіть кількість серій`, question: `Скільки серій дивимося: ${state.selected?.anime?.label || 'обране аніме'}?`, options: state.episodeCountOptions || [], closeSeconds: LIVE_POLL_CLOSE_SECONDS });
-  stages.push({ stage: 'dub', stageLabel: `Крок ${state.isMovie ? 2 : 3} із ${totalSteps} — оберіть озвучку`, question: 'Яку озвучку обираємо?', options: state.dubOptions || [], closeSeconds: LIVE_POLL_CLOSE_SECONDS });
+  const totalSteps = state.isMovie ? 2 : 4;
+  const stages = [{ stage: 'anime', stageLabel: `Крок 1 із ${totalSteps} — оберіть аніме`, question: 'Яке аніме дивимося разом?', options: state.animeOptions || [] }];
+  if (!state.isMovie) {
+    stages.push({ stage: 'season', stageLabel: `Крок 2 із ${totalSteps} — оберіть сезон`, question: `Який сезон дивимося: ${state.selected?.anime?.label || 'обране аніме'}?`, options: state.seasonOptions || [] });
+    stages.push({ stage: 'episode_count', stageLabel: `Крок 3 із ${totalSteps} — оберіть кількість серій`, question: `Скільки серій дивимося: ${state.selected?.anime?.label || 'обране аніме'}?`, options: state.episodeCountOptions || [] });
+  }
+  stages.push({ stage: 'dub', stageLabel: `Крок ${state.isMovie ? 2 : 4} із ${totalSteps} — оберіть озвучку`, question: 'Яку озвучку обираємо?', options: state.dubOptions || [] });
   return stages;
 }
 
@@ -2622,7 +2679,6 @@ async function sendLivePollBatch(state, env) {
     options: options.map(item => item.label.slice(0, 100)),
     is_anonymous: false,
     allows_multiple_answers: false,
-    open_period: definition.closeSeconds,
   }, env);
   if (!result?.ok || !result.result?.id) throw new Error(result?.description || 'LIVE_POLL_SEND_FAILED');
   state.poll = {
@@ -2650,6 +2706,10 @@ async function startLiveSession(chatId, env, messageId = null) {
     await sendMessage(chatId, message, {}, env);
     return;
   }
+  if (existing?.chatId === String(chatId) && existing.status === 'ready') {
+    await sendMessage(chatId, 'Live-вибори завершені. Для запуску трансляції використайте /livestart.', {}, env);
+    return;
+  }
   if (existing?.chatId === String(chatId) && existing.status === 'running') {
     await sendMessage(chatId, 'Live-стрім уже активний. Нове опитування можна запустити після його завершення.', {}, env);
     return;
@@ -2668,6 +2728,7 @@ async function startLiveSession(chatId, env, messageId = null) {
     stageIndex: 0,
     animeOptions,
     episodeOptions: [],
+    seasonOptions: [],
     episodeCountOptions: [],
     dubOptions: [],
     isMovie: false,
@@ -2732,6 +2793,47 @@ function pickLiveWinner(options) {
   return options.reduce((winner, item) => Number(item.votes || 0) > Number(winner?.votes || -1) ? item : winner, options[0]);
 }
 
+function formatLiveWinnerStats(state, winner, stage) {
+  const lines = [`Live-результат: ${stage}`, `Переможець: ${winner.label}`];
+  if (stage === 'anime') lines.push('Наступний крок: вибір сезону.');
+  else if (stage === 'season') lines.push('Наступний крок: вибір кількості серій.');
+  else if (stage === 'episode_count') lines.push('Наступний крок: вибір озвучки.');
+  else if (stage === 'dub') lines.push('Усі вибори завершені. Для запуску: /livestart або /livestart 2');
+  return lines.join('\n');
+}
+async function sendLiveWinnerStats(state, winner, stage, env) {
+  if (!winner || !state?.chatId) return;
+  await sendMessage(state.chatId, formatLiveWinnerStats(state, winner, stage), {}, env);
+}
+async function finishLivePollManually(chatId, env) {
+  const state = await readLiveState(env);
+  if (!state || state.chatId !== String(chatId) || state.status !== 'polling' || !state.poll?.id || !state.poll.messageId) {
+    await sendMessage(chatId, 'Активного live-опитування немає.', {}, env);
+    return;
+  }
+  const result = await telegram('stopPoll', { chat_id: state.chatId, message_id: state.poll.messageId }, env);
+  if (!result?.ok || !result.result?.id) {
+    await sendMessage(chatId, 'Не вдалося завершити поточний poll. Спробуйте ще раз.', {}, env);
+    return;
+  }
+  await handleLivePollUpdate(result.result, env);
+}
+async function startLiveBroadcast(chatId, env, requestedHours) {
+  const state = await readLiveState(env);
+  if (!state || state.chatId !== String(chatId) || state.status !== 'ready') {
+    await sendMessage(chatId, 'Трансляція ще не готова. Спочатку завершіть усі live-опитування командою /livenext.', {}, env);
+    return;
+  }
+  const parsedHours = requestedHours ? Number(requestedHours) : LIVE_OWNER_DURATION_HOURS;
+  const hours = Number.isFinite(parsedHours) && parsedHours > 0 && parsedHours <= 24 ? parsedHours : LIVE_OWNER_DURATION_HOURS;
+  state.selected.duration = liveOption(`${hours} ${hours === 1 ? 'година' : 'години'}`, hours);
+  state.status = 'running';
+  state.startsAt = Date.now();
+  state.endsAt = state.startsAt + hours * 60 * 60 * 1000;
+  state.updatedAt = Date.now();
+  await writeLiveState(state, env);
+  await sendMessage(chatId, `Власник запустив трансляцію на ${hours} год.\n${state.selected.anime?.label || 'Аніме'}\nСезон: ${state.selected.season?.label || '—'}\nСерій: ${state.selected.episodeCount?.value || 'фільм'}\nОзвучка: ${state.selected.dub?.value || '—'}`, { reply_markup: { inline_keyboard: [[{ text: 'Відкрити VakDab', url: SITE_BASE_URL }]] } }, env);
+}
 async function advanceLiveAfterWinner(state, winner, env) {
   if (!winner) return;
   if (state.stageIndex === 0) {
@@ -2746,29 +2848,43 @@ async function advanceLiveAfterWinner(state, winner, env) {
         isMovie: false,
         episodes: [],
         episodeCountOptions: LIVE_EPISODE_COUNT_OPTIONS.map(count => liveOption(`${count} ${count === 1 ? 'серія' : 'серій'}`, count)),
-        dubs: [liveOption('Основна озвучка', 'Основна озвучка')]
+        dubs: [liveOption('Основна озвучка', 'Основна озвучка')],
+        seasonOptions: [winner]
       };
     }
     state.selected.anime = { ...winner, label: meta.title || winner.label };
     state.isMovie = Boolean(meta.isMovie);
+    state.seasonOptions = meta.seasonOptions || [winner];
     state.episodeOptions = meta.episodes;
     state.episodeCountOptions = meta.episodeCountOptions;
     state.dubOptions = meta.dubs;
   } else if (!state.isMovie && state.stageIndex === 1) {
+    state.selected.season = winner;
+    let meta;
+    try {
+      meta = await fetchLiveAnimeMeta(winner.url);
+    } catch (error) {
+      console.error('[live] selected season metadata failed:', safeError(error));
+      meta = { isMovie: false, episodes: [], episodeCountOptions: [liveOption('1 серія', 1)], dubs: [liveOption('Основна озвучка', 'Основна озвучка')] };
+    }
+    state.isMovie = Boolean(meta.isMovie);
+    state.episodeOptions = meta.episodes;
+    state.episodeCountOptions = meta.episodeCountOptions;
+    state.dubOptions = meta.dubs;
+  } else if (!state.isMovie && state.stageIndex === 2) {
     const count = Math.max(1, Number(winner.value || 1));
     state.selected.episodeCount = liveOption(`${count} ${count === 1 ? 'серія' : 'серій'}`, count);
     state.selected.episode = liveOption(count === 1 ? '1' : `1–${count}`, count === 1 ? '1' : `1–${count}`);
-  } else if (state.stageIndex === (state.isMovie ? 1 : 2)) {
+  } else if (state.stageIndex === (state.isMovie ? 1 : 3)) {
     state.selected.dub = winner;
-    state.selected.duration = liveOption(`${LIVE_OWNER_DURATION_HOURS} години`, LIVE_OWNER_DURATION_HOURS);
-    state.status = 'running';
-    state.startsAt = Date.now();
-    state.endsAt = state.startsAt + LIVE_OWNER_DURATION_HOURS * 60 * 60 * 1000;
+    state.status = 'ready';
+    state.startsAt = 0;
+    state.endsAt = 0;
     state.poll = null;
     state.transitioningPollId = null;
     state.updatedAt = Date.now();
     await writeLiveState(state, env);
-    // Годину визначає власник; після озвучки додатковий poll не надсилаємо.
+    // Трансляцію запускає власник окремою командою /livestart.
     return;
   }
   state.stageIndex += 1;
@@ -2807,5 +2923,10 @@ async function handleLivePollUpdate(poll, env) {
   state.transitioningPollId = pollId;
   state.updatedAt = Date.now();
   await writeLiveState(state, env);
+  try {
+    await sendLiveWinnerStats(state, winner, currentPoll.stage, env);
+  } catch (error) {
+    console.error('[live] winner stats failed:', safeError(error));
+  }
   await advanceLiveAfterWinner({ ...state, poll: currentPoll }, winner, env);
 }

@@ -19,7 +19,7 @@ function formatRemaining(target) {
 }
 
 function statusLabel(status) {
-    return ({ polling: 'Голосування триває', scheduled: 'Стрім заплановано', running: 'Ефір триває', finished: 'Стрім завершено' })[status] || 'Live';
+    return ({ polling: 'Голосування триває', ready: 'Готово до запуску власником', scheduled: 'Стрім заплановано', running: 'Ефір триває', finished: 'Стрім завершено' })[status] || 'Live';
 }
 
 function renderOptions(poll) {
@@ -47,8 +47,9 @@ function renderState(host, state) {
     const telegramLink = state.telegramUrl ? `<a class="live-action live-action--secondary" href="${escapeHtml(state.telegramUrl)}" target="_blank" rel="noopener">Голосувати в Telegram</a>` : '';
     const watch = hasWatch ? `<button type="button" class="live-action live-action--primary" id="liveWatchButton">${isRunning ? 'Дивитися зараз' : 'Відкрити стрім'}</button>` : '';
     const selectionType = state.isMovie ? 'Фільм' : state.episodeCount ? `${escapeHtml(state.episodeCount)} ${state.episodeCount === 1 ? 'серія' : 'серій'}` : `Серія ${escapeHtml(state.episode || '—')}`;
+    const season = state.season ? ` · ${escapeHtml(state.season)}` : '';
     const duration = state.durationHours ? ` · ${escapeHtml(state.durationHours)} год.` : '';
-    const selected = state.animeTitle ? `<div class="live-selection"><strong>${escapeHtml(state.animeTitle)}</strong><span>${selectionType} · ${escapeHtml(state.dub || 'Озвучка не вказана')}${duration}</span></div>` : '';
+    const selected = state.animeTitle ? `<div class="live-selection"><strong>${escapeHtml(state.animeTitle)}</strong><span>${selectionType}${season} · ${escapeHtml(state.dub || 'Озвучка не вказана')}${duration}</span></div>` : '';
     const countdownTarget = isRunning ? state.endsAt : state.startsAt;
     const countdown = countdownTarget ? `<span class="live-countdown" data-live-countdown="${Number(countdownTarget)}">${formatRemaining(countdownTarget)}</span>` : '';
     host.innerHTML = `<section class="live-stream-card${isRunning ? ' is-running' : ''}" aria-labelledby="liveStreamTitle"><div class="live-stream-card__header"><div><span class="live-kicker">LIVE VAKDAB</span><h2 id="liveStreamTitle">${isRunning ? 'Зараз дивимося разом' : 'Готуємо наступний стрім'}</h2></div><span class="live-status">${escapeHtml(statusLabel(state.status))}</span></div>${selected}<div class="live-stream-card__meta">${poll.stageLabel ? `<span>${escapeHtml(poll.stageLabel)}</span>` : ''}${countdown ? `<span>${isRunning ? 'До завершення' : 'До старту'}: ${countdown}</span>` : ''}</div>${poll.question ? `<div class="live-poll"><div class="live-poll__title">${escapeHtml(poll.question)}</div>${renderOptions(poll)}</div>` : ''}<div class="live-stream-card__actions">${watch}${telegramLink}</div></section>`;

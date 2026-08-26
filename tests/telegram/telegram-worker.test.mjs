@@ -21,7 +21,8 @@ import worker, {
   formatLunaMemory,
   buildRecentHistory,
   repairMojibake,
-  aboutUsText
+  aboutUsText,
+  liveStageDefinitions
 } from '../../backend/telegram/worker.js';
 
 test('about us help explains VakDab usage and links back to the site', () => {
@@ -366,4 +367,36 @@ test('start flow gates the main menu behind @vakluna subscription', () => {
   assert.match(workerSource, /Підписався\(лась\)/);
   assert.match(workerSource, /return '&#8203;'/);
   assert.match(workerSource, /getChatMember request failed/);
+});
+
+test('live serial flow uses anime, season, episode count and dub stages without timers', () => {
+  const stages = liveStageDefinitions({
+    isMovie: false,
+    animeOptions: [{ label: 'Anime', value: 'anime' }],
+    seasonOptions: [{ label: 'Season 1', value: 'season-1' }],
+    episodeCountOptions: [{ label: '3 серії', value: 3 }],
+    dubOptions: [{ label: 'Team', value: 'Team' }],
+    selected: { anime: { label: 'Anime' } }
+  });
+  assert.deepEqual(stages.map(stage => stage.stage), ['anime', 'season', 'episode_count', 'dub']);
+  assert.ok(stages.every(stage => !Object.hasOwn(stage, 'closeSeconds')));
+});
+
+test('live movie flow skips season and episode count stages', () => {
+  const stages = liveStageDefinitions({
+    isMovie: true,
+    animeOptions: [{ label: 'Movie', value: 'movie' }],
+    dubOptions: [{ label: 'Team', value: 'Team' }]
+  });
+  assert.deepEqual(stages.map(stage => stage.stage), ['anime', 'dub']);
+});
+
+test('live worker uses manual next and owner-only broadcast controls', () => {
+  const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
+  assert.match(workerSource, /\/livenext/);
+  assert.match(workerSource, /\/livestart/);
+  assert.match(workerSource, /stopPoll/);
+  assert.match(workerSource, /status = 'ready'/);
+  assert.doesNotMatch(workerSource, /open_period/);
+  assert.match(workerSource, /sendLiveWinnerStats/);
 });
