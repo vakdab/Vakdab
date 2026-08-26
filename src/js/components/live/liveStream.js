@@ -85,6 +85,9 @@ function renderVideoStage(state) {
 
 function renderState(host, state) {
     latestState = state;
+    const previousVideo = host.querySelector('#liveVideoElement');
+    const previousSource = previousVideo?.getAttribute('src') || previousVideo?.currentSrc || '';
+    const previousWasPlaying = Boolean(previousVideo && !previousVideo.paused);
     if (!state || state.status === 'idle') return renderIdle(host);
     const poll = state.poll || {};
     const isRunning = state.status === 'running';
@@ -98,12 +101,17 @@ function renderState(host, state) {
     const countdown = countdownTarget ? `<span class="live-countdown" data-live-countdown="${Number(countdownTarget)}">${formatRemaining(countdownTarget)}</span>` : '';
     const videoStage = (isRunning || hasWatch) ? renderVideoStage(state) : '';
     host.innerHTML = `<section class="live-stream-card${isRunning ? ' is-running' : ''}" aria-labelledby="liveStreamTitle"><div class="live-stream-card__header"><div><span class="live-kicker">LIVE VAKDAB</span><h2 id="liveStreamTitle">${isRunning ? 'Зараз дивимося разом' : 'Готуємо наступний стрім'}</h2></div><span class="live-status">${escapeHtml(statusLabel(state.status))}</span></div>${videoStage}${selected}<div class="live-stream-card__meta">${poll.stageLabel ? `<span>${escapeHtml(poll.stageLabel)}</span>` : ''}${countdown ? `<span>${isRunning ? 'До завершення' : 'До старту'}: ${countdown}</span>` : ''}</div>${poll.question ? `<div class="live-poll"><div class="live-poll__title">${escapeHtml(poll.question)}</div>${renderOptions(poll)}</div>` : ''}<div class="live-stream-card__actions">${telegramLink}</div></section>`;
+    const renderedVideo = host.querySelector('#liveVideoElement');
+    const sameSource = Boolean(renderedVideo && previousVideo && previousSource && previousSource === renderedVideo.getAttribute('src'));
+    if (sameSource) renderedVideo.replaceWith(previousVideo);
     const liveVideo = host.querySelector('#liveVideoElement');
-    if (liveVideo) {
+    if (liveVideo && liveVideo !== previousVideo) {
         const startVideo = () => liveVideo.play().catch(error => console.warn('[VakDab] autoplay blocked:', error));
         liveVideo.addEventListener('loadedmetadata', startVideo, { once: true });
         liveVideo.addEventListener('canplay', startVideo, { once: true });
         startVideo();
+    } else if (liveVideo && previousWasPlaying && liveVideo.paused) {
+        liveVideo.play().catch(error => console.warn('[VakDab] autoplay resume blocked:', error));
     }
 }
 

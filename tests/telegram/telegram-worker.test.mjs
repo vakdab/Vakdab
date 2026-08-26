@@ -400,3 +400,11 @@ test('live worker uses manual next and owner-only broadcast controls', () => {
   assert.doesNotMatch(workerSource, /open_period/);
   assert.match(workerSource, /sendLiveWinnerStats/);
 });
+
+test('live refresh preserves the active video element', () => {
+  const liveSource = readFileSync(new URL('../../src/js/components/live/liveStream.js', import.meta.url), 'utf8');
+  assert.match(liveSource, /const previousVideo = host\.querySelector\('#liveVideoElement'\)/);
+  assert.match(liveSource, /if \(sameSource\) renderedVideo\.replaceWith\(previousVideo\)/);
+  assert.match(liveSource, /autoplay muted playsinline/);
+  assert.doesNotMatch(liveSource, /<video[^>]+controls/);
+});
