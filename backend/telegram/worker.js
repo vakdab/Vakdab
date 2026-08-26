@@ -13,7 +13,7 @@ const LIVE_POLL_PREFIX = 'live:poll:';
 const LIVE_VOTE_PREFIX = 'live:vote:';
 const LIVE_POLL_MAX_OPTIONS = 10;
 const LIVE_POLL_CLOSE_SECONDS = 300;
-const LIVE_ANIME_POLL_CLOSE_SECONDS = 15 * 60;
+const LIVE_ANIME_POLL_CLOSE_SECONDS = 5 * 60;
 const LIVE_EPISODE_COUNT_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 10];
 const LIVE_HOUR_OPTIONS = [1, 2, 3, 4, 6];
 const LIVE_API_ORIGINS = new Set(['https://vakdab.github.io', 'https://vakdab.web.app']);
@@ -2678,7 +2678,7 @@ async function startLiveSession(chatId, env, messageId = null) {
   };
   await writeLiveState(state, env);
   if (messageId) await deleteMessage(chatId, messageId, env);
-  await sendMessage(chatId, 'Починаємо live-опитування. Бот проведе кроки по черзі: аніме → кількість серій (для серіалів) → озвучка → години.', {}, env);
+  await sendMessage(chatId, '𝗩𝗮𝗸𝗗𝗮𝗯𝗕𝗼𝘁 Запускає Опитування', {}, env);
   await sendLivePollBatch(state, env);
 }
 
@@ -2753,7 +2753,7 @@ async function advanceLiveAfterWinner(state, winner, env) {
     state.transitioningPollId = null;
     state.updatedAt = Date.now();
     await writeLiveState(state, env);
-    await sendMessage(state.chatId, `<b>Live-стрім починається!</b>\n\n${escapeHtml(state.selected.anime?.label || 'Аніме')}${state.isMovie ? '\nФільм' : `\nКількість серій: ${escapeHtml(state.selected.episodeCount?.value || '—')}`}\nОзвучка: ${escapeHtml(state.selected.dub?.value || '—')}\nТривалість: ${escapeHtml(state.selected.duration?.value || '—')} год.\n\nВідкрийте VakDab для перегляду.`, { reply_markup: { inline_keyboard: [[{ text: 'Відкрити VakDab', url: SITE_BASE_URL }]] } }, env);
+    // Після завершення вибору не надсилаємо додаткового службового тексту.
     return;
   }
   state.stageIndex += 1;
