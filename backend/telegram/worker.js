@@ -1689,7 +1689,7 @@ async function fetchAnimeDetails(url, type = 'anime') {
   const response = await fetch(safeUrl, { headers: { accept: 'application/json' } });
   if (!response.ok) throw new Error(`HIKKA_HTTP_${response.status}`);
   const item = await response.json();
-  return { ...item, contentType: safeType, title: pickContentTitle(item), url: safeUrl,
+  return { ...item, contentType: safeType, media_type: item.media_type || item.type || item.format || '', title: pickContentTitle(item), url: safeUrl,
     image: item.image || item.poster || item.cover || item.cover_url || '', synopsis: item.synopsis_ua || item.synopsis_en || item.description_ua || item.description_en || '',
     genres: normalizeHikkaGenres(item.genres),
     year: item.year || '',
@@ -2161,7 +2161,7 @@ function isUnsafeRouletteText(value) {
     || /(?:докс|доксинг|doxx|порно з неповноліт|child\s*sexual|csam)/i.test(text);
 }
 
-export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, scheduleWebAppKeyboard, vakdabWatchUrl, getAIProviderConfig };
+export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, scheduleWebAppKeyboard, vakdabWatchUrl, getAIProviderConfig, liveStageDefinitions, pickLiveWinner };
 
 export class ChatRouletteRoom {
   constructor(ctx, env) {
@@ -2520,10 +2520,10 @@ async function publicLiveState(state, env) {
     poll,
     animeTitle: state.selected?.anime?.label || '',
     animeUrl: state.selected?.anime?.url || '',
+    isMovie: Boolean(state.isMovie),
     episode: state.selected?.episode?.value || '',
     episodeCount: Number(state.selected?.episodeCount?.value || 0) || 0,
     dub: state.selected?.dub?.value || '',
-    durationMinutes: Number(state.selected?.duration?.value || 0) * 60 || 0,
     durationHours: Number(state.selected?.duration?.value || 0) || 0,
     startsAt: Number(state.startsAt || 0) || 0,
     endsAt: Number(state.endsAt || 0) || 0,
@@ -2538,12 +2538,6 @@ async function getLiveStateResponse(request, env) {
   return new Response(JSON.stringify({ live: await publicLiveState(state, env) }), { status: 200, headers: liveCorsHeaders(request) });
 }
 
-function liveChunks(items) {
-  const safe = Array.isArray(items) ? items.filter(Boolean) : [];
-  const chunks = [];
-  for (let index = 0; index < safe.length; index += LIVE_POLL_MAX_OPTIONS) chunks.push(safe.slice(index, index + LIVE_POLL_MAX_OPTIONS));
-  return chunks.length ? chunks : [[]];
-}
 
 function liveOption(label, value, extra = {}) {
   return { label: String(label || '').slice(0, 100), value: String(value || ''), ...extra };
@@ -2607,8 +2601,8 @@ async function fetchLiveAnimeMeta(animeUrl) {
 }
 
 function liveStageDefinitions(state) {
-  const stages = [{ stage: 'anime', stageLabel: 'Крок 1 із 4 — оберіть аніме', question: 'Яке аніме дивимося разом?', options: state.animeOptions || [], closeSeconds: LIVE_ANIME_POLL_CLOSE_SECONDS }];
   const totalSteps = state.isMovie ? 3 : 4;
+  const stages = [{ stage: 'anime', stageLabel: `Крок 1 із ${totalSteps} — оберіть аніме`, question: 'Яке аніме дивимося разом?', options: state.animeOptions || [], closeSeconds: LIVE_ANIME_POLL_CLOSE_SECONDS }];
   if (!state.isMovie) stages.push({ stage: 'episode_count', stageLabel: `Крок 2 із ${totalSteps} — оберіть кількість серій`, question: `Скільки серій дивимося: ${state.selected?.anime?.label || 'обране аніме'}?`, options: state.episodeCountOptions || [], closeSeconds: LIVE_POLL_CLOSE_SECONDS });
   stages.push({ stage: 'dub', stageLabel: `Крок ${state.isMovie ? 2 : 3} із ${totalSteps} — оберіть озвучку`, question: 'Яку озвучку обираємо?', options: state.dubOptions || [], closeSeconds: LIVE_POLL_CLOSE_SECONDS });
   stages.push({ stage: 'duration', stageLabel: `Крок ${state.isMovie ? 3 : 4} із ${totalSteps} — оберіть години`, question: 'Скільки годин триває live-перегляд?', options: LIVE_HOUR_OPTIONS.map(hours => liveOption(`${hours} ${hours === 1 ? 'година' : 'години'}`, hours)), closeSeconds: LIVE_POLL_CLOSE_SECONDS });
@@ -2621,16 +2615,15 @@ function liveStageDefinition(state, stageIndex) {
 
 async function sendLivePollBatch(state, env) {
   const definition = liveStageDefinition(state, state.stageIndex);
-  const batches = state.pollBatches || liveChunks(definition.options);
-  const batch = batches[state.batchIndex] || [];
-  const question = batches.length > 1 ? `${definition.question} (частина ${state.batchIndex + 1}/${batches.length})` : definition.question;
+  const options = definition?.options || [];
+  const question = definition?.question || '';
   const result = await telegram('sendPoll', {
     chat_id: state.chatId,
     question: question.slice(0, 300),
-    options: batch.map(item => item.label.slice(0, 100)),
+    options: options.map(item => item.label.slice(0, 100)),
     is_anonymous: false,
     allows_multiple_answers: false,
-    close_period: definition.closeSeconds,
+    open_period: definition.closeSeconds,
   }, env);
   if (!result?.ok || !result.result?.id) throw new Error(result?.description || 'LIVE_POLL_SEND_FAILED');
   state.poll = {
@@ -2638,15 +2631,14 @@ async function sendLivePollBatch(state, env) {
     messageId: String(result.result.message_id || ''),
     stage: definition.stage,
     stageIndex: state.stageIndex,
-    batchIndex: state.batchIndex,
     stageLabel: definition.stageLabel,
     question,
-    options: batch.map(item => ({ ...item, votes: 0 })),
+    options: options.map(item => ({ ...item, votes: 0 })),
     sentAt: Date.now()
   };
   state.updatedAt = Date.now();
   await writeLiveState(state, env);
-  await env.MAKIMA_MEMORY?.put(`${LIVE_POLL_PREFIX}${state.poll.id}`, JSON.stringify({ sessionId: state.id, chatId: state.chatId, stageIndex: state.stageIndex, batchIndex: state.batchIndex }));
+  await env.MAKIMA_MEMORY?.put(`${LIVE_POLL_PREFIX}${state.poll.id}`, JSON.stringify({ sessionId: state.id, chatId: state.chatId, stageIndex: state.stageIndex }));
   return result;
 }
 
@@ -2672,14 +2664,12 @@ async function startLiveSession(chatId, env, messageId = null) {
     chatId: String(chatId),
     status: 'polling',
     stageIndex: 0,
-    batchIndex: 0,
-    pollBatches: [animeOptions],
-    batchWinners: [],
     animeOptions,
     episodeOptions: [],
     episodeCountOptions: [],
     dubOptions: [],
     isMovie: false,
+    transitioningPollId: null,
     selected: {},
     updatedAt: Date.now()
   };
@@ -2757,17 +2747,16 @@ async function advanceLiveAfterWinner(state, winner, env) {
     state.startsAt = Date.now();
     state.endsAt = state.startsAt + Number(winner.value || 1) * 60 * 60 * 1000;
     state.poll = null;
+    state.transitioningPollId = null;
     state.updatedAt = Date.now();
     await writeLiveState(state, env);
     await sendMessage(state.chatId, `<b>Live-стрім починається!</b>\n\n${escapeHtml(state.selected.anime?.label || 'Аніме')}${state.isMovie ? '\nФільм' : `\nКількість серій: ${escapeHtml(state.selected.episodeCount?.value || '—')}`}\nОзвучка: ${escapeHtml(state.selected.dub?.value || '—')}\nТривалість: ${escapeHtml(state.selected.duration?.value || '—')} год.\n\nВідкрийте VakDab для перегляду.`, { reply_markup: { inline_keyboard: [[{ text: 'Відкрити VakDab', url: SITE_BASE_URL }]] } }, env);
     return;
   }
   state.stageIndex += 1;
-  state.batchIndex = 0;
-  state.batchWinners = [];
   const definition = liveStageDefinition(state, state.stageIndex);
-  state.pollBatches = liveChunks(definition.options);
   state.poll = null;
+  state.transitioningPollId = null;
   state.updatedAt = Date.now();
   await writeLiveState(state, env);
   await sendLivePollBatch(state, env);
@@ -2778,34 +2767,20 @@ async function handleLivePollUpdate(poll, env) {
   if (!pollId || !poll?.is_closed) return;
   const state = await readLiveState(env);
   if (!state?.poll || String(state.poll.id) !== pollId) return;
-  if (state.lastProcessedPollId === pollId) return;
+  if (state.lastProcessedPollId === pollId || state.transitioningPollId === pollId) return;
+  const currentPoll = state.poll;
   state.lastProcessedPollId = pollId;
   const telegramCounts = Array.isArray(poll.options) ? poll.options.map(option => Number(option?.voter_count || 0)) : [];
-  const storedCounts = countLivePollVotes(await getLiveVotes(pollId, env), state.poll.options.length);
-  const counts = telegramCounts.length === state.poll.options.length ? telegramCounts : storedCounts;
-  state.poll.options = state.poll.options.map((item, index) => ({ ...item, votes: counts[index] || 0 }));
+  const storedCounts = countLivePollVotes(await getLiveVotes(pollId, env), currentPoll.options.length);
+  const counts = telegramCounts.length === currentPoll.options.length ? telegramCounts : storedCounts;
+  const options = currentPoll.options.map((item, index) => ({ ...item, votes: counts[index] || 0 }));
+  const winner = pickLiveWinner(options);
+  if (!winner) return;
+  // Remove the active poll before any metadata fetch. Duplicate Telegram deliveries
+  // now see no matching poll and cannot create another anime/stage poll.
+  state.poll = null;
+  state.transitioningPollId = pollId;
+  state.updatedAt = Date.now();
   await writeLiveState(state, env);
-  const winner = pickLiveWinner(state.poll.options);
-  const batchCount = (state.pollBatches || []).length;
-  if (batchCount > 1 && state.batchIndex < batchCount - 1) {
-    if (winner) state.batchWinners.push(winner);
-    state.batchIndex += 1;
-    state.poll = null;
-    state.updatedAt = Date.now();
-    await writeLiveState(state, env);
-    await sendLivePollBatch(state, env);
-    return;
-  }
-  if (batchCount > 1 && state.batchWinners.length) {
-    if (winner) state.batchWinners.push(winner);
-    state.pollBatches = [state.batchWinners];
-    state.batchWinners = [];
-    state.batchIndex = 0;
-    state.poll = null;
-    state.updatedAt = Date.now();
-    await writeLiveState(state, env);
-    await sendLivePollBatch(state, env);
-    return;
-  }
-  await advanceLiveAfterWinner(state, winner, env);
+  await advanceLiveAfterWinner({ ...state, poll: currentPoll }, winner, env);
 }
