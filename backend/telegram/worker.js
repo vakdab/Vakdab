@@ -9,6 +9,7 @@ const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
 const LIVE_STATE_KEY = 'live:current';
+const LIVE_VIDEO_PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const LIVE_POLL_PREFIX = 'live:poll:';
 const LIVE_VOTE_PREFIX = 'live:vote:';
 const LIVE_POLL_MAX_OPTIONS = 10;
@@ -1275,6 +1276,9 @@ async function handleCallbackQuery(callback, env) {
         return;
       }
       liveState.selected.dub = dub;
+      const selectedEpisode = String(liveState.selected.episodeStart || 1);
+      const playLink = liveState.playLinksByDub?.[String(dub.value)]?.[selectedEpisode] || '';
+      liveState.videoUrl = await resolveLivePlaybackUrl(playLink);
       liveState.status = 'ready';
       liveState.inputStage = null;
       liveState.updatedAt = Date.now();
@@ -2566,11 +2570,16 @@ async function publicLiveState(state, env) {
     poll,
     animeTitle: state.selected?.anime?.label || '',
     animeUrl: state.selected?.anime?.url || '',
+    poster: state.selected?.anime?.image || '',
     isMovie: Boolean(state.isMovie),
     season: state.selected?.season?.label || '',
     episode: state.selected?.episode?.value || '',
+    episodeStart: Number(state.selected?.episodeStart || 0) || 0,
+    episodeEnd: Number(state.selected?.episodeEnd || 0) || 0,
     episodeCount: Number(state.selected?.episodeCount?.value || 0) || 0,
+    availableEpisodeCount: Number(state.availableEpisodeCount || 0) || 0,
     dub: state.selected?.dub?.value || '',
+    videoUrl: state.videoUrl || '',
     durationHours: Number(state.selected?.duration?.value || 0) || 0,
     startsAt: Number(state.startsAt || 0) || 0,
     endsAt: Number(state.endsAt || 0) || 0,
@@ -2639,12 +2648,32 @@ async function fetchLiveSeasonOptions(details) {
     return [current];
   }
 }
+async function resolveLivePlaybackUrl(playLink) {
+  const source = String(playLink || '').trim();
+  if (!source) return '';
+  let manifest = source;
+  if (!/\.(?:m3u8|mp4)(?:[?#].*)?$/i.test(source)) {
+    try {
+      const response = await fetch(source, { headers: { accept: 'text/html,application/xhtml+xml', 'user-agent': 'VakDabLive/1.0' } });
+      if (response.ok) {
+        const html = String(await response.text()).replace(/\\u002F/g, '/').replace(/\\\//g, '/');
+        manifest = (html.match(/https?:\/\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?/i) || [])[0] || source;
+      }
+    } catch (error) {
+      console.warn('[live] playback resolution failed:', safeError(error));
+    }
+  }
+  return /\.(?:m3u8|mp4)(?:[?#].*)?$/i.test(manifest)
+    ? `${LIVE_VIDEO_PROXY_URL}?url=${encodeURIComponent(manifest)}&force_ua=mobile`
+    : source;
+}
 async function fetchLiveAnimeMeta(animeUrl) {
   const details = await fetchAnimeDetails(animeUrl, 'anime');
   const external = Array.isArray(details.external) ? details.external : [];
   const mikaiUrl = external.map(item => typeof item === 'string' ? item : item?.url).find(url => /^https:\/\/(?:www\.)?mikai\.me\/anime\//i.test(String(url || '')));
   const mikaiId = findMikaiId(mikaiUrl);
   const byDub = {};
+  const playLinksByDub = {};
   if (mikaiId) {
     try {
       const response = await fetch(`${MIKAI_API_BASE}/anime/${mikaiId}`, { headers: { accept: 'application/json' } });
@@ -2654,8 +2683,14 @@ async function fetchLiveAnimeMeta(animeUrl) {
         for (const group of players) {
           if (group?.isSubs) continue;
           const dub = String(group?.team?.name || '').trim() || 'Основна озвучка';
-          const episodes = (group?.providers || []).flatMap(provider => provider?.name === 'ASHDI' ? (provider.episodes || []) : []).map(ep => String(ep?.number ?? '').trim()).filter(Boolean);
-          if (episodes.length) byDub[dub] = [...new Set([...(byDub[dub] || []), ...episodes])].sort((a, b) => Number(a) - Number(b));
+          const entries = (group?.providers || []).flatMap(provider => provider?.name === 'ASHDI' ? (provider.episodes || []) : [])
+            .map(ep => ({ number: String(ep?.number ?? '').trim(), playLink: String(ep?.playLink || '').trim() }))
+            .filter(entry => entry.number && entry.playLink);
+          if (entries.length) {
+            byDub[dub] = [...new Set([...(byDub[dub] || []), ...entries.map(entry => entry.number)])].sort((a, b) => Number(a) - Number(b));
+            playLinksByDub[dub] = { ...(playLinksByDub[dub] || {}) };
+            entries.forEach(entry => { playLinksByDub[dub][entry.number] = entry.playLink; });
+          }
         }
       }
     } catch (error) {
@@ -2663,10 +2698,12 @@ async function fetchLiveAnimeMeta(animeUrl) {
     }
   }
   const episodeCount = Number(details.episodes || details.episodesTotal || 0) || 1;
+  const knownEpisodeNumbers = Object.values(byDub).flat().map(Number).filter(number => Number.isFinite(number) && number > 0);
+  const availableEpisodeCount = knownEpisodeNumbers.length ? Math.max(...knownEpisodeNumbers) : episodeCount;
   const episodeNumbers = uniqueLiveOptions(Object.values(byDub).flat().map(number => liveOption(`Серія ${number}`, number)));
   const fallbackEpisodes = Array.from({ length: Math.min(episodeCount, 100) }, (_, index) => liveOption(`Серія ${index + 1}`, index + 1));
   const dubs = Object.keys(byDub).map(name => liveOption(name, name));
-  const maxEpisodes = Math.max(1, ...Object.values(byDub).map(list => list.length), episodeCount);
+  const maxEpisodes = Math.max(1, availableEpisodeCount);
   const countValues = [...new Set([...LIVE_EPISODE_COUNT_OPTIONS.filter(count => count <= maxEpisodes), ...(maxEpisodes <= 50 ? [maxEpisodes] : [])])].sort((a, b) => a - b);
   const episodeCountOptions = countValues.map(count => liveOption(`${count} ${count === 1 ? 'серія' : 'серій'}`, count));
   const mediaType = String(details.media_type || details.type || details.format || '').toLowerCase();
@@ -2679,7 +2716,9 @@ async function fetchLiveAnimeMeta(animeUrl) {
     episodes: episodeNumbers.length ? episodeNumbers : fallbackEpisodes,
     episodeCountOptions: episodeCountOptions.length ? episodeCountOptions : [liveOption('1 серія', 1)],
     dubs: dubs.length ? dubs.slice(0, LIVE_POLL_MAX_OPTIONS) : [liveOption('Основна озвучка', 'Основна озвучка')],
-    episodesByDub: byDub
+    episodesByDub: byDub,
+    playLinksByDub,
+    availableEpisodeCount
   };
 }
 
@@ -2735,14 +2774,14 @@ function parseLiveEpisodeRange(value) {
   return { start, end, count: end - start + 1, value: `${start}-${end}` };
 }
 function liveOwnerKeyboard(buttons) {
-  return { inline_keyboard: [buttons.map(button => ({ text: button.text, callback_data: button.callback_data }))] };
+  return { inline_keyboard: buttons.map(button => [{ text: String(button.text || '').slice(0, 100), callback_data: button.callback_data }]) };
 }
 function liveOwnerSummary(state) {
   return [
     'Live налаштовано:',
     `Аніме: ${state.selected?.anime?.label || '—'}`,
     `Сезон: ${state.selected?.season?.label || '—'}`,
-    `Серії: ${state.selected?.episode?.label || '—'}`,
+    `Серії: ${state.selected?.episode?.label || '—'}${state.availableEpisodeCount ? ` (доступно ${state.availableEpisodeCount})` : ''}`,
     `Озвучка: ${state.selected?.dub?.label || '—'}`
   ].join('\n');
 }
@@ -2782,12 +2821,15 @@ async function handleLiveOwnerText(message, env) {
       await sendMessage(state.chatId, 'Не знайшов це аніме. Напиши назву ще раз.', {}, env);
       return true;
     }
-    state.selected.anime = liveOption(match.title || text, match.url, { id: match.id, slug: match.slug });
+    state.selected.anime = liveOption(match.title || text, match.url, { id: match.id, slug: match.slug, image: match.image || match.poster || '' });
     let meta;
     try { meta = await fetchLiveAnimeMeta(match.url); } catch (error) { console.error('[live] title metadata failed:', safeError(error)); }
     state.isMovie = Boolean(meta?.isMovie);
     state.seasonOptions = meta?.seasonOptions || [];
+    state.selected.season = state.seasonOptions[0] || liveOption(match.title || text, match.url);
     state.dubOptions = meta?.dubs || [liveOption('Основна озвучка', 'Основна озвучка')];
+    state.availableEpisodeCount = Number(meta?.availableEpisodeCount || 0) || 0;
+    state.playLinksByDub = meta?.playLinksByDub || {};
     state.inputStage = 'range';
     state.updatedAt = Date.now();
     await writeLiveState(state, env);
@@ -2800,7 +2842,13 @@ async function handleLiveOwnerText(message, env) {
       await sendMessage(state.chatId, 'Невірний формат. Напиши діапазон так: `1-5` або `5-12`.', {}, env);
       return true;
     }
+    if (state.availableEpisodeCount && range.end > state.availableEpisodeCount) {
+      await sendMessage(state.chatId, `У цього аніме доступно ${state.availableEpisodeCount} серій. Введи діапазон від 1 до ${state.availableEpisodeCount}.`, {}, env);
+      return true;
+    }
     state.selected.episode = liveOption(`Серії ${range.start}-${range.end}`, range.value, { start: range.start, end: range.end });
+    state.selected.episodeStart = range.start;
+    state.selected.episodeEnd = range.end;
     state.selected.episodeCount = liveOption(`${range.count} ${range.count === 1 ? 'серія' : 'серій'}`, range.count);
     if (state.isMovie) {
       state.inputStage = 'dub';
@@ -2808,6 +2856,8 @@ async function handleLiveOwnerText(message, env) {
     } else if (!state.selected.dub) {
       state.inputStage = 'dub';
     } else {
+      const playLink = state.playLinksByDub?.[String(state.selected.dub.value)]?.[String(range.start)] || '';
+      state.videoUrl = await resolveLivePlaybackUrl(playLink);
       state.status = 'ready';
       state.inputStage = null;
     }

@@ -33,3 +33,21 @@
   .live-stream-card__actions { flex-direction:column; }
   .live-action { width:100%; }
 }
+
+.live-video-stage { position:relative; overflow:hidden; min-height:clamp(220px, 42vw, 520px); margin-top:18px; border-radius:22px; background:#111; isolation:isolate; }
+.live-video-stage__open, .live-video-stage__video { display:block; width:100%; height:100%; min-height:inherit; border:0; }
+.live-video-stage__open { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:24px; color:#fff; background-color:#202020; background-position:center; background-size:cover; background-repeat:no-repeat; font:inherit; font-weight:800; cursor:pointer; }
+.live-video-stage__play { display:grid; width:64px; height:64px; place-items:center; border-radius:50%; color:#fff; background:#e33b59; font-size:1.45rem; box-shadow:0 8px 28px rgba(0,0,0,.35); }
+.live-video-stage__video { object-fit:contain; background:#000; }
+.live-video-stage__live { position:absolute; top:14px; left:14px; z-index:2; display:inline-flex; align-items:center; gap:7px; padding:6px 10px; border-radius:7px; color:#fff; background:rgba(15,15,15,.78); font-size:.72rem; font-weight:900; letter-spacing:.08em; }
+.live-video-stage__live i { display:block; width:8px; height:8px; border-radius:50%; background:#ff365d; box-shadow:0 0 0 4px rgba(255,54,93,.18); }
+.live-video-stage__caption { position:absolute; right:0; bottom:0; left:0; z-index:2; display:flex; flex-direction:column; gap:3px; padding:56px 18px 17px; color:#fff; background:linear-gradient(transparent,rgba(0,0,0,.86)); pointer-events:none; }
+.live-video-stage__caption strong { font-size:1.08rem; }
+.live-video-stage__caption span { color:rgba(255,255,255,.78); font-size:.86rem; }
+.live-selection small { color:var(--muted-text, #727272); font-size:.78rem; }
+@media (max-width: 600px) {
+  .live-video-stage { min-height:205px; border-radius:17px; }
+  .live-video-stage__caption { padding:45px 13px 13px; }
+  .live-video-stage__caption strong { font-size:.96rem; }
+  .live-video-stage__caption span { font-size:.76rem; }
+}
