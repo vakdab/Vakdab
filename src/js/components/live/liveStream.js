@@ -1,5 +1,7 @@
 const LIVE_API_URL = 'https://vakdab.animegran8.workers.dev/api/live';
+const LIVE_VIDEO_PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const REFRESH_MS = 15000;
+const videoResolutionCache = new Map();
 
 let refreshTimer = null;
 let countdownTimer = null;
@@ -20,6 +22,28 @@ function formatRemaining(target) {
 
 function statusLabel(status) {
     return ({ draft: 'Налаштування', ready: 'Готово до запуску', running: 'Ефір триває', finished: 'Стрім завершено' })[status] || 'Live';
+}
+
+async function resolveLiveVideoSource(source) {
+    const value = String(source || '').trim();
+    if (!value) return '';
+    if (/\.(?:m3u8|mp4)(?:[?#].*)?$/i.test(value) || /[?&]url=[^&]*(?:m3u8|mp4)/i.test(value)) {
+        return value.startsWith(LIVE_VIDEO_PROXY_URL) ? value : `${LIVE_VIDEO_PROXY_URL}?url=${encodeURIComponent(value)}&force_ua=mobile`;
+    }
+    if (videoResolutionCache.has(value)) return videoResolutionCache.get(value);
+    try {
+        const response = await fetch(`${LIVE_VIDEO_PROXY_URL}?url=${encodeURIComponent(value)}&force_ua=mobile`, { cache: 'no-store', headers: { accept: 'text/html,application/xhtml+xml' } });
+        if (!response.ok) throw new Error(`LIVE_SOURCE_HTTP_${response.status}`);
+        const html = String(await response.text()).replace(/\\u002F/g, '/').replace(/\\\//g, '/');
+        const manifest = (html.match(/https?:\/\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?/i) || [])[0] || '';
+        const resolved = manifest ? `${LIVE_VIDEO_PROXY_URL}?url=${encodeURIComponent(manifest)}&force_ua=mobile` : '';
+        videoResolutionCache.set(value, resolved);
+        return resolved;
+    } catch (error) {
+        console.warn('[VakDab] live source resolution failed:', error);
+        videoResolutionCache.set(value, '');
+        return '';
+    }
 }
 
 function renderOptions(poll) {
@@ -53,12 +77,9 @@ function renderVideoStage(state) {
     }
     const poster = escapeHtml(state.poster || '');
     const directVideo = /\.(?:m3u8|mp4)(?:[?#].*)?$/i.test(videoUrl) || /[?&]url=[^&]*(?:m3u8|mp4)/i.test(videoUrl);
-    const embeddablePage = /^https?:\/\//i.test(videoUrl) && !directVideo;
     const media = directVideo
         ? `<video class="live-video-stage__video" controls playsinline preload="metadata"${poster ? ` poster="${poster}"` : ''} src="${escapeHtml(videoUrl)}"></video>`
-        : embeddablePage
-            ? `<iframe class="live-video-stage__frame" src="${escapeHtml(videoUrl)}" title="${escapeHtml(state.animeTitle || 'VakDab Live')}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="eager"></iframe>`
-            : `<button type="button" class="live-video-stage__open" id="liveWatchButton"${poster ? ` style="background-image:linear-gradient(180deg,rgba(0,0,0,.04),rgba(0,0,0,.82)),url('${poster}')"` : ''}><span class="live-video-stage__play">▶</span><span>Відкрити відео у плеєрі VakDab</span></button>`;
+        : `<button type="button" class="live-video-stage__open" id="liveWatchButton"${poster ? ` style="background-image:linear-gradient(180deg,rgba(0,0,0,.04),rgba(0,0,0,.82)),url('${poster}')"` : ''}><span class="live-video-stage__play">▶</span><span>Відкрити чисте відео VakDab</span></button>`;
     return `<div class="live-video-stage${directVideo ? ' live-video-stage--direct' : ''}">${media}<div class="live-video-stage__live"><i></i>${state.status === 'running' ? 'LIVE' : 'ПРЕВʼЮ'}</div><div class="live-video-stage__caption"><strong>${escapeHtml(state.animeTitle)}</strong><span>${escapeHtml(episodeLabel(state))} · ${escapeHtml(state.dub || 'Озвучка не вказана')}</span></div></div>`;
 }
 
@@ -94,7 +115,12 @@ async function refreshLiveStream(host) {
         const response = await fetch(LIVE_API_URL, { cache: 'no-store', headers: { accept: 'application/json' } });
         if (!response.ok) throw new Error(`LIVE_HTTP_${response.status}`);
         const payload = await response.json();
-        renderState(host, payload?.live || payload);
+        const liveState = payload?.live || payload;
+        if (liveState?.videoUrl) {
+            const resolvedVideo = await resolveLiveVideoSource(liveState.videoUrl);
+            if (resolvedVideo) liveState.videoUrl = resolvedVideo;
+        }
+        renderState(host, liveState);
     } catch (error) {
         console.warn('[VakDab] live stream state unavailable:', error);
         if (!latestState) renderIdle(host);
