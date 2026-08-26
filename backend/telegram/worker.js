@@ -51,6 +51,8 @@ let popularCache = null;
 let popularCacheAt = 0;
 let catalogCache = null;
 let catalogCacheAt = 0;
+let liveBotUrlCache = '';
+let liveBotUrlCacheAt = 0;
 const BOT_OWNER_USERNAME = 'vaditx';
 const MAX_ROULETTE_REPORTS = 18;
 const ROULETTE_BAN_MS = 3 * 24 * 60 * 60 * 1000;
@@ -2488,7 +2490,22 @@ function liveCorsHeaders(request) {
   return headers;
 }
 
-function publicLiveState(state, env) {
+async function liveTelegramUrl(env) {
+  if (env.TELEGRAM_BOT_USERNAME) return `https://t.me/${String(env.TELEGRAM_BOT_USERNAME).replace(/^@/, '')}`;
+  if (liveBotUrlCache && Date.now() - liveBotUrlCacheAt < 60 * 60 * 1000) return liveBotUrlCache;
+  try {
+    const result = await telegram('getMe', {}, env);
+    const username = String(result?.result?.username || '').trim();
+    liveBotUrlCache = username ? `https://t.me/${username}` : '';
+    liveBotUrlCacheAt = Date.now();
+    return liveBotUrlCache;
+  } catch (error) {
+    console.warn('[live] bot username lookup failed:', safeError(error));
+    return '';
+  }
+}
+
+async function publicLiveState(state, env) {
   if (!state) return { status: 'idle' };
   const poll = state.poll ? {
     question: state.poll.question,
@@ -2507,14 +2524,14 @@ function publicLiveState(state, env) {
     startsAt: Number(state.startsAt || 0) || 0,
     endsAt: Number(state.endsAt || 0) || 0,
     updatedAt: Number(state.updatedAt || 0) || 0,
-    telegramUrl: env.TELEGRAM_BOT_USERNAME ? `https://t.me/${String(env.TELEGRAM_BOT_USERNAME).replace(/^@/, '')}` : ''
+    telegramUrl: await liveTelegramUrl(env)
   };
 }
 
 async function getLiveStateResponse(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: liveCorsHeaders(request) });
   const state = await readLiveState(env);
-  return new Response(JSON.stringify({ live: publicLiveState(state, env) }), { status: 200, headers: liveCorsHeaders(request) });
+  return new Response(JSON.stringify({ live: await publicLiveState(state, env) }), { status: 200, headers: liveCorsHeaders(request) });
 }
 
 function liveChunks(items) {
