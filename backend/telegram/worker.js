@@ -8,6 +8,13 @@ const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/wa
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
+const LIVE_STATE_KEY = 'live:current';
+const LIVE_POLL_PREFIX = 'live:poll:';
+const LIVE_VOTE_PREFIX = 'live:vote:';
+const LIVE_POLL_MAX_OPTIONS = 10;
+const LIVE_POLL_CLOSE_SECONDS = 300;
+const LIVE_DURATION_OPTIONS = [30, 60, 90, 120];
+const LIVE_API_ORIGINS = new Set(['https://vakdab.github.io', 'https://vakdab.web.app']);
 const REQUIRED_CHANNEL_USERNAME = '@vakluna';
 const REQUIRED_CHANNEL_URL = 'https://t.me/vakluna';
 
@@ -72,6 +79,9 @@ export default {
       if (REMOVED_FEATURE_PATHS.has(url.pathname)) return textResponse('Not Found', 404);
 
       if (request.method === 'GET') {
+        if (url.pathname === '/api/live') {
+          return await getLiveStateResponse(request, env);
+        }
         if (url.pathname === '/set_webhook') {
           return await setWebhook(request, env, url);
         }
@@ -134,7 +144,7 @@ async function setWebhook(request, env, url) {
     });
   }
 
-  const params = { url: webhookUrl };
+  const params = { url: webhookUrl, allowed_updates: ['message', 'callback_query', 'poll_answer', 'poll'] };
   if (env.TELEGRAM_WEBHOOK_SECRET_TOKEN) params.secret_token = String(env.TELEGRAM_WEBHOOK_SECRET_TOKEN);
   return jsonResponse(await telegram('setWebhook', params, env));
 }
@@ -144,6 +154,10 @@ async function processUpdate(update, env) {
     await handleMessage({ ...update.message, __updateId: update.update_id }, env);
   } else if (update?.callback_query) {
     await handleCallbackQuery({ ...update.callback_query, __updateId: update.update_id }, env);
+  } else if (update?.poll_answer) {
+    await handleLivePollAnswer(update.poll_answer, env);
+  } else if (update?.poll) {
+    await handleLivePollUpdate(update.poll, env);
   }
 }
 
@@ -182,6 +196,14 @@ async function handleMessage(message, env) {
     }
     const stats = await rouletteOperation({ op: 'stats', chatId }, env);
     await sendMessage(chatId, formatBotUsageReport(stats), {}, env);
+    return;
+  }
+  if (/^\/live(?:@\w+)?(?:\s|$)/i.test(text)) {
+    if (!isBotOwner(message.from)) {
+      await sendMessage(chatId, 'Запуск live-опитування доступний лише власнику бота.', {}, env);
+      return;
+    }
+    await startLiveSession(chatId, env);
     return;
   }
   // Команди рулетки обробляємо до relay, інакше активний чат передасть /next як звичайний текст.
@@ -1212,6 +1234,15 @@ async function handleCallbackQuery(callback, env) {
       return;
     }
 
+    if (data === 'live:start') {
+      if (!isBotOwner(callback.from)) {
+        await answerCallback(callbackId, 'Тільки власник бота може запустити live.', env, { show_alert: true });
+        return;
+      }
+      await startLiveSession(chatId, env, messageId);
+      return;
+    }
+
     if (data === 'about') {
       state.screen = 'about';
       await replaceMessage(chatId, messageId, aboutUsText(), false, { reply_markup: aboutUsKeyboard() }, env);
@@ -1566,6 +1597,7 @@ function aboutUsKeyboard() {
 
 function mainKeyboard() {
   return { inline_keyboard: [
+    [{ text: 'Live-опитування', callback_data: 'live:start' }],
     [{ text: 'Популярні', callback_data: 'popular:1' }],
     [{ text: 'Випадкове', callback_data: 'random' }],
     [{ text: 'Пошук', callback_data: 'search:prompt' }],
@@ -1945,7 +1977,8 @@ async function setBotCommands(env) {
         { command: 'forget', description: 'Забути історію розмови' },
         { command: 'forgetall', description: 'Забути історію та профіль' },
         { command: 'next', description: 'Наступний співрозмовник у чат-рулетці' },
-        { command: 'report', description: 'Поскаржитися або завершити рулетку' }
+        { command: 'report', description: 'Поскаржитися або завершити рулетку' },
+        { command: 'live', description: 'Запустити live-опитування (власник)' }
       ]
     }, env);
   } catch (error) {
@@ -2418,4 +2451,305 @@ export class ChatRouletteRoom {
       keyboard: 'start'
     };
   }
+}
+
+
+// ==================== VakDab live stream voting ====================
+
+async function readLiveState(env) {
+  if (!env.MAKIMA_MEMORY) return null;
+  try {
+    const raw = await env.MAKIMA_MEMORY.get(LIVE_STATE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    console.error('[live] state read failed:', safeError(error));
+    return null;
+  }
+}
+
+async function writeLiveState(state, env) {
+  if (!env.MAKIMA_MEMORY) throw new Error('MAKIMA_MEMORY is not configured');
+  await env.MAKIMA_MEMORY.put(LIVE_STATE_KEY, JSON.stringify(state));
+  return state;
+}
+
+function liveCorsHeaders(request) {
+  const origin = request.headers.get('Origin') || '';
+  const headers = {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store'
+  };
+  if (LIVE_API_ORIGINS.has(origin)) {
+    headers['access-control-allow-origin'] = origin;
+    headers['access-control-allow-methods'] = 'GET, OPTIONS';
+    headers['access-control-allow-headers'] = 'content-type';
+    headers.vary = 'Origin';
+  }
+  return headers;
+}
+
+function publicLiveState(state, env) {
+  if (!state) return { status: 'idle' };
+  const poll = state.poll ? {
+    question: state.poll.question,
+    stage: state.poll.stage,
+    stageLabel: state.poll.stageLabel,
+    options: (state.poll.options || []).map(item => ({ label: item.label, votes: Number(item.votes || 0) }))
+  } : null;
+  return {
+    status: state.status || 'idle',
+    poll,
+    animeTitle: state.selected?.anime?.label || '',
+    animeUrl: state.selected?.anime?.url || '',
+    episode: state.selected?.episode?.value || '',
+    dub: state.selected?.dub?.value || '',
+    durationMinutes: Number(state.selected?.duration?.value || 0) || 0,
+    startsAt: Number(state.startsAt || 0) || 0,
+    endsAt: Number(state.endsAt || 0) || 0,
+    updatedAt: Number(state.updatedAt || 0) || 0,
+    telegramUrl: env.TELEGRAM_BOT_USERNAME ? `https://t.me/${String(env.TELEGRAM_BOT_USERNAME).replace(/^@/, '')}` : ''
+  };
+}
+
+async function getLiveStateResponse(request, env) {
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: liveCorsHeaders(request) });
+  const state = await readLiveState(env);
+  return new Response(JSON.stringify({ live: publicLiveState(state, env) }), { status: 200, headers: liveCorsHeaders(request) });
+}
+
+function liveChunks(items) {
+  const safe = Array.isArray(items) ? items.filter(Boolean) : [];
+  const chunks = [];
+  for (let index = 0; index < safe.length; index += LIVE_POLL_MAX_OPTIONS) chunks.push(safe.slice(index, index + LIVE_POLL_MAX_OPTIONS));
+  return chunks.length ? chunks : [[]];
+}
+
+function liveOption(label, value, extra = {}) {
+  return { label: String(label || '').slice(0, 100), value: String(value || ''), ...extra };
+}
+
+function uniqueLiveOptions(items) {
+  const seen = new Set();
+  return items.filter(item => {
+    const key = String(item?.value || item?.label || '').trim();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function findMikaiId(value) {
+  const match = String(value || '').match(/\/anime\/(\d+)(?:[-/?#]|$)/i);
+  return match?.[1] || '';
+}
+
+async function fetchLiveAnimeMeta(animeUrl) {
+  const details = await fetchAnimeDetails(animeUrl, 'anime');
+  const external = Array.isArray(details.external) ? details.external : [];
+  const mikaiUrl = external.map(item => typeof item === 'string' ? item : item?.url).find(url => /^https:\/\/(?:www\.)?mikai\.me\/anime\//i.test(String(url || '')));
+  const mikaiId = findMikaiId(mikaiUrl);
+  const byDub = {};
+  if (mikaiId) {
+    try {
+      const response = await fetch(`${MIKAI_API_BASE}/anime/${mikaiId}`, { headers: { accept: 'application/json' } });
+      if (response.ok) {
+        const payload = await response.json();
+        const players = payload?.result?.players || payload?.players || [];
+        for (const group of players) {
+          if (group?.isSubs) continue;
+          const dub = String(group?.team?.name || '').trim() || 'Основна озвучка';
+          const episodes = (group?.providers || []).flatMap(provider => provider?.name === 'ASHDI' ? (provider.episodes || []) : []).map(ep => String(ep?.number ?? '').trim()).filter(Boolean);
+          if (episodes.length) byDub[dub] = [...new Set([...(byDub[dub] || []), ...episodes])].sort((a, b) => Number(a) - Number(b));
+        }
+      }
+    } catch (error) {
+      console.warn('[live] Mikai metadata failed:', safeError(error));
+    }
+  }
+  const episodeCount = Number(details.episodes || details.episodesTotal || 0) || 1;
+  const episodeNumbers = uniqueLiveOptions(Object.values(byDub).flat().map(number => liveOption(`Серія ${number}`, number)));
+  const fallbackEpisodes = Array.from({ length: Math.min(episodeCount, 100) }, (_, index) => liveOption(`Серія ${index + 1}`, index + 1));
+  const dubs = Object.keys(byDub).map(name => liveOption(name, name));
+  return {
+    title: details.title,
+    episodes: episodeNumbers.length ? episodeNumbers : fallbackEpisodes,
+    dubs: dubs.length ? dubs : [liveOption('Основна озвучка', 'Основна озвучка')],
+    episodesByDub: byDub
+  };
+}
+
+function liveStageDefinition(state, stageIndex) {
+  if (stageIndex === 0) return { stage: 'anime', stageLabel: 'Крок 1 із 4 — оберіть аніме', question: 'Яке аніме дивимося разом?', options: state.animeOptions || [] };
+  if (stageIndex === 1) return { stage: 'episode', stageLabel: 'Крок 2 із 4 — оберіть серію', question: `Яку серію дивимося: ${state.selected?.anime?.label || 'обране аніме'}?`, options: state.episodeOptions || [] };
+  if (stageIndex === 2) return { stage: 'dub', stageLabel: 'Крок 3 із 4 — оберіть озвучку', question: 'Яку озвучку обираємо?', options: state.dubOptions || [] };
+  return { stage: 'duration', stageLabel: 'Крок 4 із 4 — оберіть тривалість', question: 'Скільки хвилин триває live-перегляд?', options: LIVE_DURATION_OPTIONS.map(minutes => liveOption(`${minutes} хвилин`, minutes)) };
+}
+
+async function sendLivePollBatch(state, env) {
+  const definition = liveStageDefinition(state, state.stageIndex);
+  const batches = state.pollBatches || liveChunks(definition.options);
+  const batch = batches[state.batchIndex] || [];
+  const question = batches.length > 1 ? `${definition.question} (частина ${state.batchIndex + 1}/${batches.length})` : definition.question;
+  const result = await telegram('sendPoll', {
+    chat_id: state.chatId,
+    question: question.slice(0, 300),
+    options: batch.map(item => item.label.slice(0, 100)),
+    is_anonymous: false,
+    allows_multiple_answers: false,
+    close_period: LIVE_POLL_CLOSE_SECONDS
+  }, env);
+  if (!result?.ok || !result.result?.id) throw new Error(result?.description || 'LIVE_POLL_SEND_FAILED');
+  state.poll = {
+    id: String(result.result.id),
+    stage: definition.stage,
+    stageIndex: state.stageIndex,
+    batchIndex: state.batchIndex,
+    stageLabel: definition.stageLabel,
+    question,
+    options: batch.map(item => ({ ...item, votes: 0 })),
+    sentAt: Date.now()
+  };
+  state.updatedAt = Date.now();
+  await writeLiveState(state, env);
+  await env.MAKIMA_MEMORY?.put(`${LIVE_POLL_PREFIX}${state.poll.id}`, JSON.stringify({ sessionId: state.id, chatId: state.chatId, stageIndex: state.stageIndex, batchIndex: state.batchIndex }));
+  return result;
+}
+
+async function startLiveSession(chatId, env, messageId = null) {
+  const popular = await fetchPopularAnime();
+  const animeOptions = uniqueLiveOptions(popular.slice(0, 100).map(item => liveOption(item.title, item.url, { id: item.id, slug: item.slug })));
+  if (!animeOptions.length) {
+    await updateOrSend(chatId, messageId, 'Не вдалося сформувати список аніме для live-опитування.', false, { reply_markup: mainKeyboard() }, env);
+    return;
+  }
+  const state = {
+    id: `${Date.now()}-${String(chatId)}`,
+    chatId: String(chatId),
+    status: 'polling',
+    stageIndex: 0,
+    batchIndex: 0,
+    pollBatches: liveChunks(animeOptions),
+    batchWinners: [],
+    animeOptions,
+    episodeOptions: [],
+    dubOptions: [],
+    selected: {},
+    updatedAt: Date.now()
+  };
+  await writeLiveState(state, env);
+  if (messageId) await deleteMessage(chatId, messageId, env);
+  await sendMessage(chatId, 'Починаємо live-опитування. Бот проведе кроки по черзі: аніме → серія → озвучка → тривалість.', {}, env);
+  await sendLivePollBatch(state, env);
+}
+
+function countLivePollVotes(votes, optionCount) {
+  const counts = Array.from({ length: optionCount }, () => 0);
+  for (const selected of votes) for (const index of selected) if (Number.isInteger(index) && counts[index] !== undefined) counts[index] += 1;
+  return counts;
+}
+
+async function getLiveVotes(pollId, env) {
+  if (!env.MAKIMA_MEMORY) return [];
+  const votes = [];
+  let cursor;
+  try {
+    do {
+      const page = await env.MAKIMA_MEMORY.list({ prefix: `${LIVE_VOTE_PREFIX}${pollId}:`, limit: 1000, ...(cursor ? { cursor } : {}) });
+      for (const key of page?.keys || []) {
+        const raw = await env.MAKIMA_MEMORY.get(key.name);
+        try { votes.push(JSON.parse(raw || '[]')); } catch { /* ignore malformed vote */ }
+      }
+      cursor = page?.list_complete ? undefined : page?.cursor;
+    } while (cursor);
+  } catch (error) {
+    console.error('[live] votes read failed:', safeError(error));
+  }
+  return votes;
+}
+
+async function handleLivePollAnswer(answer, env) {
+  const pollId = String(answer?.poll_id || '');
+  const userId = String(answer?.user?.id || '');
+  if (!pollId || !userId || !env.MAKIMA_MEMORY) return;
+  const mappingRaw = await env.MAKIMA_MEMORY.get(`${LIVE_POLL_PREFIX}${pollId}`);
+  if (!mappingRaw) return;
+  const mapping = JSON.parse(mappingRaw);
+  const state = await readLiveState(env);
+  if (!state?.poll || String(state.poll.id) !== pollId || state.id !== mapping.sessionId) return;
+  await env.MAKIMA_MEMORY.put(`${LIVE_VOTE_PREFIX}${pollId}:${userId}`, JSON.stringify(Array.isArray(answer.option_ids) ? answer.option_ids : []));
+  const counts = countLivePollVotes(await getLiveVotes(pollId, env), state.poll.options.length);
+  state.poll.options = state.poll.options.map((item, index) => ({ ...item, votes: counts[index] || 0 }));
+  state.updatedAt = Date.now();
+  await writeLiveState(state, env);
+}
+
+function pickLiveWinner(options) {
+  if (!options?.length) return null;
+  return options.reduce((winner, item) => Number(item.votes || 0) > Number(winner?.votes || -1) ? item : winner, options[0]);
+}
+
+async function advanceLiveAfterWinner(state, winner, env) {
+  if (!winner) return;
+  if (state.stageIndex === 0) {
+    state.selected.anime = winner;
+    const meta = await fetchLiveAnimeMeta(winner.url);
+    state.selected.anime = { ...winner, label: meta.title || winner.label };
+    state.episodeOptions = meta.episodes;
+    state.dubOptions = meta.dubs;
+  } else if (state.stageIndex === 1) {
+    state.selected.episode = winner;
+  } else if (state.stageIndex === 2) {
+    state.selected.dub = winner;
+  } else {
+    state.selected.duration = winner;
+    state.status = 'running';
+    state.startsAt = Date.now();
+    state.endsAt = state.startsAt + Number(winner.value || 60) * 60 * 1000;
+    state.poll = null;
+    state.updatedAt = Date.now();
+    await writeLiveState(state, env);
+    await sendMessage(state.chatId, `<b>Live-стрім починається!</b>\n\n${escapeHtml(state.selected.anime?.label || 'Аніме')}\nСерія: ${escapeHtml(state.selected.episode?.value || '—')}\nОзвучка: ${escapeHtml(state.selected.dub?.value || '—')}\nТривалість: ${escapeHtml(state.selected.duration?.value || '—')} хв\n\nВідкрийте VakDab для перегляду.`, { reply_markup: { inline_keyboard: [[{ text: 'Відкрити VakDab', url: SITE_BASE_URL }]] } }, env);
+    return;
+  }
+  state.stageIndex += 1;
+  state.batchIndex = 0;
+  state.batchWinners = [];
+  const definition = liveStageDefinition(state, state.stageIndex);
+  state.pollBatches = liveChunks(definition.options);
+  state.poll = null;
+  state.updatedAt = Date.now();
+  await writeLiveState(state, env);
+  await sendLivePollBatch(state, env);
+}
+
+async function handleLivePollUpdate(poll, env) {
+  const pollId = String(poll?.id || '');
+  if (!pollId || !poll?.is_closed) return;
+  const state = await readLiveState(env);
+  if (!state?.poll || String(state.poll.id) !== pollId) return;
+  const counts = countLivePollVotes(await getLiveVotes(pollId, env), state.poll.options.length);
+  state.poll.options = state.poll.options.map((item, index) => ({ ...item, votes: counts[index] || 0 }));
+  const winner = pickLiveWinner(state.poll.options);
+  const batchCount = (state.pollBatches || []).length;
+  if (batchCount > 1 && state.batchIndex < batchCount - 1) {
+    if (winner) state.batchWinners.push(winner);
+    state.batchIndex += 1;
+    state.poll = null;
+    state.updatedAt = Date.now();
+    await writeLiveState(state, env);
+    await sendLivePollBatch(state, env);
+    return;
+  }
+  if (batchCount > 1 && state.batchWinners.length) {
+    if (winner) state.batchWinners.push(winner);
+    state.pollBatches = [state.batchWinners];
+    state.batchWinners = [];
+    state.batchIndex = 0;
+    state.poll = null;
+    state.updatedAt = Date.now();
+    await writeLiveState(state, env);
+    await sendLivePollBatch(state, env);
+    return;
+  }
+  await advanceLiveAfterWinner(state, winner, env);
 }

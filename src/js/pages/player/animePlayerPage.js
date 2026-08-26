@@ -233,8 +233,16 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-re
                 loadAnimeRatingAggregate(url);
                 const seasons = Object.keys(anime.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
                 playerPageCurrentSeason = seasons[0] || '1';
-                playerPageCurrentDub = pickPreferredDub(anime.seasons[playerPageCurrentSeason]);
-                playerPageCurrentEpisodeNum = '1';
+                const liveSeasonData = anime.seasons?.[playerPageCurrentSeason] || {};
+                const requestedLiveDub = String(options.liveDub || '').trim();
+                playerPageCurrentDub = requestedLiveDub && liveSeasonData[requestedLiveDub]
+                    ? requestedLiveDub
+                    : pickPreferredDub(liveSeasonData);
+                const liveEpisodes = liveSeasonData[playerPageCurrentDub] || [];
+                const requestedLiveEpisode = String(options.liveEpisode || '').trim();
+                playerPageCurrentEpisodeNum = liveEpisodes.some(ep => String(ep.episode) === requestedLiveEpisode)
+                    ? requestedLiveEpisode
+                    : '1';
                 playerPageCurrentQuality = '720p';
                 buildSeasonRow(seasons);
                 buildEpisodeViews();
@@ -1542,6 +1550,15 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-re
                     Router.goTo('stickers');
                 } else if (action === 'schedule') {
                     Router.goTo('schedule');
+                } else if (action === 'live') {
+                    document.getElementById('liveStreamContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else if (action === 'catalog') {
+                    Router.goTo('main');
+                    setTimeout(() => document.getElementById('homeCatalogSearch')?.focus(), 180);
+                } else if (action === 'popular') {
+                    showTop100();
+                } else if (action === 'random') {
+                    openRandomAnime();
                 }
             });
         });
