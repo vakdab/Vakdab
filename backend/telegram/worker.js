@@ -13,8 +13,9 @@ const LIVE_POLL_PREFIX = 'live:poll:';
 const LIVE_VOTE_PREFIX = 'live:vote:';
 const LIVE_POLL_MAX_OPTIONS = 10;
 const LIVE_POLL_CLOSE_SECONDS = 300;
-const LIVE_ANIME_POLL_CLOSE_SECONDS = 15;
+const LIVE_ANIME_POLL_CLOSE_SECONDS = 15 * 60;
 const LIVE_EPISODE_COUNT_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 10];
+const LIVE_HOUR_OPTIONS = [1, 2, 3, 4, 6];
 const LIVE_API_ORIGINS = new Set(['https://vakdab.github.io', 'https://vakdab.web.app']);
 const REQUIRED_CHANNEL_USERNAME = '@vakluna';
 const REQUIRED_CHANNEL_URL = 'https://t.me/vakluna';
@@ -2522,7 +2523,8 @@ async function publicLiveState(state, env) {
     episode: state.selected?.episode?.value || '',
     episodeCount: Number(state.selected?.episodeCount?.value || 0) || 0,
     dub: state.selected?.dub?.value || '',
-    durationMinutes: Number(state.selected?.duration?.value || 0) || 0,
+    durationMinutes: Number(state.selected?.duration?.value || 0) * 60 || 0,
+    durationHours: Number(state.selected?.duration?.value || 0) || 0,
     startsAt: Number(state.startsAt || 0) || 0,
     endsAt: Number(state.endsAt || 0) || 0,
     updatedAt: Number(state.updatedAt || 0) || 0,
@@ -2590,22 +2592,31 @@ async function fetchLiveAnimeMeta(animeUrl) {
   const fallbackEpisodes = Array.from({ length: Math.min(episodeCount, 100) }, (_, index) => liveOption(`Серія ${index + 1}`, index + 1));
   const dubs = Object.keys(byDub).map(name => liveOption(name, name));
   const maxEpisodes = Math.max(1, ...Object.values(byDub).map(list => list.length), episodeCount);
-  const episodeCountOptions = LIVE_EPISODE_COUNT_OPTIONS
-    .filter(count => count <= maxEpisodes)
-    .map(count => liveOption(`${count} ${count === 1 ? 'серія' : 'серій'}`, count));
+  const countValues = [...new Set([...LIVE_EPISODE_COUNT_OPTIONS.filter(count => count <= maxEpisodes), ...(maxEpisodes <= 50 ? [maxEpisodes] : [])])].sort((a, b) => a - b);
+  const episodeCountOptions = countValues.map(count => liveOption(`${count} ${count === 1 ? 'серія' : 'серій'}`, count));
+  const mediaType = String(details.media_type || details.type || details.format || '').toLowerCase();
+  const isMovie = mediaType === 'movie' || mediaType === 'film' || /фільм|movie|film/i.test(String(details.title || ''));
   return {
     title: details.title,
+    isMovie,
     episodes: episodeNumbers.length ? episodeNumbers : fallbackEpisodes,
     episodeCountOptions: episodeCountOptions.length ? episodeCountOptions : [liveOption('1 серія', 1)],
-    dubs: dubs.length ? dubs : [liveOption('Основна озвучка', 'Основна озвучка')],
+    dubs: dubs.length ? dubs.slice(0, LIVE_POLL_MAX_OPTIONS) : [liveOption('Основна озвучка', 'Основна озвучка')],
     episodesByDub: byDub
   };
 }
 
+function liveStageDefinitions(state) {
+  const stages = [{ stage: 'anime', stageLabel: 'Крок 1 із 4 — оберіть аніме', question: 'Яке аніме дивимося разом?', options: state.animeOptions || [], closeSeconds: LIVE_ANIME_POLL_CLOSE_SECONDS }];
+  const totalSteps = state.isMovie ? 3 : 4;
+  if (!state.isMovie) stages.push({ stage: 'episode_count', stageLabel: `Крок 2 із ${totalSteps} — оберіть кількість серій`, question: `Скільки серій дивимося: ${state.selected?.anime?.label || 'обране аніме'}?`, options: state.episodeCountOptions || [], closeSeconds: LIVE_POLL_CLOSE_SECONDS });
+  stages.push({ stage: 'dub', stageLabel: `Крок ${state.isMovie ? 2 : 3} із ${totalSteps} — оберіть озвучку`, question: 'Яку озвучку обираємо?', options: state.dubOptions || [], closeSeconds: LIVE_POLL_CLOSE_SECONDS });
+  stages.push({ stage: 'duration', stageLabel: `Крок ${state.isMovie ? 3 : 4} із ${totalSteps} — оберіть години`, question: 'Скільки годин триває live-перегляд?', options: LIVE_HOUR_OPTIONS.map(hours => liveOption(`${hours} ${hours === 1 ? 'година' : 'години'}`, hours)), closeSeconds: LIVE_POLL_CLOSE_SECONDS });
+  return stages;
+}
+
 function liveStageDefinition(state, stageIndex) {
-  if (stageIndex === 0) return { stage: 'anime', stageLabel: 'Крок 1 із 3 — оберіть аніме', question: 'Яке аніме дивимося разом?', options: state.animeOptions || [] };
-  if (stageIndex === 1) return { stage: 'episode_count', stageLabel: 'Крок 2 із 3 — оберіть кількість серій', question: `Скільки серій дивимося: ${state.selected?.anime?.label || 'обране аніме'}?`, options: state.episodeCountOptions || [] };
-  return { stage: 'dub', stageLabel: 'Крок 3 із 3 — оберіть озвучку', question: 'Яку озвучку обираємо?', options: state.dubOptions || [] };
+  return liveStageDefinitions(state)[stageIndex] || null;
 }
 
 async function sendLivePollBatch(state, env) {
@@ -2619,11 +2630,12 @@ async function sendLivePollBatch(state, env) {
     options: batch.map(item => item.label.slice(0, 100)),
     is_anonymous: false,
     allows_multiple_answers: false,
-    close_period: state.stageIndex === 0 ? LIVE_ANIME_POLL_CLOSE_SECONDS : LIVE_POLL_CLOSE_SECONDS
+    close_period: definition.closeSeconds,
   }, env);
   if (!result?.ok || !result.result?.id) throw new Error(result?.description || 'LIVE_POLL_SEND_FAILED');
   state.poll = {
     id: String(result.result.id),
+    messageId: String(result.result.message_id || ''),
     stage: definition.stage,
     stageIndex: state.stageIndex,
     batchIndex: state.batchIndex,
@@ -2661,12 +2673,13 @@ async function startLiveSession(chatId, env, messageId = null) {
     status: 'polling',
     stageIndex: 0,
     batchIndex: 0,
-    pollBatches: liveChunks(animeOptions),
+    pollBatches: [animeOptions],
     batchWinners: [],
     animeOptions,
     episodeOptions: [],
     episodeCountOptions: [],
     dubOptions: [],
+    isMovie: false,
     selected: {},
     updatedAt: Date.now()
   };
@@ -2728,22 +2741,25 @@ async function advanceLiveAfterWinner(state, winner, env) {
     state.selected.anime = winner;
     const meta = await fetchLiveAnimeMeta(winner.url);
     state.selected.anime = { ...winner, label: meta.title || winner.label };
+    state.isMovie = Boolean(meta.isMovie);
     state.episodeOptions = meta.episodes;
     state.episodeCountOptions = meta.episodeCountOptions;
     state.dubOptions = meta.dubs;
-  } else if (state.stageIndex === 1) {
+  } else if (!state.isMovie && state.stageIndex === 1) {
     const count = Math.max(1, Number(winner.value || 1));
     state.selected.episodeCount = liveOption(`${count} ${count === 1 ? 'серія' : 'серій'}`, count);
     state.selected.episode = liveOption(count === 1 ? '1' : `1–${count}`, count === 1 ? '1' : `1–${count}`);
-  } else if (state.stageIndex === 2) {
+  } else if (state.stageIndex === (state.isMovie ? 1 : 2)) {
     state.selected.dub = winner;
+  } else if (state.stageIndex === (state.isMovie ? 2 : 3)) {
+    state.selected.duration = winner;
     state.status = 'running';
     state.startsAt = Date.now();
-    state.endsAt = 0;
+    state.endsAt = state.startsAt + Number(winner.value || 1) * 60 * 60 * 1000;
     state.poll = null;
     state.updatedAt = Date.now();
     await writeLiveState(state, env);
-    await sendMessage(state.chatId, `<b>Live-стрім починається!</b>\n\n${escapeHtml(state.selected.anime?.label || 'Аніме')}\nКількість серій: ${escapeHtml(state.selected.episodeCount?.value || '—')}\nОзвучка: ${escapeHtml(state.selected.dub?.value || '—')}\n\nВідкрийте VakDab для перегляду.`, { reply_markup: { inline_keyboard: [[{ text: 'Відкрити VakDab', url: SITE_BASE_URL }]] } }, env);
+    await sendMessage(state.chatId, `<b>Live-стрім починається!</b>\n\n${escapeHtml(state.selected.anime?.label || 'Аніме')}${state.isMovie ? '\nФільм' : `\nКількість серій: ${escapeHtml(state.selected.episodeCount?.value || '—')}`}\nОзвучка: ${escapeHtml(state.selected.dub?.value || '—')}\nТривалість: ${escapeHtml(state.selected.duration?.value || '—')} год.\n\nВідкрийте VakDab для перегляду.`, { reply_markup: { inline_keyboard: [[{ text: 'Відкрити VakDab', url: SITE_BASE_URL }]] } }, env);
     return;
   }
   state.stageIndex += 1;
