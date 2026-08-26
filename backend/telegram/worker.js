@@ -13,7 +13,8 @@ const LIVE_POLL_PREFIX = 'live:poll:';
 const LIVE_VOTE_PREFIX = 'live:vote:';
 const LIVE_POLL_MAX_OPTIONS = 10;
 const LIVE_POLL_CLOSE_SECONDS = 300;
-const LIVE_DURATION_OPTIONS = [30, 60, 90, 120];
+const LIVE_ANIME_POLL_CLOSE_SECONDS = 15;
+const LIVE_EPISODE_COUNT_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 10];
 const LIVE_API_ORIGINS = new Set(['https://vakdab.github.io', 'https://vakdab.web.app']);
 const REQUIRED_CHANNEL_USERNAME = '@vakluna';
 const REQUIRED_CHANNEL_URL = 'https://t.me/vakluna';
@@ -2519,6 +2520,7 @@ async function publicLiveState(state, env) {
     animeTitle: state.selected?.anime?.label || '',
     animeUrl: state.selected?.anime?.url || '',
     episode: state.selected?.episode?.value || '',
+    episodeCount: Number(state.selected?.episodeCount?.value || 0) || 0,
     dub: state.selected?.dub?.value || '',
     durationMinutes: Number(state.selected?.duration?.value || 0) || 0,
     startsAt: Number(state.startsAt || 0) || 0,
@@ -2587,19 +2589,23 @@ async function fetchLiveAnimeMeta(animeUrl) {
   const episodeNumbers = uniqueLiveOptions(Object.values(byDub).flat().map(number => liveOption(`Серія ${number}`, number)));
   const fallbackEpisodes = Array.from({ length: Math.min(episodeCount, 100) }, (_, index) => liveOption(`Серія ${index + 1}`, index + 1));
   const dubs = Object.keys(byDub).map(name => liveOption(name, name));
+  const maxEpisodes = Math.max(1, ...Object.values(byDub).map(list => list.length), episodeCount);
+  const episodeCountOptions = LIVE_EPISODE_COUNT_OPTIONS
+    .filter(count => count <= maxEpisodes)
+    .map(count => liveOption(`${count} ${count === 1 ? 'серія' : 'серій'}`, count));
   return {
     title: details.title,
     episodes: episodeNumbers.length ? episodeNumbers : fallbackEpisodes,
+    episodeCountOptions: episodeCountOptions.length ? episodeCountOptions : [liveOption('1 серія', 1)],
     dubs: dubs.length ? dubs : [liveOption('Основна озвучка', 'Основна озвучка')],
     episodesByDub: byDub
   };
 }
 
 function liveStageDefinition(state, stageIndex) {
-  if (stageIndex === 0) return { stage: 'anime', stageLabel: 'Крок 1 із 4 — оберіть аніме', question: 'Яке аніме дивимося разом?', options: state.animeOptions || [] };
-  if (stageIndex === 1) return { stage: 'episode', stageLabel: 'Крок 2 із 4 — оберіть серію', question: `Яку серію дивимося: ${state.selected?.anime?.label || 'обране аніме'}?`, options: state.episodeOptions || [] };
-  if (stageIndex === 2) return { stage: 'dub', stageLabel: 'Крок 3 із 4 — оберіть озвучку', question: 'Яку озвучку обираємо?', options: state.dubOptions || [] };
-  return { stage: 'duration', stageLabel: 'Крок 4 із 4 — оберіть тривалість', question: 'Скільки хвилин триває live-перегляд?', options: LIVE_DURATION_OPTIONS.map(minutes => liveOption(`${minutes} хвилин`, minutes)) };
+  if (stageIndex === 0) return { stage: 'anime', stageLabel: 'Крок 1 із 3 — оберіть аніме', question: 'Яке аніме дивимося разом?', options: state.animeOptions || [] };
+  if (stageIndex === 1) return { stage: 'episode_count', stageLabel: 'Крок 2 із 3 — оберіть кількість серій', question: `Скільки серій дивимося: ${state.selected?.anime?.label || 'обране аніме'}?`, options: state.episodeCountOptions || [] };
+  return { stage: 'dub', stageLabel: 'Крок 3 із 3 — оберіть озвучку', question: 'Яку озвучку обираємо?', options: state.dubOptions || [] };
 }
 
 async function sendLivePollBatch(state, env) {
@@ -2613,7 +2619,7 @@ async function sendLivePollBatch(state, env) {
     options: batch.map(item => item.label.slice(0, 100)),
     is_anonymous: false,
     allows_multiple_answers: false,
-    close_period: LIVE_POLL_CLOSE_SECONDS
+    close_period: state.stageIndex === 0 ? LIVE_ANIME_POLL_CLOSE_SECONDS : LIVE_POLL_CLOSE_SECONDS
   }, env);
   if (!result?.ok || !result.result?.id) throw new Error(result?.description || 'LIVE_POLL_SEND_FAILED');
   state.poll = {
@@ -2633,8 +2639,18 @@ async function sendLivePollBatch(state, env) {
 }
 
 async function startLiveSession(chatId, env, messageId = null) {
+  const existing = await readLiveState(env);
+  if (existing?.chatId === String(chatId) && existing.status === 'polling' && existing.poll?.id) {
+    await sendMessage(chatId, 'Live-опитування вже триває. Дочекайтеся завершення поточного кроку.', {}, env);
+    return;
+  }
+  if (existing?.chatId === String(chatId) && existing.status === 'running') {
+    await sendMessage(chatId, 'Live-стрім уже активний. Нове опитування можна запустити після його завершення.', {}, env);
+    return;
+  }
   const popular = await fetchPopularAnime();
-  const animeOptions = uniqueLiveOptions(popular.slice(0, 100).map(item => liveOption(item.title, item.url, { id: item.id, slug: item.slug })));
+  // Один короткий anime poll. Не створюємо десятки batch-poll-ів, бо це виглядає як спам.
+  const animeOptions = uniqueLiveOptions(popular.slice(0, LIVE_POLL_MAX_OPTIONS).map(item => liveOption(item.title, item.url, { id: item.id, slug: item.slug })));
   if (!animeOptions.length) {
     await updateOrSend(chatId, messageId, 'Не вдалося сформувати список аніме для live-опитування.', false, { reply_markup: mainKeyboard() }, env);
     return;
@@ -2649,6 +2665,7 @@ async function startLiveSession(chatId, env, messageId = null) {
     batchWinners: [],
     animeOptions,
     episodeOptions: [],
+    episodeCountOptions: [],
     dubOptions: [],
     selected: {},
     updatedAt: Date.now()
@@ -2712,20 +2729,21 @@ async function advanceLiveAfterWinner(state, winner, env) {
     const meta = await fetchLiveAnimeMeta(winner.url);
     state.selected.anime = { ...winner, label: meta.title || winner.label };
     state.episodeOptions = meta.episodes;
+    state.episodeCountOptions = meta.episodeCountOptions;
     state.dubOptions = meta.dubs;
   } else if (state.stageIndex === 1) {
-    state.selected.episode = winner;
+    const count = Math.max(1, Number(winner.value || 1));
+    state.selected.episodeCount = liveOption(`${count} ${count === 1 ? 'серія' : 'серій'}`, count);
+    state.selected.episode = liveOption(count === 1 ? '1' : `1–${count}`, count === 1 ? '1' : `1–${count}`);
   } else if (state.stageIndex === 2) {
     state.selected.dub = winner;
-  } else {
-    state.selected.duration = winner;
     state.status = 'running';
     state.startsAt = Date.now();
-    state.endsAt = state.startsAt + Number(winner.value || 60) * 60 * 1000;
+    state.endsAt = 0;
     state.poll = null;
     state.updatedAt = Date.now();
     await writeLiveState(state, env);
-    await sendMessage(state.chatId, `<b>Live-стрім починається!</b>\n\n${escapeHtml(state.selected.anime?.label || 'Аніме')}\nСерія: ${escapeHtml(state.selected.episode?.value || '—')}\nОзвучка: ${escapeHtml(state.selected.dub?.value || '—')}\nТривалість: ${escapeHtml(state.selected.duration?.value || '—')} хв\n\nВідкрийте VakDab для перегляду.`, { reply_markup: { inline_keyboard: [[{ text: 'Відкрити VakDab', url: SITE_BASE_URL }]] } }, env);
+    await sendMessage(state.chatId, `<b>Live-стрім починається!</b>\n\n${escapeHtml(state.selected.anime?.label || 'Аніме')}\nКількість серій: ${escapeHtml(state.selected.episodeCount?.value || '—')}\nОзвучка: ${escapeHtml(state.selected.dub?.value || '—')}\n\nВідкрийте VakDab для перегляду.`, { reply_markup: { inline_keyboard: [[{ text: 'Відкрити VakDab', url: SITE_BASE_URL }]] } }, env);
     return;
   }
   state.stageIndex += 1;
@@ -2744,8 +2762,13 @@ async function handleLivePollUpdate(poll, env) {
   if (!pollId || !poll?.is_closed) return;
   const state = await readLiveState(env);
   if (!state?.poll || String(state.poll.id) !== pollId) return;
-  const counts = countLivePollVotes(await getLiveVotes(pollId, env), state.poll.options.length);
+  if (state.lastProcessedPollId === pollId) return;
+  state.lastProcessedPollId = pollId;
+  const telegramCounts = Array.isArray(poll.options) ? poll.options.map(option => Number(option?.voter_count || 0)) : [];
+  const storedCounts = countLivePollVotes(await getLiveVotes(pollId, env), state.poll.options.length);
+  const counts = telegramCounts.length === state.poll.options.length ? telegramCounts : storedCounts;
   state.poll.options = state.poll.options.map((item, index) => ({ ...item, votes: counts[index] || 0 }));
+  await writeLiveState(state, env);
   const winner = pickLiveWinner(state.poll.options);
   const batchCount = (state.pollBatches || []).length;
   if (batchCount > 1 && state.batchIndex < batchCount - 1) {
