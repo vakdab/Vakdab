@@ -2644,8 +2644,11 @@ async function sendLivePollBatch(state, env) {
 
 async function startLiveSession(chatId, env, messageId = null) {
   const existing = await readLiveState(env);
-  if (existing?.chatId === String(chatId) && existing.status === 'polling' && existing.poll?.id) {
-    await sendMessage(chatId, 'Live-опитування вже триває. Дочекайтеся завершення поточного кроку.', {}, env);
+  if (existing?.chatId === String(chatId) && existing.status === 'polling') {
+    const message = existing.poll?.id
+      ? 'Live-опитування вже триває. Дочекайтеся завершення поточного кроку.'
+      : 'Live-опитування вже переходить до наступного кроку. Новий запуск не потрібен.';
+    await sendMessage(chatId, message, {}, env);
     return;
   }
   if (existing?.chatId === String(chatId) && existing.status === 'running') {
@@ -2675,7 +2678,7 @@ async function startLiveSession(chatId, env, messageId = null) {
   };
   await writeLiveState(state, env);
   if (messageId) await deleteMessage(chatId, messageId, env);
-  await sendMessage(chatId, 'Починаємо live-опитування. Бот проведе кроки по черзі: аніме → серія → озвучка → тривалість.', {}, env);
+  await sendMessage(chatId, 'Починаємо live-опитування. Бот проведе кроки по черзі: аніме → кількість серій (для серіалів) → озвучка → години.', {}, env);
   await sendLivePollBatch(state, env);
 }
 
