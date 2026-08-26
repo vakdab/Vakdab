@@ -15,7 +15,7 @@ const LIVE_POLL_MAX_OPTIONS = 10;
 const LIVE_POLL_CLOSE_SECONDS = 300;
 const LIVE_ANIME_POLL_CLOSE_SECONDS = 5 * 60;
 const LIVE_EPISODE_COUNT_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 10];
-const LIVE_HOUR_OPTIONS = [1, 2, 3, 4, 6];
+const LIVE_OWNER_DURATION_HOURS = 2;
 const LIVE_API_ORIGINS = new Set(['https://vakdab.github.io', 'https://vakdab.web.app']);
 const REQUIRED_CHANNEL_USERNAME = '@vakluna';
 const REQUIRED_CHANNEL_URL = 'https://t.me/vakluna';
@@ -2601,11 +2601,10 @@ async function fetchLiveAnimeMeta(animeUrl) {
 }
 
 function liveStageDefinitions(state) {
-  const totalSteps = state.isMovie ? 3 : 4;
-  const stages = [{ stage: 'anime', stageLabel: `Крок 1 із ${totalSteps} — оберіть аніме`, question: 'Яке аніме дивимося разом?', options: state.animeOptions || [], closeSeconds: LIVE_ANIME_POLL_CLOSE_SECONDS }];
+  const totalSteps = state.isMovie ? 2 : 3;
+  const stages = [{ stage: 'anime', stageLabel: `Крок 1 із ${totalSteps} — оберіть аніме`, question: 'Яке аніме дивимося разом?', options: state.animeOptions || [], closeSeconds: LIVE_POLL_CLOSE_SECONDS }];
   if (!state.isMovie) stages.push({ stage: 'episode_count', stageLabel: `Крок 2 із ${totalSteps} — оберіть кількість серій`, question: `Скільки серій дивимося: ${state.selected?.anime?.label || 'обране аніме'}?`, options: state.episodeCountOptions || [], closeSeconds: LIVE_POLL_CLOSE_SECONDS });
   stages.push({ stage: 'dub', stageLabel: `Крок ${state.isMovie ? 2 : 3} із ${totalSteps} — оберіть озвучку`, question: 'Яку озвучку обираємо?', options: state.dubOptions || [], closeSeconds: LIVE_POLL_CLOSE_SECONDS });
-  stages.push({ stage: 'duration', stageLabel: `Крок ${state.isMovie ? 3 : 4} із ${totalSteps} — оберіть години`, question: 'Скільки годин триває live-перегляд?', options: LIVE_HOUR_OPTIONS.map(hours => liveOption(`${hours} ${hours === 1 ? 'година' : 'години'}`, hours)), closeSeconds: LIVE_POLL_CLOSE_SECONDS });
   return stages;
 }
 
@@ -2737,7 +2736,19 @@ async function advanceLiveAfterWinner(state, winner, env) {
   if (!winner) return;
   if (state.stageIndex === 0) {
     state.selected.anime = winner;
-    const meta = await fetchLiveAnimeMeta(winner.url);
+    let meta;
+    try {
+      meta = await fetchLiveAnimeMeta(winner.url);
+    } catch (error) {
+      console.error('[live] selected anime metadata failed:', safeError(error));
+      meta = {
+        title: winner.label,
+        isMovie: false,
+        episodes: [],
+        episodeCountOptions: LIVE_EPISODE_COUNT_OPTIONS.map(count => liveOption(`${count} ${count === 1 ? 'серія' : 'серій'}`, count)),
+        dubs: [liveOption('Основна озвучка', 'Основна озвучка')]
+      };
+    }
     state.selected.anime = { ...winner, label: meta.title || winner.label };
     state.isMovie = Boolean(meta.isMovie);
     state.episodeOptions = meta.episodes;
@@ -2749,27 +2760,33 @@ async function advanceLiveAfterWinner(state, winner, env) {
     state.selected.episode = liveOption(count === 1 ? '1' : `1–${count}`, count === 1 ? '1' : `1–${count}`);
   } else if (state.stageIndex === (state.isMovie ? 1 : 2)) {
     state.selected.dub = winner;
-  } else if (state.stageIndex === (state.isMovie ? 2 : 3)) {
-    state.selected.duration = winner;
+    state.selected.duration = liveOption(`${LIVE_OWNER_DURATION_HOURS} години`, LIVE_OWNER_DURATION_HOURS);
     state.status = 'running';
     state.startsAt = Date.now();
-    state.endsAt = state.startsAt + Number(winner.value || 1) * 60 * 60 * 1000;
+    state.endsAt = state.startsAt + LIVE_OWNER_DURATION_HOURS * 60 * 60 * 1000;
     state.poll = null;
     state.transitioningPollId = null;
     state.updatedAt = Date.now();
     await writeLiveState(state, env);
-    // Після завершення вибору не надсилаємо додаткового службового тексту.
+    // Годину визначає власник; після озвучки додатковий poll не надсилаємо.
     return;
   }
   state.stageIndex += 1;
-  const definition = liveStageDefinition(state, state.stageIndex);
   state.poll = null;
   state.transitioningPollId = null;
   state.updatedAt = Date.now();
   await writeLiveState(state, env);
-  await sendLivePollBatch(state, env);
+  try {
+    await sendLivePollBatch(state, env);
+  } catch (error) {
+    console.error('[live] next poll failed:', safeError(error));
+    state.status = 'idle';
+    state.poll = null;
+    state.transitioningPollId = null;
+    state.updatedAt = Date.now();
+    await writeLiveState(state, env);
+  }
 }
-
 async function handleLivePollUpdate(poll, env) {
   const pollId = String(poll?.id || '');
   if (!pollId || !poll?.is_closed) return;

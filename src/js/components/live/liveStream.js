@@ -34,7 +34,7 @@ function renderOptions(poll) {
 }
 
 function renderIdle(host) {
-    host.innerHTML = `<section class="live-stream-card live-stream-card--idle" aria-labelledby="liveStreamTitle"><div class="live-stream-card__header"><div><span class="live-kicker">LIVE VAKDAB</span><h2 id="liveStreamTitle">Спільний перегляд</h2></div><span class="live-status">Очікування</span></div><p class="live-stream-card__hint">Коли бот запустить голосування, тут з’являться результати вибору аніме, серії, озвучки та тривалості.</p></section>`;
+    host.innerHTML = `<section class="live-stream-card live-stream-card--idle" aria-labelledby="liveStreamTitle"><div class="live-stream-card__header"><div><span class="live-kicker">LIVE VAKDAB</span><h2 id="liveStreamTitle">Спільний перегляд</h2></div><span class="live-status">Очікування</span></div><p class="live-stream-card__hint">Коли бот запустить голосування, тут з’являться результати вибору аніме, серій та озвучки.</p></section>`;
 }
 
 function renderState(host, state) {
