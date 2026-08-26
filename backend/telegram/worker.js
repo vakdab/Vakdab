@@ -202,7 +202,7 @@ async function handleMessage(message, env) {
   }
   if (/^\/live(?:@\w+)?(?:\s|$)/i.test(text)) {
     if (!isBotOwner(message.from)) {
-      await sendMessage(chatId, 'Запуск live-опитування доступний лише власнику бота.', {}, env);
+      await sendMessage(chatId, 'Запуск live доступний лише власнику бота.', {}, env);
       return;
     }
     await startLiveSession(chatId, env);
@@ -213,16 +213,15 @@ async function handleMessage(message, env) {
       await sendMessage(chatId, 'Ця команда доступна лише власнику бота.', {}, env);
       return;
     }
-    await finishLivePollManually(chatId, env);
+    await prepareLiveNextRange(chatId, env);
     return;
   }
-  const liveStartMatch = text.match(/^\/livestart(?:@\w+)?(?:\s+(\d+(?:\.\d+)?))?$/i);
-  if (liveStartMatch) {
+  if (/^\/livecancel(?:@\w+)?(?:\s|$)/i.test(text)) {
     if (!isBotOwner(message.from)) {
-      await sendMessage(chatId, 'Запустити трансляцію може лише власник бота.', {}, env);
+      await sendMessage(chatId, 'Ця команда доступна лише власнику бота.', {}, env);
       return;
     }
-    await startLiveBroadcast(chatId, env, liveStartMatch[1]);
+    await cancelLiveSession(chatId, env);
     return;
   }
   // Команди рулетки обробляємо до relay, інакше активний чат передасть /next як звичайний текст.
@@ -315,6 +314,7 @@ async function handleMessage(message, env) {
     return;
   }
 
+  if (await handleLiveOwnerText(message, env)) return;
   // За замовчуванням — вільна розмова з Луною
   await handleLunaMessage(chatId, memoryKey, text, env);
 }
@@ -1261,7 +1261,35 @@ async function handleCallbackQuery(callback, env) {
       await startLiveSession(chatId, env, messageId);
       return;
     }
-
+    const liveDubMatch = data.match(/^live:dub:(\d+)$/);
+    if (liveDubMatch) {
+      if (!isBotOwner(callback.from)) {
+        await answerCallback(callbackId, 'Тільки власник може вибирати озвучку.', env, { show_alert: true });
+        return;
+      }
+      const liveState = await readLiveState(env);
+      const dubIndex = Number(liveDubMatch[1]);
+      const dub = liveState?.dubOptions?.[dubIndex];
+      if (!liveState || liveState.chatId !== String(chatId) || liveState.status !== 'draft' || liveState.inputStage !== 'dub' || !dub) {
+        await answerCallback(callbackId, 'Цей вибір уже неактивний.', env, { show_alert: true });
+        return;
+      }
+      liveState.selected.dub = dub;
+      liveState.status = 'ready';
+      liveState.inputStage = null;
+      liveState.updatedAt = Date.now();
+      await writeLiveState(liveState, env);
+      await sendMessage(chatId, `Озвучку обрано: ${dub.label}. Натисни кнопку, щоб почати трансляцію.`, { reply_markup: { inline_keyboard: [[{ text: 'Почати трансляцію', callback_data: 'live:broadcast' }]] } }, env);
+      return;
+    }
+    if (data === 'live:broadcast') {
+      if (!isBotOwner(callback.from)) {
+        await answerCallback(callbackId, 'Трансляцію може почати лише власник.', env, { show_alert: true });
+        return;
+      }
+      await startLiveBroadcast(chatId, env);
+      return;
+    }
     if (data === 'about') {
       state.screen = 'about';
       await replaceMessage(chatId, messageId, aboutUsText(), false, { reply_markup: aboutUsKeyboard() }, env);
@@ -1998,8 +2026,9 @@ async function setBotCommands(env) {
         { command: 'next', description: 'Наступний співрозмовник у чат-рулетці' },
         { command: 'report', description: 'Поскаржитися або завершити рулетку' },
         { command: 'live', description: 'Запустити live-опитування (власник)' },
-        { command: 'livenext', description: 'Завершити поточний live-етап (власник)' },
-        { command: 'livestart', description: 'Запустити готову live-трансляцію (власник)' }
+        { command: 'livenext', description: 'Ввести наступний діапазон серій (власник)' },
+        { command: 'livestart', description: 'Запустити готову live-трансляцію (власник)' },
+        { command: 'livecancel', description: 'Скасувати live-сесію (власник)' }
       ]
     }, env);
   } catch (error) {
@@ -2697,54 +2726,112 @@ async function sendLivePollBatch(state, env) {
   return result;
 }
 
+function parseLiveEpisodeRange(value) {
+  const match = String(value || '').trim().match(/^(\d+)\s*[-–—]\s*(\d+)$/);
+  if (!match) return null;
+  const start = Number(match[1]);
+  const end = Number(match[2]);
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start || end > 999) return null;
+  return { start, end, count: end - start + 1, value: `${start}-${end}` };
+}
+function liveOwnerKeyboard(buttons) {
+  return { inline_keyboard: [buttons.map(button => ({ text: button.text, callback_data: button.callback_data }))] };
+}
+async function prepareLiveNextRange(chatId, env) {
+  const state = await readLiveState(env);
+  if (!state || state.chatId !== String(chatId) || !state.selected?.anime) {
+    await sendMessage(chatId, 'Спочатку запусти /live і вибери аніме.', {}, env);
+    return;
+  }
+  state.status = 'draft';
+  state.inputStage = 'range';
+  state.updatedAt = Date.now();
+  await writeLiveState(state, env);
+  await sendMessage(chatId, 'Напиши новий діапазон серій, наприклад `5-12`.', {}, env);
+}
+async function cancelLiveSession(chatId, env) {
+  const state = await readLiveState(env);
+  if (state?.chatId === String(chatId)) await env.MAKIMA_MEMORY.delete(LIVE_STATE_KEY);
+  await sendMessage(chatId, 'Live-сесію скасовано.', {}, env);
+}
+async function resolveLiveAnimeByTitle(title) {
+  const items = await hikkaCatalog(1, { query: String(title || '').trim(), only_translated: true });
+  const normalized = String(title || '').trim().toLocaleLowerCase('uk-UA');
+  return items.find(item => String(item.title || '').trim().toLocaleLowerCase('uk-UA') === normalized) || items[0] || null;
+}
+async function handleLiveOwnerText(message, env) {
+  if (!isBotOwner(message?.from)) return false;
+  const text = String(message?.text || '').trim();
+  if (!text || /^\//.test(text)) return false;
+  const state = await readLiveState(env);
+  if (!state || state.chatId !== String(message.chat?.id || '') || state.status !== 'draft') return false;
+  if (state.inputStage === 'title') {
+    await sendMessage(state.chatId, 'Шукаю аніме…', {}, env);
+    let match;
+    try { match = await resolveLiveAnimeByTitle(text); } catch (error) { console.error('[live] title lookup failed:', safeError(error)); }
+    if (!match?.url) {
+      await sendMessage(state.chatId, 'Не знайшов це аніме. Напиши назву ще раз.', {}, env);
+      return true;
+    }
+    state.selected.anime = liveOption(match.title || text, match.url, { id: match.id, slug: match.slug });
+    let meta;
+    try { meta = await fetchLiveAnimeMeta(match.url); } catch (error) { console.error('[live] title metadata failed:', safeError(error)); }
+    state.isMovie = Boolean(meta?.isMovie);
+    state.seasonOptions = meta?.seasonOptions || [];
+    state.dubOptions = meta?.dubs || [liveOption('Основна озвучка', 'Основна озвучка')];
+    state.inputStage = 'range';
+    state.updatedAt = Date.now();
+    await writeLiveState(state, env);
+    await sendMessage(state.chatId, state.isMovie ? 'Це фільм. Напиши `1-1` для перегляду або скасуй командою /livecancel.' : 'Напиши діапазон серій текстом, наприклад `1-5` або `5-12`.', {}, env);
+    return true;
+  }
+  if (state.inputStage === 'range') {
+    const range = parseLiveEpisodeRange(text);
+    if (!range) {
+      await sendMessage(state.chatId, 'Невірний формат. Напиши діапазон так: `1-5` або `5-12`.', {}, env);
+      return true;
+    }
+    state.selected.episode = liveOption(`Серії ${range.start}-${range.end}`, range.value, { start: range.start, end: range.end });
+    state.selected.episodeCount = liveOption(`${range.count} ${range.count === 1 ? 'серія' : 'серій'}`, range.count);
+    if (state.isMovie) {
+      state.inputStage = 'dub';
+      state.dubOptions = state.dubOptions?.length ? state.dubOptions : [liveOption('Основна озвучка', 'Основна озвучка')];
+    } else if (!state.selected.dub) {
+      state.inputStage = 'dub';
+    } else {
+      state.status = 'ready';
+      state.inputStage = null;
+    }
+    state.updatedAt = Date.now();
+    await writeLiveState(state, env);
+    if (state.inputStage === 'dub') {
+      await sendMessage(state.chatId, 'Вибери озвучку кнопкою:', { reply_markup: liveOwnerKeyboard(state.dubOptions.map((item, index) => ({ text: item.label, callback_data: `live:dub:${index}` }))) }, env);
+    } else {
+      await sendMessage(state.chatId, 'Діапазон оновлено. Натисни кнопку запуску трансляції.', { reply_markup: liveOwnerKeyboard([{ text: 'Запустити трансляцію', callback_data: 'live:broadcast' }]) }, env);
+    }
+    return true;
+  }
+  return false;
+}
 async function startLiveSession(chatId, env, messageId = null) {
   const existing = await readLiveState(env);
-  if (existing?.chatId === String(chatId) && existing.status === 'polling') {
-    const message = existing.poll?.id
-      ? 'Live-опитування вже триває. Дочекайтеся завершення поточного кроку.'
-      : 'Live-опитування вже переходить до наступного кроку. Новий запуск не потрібен.';
-    await sendMessage(chatId, message, {}, env);
-    return;
-  }
-  if (existing?.chatId === String(chatId) && existing.status === 'ready') {
-    await sendMessage(chatId, 'Live-вибори завершені. Для запуску трансляції використайте /livestart.', {}, env);
-    return;
-  }
   if (existing?.chatId === String(chatId) && existing.status === 'running') {
-    await sendMessage(chatId, 'Live-стрім уже активний. Нове опитування можна запустити після його завершення.', {}, env);
-    return;
-  }
-  const popular = await fetchPopularAnime();
-  // Один короткий anime poll. Не створюємо десятки batch-poll-ів, бо це виглядає як спам.
-  const animeOptions = uniqueLiveOptions(popular.slice(0, LIVE_POLL_MAX_OPTIONS).map(item => liveOption(item.title, item.url, { id: item.id, slug: item.slug })));
-  if (!animeOptions.length) {
-    await updateOrSend(chatId, messageId, 'Не вдалося сформувати список аніме для live-опитування.', false, { reply_markup: mainKeyboard() }, env);
+    await sendMessage(chatId, 'Live-стрім уже активний. Спочатку завершіть його командою /livecancel.', {}, env);
     return;
   }
   const state = {
     id: `${Date.now()}-${String(chatId)}`,
     chatId: String(chatId),
-    status: 'polling',
-    stageIndex: 0,
-    animeOptions,
-    episodeOptions: [],
-    seasonOptions: [],
-    episodeCountOptions: [],
-    dubOptions: [],
-    isMovie: false,
-    transitioningPollId: null,
+    status: 'draft',
+    inputStage: 'title',
     selected: {},
+    isMovie: false,
+    dubOptions: [],
     updatedAt: Date.now()
   };
   await writeLiveState(state, env);
   if (messageId) await deleteMessage(chatId, messageId, env);
-  await sendMessage(chatId, '𝗩𝗮𝗸𝗗𝗮𝗯𝗕𝗼𝘁 Запускає Опитування', {}, env);
-  try {
-    await sendLivePollBatch(state, env);
-  } catch (error) {
-    console.error('[live] first poll failed:', safeError(error));
-    await env.MAKIMA_MEMORY.delete(LIVE_STATE_KEY);
-  }
+  await sendMessage(chatId, 'Напиши назву аніме текстом.', {}, env);
 }
 
 function countLivePollVotes(votes, optionCount) {
