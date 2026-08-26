@@ -25,7 +25,7 @@
             border: 2px solid var(--border);
             border-radius: var(--radius-xl);
             padding: 0.5rem 0.9rem;
-            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: border-color 160ms var(--ui-ease), box-shadow 160ms var(--ui-ease), transform 160ms var(--ui-ease);
             box-shadow: var(--shadow-sm);
             flex: 1 1 100%;
             max-width: 600px;
@@ -65,7 +65,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s;
+            transition: opacity 160ms var(--ui-ease), visibility 160ms var(--ui-ease), background 160ms var(--ui-ease), color 160ms var(--ui-ease), transform 160ms var(--ui-ease);
             opacity: 0;
             visibility: hidden;
             pointer-events: none;

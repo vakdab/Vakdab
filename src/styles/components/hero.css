@@ -274,7 +274,7 @@
             -webkit-backdrop-filter: blur(14px);
             text-shadow: 0 1px 6px rgba(0,0,0,0.3);
             letter-spacing: 0.3px;
-            transition: all 0.25s ease;
+            transition: background 160ms var(--ui-ease), border-color 160ms var(--ui-ease), transform 160ms var(--ui-ease);
         }
         .hero-tag.genre-tag {
             background: rgba(255,255,255,0.06);
@@ -403,11 +403,12 @@
             border-radius: 2px;
             background: rgba(255,255,255,0.25);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transform-origin: left center;
+            transition: transform 180ms var(--ui-ease), background 180ms var(--ui-ease), box-shadow 180ms var(--ui-ease);
         }
         .hero-dot.active {
             background: #ffffff;
-            width: 40px;
+            transform: scaleX(1.6667);
             box-shadow: 0 0 8px rgba(255,255,255,0.3);
         }
 
@@ -458,7 +459,7 @@
             cursor: pointer;
             overflow: hidden;
             position: relative;
-            animation: fadeInUp 0.5s ease both;
+            animation: fadeInUp .3s var(--ui-ease) both;
             display: flex;
             flex-direction: column;
             width: 100%;
@@ -625,5 +626,5 @@
             }
         }
         .anime-grid .anime-card {
-            animation: fadeInUp 0.5s ease both;
+            animation: fadeInUp .3s var(--ui-ease) both;
         }

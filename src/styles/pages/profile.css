@@ -1159,7 +1159,7 @@
 
         #genrePageContainer {
             display: none;
-            animation: fadeInUp 0.5s ease;
+            animation: fadeInUp .3s var(--ui-ease);
             margin-top: 0.5rem;
             width: 100%;
         }
@@ -1169,7 +1169,7 @@
 
         #genresPageContainer {
             display: none;
-            animation: fadeInUp 0.5s ease;
+            animation: fadeInUp .3s var(--ui-ease);
             margin-top: 0.5rem;
             width: 100%;
             padding: 0 0.100rem;

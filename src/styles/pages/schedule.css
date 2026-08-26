@@ -386,7 +386,7 @@
 
         #searchPageContainer {
             display: none;
-            animation: fadeInUp 0.5s ease;
+            animation: fadeInUp .3s var(--ui-ease);
             margin-top: 0.5rem;
             width: 100%;
         }
@@ -588,7 +588,7 @@
         }
         #settingsPageContainer {
             display: none;
-            animation: fadeInUp 0.5s ease;
+            animation: fadeInUp .3s var(--ui-ease);
             margin-top: 0.5rem;
             width: 100%;
         }
