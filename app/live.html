@@ -54,7 +54,7 @@
     .chat-composer button svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; transform:translateX(-1px); }
     .chat-composer button .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
     .chat-composer button:disabled { opacity:.55; cursor:wait; }
-    .chat-status { min-height:16px; padding:0 12px 8px; color:var(--muted); font-size:11px; }
+    .chat-status { min-height:0; padding:0 12px 6px; color:var(--muted); font-size:11px; }
     body.keyboard-open .chat-composer { position:fixed; right:10px; bottom:env(safe-area-inset-bottom); left:10px; z-index:20; border:1px solid var(--line); border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,.14); }
 
     .empty,.loading { display:grid; min-height:55vh; place-items:center; text-align:center; color:var(--muted); }
@@ -144,7 +144,7 @@
       const target = state.status === 'running' ? state.endsAt : state.startsAt;
       currentTarget = Number(target || 0);
       const videoMarkup = source ? `<video id="liveVideo" autoplay muted playsinline preload="auto"></video>` : '<div class="stage-missing">Відео трансляції готується…</div>';
-      app.innerHTML = `<div class="live-layout"><div class="stage">${videoMarkup}<div class="live-badge"><i></i> LIVE</div><div class="caption"><strong>${escape(state.animeTitle || 'VakDab')}</strong><span>${escape(episodes(state))} · ${escape(state.dub || 'Озвучка')}</span></div></div><aside class="chat" aria-label="Чат трансляції"><div class="chat-head">Чат трансляції<small>Спільнота VakDab</small></div><div class="chat-messages">${chatMessagesMarkup(messages)}</div><form class="chat-composer" id="liveChatForm"><input id="liveChatInput" maxlength="500" autocomplete="off" enterkeyhint="send" placeholder="Написати в чат" aria-label="Повідомлення в чат"><button id="liveChatSubmit" type="submit" aria-label="Надіслати повідомлення"><span class="sr-only">Надіслати</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 21 3l-6.5 18-3.2-7.3L3 11.5Z"/><path d="m11.3 13.7 4.8-4.8"/></svg></button></form><div class="chat-status" id="liveChatStatus" aria-live="polite"></div></aside></div>`;
+      app.innerHTML = `<div class="live-layout"><div class="stage">${videoMarkup}<div class="live-badge"><i></i> LIVE</div><div class="caption"><strong>${escape(state.animeTitle || 'VakDab')}</strong><span>${escape(episodes(state))} · ${escape(state.dub || 'Озвучка')}</span></div></div><aside class="chat" aria-label="Чат трансляції"><div class="chat-head">Чат трансляції<small>Спільнота VakDab</small></div><div class="chat-messages">${chatMessagesMarkup(messages)}</div><div class="chat-status" id="liveChatStatus" aria-live="polite"></div><form class="chat-composer" id="liveChatForm"><input id="liveChatInput" maxlength="500" autocomplete="off" enterkeyhint="send" placeholder="Написати в чат" aria-label="Повідомлення в чат"><button id="liveChatSubmit" type="submit" aria-label="Надіслати повідомлення"><span class="sr-only">Надіслати</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 21 3l-6.5 18-3.2-7.3L3 11.5Z"/><path d="m11.3 13.7 4.8-4.8"/></svg></button></form></aside></div>`;
       bindChatComposer();
       const video = document.getElementById('liveVideo');
       if (reuseVideo) video?.replaceWith(previousVideo);

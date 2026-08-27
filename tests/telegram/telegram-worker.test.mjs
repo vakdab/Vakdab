@@ -327,7 +327,7 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-10');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-11');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
@@ -343,6 +343,7 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /color:#fff; background:#111114/);
   assert.match(liveAppSource, /body\.keyboard-open \.chat-composer \{ position:fixed/);
   assert.match(liveAppSource, /scrollIntoView\(\{ block:'nearest'/);
+  assert.match(liveAppSource, /chat-messages">\$\{chatMessagesMarkup\(messages\)\}<\/div><div class="chat-status"[^>]*><\/div><form class="chat-composer"/);
   assert.match(liveAppSource, /x-telegram-init-data/);
   assert.match(workerSource, /url\.pathname === '\/api\/live-chat'/);
   assert.match(workerSource, /TELEGRAM_AUTH_REQUIRED/);
