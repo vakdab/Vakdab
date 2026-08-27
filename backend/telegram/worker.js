@@ -4,7 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-36`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-41`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -2571,6 +2571,8 @@ async function liveTelegramUrl(env) {
   }
 }
 
+const isResolvedLiveVideoUrl = value => /\.(?:m3u8|mp4)(?:[?#].*)?$/i.test(String(value || '')) || /[?&]url=[^&]*(?:m3u8|mp4)/i.test(String(value || ''));
+
 async function repairLiveVideoState(state, env) {
   if (!state?.selected?.anime?.label) return state;
   const episodeStart = Number(state.selected?.episodeStart || String(state.selected?.episode?.value || '').match(/^(\d+)/)?.[1] || 1) || 1;
@@ -2579,7 +2581,14 @@ async function repairLiveVideoState(state, env) {
       const match = await resolveLiveAnimeByTitle(state.selected.anime.label);
       if (match?.url) state.selected.anime = { ...state.selected.anime, url: match.url, image: state.selected.anime.image || match.image || match.poster || '' };
     }
-    const shouldRefreshPlayback = !state.videoUrl || /ashdi\.vip\/vod\//i.test(String(state.videoUrl));
+    let shouldRefreshPlayback = !isResolvedLiveVideoUrl(state.videoUrl);
+    if (shouldRefreshPlayback && state.videoUrl) {
+      const resolvedCurrent = await resolveLivePlaybackUrl(state.videoUrl);
+      if (isResolvedLiveVideoUrl(resolvedCurrent)) {
+        state.videoUrl = resolvedCurrent;
+        shouldRefreshPlayback = false;
+      }
+    }
     if (state.selected.anime.url && (shouldRefreshPlayback || !state.playLinksByDub || !Object.keys(state.playLinksByDub).length)) {
       const meta = await fetchLiveAnimeMeta(state.selected.anime.url);
       state.availableEpisodeCount = Number(state.availableEpisodeCount || meta.availableEpisodeCount || 0) || 0;
@@ -2588,8 +2597,11 @@ async function repairLiveVideoState(state, env) {
       state.seasonOptions = meta.seasonOptions || state.seasonOptions || [];
       if (!state.selected.season) state.selected.season = state.seasonOptions[0] || liveOption(state.selected.anime.label, state.selected.anime.url);
     }
-    const playLink = state.playLinksByDub?.[String(state.selected?.dub?.value)]?.[String(episodeStart)] || '';
-    if (shouldRefreshPlayback && playLink) state.videoUrl = await resolveLivePlaybackUrl(playLink);
+    const playLink = state.playLinksByDub?.[String(state.selected?.dub?.value)]?.[String(episodeStart)] || (!isResolvedLiveVideoUrl(state.videoUrl) ? String(state.videoUrl || '') : '');
+    if (shouldRefreshPlayback && playLink) {
+      const resolved = await resolveLivePlaybackUrl(playLink);
+      if (isResolvedLiveVideoUrl(resolved)) state.videoUrl = resolved;
+    }
     state.selected.episodeStart = episodeStart;
     if (!state.selected.episodeEnd) state.selected.episodeEnd = episodeStart + Math.max(0, Number(state.selected?.episodeCount?.value || 1) - 1);
     state.updatedAt = Date.now();
@@ -2601,7 +2613,14 @@ async function repairLiveVideoState(state, env) {
 }
 async function publicLiveState(state, env) {
   if (!state) return { status: 'idle' };
-  if (state.status === 'running' && (!state.selected?.anime?.url || !state.videoUrl || /ashdi\.vip\/vod\//i.test(String(state.videoUrl)))) state = await repairLiveVideoState(state, env);
+  if (state.status === 'running' && !isResolvedLiveVideoUrl(state.videoUrl) && state.videoUrl) {
+    const resolvedCurrent = await resolveLivePlaybackUrl(state.videoUrl);
+    if (isResolvedLiveVideoUrl(resolvedCurrent)) {
+      state.videoUrl = resolvedCurrent;
+      await writeLiveState(state, env);
+    }
+  }
+  if (state.status === 'running' && (!state.selected?.anime?.url || !isResolvedLiveVideoUrl(state.videoUrl))) state = await repairLiveVideoState(state, env);
   const liveExpired = state.status === 'running' && Number(state.endsAt || 0) > 0 && Number(state.endsAt) <= Date.now();
   const publicStatus = liveExpired ? 'finished' : (state.status || 'idle');
   const poll = state.poll ? {

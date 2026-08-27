@@ -327,7 +327,7 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-36');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-41');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
@@ -360,7 +360,7 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(workerSource, /serverNow: Date\.now\(\)/);
   assert.match(workerSource, /providers\.find\(item => \/MOONANIME\/i/);
   assert.match(workerSource, /function extractMoonanimeManifest/);
-  assert.match(workerSource, /const shouldRefreshPlayback = !state\.videoUrl/);
+  assert.match(workerSource, /let shouldRefreshPlayback = !isResolvedLiveVideoUrl\(state\.videoUrl\);/);
   assert.match(workerSource, /shouldRefreshPlayback \|\| !state\.playLinksByDub/);
   assert.match(workerSource, /extractMoonanimeManifest\(html\)/);
   assert.match(workerSource, /const liveExpired = state\.status === 'running'/);
