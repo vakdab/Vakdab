@@ -327,7 +327,7 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-23');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-24');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
@@ -350,7 +350,8 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(workerSource, /liveGuestChatUser/);
   assert.match(workerSource, /user\.username \? `@\$\{user\.username\}`/);
   assert.match(workerSource, /username: String\(user\.username \|\| ''\)/);
-  assert.match(workerSource, /message\?\.username \? `@\$\{message\.username\}`/);
+  assert.match(workerSource, /const username = String\(message\?\.username \|\| ''\)\.trim\(\)/);
+  assert.match(workerSource, /name: String\(username \? `@\$\{username\}`/);
   assert.match(workerSource, /x-live-viewer-id/);
   assert.match(workerSource, /LIVE_CHAT_KEY/);
   assert.match(workerSource, /LIVE_VIEWERS_KEY/);

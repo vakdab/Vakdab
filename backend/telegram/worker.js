@@ -4,7 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-23`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-24`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -2675,12 +2675,16 @@ function liveGuestChatUser(request, payload) {
 }
 
 function publicLiveChat(messages) {
-  return messages.map(message => ({
-    id: String(message?.id || ''),
-    name: String(message?.name || (message?.username ? `@${message.username}` : 'Глядач')).slice(0, 80),
-    text: String(message?.text || '').slice(0, LIVE_CHAT_MAX_TEXT),
-    createdAt: Number(message?.createdAt || 0) || 0
-  })).filter(message => message.id && message.text);
+  return messages.map(message => {
+    const username = String(message?.username || '').trim();
+    const storedName = String(message?.name || '').trim();
+    return {
+      id: String(message?.id || ''),
+      name: String(username ? `@${username}` : (storedName || 'Глядач')).slice(0, 80),
+      text: String(message?.text || '').slice(0, LIVE_CHAT_MAX_TEXT),
+      createdAt: Number(message?.createdAt || 0) || 0
+    };
+  }).filter(message => message.id && message.text);
 }
 
 async function verifyTelegramWebAppInitData(initData, env) {
