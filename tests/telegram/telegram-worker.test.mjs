@@ -327,7 +327,7 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-14');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-15');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
@@ -351,6 +351,15 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(workerSource, /x-telegram-init-data/);
   assert.match(liveAppSource, /id="liveVideo" autoplay muted playsinline/);
   assert.match(liveAppSource, /const reuseVideo = Boolean\(previousVideo && source && currentSource === source\)/);
+  assert.match(liveAppSource, /id="liveMuteToggle"/);
+  assert.match(liveAppSource, /id="liveFullscreenToggle"/);
+  assert.match(liveAppSource, /video\.muted = !video\.muted/);
+  assert.match(liveAppSource, /stage\.addEventListener\('click'/);
+  assert.match(liveAppSource, /stage\?\.requestFullscreen/);
+  assert.match(liveAppSource, /video\?\.webkitEnterFullscreen/);
+  assert.match(liveAppSource, /document\.addEventListener\('fullscreenchange'/);
+  assert.match(liveAppSource, /\.stage:fullscreen[^{]*\{/);
+  assert.match(liveAppSource, /if \(reuseVideo && previousStage\)/);
   assert.match(liveAppSource, /theme-color" content="#ffffff"/);
   assert.match(liveAppSource, /--bg:#ffffff/);
   assert.match(liveAppSource, /color:var\(--text\)/);
