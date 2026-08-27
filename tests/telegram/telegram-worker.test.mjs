@@ -348,6 +348,9 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /setBackgroundColor\?\.\('\#ffffff'\)/);
   assert.doesNotMatch(liveAppSource, /app\.innerHTML = `\\<div class="topbar"/);
   assert.doesNotMatch(liveAppSource, /app\.innerHTML = `[^`]*class="info"/);
+  assert.doesNotMatch(liveAppSource, /app\.innerHTML = `[^`]*class="chat"/);
+  assert.match(liveAppSource, /app\.innerHTML = `\<div class="stage"/);
+  assert.doesNotMatch(liveAppSource, /app\.innerHTML = `[^`]*class="wide"/);
   assert.doesNotMatch(liveAppSource, /<video[^>]+controls/);
 });
 
