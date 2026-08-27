@@ -339,6 +339,11 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /theme-color" content="#ffffff"/);
   assert.match(liveAppSource, /--bg:#ffffff/);
   assert.match(liveAppSource, /color:var\(--text\)/);
+  assert.match(liveAppSource, /color:#fff; background:rgba\(8,8,10,.82\)/);
+  assert.match(liveAppSource, /\.caption strong,\.caption span \{ display:block; color:#fff; \}/);
+  assert.doesNotMatch(liveAppSource, /<p><b>VakDab:<\/b>/);
+  assert.doesNotMatch(liveAppSource, /<p><b>Луна:<\/b>/);
+  assert.doesNotMatch(liveAppSource, /<p><b>Система:<\/b>/);
   assert.match(liveAppSource, /setHeaderColor\?\.\('\#ffffff'\)/);
   assert.match(liveAppSource, /setBackgroundColor\?\.\('\#ffffff'\)/);
   assert.doesNotMatch(liveAppSource, /app\.innerHTML = `\\<div class="topbar"/);
