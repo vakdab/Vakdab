@@ -4,13 +4,15 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-17`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-18`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
 const LIVE_STATE_KEY = 'live:current';
 const LIVE_CHAT_KEY = 'live:chat:messages';
+const LIVE_VIEWERS_KEY = 'live:viewers';
+const LIVE_VIEWER_TTL_MS = 45 * 1000;
 const LIVE_CHAT_MAX_MESSAGES = 100;
 const LIVE_CHAT_MAX_TEXT = 500;
 const LIVE_VIDEO_PROXY_URL = 'https://monoanime.animegran8.workers.dev';
@@ -2646,6 +2648,26 @@ async function readLiveChat(env) {
   }
 }
 
+async function touchLiveViewer(request, env) {
+  const viewer = String(new URL(request.url).searchParams.get('viewer') || '').trim().slice(0, 120);
+  if (!viewer || !env.MAKIMA_MEMORY) return 0;
+  const now = Date.now();
+  let viewers = {};
+  try {
+    const raw = await env.MAKIMA_MEMORY.get(LIVE_VIEWERS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) viewers = parsed;
+  } catch (error) {
+    console.error('[live-chat] viewer state read failed:', safeError(error));
+  }
+  for (const [id, lastSeen] of Object.entries(viewers)) {
+    if (!Number.isFinite(Number(lastSeen)) || now - Number(lastSeen) > LIVE_VIEWER_TTL_MS) delete viewers[id];
+  }
+  viewers[viewer] = now;
+  try { await env.MAKIMA_MEMORY.put(LIVE_VIEWERS_KEY, JSON.stringify(viewers), { expirationTtl: 120 }); } catch (error) { console.error('[live-chat] viewer state write failed:', safeError(error)); }
+  return Object.keys(viewers).length;
+}
+
 function publicLiveChat(messages) {
   return messages.map(message => ({
     id: String(message?.id || ''),
@@ -2667,7 +2689,7 @@ async function verifyTelegramWebAppInitData(initData, env) {
     .filter(([key]) => key !== 'hash')
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => `${key}=${value}`)
-    .join('\\n');
+    .join('\n');
   const encoder = new TextEncoder();
   const hmac = async (keyBytes, message) => {
     const key = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -2688,7 +2710,8 @@ async function liveChatResponse(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: liveCorsHeaders(request) });
   const state = await readLiveState(env);
   if (request.method === 'GET') {
-    return new Response(JSON.stringify({ messages: publicLiveChat(await readLiveChat(env)), running: state?.status === 'running' }), { status: 200, headers: liveCorsHeaders(request) });
+    const viewerCount = state?.status === 'running' ? await touchLiveViewer(request, env) : 0;
+    return new Response(JSON.stringify({ messages: publicLiveChat(await readLiveChat(env)), running: state?.status === 'running', viewerCount }), { status: 200, headers: liveCorsHeaders(request) });
   }
   if (request.method !== 'POST') return jsonResponse({ ok: false, error: 'METHOD_NOT_ALLOWED' }, 405);
   if (state?.status !== 'running') return new Response(JSON.stringify({ ok: false, error: 'LIVE_NOT_RUNNING' }), { status: 409, headers: liveCorsHeaders(request) });
@@ -2696,7 +2719,7 @@ async function liveChatResponse(request, env) {
   try { payload = await request.json(); } catch { return new Response(JSON.stringify({ ok: false, error: 'INVALID_JSON' }), { status: 400, headers: liveCorsHeaders(request) }); }
   const user = await verifyTelegramWebAppInitData(request.headers.get('x-telegram-init-data') || payload?.initData, env);
   if (!user) return new Response(JSON.stringify({ ok: false, error: 'TELEGRAM_AUTH_REQUIRED' }), { status: 401, headers: liveCorsHeaders(request) });
-  const text = String(payload?.text || '').replace(/[\\u0000-\\u001f\\u007f]/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, LIVE_CHAT_MAX_TEXT);
+  const text = String(payload?.text || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, LIVE_CHAT_MAX_TEXT);
   if (!text) return new Response(JSON.stringify({ ok: false, error: 'MESSAGE_REQUIRED' }), { status: 400, headers: liveCorsHeaders(request) });
   const messages = await readLiveChat(env);
   messages.push({ id: `${Date.now()}-${user.id}`, userId: user.id, name: user.name, text, createdAt: Date.now() });
