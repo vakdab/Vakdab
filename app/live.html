@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0b0b0d">
+  <meta name="theme-color" content="#ffffff">
   <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="pragma" content="no-cache">
   <title>Аніме Ефір — VakDab</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
   <style>
-    :root { --bg:#09090b; --panel:#17171b; --panel-2:#202025; --text:#fafafd; --muted:#a8a8b1; --accent:#f04c70; --line:rgba(255,255,255,.12); }
+    :root { color-scheme:light; --bg:#ffffff; --panel:#ffffff; --panel-2:#f5f5f7; --text:#111114; --muted:#686873; --accent:#d83f63; --line:#e4e4e8; }
     * { box-sizing:border-box; }
-    html { background:var(--bg); }
-    body { margin:0; min-width:320px; background:radial-gradient(circle at 12% 0%,rgba(240,76,112,.16),transparent 31%),var(--bg); color:var(--text); font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    html { background:#ffffff; }
+    body { margin:0; min-width:320px; background:#ffffff; color:var(--text); font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
     button { font:inherit; }
-    .app { width:min(100%,960px); margin:0 auto; padding:calc(14px + env(safe-area-inset-top)) 14px calc(30px + env(safe-area-inset-bottom)); }
+    .app { width:min(100%,960px); margin:0 auto; padding:0 14px calc(30px + env(safe-area-inset-bottom)); }
     .topbar { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
     .back { display:grid; width:42px; height:42px; flex:none; place-items:center; border:1px solid var(--line); border-radius:50%; color:var(--text); background:rgba(255,255,255,.08); font-size:25px; line-height:1; }
     .kicker { margin:0 0 4px; color:var(--accent); font-size:11px; font-weight:900; letter-spacing:.16em; text-transform:uppercase; }
@@ -38,14 +38,14 @@
     .available { color:var(--muted); font-size:12px; }
     .countdown { min-height:20px; margin-top:14px; color:var(--muted); font-size:13px; }
     .countdown strong { color:#ff8099; font-variant-numeric:tabular-nums; }
-    .chat { margin-top:14px; overflow:hidden; border:1px solid var(--line); border-radius:18px; background:var(--panel); }
+    .chat { margin-top:14px; overflow:hidden; border:1px solid var(--line); border-radius:18px; background:var(--panel); box-shadow:0 8px 24px rgba(20,20,30,.06); }
     .chat-head { padding:15px 17px; border-bottom:1px solid var(--line); font-weight:800; }
     .chat-head small { display:block; margin-top:3px; color:var(--muted); font-size:11px; font-weight:500; }
-    .messages { display:grid; gap:12px; padding:15px 17px 17px; color:#e5e5e8; font-size:13px; line-height:1.45; }
+    .messages { display:grid; gap:12px; padding:15px 17px 17px; color:var(--text); font-size:13px; line-height:1.45; }
     .messages p { margin:0; }
     .messages b { color:#ff7894; }
     .empty,.loading { display:grid; min-height:55vh; place-items:center; text-align:center; color:var(--muted); }
-    .empty-card { width:min(100%,420px); padding:28px 20px; border:1px solid var(--line); border-radius:20px; background:var(--panel); }
+    .empty-card { width:min(100%,420px); padding:28px 20px; border:1px solid var(--line); border-radius:20px; background:var(--panel); box-shadow:0 8px 24px rgba(20,20,30,.06); }
     .empty-card h2 { margin:12px 0 7px; color:var(--text); }
     .empty-card p { margin:0; line-height:1.5; }
     @media (min-width:760px) { .app { padding-left:24px; padding-right:24px; } .wide { display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:14px; align-items:start; } .chat { margin-top:0; } }
@@ -87,15 +87,14 @@
       const target = state.status === 'running' ? state.endsAt : state.startsAt;
       currentTarget = Number(target || 0);
       const videoMarkup = source ? `<video id="liveVideo" autoplay muted playsinline preload="auto"></video>` : '<div class="stage-missing">Відео трансляції готується…</div>';
-      app.innerHTML = `<div class="topbar"><button class="back" type="button" id="close" aria-label="Закрити">←</button><div><div class="kicker">VAKDAB LIVE</div><h1>Аніме Ефір</h1></div><div class="status"><i></i>${state.status === 'running' ? 'Ефір триває' : 'Готово до старту'}</div></div><div class="wide"><section><div class="stage">${videoMarkup}<div class="live-badge"><i></i> LIVE</div><div class="caption"><strong>${escape(state.animeTitle || 'VakDab')}</strong><span>${escape(episodes(state))} · ${escape(state.dub || 'Озвучка')}</span></div></div><section class="info"><div class="info-head"><h2>${escape(state.animeTitle || 'Спільний перегляд')}</h2><span class="on-air">● наживо</span></div><p class="meta">${escape(episodes(state))} · ${escape(state.dub || 'Озвучка не вказана')}${state.season ? ` · ${escape(state.season)}` : ''}</p>${state.availableEpisodeCount ? `<small class="available">Доступно серій: ${escape(state.availableEpisodeCount)}</small>` : ''}<div class="countdown" id="countdown">${currentTarget ? `До завершення: <strong>${remaining(currentTarget)}</strong>` : ''}</div></section></section><aside class="chat"><div class="chat-head">Чат трансляції<small>Спільнота VakDab</small></div><div class="messages"><p><b>VakDab:</b> Приємного перегляду!</p><p><b>Луна:</b> Ефір іде наживо — приєднуйся.</p><p><b>Система:</b> ${escape(state.animeTitle || 'Аніме')} · ${escape(state.dub || 'озвучка')}</p></div></aside></div>`;
-      document.getElementById('close')?.addEventListener('click', () => window.Telegram?.WebApp?.close?.());
+      app.innerHTML = `<div class="wide"><section><div class="stage">${videoMarkup}<div class="live-badge"><i></i> LIVE</div><div class="caption"><strong>${escape(state.animeTitle || 'VakDab')}</strong><span>${escape(episodes(state))} · ${escape(state.dub || 'Озвучка')}</span></div></div></section><aside class="chat"><div class="chat-head">Чат трансляції<small>Спільнота VakDab</small></div><div class="messages"><p><b>VakDab:</b> Приємного перегляду!</p><p><b>Луна:</b> Ефір іде наживо — приєднуйся.</p><p><b>Система:</b> ${escape(state.animeTitle || 'Аніме')} · ${escape(state.dub || 'озвучка')}</p></div></aside></div>`;
       const video = document.getElementById('liveVideo');
       if (reuseVideo) video?.replaceWith(previousVideo);
       const activeVideo = document.getElementById('liveVideo');
       if (activeVideo && source && !reuseVideo) attachVideo(activeVideo, source);
     }
     async function load() { try { const response = await fetch(API, { cache:'no-store', headers:{ accept:'application/json' } }); if (!response.ok) throw new Error(); const payload = await response.json(); const state = payload?.live || payload; if (!state || state.status === 'idle') return renderEmpty(); const source = await resolveSource(state.videoUrl); render(state, source); } catch { renderEmpty('Не вдалося завантажити ефір'); } }
-    if (window.Telegram?.WebApp) { Telegram.WebApp.ready(); Telegram.WebApp.expand(); }
+    if (window.Telegram?.WebApp) { Telegram.WebApp.ready(); Telegram.WebApp.expand(); Telegram.WebApp.setHeaderColor?.('#ffffff'); Telegram.WebApp.setBackgroundColor?.('#ffffff'); }
     load();
     setInterval(() => { const node = document.querySelector('#countdown strong'); if (node && currentTarget) node.textContent = remaining(currentTarget); }, 1000);
     setInterval(load, 15000);
