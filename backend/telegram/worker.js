@@ -4,7 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-16`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-17`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -85,13 +85,14 @@ export default {
       const url = new URL(request.url);
       if (REMOVED_FEATURE_PATHS.has(url.pathname)) return textResponse('Not Found', 404);
 
+      if (url.pathname === '/api/live' && ['GET', 'OPTIONS'].includes(request.method)) {
+        return await getLiveStateResponse(request, env);
+      }
+      if (url.pathname === '/api/live-chat' && ['GET', 'POST', 'OPTIONS'].includes(request.method)) {
+        return await liveChatResponse(request, env);
+      }
+
       if (request.method === 'GET') {
-        if (url.pathname === '/api/live') {
-          return await getLiveStateResponse(request, env);
-        }
-        if (url.pathname === '/api/live-chat') {
-          return await liveChatResponse(request, env);
-        }
         if (url.pathname === '/set_webhook') {
           return await setWebhook(request, env, url);
         }
@@ -108,10 +109,6 @@ export default {
           return env.ASSETS.fetch(request);
         }
         return textResponse('VakDab Telegram Worker is running.');
-      }
-
-      if (request.method === 'POST' && url.pathname === '/api/live-chat') {
-        return await liveChatResponse(request, env);
       }
 
       if (request.method === 'POST' && (url.pathname === TELEGRAM_WEBHOOK_PATH || url.pathname === '/')) {
