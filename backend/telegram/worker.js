@@ -4,7 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-22`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-23`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -2677,7 +2677,7 @@ function liveGuestChatUser(request, payload) {
 function publicLiveChat(messages) {
   return messages.map(message => ({
     id: String(message?.id || ''),
-    name: String(message?.name || 'Глядач').slice(0, 80),
+    name: String(message?.name || (message?.username ? `@${message.username}` : 'Глядач')).slice(0, 80),
     text: String(message?.text || '').slice(0, LIVE_CHAT_MAX_TEXT),
     createdAt: Number(message?.createdAt || 0) || 0
   })).filter(message => message.id && message.text);
@@ -2706,7 +2706,7 @@ async function verifyTelegramWebAppInitData(initData, env) {
   if (calculated !== receivedHash.toLowerCase()) return null;
   try {
     const user = JSON.parse(params.get('user') || '{}');
-    return user?.id ? { id: String(user.id), name: user.username ? `@${user.username}` : ([user.first_name, user.last_name].filter(Boolean).join(' ').trim() || 'Глядач') } : null;
+    return user?.id ? { id: String(user.id), username: String(user.username || '').trim(), name: user.username ? `@${user.username}` : ([user.first_name, user.last_name].filter(Boolean).join(' ').trim() || 'Глядач') } : null;
   } catch {
     return null;
   }
@@ -2728,7 +2728,7 @@ async function liveChatResponse(request, env) {
   const text = String(payload?.text || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, LIVE_CHAT_MAX_TEXT);
   if (!text) return new Response(JSON.stringify({ ok: false, error: 'MESSAGE_REQUIRED' }), { status: 400, headers: liveCorsHeaders(request) });
   const messages = await readLiveChat(env);
-  messages.push({ id: `${Date.now()}-${user.id}`, userId: user.id, name: user.name, text, createdAt: Date.now() });
+  messages.push({ id: `${Date.now()}-${user.id}`, userId: user.id, username: user.username || '', name: user.name, text, createdAt: Date.now() });
   await env.MAKIMA_MEMORY.put(LIVE_CHAT_KEY, JSON.stringify(messages.slice(-LIVE_CHAT_MAX_MESSAGES)));
   return new Response(JSON.stringify({ ok: true, message: publicLiveChat(messages).at(-1) }), { status: 201, headers: liveCorsHeaders(request) });
 }

@@ -327,7 +327,7 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-22');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-23');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
@@ -349,6 +349,8 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(workerSource, /CHAT_ID_REQUIRED/);
   assert.match(workerSource, /liveGuestChatUser/);
   assert.match(workerSource, /user\.username \? `@\$\{user\.username\}`/);
+  assert.match(workerSource, /username: String\(user\.username \|\| ''\)/);
+  assert.match(workerSource, /message\?\.username \? `@\$\{message\.username\}`/);
   assert.match(workerSource, /x-live-viewer-id/);
   assert.match(workerSource, /LIVE_CHAT_KEY/);
   assert.match(workerSource, /LIVE_VIEWERS_KEY/);
@@ -357,11 +359,14 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(workerSource, /\.join\('\\n'\)/);
   assert.match(workerSource, /x-telegram-init-data/);
   assert.match(liveAppSource, /id="liveVideo" autoplay muted playsinline/);
-  assert.match(liveAppSource, /const reuseVideo = Boolean\(previousVideo && source && currentSource === source\)/);
+  assert.match(liveAppSource, /const reuseVideo = Boolean\(previousVideo && source && currentSource === source && currentPositionKey === positionKey\)/);
   assert.match(liveAppSource, /LIVE_POSITION_KEY/);
   assert.match(liveAppSource, /localStorage\.setItem\(LIVE_POSITION_KEY/);
   assert.match(liveAppSource, /resumeVideo\(video, source, liveStartedAt, positionKey\)/);
-  assert.match(liveAppSource, /attachVideo\(activeVideo, source, state\.startsAt, state\.videoUrl\)/);
+  assert.match(liveAppSource, /const positionKey = source \? `\$\{source\}\|\$\{Number\(state\.startsAt \|\| 0\)\}`/);
+  assert.match(liveAppSource, /video\.seekable/);
+  assert.match(liveAppSource, /\['loadedmetadata','durationchange','progress','canplay'\]/);
+  assert.match(liveAppSource, /attachVideo\(activeVideo, source, state\.startsAt, positionKey\)/);
   assert.match(liveAppSource, /pagehide.*saveVideoPosition/s);
   assert.match(liveAppSource, /id="liveMuteToggle"/);
   assert.doesNotMatch(liveAppSource, /id="liveFullscreenToggle"/);
