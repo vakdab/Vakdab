@@ -375,9 +375,12 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /serverClockOffset = serverNow - Date\.now\(\)/);
   assert.match(liveAppSource, /syncServerClock\(payload\?\.serverNow \|\| payload\?\.live\?\.serverNow\)/);
   assert.match(liveAppSource, /liveNow\(\) - liveStartedAt/);
-  assert.match(liveAppSource, /let position = elapsed/);
+  assert.match(liveAppSource, /const elapsed = liveElapsedSeconds\(liveStartedAt\)/);
   assert.doesNotMatch(liveAppSource, /Math\.max\(elapsed, savedPosition\)/);
-  assert.match(liveAppSource, /visibilitychange.*resumeVideo/s);
+  assert.match(liveAppSource, /function livePositionForVideo\(video, liveStartedAt\)/);
+  assert.match(liveAppSource, /function syncVideoToLiveClock/);
+  assert.match(liveAppSource, /setInterval\(\(\) => syncVideoToLiveClock\(video\), 5000\)/);
+  assert.match(liveAppSource, /visibilitychange.*syncVideoToLiveClock/s);
   assert.match(liveAppSource, /id="liveMuteToggle"/);
   assert.doesNotMatch(liveAppSource, /id="liveFullscreenToggle"/);
   assert.doesNotMatch(liveAppSource, /id="liveExitFullscreenToggle"/);
