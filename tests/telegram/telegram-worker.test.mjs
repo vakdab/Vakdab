@@ -327,7 +327,7 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-30');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-31');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
@@ -434,6 +434,8 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /<aside class="chat"/);
   assert.match(liveAppSource, /<div class="live-layout">/);
   assert.match(liveAppSource, /min-width:700px.*max-height:600px.*grid-template-columns:minmax\(0,1\.85fr\) minmax\(220px,1fr\)/s);
+  assert.match(liveAppSource, /grid-template-rows:minmax\(0,1fr\)/);
+  assert.match(liveAppSource, /\.stage \{ width:100%; height:100%; max-width:100%; aspect-ratio:auto/);
   assert.match(liveAppSource, /min-width:700px.*max-height:600px.*\.chat \{ display:flex;/s);
   assert.match(liveAppSource, /max-width:699px.*\.live-layout \{ display:flex; flex-direction:column; min-height:0; \}/s);
   assert.match(liveAppSource, /max-width:699px.*\.chat \{ display:flex; flex:1 1 0; flex-direction:column; height:auto; min-height:0; \}/s);
