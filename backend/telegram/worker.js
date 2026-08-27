@@ -4,6 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-1`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -1648,7 +1649,7 @@ function aboutUsKeyboard() {
 
 function mainKeyboard() {
   return { inline_keyboard: [
-    [{ text: 'Live-опитування', callback_data: 'live:start' }],
+    [{ text: 'Аніме Ефір', web_app: { url: LIVE_WEB_APP_URL } }],
     [{ text: 'Популярні', callback_data: 'popular:1' }],
     [{ text: 'Випадкове', callback_data: 'random' }],
     [{ text: 'Пошук', callback_data: 'search:prompt' }],
@@ -1661,6 +1662,10 @@ function mainKeyboard() {
 
 function scheduleWebAppKeyboard() {
   return { inline_keyboard: [[{ text: 'Відкрити розклад', web_app: { url: SCHEDULE_WEB_APP_URL } }], [{ text: 'Головна', callback_data: 'home' }]] };
+}
+
+function liveWebAppKeyboard() {
+  return { inline_keyboard: [[{ text: 'Відкрити Аніме Ефір', web_app: { url: LIVE_WEB_APP_URL } }], [{ text: 'Головна', callback_data: 'home' }]] };
 }
 
 function backHomeKeyboard() {
@@ -2211,7 +2216,7 @@ function isUnsafeRouletteText(value) {
     || /(?:докс|доксинг|doxx|порно з неповноліт|child\s*sexual|csam)/i.test(text);
 }
 
-export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, scheduleWebAppKeyboard, vakdabWatchUrl, getAIProviderConfig, liveStageDefinitions, pickLiveWinner };
+export { getContentType, contentTypeLabel, validateContentUrl, extractContentId, isUnsafeRouletteText, extractRelayMedia, isBotOwner, formatBotUsageReport, scheduleWebAppKeyboard, liveWebAppKeyboard, vakdabWatchUrl, getAIProviderConfig, liveStageDefinitions, pickLiveWinner };
 
 export class ChatRouletteRoom {
   constructor(ctx, env) {

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0b0d">
+  <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="pragma" content="no-cache">
+  <title>Аніме Ефір — VakDab</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+  <style>
+    :root { --bg:#09090b; --panel:#17171b; --panel-2:#202025; --text:#fafafd; --muted:#a8a8b1; --accent:#f04c70; --line:rgba(255,255,255,.12); }
+    * { box-sizing:border-box; }
+    html { background:var(--bg); }
+    body { margin:0; min-width:320px; background:radial-gradient(circle at 12% 0%,rgba(240,76,112,.16),transparent 31%),var(--bg); color:var(--text); font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    button { font:inherit; }
+    .app { width:min(100%,960px); margin:0 auto; padding:calc(14px + env(safe-area-inset-top)) 14px calc(30px + env(safe-area-inset-bottom)); }
+    .topbar { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+    .back { display:grid; width:42px; height:42px; flex:none; place-items:center; border:1px solid var(--line); border-radius:50%; color:var(--text); background:rgba(255,255,255,.08); font-size:25px; line-height:1; }
+    .kicker { margin:0 0 4px; color:var(--accent); font-size:11px; font-weight:900; letter-spacing:.16em; text-transform:uppercase; }
+    h1 { margin:0; font-size:clamp(25px,7vw,40px); line-height:1; letter-spacing:-.045em; }
+    .status { display:flex; align-items:center; gap:7px; margin-left:auto; padding:9px 12px; border-radius:999px; color:#ffd9e2; background:rgba(240,76,112,.18); font-size:12px; font-weight:800; white-space:nowrap; }
+    .status i,.live-badge i { display:block; width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px rgba(240,76,112,.18); }
+    .stage { position:relative; overflow:hidden; aspect-ratio:16/9; border-radius:20px; background:#000; box-shadow:0 18px 50px rgba(0,0,0,.36); }
+    video { display:block; width:100%; height:100%; object-fit:contain; background:#000; pointer-events:none; }
+    .stage-missing { display:grid; height:100%; min-height:220px; place-items:center; color:var(--muted); font-weight:800; }
+    .live-badge { position:absolute; top:13px; left:13px; z-index:2; display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; background:rgba(8,8,10,.82); font-size:12px; font-weight:900; letter-spacing:.12em; }
+    .caption { position:absolute; right:0; bottom:0; left:0; z-index:2; padding:72px 17px 16px; background:linear-gradient(transparent,rgba(0,0,0,.9)); pointer-events:none; }
+    .caption strong,.caption span { display:block; }
+    .caption strong { font-size:clamp(18px,4vw,25px); }
+    .caption span { margin-top:4px; color:rgba(255,255,255,.77); font-size:14px; }
+    .info { margin-top:14px; padding:18px; border:1px solid var(--line); border-radius:18px; background:var(--panel); }
+    .info-head { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; }
+    .info h2 { margin:0; font-size:clamp(22px,6vw,32px); letter-spacing:-.04em; }
+    .on-air { color:#f7a0b3; font-size:12px; font-weight:800; white-space:nowrap; }
+    .meta { margin:10px 0 3px; color:#e1e1e5; font-size:14px; line-height:1.5; }
+    .available { color:var(--muted); font-size:12px; }
+    .countdown { min-height:20px; margin-top:14px; color:var(--muted); font-size:13px; }
+    .countdown strong { color:#ff8099; font-variant-numeric:tabular-nums; }
+    .chat { margin-top:14px; overflow:hidden; border:1px solid var(--line); border-radius:18px; background:var(--panel); }
+    .chat-head { padding:15px 17px; border-bottom:1px solid var(--line); font-weight:800; }
+    .chat-head small { display:block; margin-top:3px; color:var(--muted); font-size:11px; font-weight:500; }
+    .messages { display:grid; gap:12px; padding:15px 17px 17px; color:#e5e5e8; font-size:13px; line-height:1.45; }
+    .messages p { margin:0; }
+    .messages b { color:#ff7894; }
+    .empty,.loading { display:grid; min-height:55vh; place-items:center; text-align:center; color:var(--muted); }
+    .empty-card { width:min(100%,420px); padding:28px 20px; border:1px solid var(--line); border-radius:20px; background:var(--panel); }
+    .empty-card h2 { margin:12px 0 7px; color:var(--text); }
+    .empty-card p { margin:0; line-height:1.5; }
+    @media (min-width:760px) { .app { padding-left:24px; padding-right:24px; } .wide { display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:14px; align-items:start; } .chat { margin-top:0; } }
+    @media (max-width:520px) { .app { padding-top:calc(10px + env(safe-area-inset-top)); } .topbar { gap:9px; } .back { width:38px; height:38px; font-size:22px; } .status { padding:8px 9px; font-size:10px; } .stage { border-radius:17px; } .caption { padding:52px 13px 13px; } .caption strong { font-size:17px; } .caption span { font-size:12px; } .info { padding:16px; } }
+  </style>
+</head>
+<body>
+  <main class="app" id="app"><div class="loading">Підключення до Anime Live…</div></main>
+  <script>
+    const API = 'https://vakdab.animegran8.workers.dev/api/live';
+    const PROXY = 'https://monoanime.animegran8.workers.dev';
+    const app = document.getElementById('app');
+    let hls = null;
+    let currentSource = '';
+    let currentTarget = 0;
+    const escape = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[char]));
+    const isDirect = value => /\.(?:m3u8|mp4)(?:[?#].*)?$/i.test(String(value || '')) || /[?&]url=[^&]*(?:m3u8|mp4)/i.test(String(value || ''));
+    const remaining = target => { const seconds = Math.max(0, Math.floor((Number(target || 0) - Date.now()) / 1000)); const hours = Math.floor(seconds / 3600); const minutes = Math.floor((seconds % 3600) / 60); return hours ? `${hours} год ${String(minutes).padStart(2,'0')} хв` : `${minutes}:${String(seconds % 60).padStart(2,'0')}`; };
+    const episodes = state => { const start = Number(state.episodeStart || 0); const end = Number(state.episodeEnd || 0); const count = Number(state.episodeCount || 0); if (start && end) return `Серії ${start}–${end}${count ? ` (${count} ${count === 1 ? 'серія' : 'серій'})` : ''}`; if (state.isMovie) return 'Фільм'; return count ? `${count} ${count === 1 ? 'серія' : 'серій'}` : 'Ефір'; };
+    async function resolveSource(value) {
+      const source = String(value || '').trim();
+      if (!source) return '';
+      if (isDirect(source)) return source.startsWith(PROXY) ? source : `${PROXY}?url=${encodeURIComponent(source)}&force_ua=mobile`;
+      try {
+        const response = await fetch(`${PROXY}?url=${encodeURIComponent(source)}&force_ua=mobile`, { cache:'no-store', headers:{ accept:'text/html,application/xhtml+xml' } });
+        if (!response.ok) return '';
+        const html = await response.text();
+        const manifest = (html.match(/https?:\/\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?/i) || [])[0] || '';
+        return manifest ? `${PROXY}?url=${encodeURIComponent(manifest)}&force_ua=mobile` : '';
+      } catch { return ''; }
+    }
+    function stopVideo() { if (hls) { hls.destroy(); hls = null; } currentSource = ''; }
+    function attachVideo(video, source) { stopVideo(); currentSource = source; if (window.Hls?.isSupported?.() && /\.m3u8(?:[?#]|$)/i.test(source)) { hls = new Hls({ enableWorker:true, lowLatencyMode:true }); hls.loadSource(source); hls.attachMedia(video); hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {})); } else { video.src = source; video.play().catch(() => {}); } }
+    function renderEmpty(message = 'Ефір зараз не запущено') { stopVideo(); app.innerHTML = `<div class="empty"><section class="empty-card"><div class="kicker">VAKDAB LIVE</div><h2>${escape(message)}</h2><p>Власник VakDab налаштує наступну трансляцію в Telegram.</p></section></div>`; }
+    function render(state, source) {
+      const previousVideo = document.getElementById('liveVideo');
+      const reuseVideo = Boolean(previousVideo && source && currentSource === source);
+      if (!source) stopVideo();
+      const target = state.status === 'running' ? state.endsAt : state.startsAt;
+      currentTarget = Number(target || 0);
+      const videoMarkup = source ? `<video id="liveVideo" autoplay muted playsinline preload="auto"></video>` : '<div class="stage-missing">Відео трансляції готується…</div>';
+      app.innerHTML = `<div class="topbar"><button class="back" type="button" id="close" aria-label="Закрити">←</button><div><div class="kicker">VAKDAB LIVE</div><h1>Аніме Ефір</h1></div><div class="status"><i></i>${state.status === 'running' ? 'Ефір триває' : 'Готово до старту'}</div></div><div class="wide"><section><div class="stage">${videoMarkup}<div class="live-badge"><i></i> LIVE</div><div class="caption"><strong>${escape(state.animeTitle || 'VakDab')}</strong><span>${escape(episodes(state))} · ${escape(state.dub || 'Озвучка')}</span></div></div><section class="info"><div class="info-head"><h2>${escape(state.animeTitle || 'Спільний перегляд')}</h2><span class="on-air">● наживо</span></div><p class="meta">${escape(episodes(state))} · ${escape(state.dub || 'Озвучка не вказана')}${state.season ? ` · ${escape(state.season)}` : ''}</p>${state.availableEpisodeCount ? `<small class="available">Доступно серій: ${escape(state.availableEpisodeCount)}</small>` : ''}<div class="countdown" id="countdown">${currentTarget ? `До завершення: <strong>${remaining(currentTarget)}</strong>` : ''}</div></section></section><aside class="chat"><div class="chat-head">Чат трансляції<small>Спільнота VakDab</small></div><div class="messages"><p><b>VakDab:</b> Приємного перегляду!</p><p><b>Луна:</b> Ефір іде наживо — приєднуйся.</p><p><b>Система:</b> ${escape(state.animeTitle || 'Аніме')} · ${escape(state.dub || 'озвучка')}</p></div></aside></div>`;
+      document.getElementById('close')?.addEventListener('click', () => window.Telegram?.WebApp?.close?.());
+      const video = document.getElementById('liveVideo');
+      if (reuseVideo) video?.replaceWith(previousVideo);
+      const activeVideo = document.getElementById('liveVideo');
+      if (activeVideo && source && !reuseVideo) attachVideo(activeVideo, source);
+    }
+    async function load() { try { const response = await fetch(API, { cache:'no-store', headers:{ accept:'application/json' } }); if (!response.ok) throw new Error(); const payload = await response.json(); const state = payload?.live || payload; if (!state || state.status === 'idle') return renderEmpty(); const source = await resolveSource(state.videoUrl); render(state, source); } catch { renderEmpty('Не вдалося завантажити ефір'); } }
+    if (window.Telegram?.WebApp) { Telegram.WebApp.ready(); Telegram.WebApp.expand(); }
+    load();
+    setInterval(() => { const node = document.querySelector('#countdown strong'); if (node && currentTarget) node.textContent = remaining(currentTarget); }, 1000);
+    setInterval(load, 15000);
+  </script>
+</body>
+</html>

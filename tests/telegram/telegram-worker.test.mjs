@@ -11,6 +11,7 @@ import worker, {
   isBotOwner,
   formatBotUsageReport,
   scheduleWebAppKeyboard,
+  liveWebAppKeyboard,
   vakdabWatchUrl,
   getAIProviderConfig,
   callCompatibleChat,
@@ -321,6 +322,21 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
   const button = scheduleWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити розклад');
   assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/schedule.html?v=mono-20260823-1540');
+});
+
+test('live keyboard opens the dedicated Telegram Web App page', () => {
+  const button = liveWebAppKeyboard().inline_keyboard[0][0];
+  assert.equal(button.text, 'Відкрити Аніме Ефір');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-1');
+  const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
+  const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
+  assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
+  assert.doesNotMatch(workerSource, /text: 'Live-опитування'/);
+  assert.match(liveAppSource, /telegram-web-app\.js/);
+  assert.match(liveAppSource, /https:\/\/vakdab\.animegran8\.workers\.dev\/api\/live/);
+  assert.match(liveAppSource, /id="liveVideo" autoplay muted playsinline/);
+  assert.match(liveAppSource, /const reuseVideo = Boolean\(previousVideo && source && currentSource === source\)/);
+  assert.doesNotMatch(liveAppSource, /<video[^>]+controls/);
 });
 
 test('VakDab links support anime, manga and novels', () => {
