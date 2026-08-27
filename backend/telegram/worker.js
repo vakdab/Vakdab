@@ -213,7 +213,8 @@ async function handleMessage(message, env) {
     }
     return;
   }
-  if (!(await isSubscriptionSatisfied(message.from, env))) {
+  const isLiveCommand = /^\/(?:live|livenext|livestart|livecancel)(?:@\w+)?(?:\s|$)/i.test(text);
+  if (!isLiveCommand && !(await isSubscriptionSatisfied(message.from, env))) {
     getState(chatId).screen = 'awaiting_subscription';
     await sendTrackedMessage(chatId, memoryKey, subscriptionGateText(), { reply_markup: subscriptionKeyboard() }, env);
     return;
@@ -232,7 +233,13 @@ async function handleMessage(message, env) {
       await sendMessage(chatId, 'Запуск live доступний лише власнику бота.', {}, env);
       return;
     }
-    await startLiveSession(chatId, env);
+    try { await startLiveSession(chatId, env); } catch (error) { console.error('[live] start command failed:', safeError(error)); await sendMessage(chatId, 'Не вдалося запустити налаштування live. Спробуй ще раз.', {}, env); }
+    return;
+  }
+  if (/^\/livestart(?:@\w+)?(?:\s|$)/i.test(text)) {
+    if (!isBotOwner(message.from)) { await sendMessage(chatId, 'Ця команда доступна лише власнику бота.', {}, env); return; }
+    const requestedHours = text.replace(/^\/livestart(?:@\w+)?\s*/i, '').trim();
+    try { await startLiveBroadcast(chatId, env, requestedHours || undefined); } catch (error) { console.error('[live] broadcast command failed:', safeError(error)); await sendMessage(chatId, 'Не вдалося запустити трансляцію. Спробуй ще раз.', {}, env); }
     return;
   }
   if (/^\/livenext(?:@\w+)?(?:\s|$)/i.test(text)) {
@@ -240,7 +247,7 @@ async function handleMessage(message, env) {
       await sendMessage(chatId, 'Ця команда доступна лише власнику бота.', {}, env);
       return;
     }
-    await prepareLiveNextRange(chatId, env);
+    try { await prepareLiveNextRange(chatId, env); } catch (error) { console.error('[live] next command failed:', safeError(error)); await sendMessage(chatId, 'Не вдалося перейти до наступного кроку live.', {}, env); }
     return;
   }
   if (/^\/livecancel(?:@\w+)?(?:\s|$)/i.test(text)) {
@@ -248,7 +255,7 @@ async function handleMessage(message, env) {
       await sendMessage(chatId, 'Ця команда доступна лише власнику бота.', {}, env);
       return;
     }
-    await cancelLiveSession(chatId, env);
+    try { await cancelLiveSession(chatId, env); } catch (error) { console.error('[live] cancel command failed:', safeError(error)); await sendMessage(chatId, 'Не вдалося скасувати live-сесію. Спробуй ще раз.', {}, env); }
     return;
   }
   // Команди рулетки обробляємо до relay, інакше активний чат передасть /next як звичайний текст.
