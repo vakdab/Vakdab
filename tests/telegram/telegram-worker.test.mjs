@@ -416,7 +416,8 @@ test('anime live screen is routed separately from the compact home widget', () =
   assert.match(routerSource, /route === 'live'/);
   assert.match(routerSource, /showLive\(\)/);
   assert.match(liveSource, /data-live-expand/);
-  assert.match(liveSource, /window\.location\.hash = 'live'/);
+  assert.match(liveSource, /startapp=live/);
+  assert.match(liveSource, /https:\/\/t\.me\/vakdabprobot/);
   assert.match(pageSource, /anime-live-page/);
   assert.match(pageSource, /id="animeLiveVideo"/);
   assert.match(pageSource, /destroyLivePage/);

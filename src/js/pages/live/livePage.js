@@ -1,4 +1,4 @@
-import { loadLiveState } from '../../components/live/liveStream.js?v=20260827-live-screen-v1';
+import { loadLiveState } from '../../components/live/liveStream.js?v=20260827-live-screen-v2';
 
 let refreshTimer = null;
 let countdownTimer = null;

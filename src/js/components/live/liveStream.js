@@ -91,7 +91,9 @@ function renderState(host, state) {
     if (!state || state.status === 'idle') return renderIdle(host);
     const isRunning = state.status === 'running';
     const hasWatch = Boolean(state.animeUrl);
-    const expandLink = (isRunning || hasWatch) ? '<button type="button" class="live-action live-action--primary" data-live-expand>Розгорнути</button>' : '';
+    const telegramBaseUrl = String(state.telegramUrl || 'https://t.me/vakdabprobot').trim();
+    const telegramLiveUrl = `${telegramBaseUrl}${telegramBaseUrl.includes('?') ? '&' : '?'}startapp=live`;
+    const expandLink = (isRunning || hasWatch) ? `<a class="live-action live-action--primary" data-live-expand href="${escapeHtml(telegramLiveUrl)}">Розгорнути</a>` : '';
     const videoStage = (isRunning || hasWatch) ? renderVideoStage(state) : '';
     host.innerHTML = `<section class="live-stream-card live-stream-card--compact${isRunning ? ' is-running' : ''}" aria-label="Поточний Anime Live ефір">${videoStage}<div class="live-stream-card__actions">${expandLink}</div></section>`;
     const renderedVideo = host.querySelector('#liveVideoElement');
@@ -106,8 +108,8 @@ function renderState(host, state) {
     } else if (liveVideo && previousWasPlaying && liveVideo.paused) {
         liveVideo.play().catch(error => console.warn('[VakDab] autoplay resume blocked:', error));
     }
-    host.querySelector('[data-live-expand]')?.addEventListener('click', () => { window.location.hash = 'live'; });
 }
+
 
 export async function loadLiveState() {
     const response = await fetch(LIVE_API_URL, { cache: 'no-store', headers: { accept: 'application/json' } });
