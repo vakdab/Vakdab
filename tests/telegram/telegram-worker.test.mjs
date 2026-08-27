@@ -368,7 +368,7 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /<div class="live-layout">/);
   assert.match(liveAppSource, /min-width:700px.*max-height:600px.*grid-template-columns:minmax\(0,62vw\) minmax\(0,1fr\)/s);
   assert.match(liveAppSource, /min-width:700px.*max-height:600px.*\.chat \{ display:flex;/s);
-  assert.match(liveAppSource, /max-width:699px.*\.chat \{ display:flex; flex-direction:column; min-height:280px; \}/s);
+  assert.match(liveAppSource, /max-width:699px.*\.chat \{ display:flex; flex-direction:column; min-height:max\(360px, calc\(100dvh - 260px\)\); \}/s);
   assert.doesNotMatch(liveAppSource, /app\.innerHTML = `[^`]*class="wide"/);
   assert.doesNotMatch(liveAppSource, /<video[^>]+controls/);
 });
