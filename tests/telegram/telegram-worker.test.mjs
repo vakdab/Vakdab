@@ -327,7 +327,7 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-26');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-27');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
@@ -399,6 +399,10 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /--bg:#ffffff/);
   assert.match(liveAppSource, /color:var\(--text\)/);
   assert.match(liveAppSource, /color:#fff; background:rgba\(8,8,10,.82\)/);
+  assert.match(liveAppSource, /html \{ height:100%; overflow:hidden/);
+  assert.match(liveAppSource, /\.app \{ width:100%; height:var\(--live-viewport-height, 100dvh\); min-height:0/);
+  assert.match(liveAppSource, /\.chat-messages \{ display:grid; flex:1 1 0; align-content:start; gap:10px; min-height:0; max-height:none; overflow-y:auto; overscroll-behavior:contain/);
+  assert.match(liveAppSource, /\.live-layout \{ display:grid; height:100%; min-height:0; gap:14px; overflow:hidden/);
   assert.match(liveAppSource, /\.caption strong,\.caption span \{ display:block; color:#fff; \}/);
   assert.doesNotMatch(liveAppSource, /<p><b>VakDab:<\/b>/);
   assert.doesNotMatch(liveAppSource, /<p><b>Луна:<\/b>/);
@@ -412,8 +416,8 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /<div class="live-layout">/);
   assert.match(liveAppSource, /min-width:700px.*max-height:600px.*grid-template-columns:minmax\(0,62vw\) minmax\(0,1fr\)/s);
   assert.match(liveAppSource, /min-width:700px.*max-height:600px.*\.chat \{ display:flex;/s);
-  assert.match(liveAppSource, /max-width:699px.*\.live-layout \{ display:flex; flex-direction:column; min-height:calc\(100dvh - 14px\); \}/s);
-  assert.match(liveAppSource, /max-width:699px.*\.chat \{ display:flex; flex:1 1 auto; flex-direction:column; height:auto; min-height:0; \}/s);
+  assert.match(liveAppSource, /max-width:699px.*\.live-layout \{ display:flex; flex-direction:column; min-height:0; \}/s);
+  assert.match(liveAppSource, /max-width:699px.*\.chat \{ display:flex; flex:1 1 0; flex-direction:column; height:auto; min-height:0; \}/s);
   assert.doesNotMatch(liveAppSource, /app\.innerHTML = `[^`]*class="wide"/);
   assert.doesNotMatch(liveAppSource, /<video[^>]+controls/);
 });
