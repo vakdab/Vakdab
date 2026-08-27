@@ -4,7 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-20`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-21`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -2706,7 +2706,7 @@ async function verifyTelegramWebAppInitData(initData, env) {
   if (calculated !== receivedHash.toLowerCase()) return null;
   try {
     const user = JSON.parse(params.get('user') || '{}');
-    return user?.id ? { id: String(user.id), name: [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || (user.username ? `@${user.username}` : 'Глядач') } : null;
+    return user?.id ? { id: String(user.id), name: user.username ? `@${user.username}` : ([user.first_name, user.last_name].filter(Boolean).join(' ').trim() || 'Глядач') } : null;
   } catch {
     return null;
   }

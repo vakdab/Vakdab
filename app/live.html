@@ -90,10 +90,13 @@
     const app = document.getElementById('app');
     let hls = null;
     let currentSource = '';
+    let currentPositionKey = '';
     let currentTarget = 0;
+    let currentLiveStart = 0;
     let chatMessages = [];
     let viewerCount = 0;
     const viewerId = (() => { try { const key = 'vakdab-live-viewer-id'; let value = localStorage.getItem(key); if (!value) { value = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`; localStorage.setItem(key, value); } return value; } catch { return `${Date.now()}-${Math.random().toString(36).slice(2)}`; } })();
+    const LIVE_POSITION_KEY = 'vakdab-live-position';
     const escape = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[char]));
     const isDirect = value => /\.(?:m3u8|mp4)(?:[?#].*)?$/i.test(String(value || '')) || /[?&]url=[^&]*(?:m3u8|mp4)/i.test(String(value || ''));
     const remaining = target => { const seconds = Math.max(0, Math.floor((Number(target || 0) - Date.now()) / 1000)); const hours = Math.floor(seconds / 3600); const minutes = Math.floor((seconds % 3600) / 60); return hours ? `${hours} год ${String(minutes).padStart(2,'0')} хв` : `${minutes}:${String(seconds % 60).padStart(2,'0')}`; };
@@ -110,8 +113,11 @@
         return manifest ? `${PROXY}?url=${encodeURIComponent(manifest)}&force_ua=mobile` : '';
       } catch { return ''; }
     }
-    function stopVideo() { if (hls) { hls.destroy(); hls = null; } currentSource = ''; }
-    function attachVideo(video, source) { stopVideo(); currentSource = source; if (window.Hls?.isSupported?.() && /\.m3u8(?:[?#]|$)/i.test(source)) { hls = new Hls({ enableWorker:true, lowLatencyMode:true }); hls.loadSource(source); hls.attachMedia(video); hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {})); } else { video.src = source; video.play().catch(() => {}); } }
+    function saveVideoPosition() { const video = document.getElementById('liveVideo'); if (!video || !(currentPositionKey || currentSource) || !Number.isFinite(video.currentTime) || video.currentTime <= 0) return; try { localStorage.setItem(LIVE_POSITION_KEY, JSON.stringify({ source:currentPositionKey || currentSource, position:video.currentTime, savedAt:Date.now() })); } catch {} }
+    function readSavedVideoPosition(sourceKey) { try { const saved = JSON.parse(localStorage.getItem(LIVE_POSITION_KEY) || 'null'); return saved?.source === sourceKey && Number.isFinite(Number(saved.position)) ? { position:Math.max(0, Number(saved.position)), savedAt:Number(saved.savedAt || 0) } : { position:0, savedAt:0 }; } catch { return { position:0, savedAt:0 }; } }
+    function resumeVideo(video, source, liveStartedAt, positionKey) { if (!video) return; const saved = readSavedVideoPosition(positionKey); const savedPosition = saved.position + (saved.savedAt > 0 ? Math.max(0, (Date.now() - saved.savedAt) / 1000) : 0); const elapsed = liveStartedAt > 0 ? Math.max(0, (Date.now() - liveStartedAt) / 1000) : 0; let applied = false; const seek = () => { if (applied) return; const duration = Number(video.duration); if (!Number.isFinite(duration) && duration !== Infinity) return; let position = Math.max(savedPosition, elapsed); if (Number.isFinite(duration) && duration > 1) { if (position >= duration - 1 && savedPosition < duration - 1) position = savedPosition; position = Math.min(position, duration - 0.5); } if (position > 0) { try { video.currentTime = position; } catch {} } applied = true; video.removeEventListener('loadedmetadata', seek); video.removeEventListener('durationchange', seek); video.play().catch(() => {}); }; video.addEventListener('loadedmetadata', seek); video.addEventListener('durationchange', seek); seek(); window.setTimeout(seek, 1000); }
+    function stopVideo() { saveVideoPosition(); if (hls) { hls.destroy(); hls = null; } currentSource = ''; currentPositionKey = ''; currentLiveStart = 0; }
+    function attachVideo(video, source, liveStartedAt, positionKey) { stopVideo(); currentSource = source; currentPositionKey = String(positionKey || source); currentLiveStart = Number(liveStartedAt || 0); if (window.Hls?.isSupported?.() && /\.m3u8(?:[?#]|$)/i.test(source)) { hls = new Hls({ enableWorker:true, lowLatencyMode:true }); hls.loadSource(source); hls.attachMedia(video); hls.on(Hls.Events.MANIFEST_PARSED, () => resumeVideo(video, source, liveStartedAt, currentPositionKey)); } else { video.src = source; resumeVideo(video, source, liveStartedAt, currentPositionKey); } }
     function renderEmpty(message = 'Ефір зараз не запущено') { stopVideo(); app.innerHTML = `<div class="empty"><section class="empty-card"><div class="kicker">VAKDAB LIVE</div><h2>${escape(message)}</h2><p>Власник VakDab налаштує наступну трансляцію в Telegram.</p></section></div>`; }
     function formatChatTime(value) { return value ? new Date(value).toLocaleTimeString('uk-UA', { hour:'2-digit', minute:'2-digit' }) : ''; }
     function chatMessagesMarkup(messages) { const items = Array.isArray(messages) ? messages : []; return items.length ? items.map(message => `<div class="chat-message"><span class="chat-message__name">${escape(message.name || 'Глядач')}</span><span class="chat-message__time">${escape(formatChatTime(message.createdAt))}</span><div class="chat-message__text">${escape(message.text)}</div></div>`).join('') : '<div class="chat-empty">Повідомлень поки немає.</div>'; }
@@ -202,13 +208,16 @@
       const video = document.getElementById('liveVideo');
       if (reuseVideo) video?.replaceWith(previousVideo);
       const activeVideo = document.getElementById('liveVideo');
-      if (activeVideo && source && !reuseVideo) attachVideo(activeVideo, source);
+      if (activeVideo && source && !reuseVideo) attachVideo(activeVideo, source, state.startsAt, state.videoUrl);
       if (activeVideo && source) bindStageControls(document.querySelector('.stage'), activeVideo);
     }
     async function load() { try { const response = await fetch(API, { cache:'no-store', headers:{ accept:'application/json' } }); if (!response.ok) throw new Error(); const payload = await response.json(); const state = payload?.live || payload; if (!state || state.status === 'idle') return renderEmpty(); const source = await resolveSource(state.videoUrl); chatMessages = await fetchChat(); render(state, source, chatMessages); } catch { renderEmpty('Не вдалося завантажити ефір'); } }
     if (window.Telegram?.WebApp) { Telegram.WebApp.ready(); Telegram.WebApp.expand(); Telegram.WebApp.setHeaderColor?.('#ffffff'); Telegram.WebApp.setBackgroundColor?.('#ffffff'); Telegram.WebApp.onEvent?.('viewportChanged', syncKeyboardViewport); }
     window.visualViewport?.addEventListener('resize', syncKeyboardViewport, { passive:true });
     window.addEventListener('resize', syncKeyboardViewport, { passive:true });
+    window.addEventListener('pagehide', saveVideoPosition, { passive:true });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) saveVideoPosition(); }, { passive:true });
+    setInterval(saveVideoPosition, 2000);
     syncKeyboardViewport();
     load();
     setInterval(() => { const node = document.querySelector('#countdown strong'); if (node && currentTarget) node.textContent = remaining(currentTarget); }, 1000);
