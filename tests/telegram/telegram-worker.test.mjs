@@ -327,7 +327,7 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-29');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-30');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
@@ -364,7 +364,8 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.doesNotMatch(workerSource, /hmac\(encoder\.encode\(token\), 'WebAppData'\)/);
   assert.match(workerSource, /\.join\('\\n'\)/);
   assert.match(workerSource, /x-telegram-init-data/);
-  assert.match(liveAppSource, /id="liveVideo" autoplay muted playsinline/);
+  assert.match(liveAppSource, /id="liveVideo" autoplay playsinline/);
+  assert.doesNotMatch(liveAppSource, /id="liveVideo" autoplay muted playsinline/);
   assert.match(liveAppSource, /const reuseVideo = Boolean\(previousVideo && source && currentSource === source && currentPositionKey === positionKey\)/);
   assert.doesNotMatch(liveAppSource, /LIVE_POSITION_KEY/);
   assert.doesNotMatch(liveAppSource, /saveVideoPosition/);
@@ -396,15 +397,18 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.doesNotMatch(liveAppSource, /id="liveExitFullscreenToggle"/);
   assert.doesNotMatch(liveAppSource, /requestFullscreen/);
   assert.doesNotMatch(liveAppSource, /is-live-fullscreen/);
-  assert.doesNotMatch(liveAppSource, /video\.muted = !video\.muted/);
+  assert.match(liveAppSource, /video\.muted = false/);
+  assert.match(liveAppSource, /video\.defaultMuted = false/);
   assert.match(liveAppSource, /id="liveViewerCount"/);
   assert.match(liveAppSource, /url\.searchParams\.set\('viewer', viewerId\)/);
-  assert.doesNotMatch(liveAppSource, /showStageOverlay/);
-  assert.doesNotMatch(liveAppSource, /hideStageOverlay/);
+  assert.match(liveAppSource, /showStageOverlay/);
+  assert.match(liveAppSource, /hideStageOverlay/);
+  assert.match(liveAppSource, /function bindStageOverlay/);
+  assert.match(liveAppSource, /stage\.addEventListener\('click', \(\) => showStageOverlay/);
   assert.match(liveAppSource, /x-live-viewer-id/);
-  assert.doesNotMatch(liveAppSource, /stage\.addEventListener\('click'/);
-  assert.doesNotMatch(liveAppSource, /\.live-badge \{[^}]*opacity:0/s);
-  assert.doesNotMatch(liveAppSource, /\.caption \{[^}]*opacity:0/s);
+  assert.match(liveAppSource, /stage\.addEventListener\('click'/);
+  assert.match(liveAppSource, /\.live-badge \{[^}]*opacity:0/s);
+  assert.match(liveAppSource, /\.caption \{[^}]*opacity:0/s);
   assert.match(liveAppSource, /\.caption \{ position:absolute; right:0; bottom:14px; left:0/);
   assert.match(liveAppSource, /if \(reuseVideo && previousStage\)/);
   assert.match(liveAppSource, /theme-color" content="#ffffff"/);
@@ -429,7 +433,7 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /app\.innerHTML = `\<div class="live-layout"\>\<div class="stage"/);
   assert.match(liveAppSource, /<aside class="chat"/);
   assert.match(liveAppSource, /<div class="live-layout">/);
-  assert.match(liveAppSource, /min-width:700px.*max-height:600px.*grid-template-columns:minmax\(0,58%\) minmax\(0,42%\)/s);
+  assert.match(liveAppSource, /min-width:700px.*max-height:600px.*grid-template-columns:minmax\(0,1\.85fr\) minmax\(220px,1fr\)/s);
   assert.match(liveAppSource, /min-width:700px.*max-height:600px.*\.chat \{ display:flex;/s);
   assert.match(liveAppSource, /max-width:699px.*\.live-layout \{ display:flex; flex-direction:column; min-height:0; \}/s);
   assert.match(liveAppSource, /max-width:699px.*\.chat \{ display:flex; flex:1 1 0; flex-direction:column; height:auto; min-height:0; \}/s);

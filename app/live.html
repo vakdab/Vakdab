@@ -22,15 +22,16 @@
     h1 { margin:0; font-size:clamp(25px,7vw,40px); line-height:1; letter-spacing:-.045em; }
     .status { display:flex; align-items:center; gap:7px; margin-left:auto; padding:9px 12px; border-radius:999px; color:#ffd9e2; background:rgba(240,76,112,.18); font-size:12px; font-weight:800; white-space:nowrap; }
     .status i,.live-badge i { display:block; width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px rgba(240,76,112,.18); }
-    .stage { position:relative; width:100%; overflow:hidden; aspect-ratio:16/9; border-radius:18px; background:#000; box-shadow:0 14px 40px rgba(0,0,0,.18); }
+    .stage { position:relative; width:100%; overflow:hidden; aspect-ratio:16/9; border-radius:18px; background:#000; box-shadow:0 14px 40px rgba(0,0,0,.18); cursor:pointer; }
     video { display:block; width:100%; height:100%; object-fit:contain; background:#000; pointer-events:none; }
 
     .chat-head-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .viewer-count { color:var(--muted); font-size:13px; font-weight:700; white-space:nowrap; }
 
     .stage-missing { display:grid; height:100%; min-height:220px; place-items:center; color:var(--muted); font-weight:800; }
-    .live-badge { position:absolute; top:16px; left:16px; z-index:2; display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; color:#fff; background:rgba(8,8,10,.82); font-size:12px; font-weight:900; letter-spacing:.12em; }
-    .caption { position:absolute; right:0; bottom:14px; left:0; z-index:2; padding:52px 17px 0; background:linear-gradient(transparent,rgba(0,0,0,.9)); pointer-events:none; }
+    .live-badge { position:absolute; top:16px; left:16px; z-index:2; display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; color:#fff; background:rgba(8,8,10,.82); font-size:12px; font-weight:900; letter-spacing:.12em; opacity:0; visibility:hidden; transform:translateY(-4px); transition:opacity .18s ease,transform .18s ease,visibility .18s ease; pointer-events:none; }
+    .caption { position:absolute; right:0; bottom:14px; left:0; z-index:2; padding:52px 17px 0; background:linear-gradient(transparent,rgba(0,0,0,.9)); pointer-events:none; opacity:0; visibility:hidden; transform:translateY(4px); transition:opacity .18s ease,transform .18s ease,visibility .18s ease; }
+    .stage.controls-visible .live-badge,.stage.controls-visible .caption { opacity:1; visibility:visible; transform:none; }
     .caption strong,.caption span { display:block; color:#fff; }
     .caption strong { font-size:clamp(18px,4vw,25px); }
     .caption span { margin-top:4px; color:rgba(255,255,255,.77); font-size:14px; }
@@ -68,7 +69,7 @@
     .empty-card p { margin:0; line-height:1.5; }
     @media (min-width:760px) { .app { padding-left:10px; padding-right:10px; } }
     .live-layout { display:grid; height:100%; min-height:0; gap:14px; overflow:hidden; }
-    @media (min-width:700px) and (max-height:600px) { .app { width:100%; padding:12px 30px calc(12px + env(safe-area-inset-bottom)); } .live-layout { grid-template-columns:minmax(0,58%) minmax(0,42%); gap:16px; align-items:stretch; } .stage { width:100%; max-width:100%; margin:0; border-radius:0; box-shadow:none; } .chat { display:flex; flex-direction:column; height:100%; min-height:0; margin:0; } .chat-messages { flex:1 1 0; min-height:0; max-height:none; } body.keyboard-open .chat-composer { position:sticky; right:auto; bottom:auto; left:auto; border:0; border-radius:0; box-shadow:none; } }
+    @media (min-width:700px) and (max-height:600px) { .app { width:100%; padding:12px 30px calc(12px + env(safe-area-inset-bottom)); } .live-layout { grid-template-columns:minmax(0,1.85fr) minmax(220px,1fr); gap:16px; align-items:stretch; } .stage { width:100%; max-width:100%; margin:0; border-radius:0; box-shadow:none; } .chat { display:flex; flex-direction:column; height:100%; min-height:0; margin:0; } .chat-messages { flex:1 1 0; min-height:0; max-height:none; } body.keyboard-open .chat-composer { position:sticky; right:auto; bottom:auto; left:auto; border:0; border-radius:0; box-shadow:none; } }
     @media (max-width:699px), (min-width:700px) and (min-height:601px) { .app { padding-bottom:env(safe-area-inset-bottom); } .live-layout { display:flex; flex-direction:column; min-height:0; } .chat { display:flex; flex:1 1 0; flex-direction:column; height:auto; min-height:0; } .chat-messages { flex:1 1 0; min-height:0; max-height:none; } }
     @media (max-width:520px) { .app { min-height:100dvh; padding:0 10px env(safe-area-inset-bottom); } .stage { border-radius:18px; } .caption { bottom:10px; padding:46px 13px 0; } .caption strong { font-size:17px; } .caption span { font-size:12px; } }
     @media (min-width:521px) and (max-width:699px) and (max-height:600px) { .app { padding-left:10px; padding-right:10px; } .stage { border-radius:0; } .chat { display:none; } }
@@ -113,7 +114,7 @@
     function livePositionForVideo(video, liveStartedAt) { if (!video) return 0; const elapsed = liveElapsedSeconds(liveStartedAt); const duration = Number(video.duration); if (!Number.isFinite(duration) && duration !== Infinity) return 0; const ranges = video.seekable; const hasSeekable = ranges && ranges.length > 0; if (duration === Infinity && !hasSeekable) return 0; if (duration === Infinity) { const start = ranges.start(0); const end = ranges.end(ranges.length - 1); return Math.min(Math.max(start + elapsed, start), Math.max(start, end - 0.5)); } return duration > 1 ? Math.min(elapsed, duration - 0.5) : elapsed; }
     function syncVideoToLiveClock(video = document.getElementById('liveVideo')) { if (!video || !currentLiveStart || video.readyState < 1) return; const target = livePositionForVideo(video, currentLiveStart); if (!(target > 0)) return; if (Math.abs(Number(video.currentTime || 0) - target) > 2) { try { video.currentTime = target; } catch {} } if (video.paused && !video.ended) video.play().catch(() => {}); }
     function startLiveSync(video) { if (liveSyncTimer) clearInterval(liveSyncTimer); liveSyncTimer = window.setInterval(() => syncVideoToLiveClock(video), 5000); syncVideoToLiveClock(video); }
-    function resumeVideo(video, source, liveStartedAt, positionKey) { if (!video) return; let applied = false; const seek = () => { if (applied) return; const target = livePositionForVideo(video, liveStartedAt); if (!(target > 0)) return; try { video.currentTime = target; } catch {} applied = true; ['loadedmetadata','durationchange','progress','canplay'].forEach(event => video.removeEventListener(event, seek)); video.play().catch(() => {}); }; ['loadedmetadata','durationchange','progress','canplay'].forEach(event => video.addEventListener(event, seek)); seek(); [500, 1500, 3000].forEach(delay => window.setTimeout(seek, delay)); }
+    function resumeVideo(video, source, liveStartedAt, positionKey) { if (!video) return; let applied = false; const seek = () => { if (applied) return; const target = livePositionForVideo(video, liveStartedAt); if (!(target > 0)) return; try { video.currentTime = target; } catch {} video.muted = false; video.defaultMuted = false; video.volume = 1; applied = true; ['loadedmetadata','durationchange','progress','canplay'].forEach(event => video.removeEventListener(event, seek)); video.play().catch(() => {}); }; ['loadedmetadata','durationchange','progress','canplay'].forEach(event => video.addEventListener(event, seek)); seek(); [500, 1500, 3000].forEach(delay => window.setTimeout(seek, delay)); }
     function stopVideo() { if (liveSyncTimer) { clearInterval(liveSyncTimer); liveSyncTimer = null; } if (hls) { hls.destroy(); hls = null; } currentSource = ''; currentPositionKey = ''; currentLiveStart = 0; }
     function attachVideo(video, source, liveStartedAt, positionKey) { stopVideo(); currentSource = source; currentPositionKey = String(positionKey || source); currentLiveStart = Number(liveStartedAt || 0); if (window.Hls?.isSupported?.() && /\.m3u8(?:[?#]|$)/i.test(source)) { hls = new Hls({ enableWorker:true, lowLatencyMode:true }); hls.loadSource(source); hls.attachMedia(video); hls.on(Hls.Events.ERROR, (_, data) => { if (!data?.fatal || !hls) return; if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad(); else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError(); }); hls.on(Hls.Events.MANIFEST_PARSED, () => { resumeVideo(video, source, liveStartedAt, currentPositionKey); startLiveSync(video); }); } else { video.src = source; resumeVideo(video, source, liveStartedAt, currentPositionKey); startLiveSync(video); } }
     function renderEmpty(message = 'Ефір зараз не запущено') { stopVideo(); app.innerHTML = `<div class="empty"><section class="empty-card"><div class="kicker">VAKDAB LIVE</div><h2>${escape(message)}</h2><p>Власник VakDab налаштує наступну трансляцію в Telegram.</p></section></div>`; }
@@ -131,6 +132,10 @@
       document.body.classList.toggle('keyboard-open', keyboardOpen);
       if (keyboardOpen) document.getElementById('liveChatForm')?.scrollIntoView({ block:'nearest', behavior:'smooth' });
     }
+    let stageOverlayTimer = 0;
+    function hideStageOverlay(stage) { window.clearTimeout(stageOverlayTimer); stageOverlayTimer = 0; stage?.classList.remove('controls-visible'); }
+    function showStageOverlay(stage, video) { if (!stage) return; window.clearTimeout(stageOverlayTimer); stage.classList.add('controls-visible'); video?.play().catch(() => {}); stageOverlayTimer = window.setTimeout(() => hideStageOverlay(stage), 3500); }
+    function bindStageOverlay(stage, video) { if (!stage) return; stage.addEventListener('click', () => showStageOverlay(stage, video)); document.addEventListener('pointerdown', event => { if (!stage.contains(event.target)) hideStageOverlay(stage); }, { passive:true }); }
     function closeChatKeyboard(input) {
       input?.blur();
       document.body.classList.remove('keyboard-open');
@@ -184,7 +189,7 @@
       if (!source) stopVideo();
       const target = state.status === 'running' ? state.endsAt : state.startsAt;
       currentTarget = Number(target || 0);
-      const videoMarkup = source ? `<video id="liveVideo" autoplay muted playsinline preload="auto"></video>` : '<div class="stage-missing">Відео трансляції готується…</div>';
+      const videoMarkup = source ? `<video id="liveVideo" autoplay playsinline preload="auto"></video>` : '<div class="stage-missing">Відео трансляції готується…</div>';
       app.innerHTML = `<div class="live-layout"><div class="stage">${videoMarkup}<div class="live-badge"><i></i> LIVE</div><div class="caption"><strong>${escape(state.animeTitle || 'VakDab')}</strong><span>${escape(episodes(state))} · ${escape(state.dub || 'Озвучка')}</span></div></div><aside class="chat" aria-label="Чат трансляції"><div class="chat-head"><div class="chat-head-row"><strong>Чат трансляції</strong><span class="viewer-count" id="liveViewerCount">${viewerCount} ${viewerCount === 1 ? 'глядач' : 'глядачів'}</span></div><small>Спільнота VakDab</small></div><div class="chat-messages">${chatMessagesMarkup(messages)}</div><div class="chat-status" id="liveChatStatus" aria-live="polite"></div><form class="chat-composer" id="liveChatForm"><input id="liveChatInput" maxlength="500" autocomplete="off" enterkeyhint="send" placeholder="Написати в чат" aria-label="Повідомлення в чат"><button id="liveChatSubmit" type="submit" aria-label="Надіслати повідомлення"><span class="sr-only">Надіслати</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 21 3l-6.5 18-3.2-7.3L3 11.5Z"/><path d="m11.3 13.7 4.8-4.8"/></svg></button></form></aside></div>`;
       bindChatComposer();
       scrollChatToBottom();
@@ -192,7 +197,7 @@
       if (reuseVideo) video?.replaceWith(previousVideo);
       const activeVideo = document.getElementById('liveVideo');
       if (activeVideo && source && !reuseVideo) attachVideo(activeVideo, source, state.startsAt, positionKey);
-      if (activeVideo && source) syncVideoToLiveClock(activeVideo);
+      if (activeVideo && source) { syncVideoToLiveClock(activeVideo); bindStageOverlay(document.querySelector('.stage'), activeVideo); }
     }
     async function load() { try { const response = await fetch(API, { cache:'no-store', headers:{ accept:'application/json' } }); if (!response.ok) throw new Error(); const payload = await response.json(); syncServerClock(payload?.serverNow || payload?.live?.serverNow); const state = payload?.live || payload; if (!state || state.status !== 'running') return renderEmpty(state?.status === 'finished' ? 'Ефір завершено' : undefined); const source = await resolveSource(state.videoUrl); chatMessages = await fetchChat(); render(state, source, chatMessages); } catch { renderEmpty('Не вдалося завантажити ефір'); } }
     if (window.Telegram?.WebApp) { Telegram.WebApp.ready(); Telegram.WebApp.expand(); Telegram.WebApp.setHeaderColor?.('#ffffff'); Telegram.WebApp.setBackgroundColor?.('#ffffff'); Telegram.WebApp.onEvent?.('viewportChanged', syncKeyboardViewport); }
