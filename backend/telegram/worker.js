@@ -4,7 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-31`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-32`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -2588,7 +2588,8 @@ async function repairLiveVideoState(state, env) {
       if (!state.selected.season) state.selected.season = state.seasonOptions[0] || liveOption(state.selected.anime.label, state.selected.anime.url);
     }
     const playLink = state.playLinksByDub?.[String(state.selected?.dub?.value)]?.[String(episodeStart)] || '';
-    if (!state.videoUrl && playLink) state.videoUrl = await resolveLivePlaybackUrl(playLink);
+    const needsPlaybackRefresh = !state.videoUrl || /ashdi\.vip\/vod\//i.test(String(state.videoUrl));
+    if (needsPlaybackRefresh && playLink) state.videoUrl = await resolveLivePlaybackUrl(playLink);
     state.selected.episodeStart = episodeStart;
     if (!state.selected.episodeEnd) state.selected.episodeEnd = episodeStart + Math.max(0, Number(state.selected?.episodeCount?.value || 1) - 1);
     state.updatedAt = Date.now();
@@ -2600,7 +2601,7 @@ async function repairLiveVideoState(state, env) {
 }
 async function publicLiveState(state, env) {
   if (!state) return { status: 'idle' };
-  if (state.status === 'running' && (!state.selected?.anime?.url || !state.videoUrl)) state = await repairLiveVideoState(state, env);
+  if (state.status === 'running' && (!state.selected?.anime?.url || !state.videoUrl || /ashdi\.vip\/vod\//i.test(String(state.videoUrl)))) state = await repairLiveVideoState(state, env);
   const liveExpired = state.status === 'running' && Number(state.endsAt || 0) > 0 && Number(state.endsAt) <= Date.now();
   const publicStatus = liveExpired ? 'finished' : (state.status || 'idle');
   const poll = state.poll ? {
@@ -2794,6 +2795,35 @@ async function fetchLiveSeasonOptions(details) {
     return [current];
   }
 }
+function extractMoonanimeManifest(html) {
+  try {
+    const outer = String(html || '').match(/var\s+_eMdje\s*=\s*atob\("([^"]+)"\)/);
+    if (!outer) return '';
+    const bytes = Uint8Array.from(atob(outer[1]), char => char.charCodeAt(0));
+    if (bytes.length < 34) return '';
+    const seed = bytes.slice(1, 33);
+    const decoded = new Uint8Array(bytes.length - 33);
+    let rolling = bytes[0];
+    for (let index = 0; index < decoded.length; index += 1) {
+      const cipher = bytes[index + 33];
+      const key = seed[index % 32];
+      decoded[index] = cipher ^ key ^ rolling;
+      rolling = (cipher + key) & 255;
+    }
+    const loader = new TextDecoder().decode(decoded);
+    const inner = loader.match(/file:\s*_0xd\("([^"]+)"\)/);
+    if (!inner) return '';
+    const encoded = atob(inner[1]);
+    const key = '4UexSfnyZybF';
+    let file = '';
+    for (let index = 0; index < encoded.length; index += 1) file += String.fromCharCode(encoded.charCodeAt(index) ^ key.charCodeAt(index % key.length));
+    const manifest = decodeURIComponent(file);
+    return /^https?:\/\/[^\s]+\.m3u8(?:[?#].*)?$/i.test(manifest) ? manifest : '';
+  } catch (error) {
+    console.warn('[live] Moonanime manifest extraction failed:', safeError(error));
+    return '';
+  }
+}
 async function resolveLivePlaybackUrl(playLink) {
   const source = String(playLink || '').trim();
   if (!source) return '';
@@ -2803,7 +2833,7 @@ async function resolveLivePlaybackUrl(playLink) {
       const response = await fetch(`${LIVE_VIDEO_PROXY_URL}?url=${encodeURIComponent(source)}&force_ua=mobile`, { headers: { accept: 'text/html,application/xhtml+xml', 'user-agent': 'VakDabLive/1.0' } });
       if (response.ok) {
         const html = String(await response.text()).replace(/\\u002F/g, '/').replace(/\\\//g, '/');
-        manifest = (html.match(/https?:\/\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?/i) || [])[0] || source;
+        manifest = (html.match(/https?:\/\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?/i) || [])[0] || extractMoonanimeManifest(html) || source;
       }
     } catch (error) {
       console.warn('[live] playback resolution failed:', safeError(error));
@@ -2829,8 +2859,10 @@ async function fetchLiveAnimeMeta(animeUrl) {
         for (const group of players) {
           if (group?.isSubs) continue;
           const dub = String(group?.team?.name || '').trim() || 'Основна озвучка';
-          const entries = (group?.providers || []).flatMap(provider => provider?.name === 'ASHDI' ? (provider.episodes || []) : [])
-            .map(ep => ({ number: String(ep?.number ?? '').trim(), playLink: String(ep?.playLink || '').trim() }))
+          const providers = Array.isArray(group?.providers) ? group.providers : [];
+          const provider = providers.find(item => /MOONANIME/i.test(String(item?.name || ''))) || providers.find(item => /ASHDI/i.test(String(item?.name || ''))) || providers[0];
+          const entries = (provider?.episodes || [])
+            .map(ep => ({ number: String(ep?.number ?? '').trim(), playLink: String(ep?.playLink || '').trim(), provider: String(provider?.name || '') }))
             .filter(entry => entry.number && entry.playLink);
           if (entries.length) {
             byDub[dub] = [...new Set([...(byDub[dub] || []), ...entries.map(entry => entry.number)])].sort((a, b) => Number(a) - Number(b));
