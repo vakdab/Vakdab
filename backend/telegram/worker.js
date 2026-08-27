@@ -10,6 +10,7 @@ const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
 const LIVE_STATE_KEY = 'live:current';
+const TELEGRAM_UPDATE_PREFIX = 'telegram:update:';
 const LIVE_CHAT_KEY = 'live:chat:messages';
 const LIVE_VIEWERS_KEY = 'live:viewers';
 const LIVE_VIEWER_TTL_MS = 45 * 1000;
@@ -81,12 +82,24 @@ const REPORT_REASONS = Object.freeze({
   other: 'Інша причина'
 });
 
+async function claimTelegramUpdate(update, env) {
+  const updateId = update?.update_id;
+  if (updateId === undefined || updateId === null || !env.MAKIMA_MEMORY) return true;
+  const key = `${TELEGRAM_UPDATE_PREFIX}${String(updateId)}`;
+  try {
+    if (await env.MAKIMA_MEMORY.get(key)) return false;
+    await env.MAKIMA_MEMORY.put(key, '1', { expirationTtl: 7 * 24 * 60 * 60 });
+  } catch (error) {
+    console.error('[telegram] update deduplication failed:', safeError(error));
+  }
+  return true;
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     try {
       const url = new URL(request.url);
       if (REMOVED_FEATURE_PATHS.has(url.pathname)) return textResponse('Not Found', 404);
-
       if (url.pathname === '/api/live' && ['GET', 'OPTIONS'].includes(request.method)) {
         return await getLiveStateResponse(request, env);
       }
@@ -116,7 +129,10 @@ export default {
       if (request.method === 'POST' && (url.pathname === TELEGRAM_WEBHOOK_PATH || url.pathname === '/')) {
         if (!verifyTelegramWebhook(request, env)) return textResponse('Unauthorized', 401);
         const update = await request.json();
-        await processUpdate(update, env);
+        if (!(await claimTelegramUpdate(update, env))) return textResponse('OK');
+        const work = processUpdate(update, env).catch(error => console.error('[telegram] update processing failed:', safeError(error)));
+        if (ctx?.waitUntil) ctx.waitUntil(work);
+        else await work;
         return textResponse('OK');
       }
 
@@ -3087,6 +3103,11 @@ async function startLiveSession(chatId, env, messageId = null) {
   const existing = await readLiveState(env);
   if (existing?.chatId === String(chatId) && existing.status === 'running') {
     await sendMessage(chatId, 'Live-стрім уже активний. Спочатку завершіть його командою /livecancel.', {}, env);
+    return;
+  }
+  if (existing?.chatId === String(chatId) && ['draft', 'ready'].includes(existing.status)) {
+    const prompt = existing.status === 'ready' ? `${liveOwnerSummary(existing)}\n\nНатисни кнопку запуску трансляції.` : 'Налаштування live-сесії вже розпочато. Продовжуй у попередньому повідомленні або скасуй командою /livecancel.';
+    await sendMessage(chatId, prompt, existing.status === 'ready' ? { reply_markup: liveOwnerKeyboard([{ text: 'Запустити трансляцію', callback_data: 'live:broadcast' }]) } : {}, env);
     return;
   }
   const state = {
