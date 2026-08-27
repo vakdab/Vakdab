@@ -4,7 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-27`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-28`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -2601,6 +2601,8 @@ async function repairLiveVideoState(state, env) {
 async function publicLiveState(state, env) {
   if (!state) return { status: 'idle' };
   if (state.status === 'running' && (!state.selected?.anime?.url || !state.videoUrl)) state = await repairLiveVideoState(state, env);
+  const liveExpired = state.status === 'running' && Number(state.endsAt || 0) > 0 && Number(state.endsAt) <= Date.now();
+  const publicStatus = liveExpired ? 'finished' : (state.status || 'idle');
   const poll = state.poll ? {
     question: state.poll.question,
     stage: state.poll.stage,
@@ -2608,7 +2610,7 @@ async function publicLiveState(state, env) {
     options: (state.poll.options || []).map(item => ({ label: item.label, votes: Number(item.votes || 0) }))
   } : null;
   return {
-    status: state.status || 'idle',
+    status: publicStatus,
     poll,
     animeTitle: state.selected?.anime?.label || '',
     animeUrl: state.selected?.anime?.url || '',

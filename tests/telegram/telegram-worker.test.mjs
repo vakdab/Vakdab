@@ -327,7 +327,7 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-27');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-28');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
@@ -358,6 +358,8 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(workerSource, /viewerCount/);
   assert.match(workerSource, /touchLiveViewer/);
   assert.match(workerSource, /serverNow: Date\.now\(\)/);
+  assert.match(workerSource, /const liveExpired = state\.status === 'running'/);
+  assert.match(workerSource, /const publicStatus = liveExpired \? 'finished'/);
   assert.match(workerSource, /hmac\(encoder\.encode\('WebAppData'\), token\)/);
   assert.doesNotMatch(workerSource, /hmac\(encoder\.encode\(token\), 'WebAppData'\)/);
   assert.match(workerSource, /\.join\('\\n'\)/);
@@ -374,12 +376,18 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /let serverClockOffset = 0/);
   assert.match(liveAppSource, /serverClockOffset = serverNow - Date\.now\(\)/);
   assert.match(liveAppSource, /syncServerClock\(payload\?\.serverNow \|\| payload\?\.live\?\.serverNow\)/);
+  assert.match(liveAppSource, /state\.status !== 'running'/);
+  assert.match(liveAppSource, /state\?\.status === 'finished' \? 'Ефір завершено'/);
   assert.match(liveAppSource, /liveNow\(\) - liveStartedAt/);
   assert.match(liveAppSource, /const elapsed = liveElapsedSeconds\(liveStartedAt\)/);
   assert.doesNotMatch(liveAppSource, /Math\.max\(elapsed, savedPosition\)/);
   assert.match(liveAppSource, /function livePositionForVideo\(video, liveStartedAt\)/);
   assert.match(liveAppSource, /function syncVideoToLiveClock/);
   assert.match(liveAppSource, /setInterval\(\(\) => syncVideoToLiveClock\(video\), 5000\)/);
+  assert.match(liveAppSource, /Hls\.ErrorTypes\.NETWORK_ERROR/);
+  assert.match(liveAppSource, /hls\.startLoad\(\)/);
+  assert.match(liveAppSource, /Hls\.ErrorTypes\.MEDIA_ERROR/);
+  assert.match(liveAppSource, /hls\.recoverMediaError\(\)/);
   assert.match(liveAppSource, /visibilitychange.*syncVideoToLiveClock/s);
   assert.match(liveAppSource, /id="liveMuteToggle"/);
   assert.doesNotMatch(liveAppSource, /id="liveFullscreenToggle"/);
