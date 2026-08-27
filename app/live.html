@@ -41,7 +41,18 @@
     .chat { margin-top:14px; overflow:hidden; border:1px solid var(--line); border-radius:18px; background:var(--panel); box-shadow:0 8px 24px rgba(20,20,30,.06); }
     .chat-head { padding:15px 17px; font-weight:800; }
     .chat-head small { display:block; margin-top:3px; color:var(--muted); font-size:11px; font-weight:500; }
-    .chat-empty { min-height:72px; padding:18px 17px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+    .chat-messages { display:grid; align-content:start; gap:10px; min-height:72px; max-height:280px; overflow:auto; padding:14px 17px; border-top:1px solid var(--line); }
+    .chat-message { font-size:13px; line-height:1.4; overflow-wrap:anywhere; }
+    .chat-message__name { color:var(--accent); font-weight:800; }
+    .chat-message__time { margin-left:6px; color:var(--muted); font-size:10px; }
+    .chat-message__text { color:var(--text); }
+    .chat-empty { color:var(--muted); font-size:13px; }
+    .chat-composer { display:flex; gap:8px; padding:10px; border-top:1px solid var(--line); }
+    .chat-composer input { min-width:0; flex:1; height:40px; padding:0 12px; border:1px solid var(--line); border-radius:12px; outline:none; background:var(--panel-2); color:var(--text); }
+    .chat-composer input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(216,63,99,.12); }
+    .chat-composer button { flex:none; min-width:84px; height:40px; padding:0 13px; border:0; border-radius:12px; color:#fff; background:var(--accent); font-weight:800; cursor:pointer; }
+    .chat-composer button:disabled { opacity:.55; cursor:wait; }
+    .chat-status { min-height:16px; padding:0 12px 8px; color:var(--muted); font-size:11px; }
 
     .empty,.loading { display:grid; min-height:55vh; place-items:center; text-align:center; color:var(--muted); }
     .empty-card { width:min(100%,420px); padding:28px 20px; border:1px solid var(--line); border-radius:20px; background:var(--panel); box-shadow:0 8px 24px rgba(20,20,30,.06); }
@@ -49,7 +60,7 @@
     .empty-card p { margin:0; line-height:1.5; }
     @media (min-width:760px) { .app { padding-left:10px; padding-right:10px; } }
     .live-layout { display:grid; gap:14px; }
-    @media (min-width:700px) and (max-height:600px) { .app { width:100%; padding:12px 30px calc(12px + env(safe-area-inset-bottom)); } .live-layout { grid-template-columns:minmax(0,62vw) minmax(0,1fr); gap:16px; align-items:stretch; } .stage { width:100%; max-width:100%; margin:0; border-radius:0; box-shadow:none; } .chat { display:flex; flex-direction:column; height:100%; min-height:0; margin:0; } .chat-empty { flex:1; } }
+    @media (min-width:700px) and (max-height:600px) { .app { width:100%; padding:12px 30px calc(12px + env(safe-area-inset-bottom)); } .live-layout { grid-template-columns:minmax(0,62vw) minmax(0,1fr); gap:16px; align-items:stretch; } .stage { width:100%; max-width:100%; margin:0; border-radius:0; box-shadow:none; } .chat { display:flex; flex-direction:column; height:100%; min-height:0; margin:0; } .chat-messages { flex:1; max-height:none; } }
     @media (max-width:699px), (min-width:700px) and (min-height:601px) { .chat { display:block; } }
     @media (max-width:520px) { .app { padding:0 10px calc(30px + env(safe-area-inset-bottom)); } .stage { border-radius:18px; } .caption { padding:52px 13px 13px; } .caption strong { font-size:17px; } .caption span { font-size:12px; } }
     @media (min-width:521px) and (max-width:699px) and (max-height:600px) { .app { padding-left:10px; padding-right:10px; } .stage { border-radius:0; } .chat { display:none; } }
@@ -59,11 +70,13 @@
   <main class="app" id="app"><div class="loading">Підключення до Anime Live…</div></main>
   <script>
     const API = 'https://vakdab.animegran8.workers.dev/api/live';
+    const CHAT_API = 'https://vakdab.animegran8.workers.dev/api/live-chat';
     const PROXY = 'https://monoanime.animegran8.workers.dev';
     const app = document.getElementById('app');
     let hls = null;
     let currentSource = '';
     let currentTarget = 0;
+    let chatMessages = [];
     const escape = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[char]));
     const isDirect = value => /\.(?:m3u8|mp4)(?:[?#].*)?$/i.test(String(value || '')) || /[?&]url=[^&]*(?:m3u8|mp4)/i.test(String(value || ''));
     const remaining = target => { const seconds = Math.max(0, Math.floor((Number(target || 0) - Date.now()) / 1000)); const hours = Math.floor(seconds / 3600); const minutes = Math.floor((seconds % 3600) / 60); return hours ? `${hours} год ${String(minutes).padStart(2,'0')} хв` : `${minutes}:${String(seconds % 60).padStart(2,'0')}`; };
@@ -83,20 +96,49 @@
     function stopVideo() { if (hls) { hls.destroy(); hls = null; } currentSource = ''; }
     function attachVideo(video, source) { stopVideo(); currentSource = source; if (window.Hls?.isSupported?.() && /\.m3u8(?:[?#]|$)/i.test(source)) { hls = new Hls({ enableWorker:true, lowLatencyMode:true }); hls.loadSource(source); hls.attachMedia(video); hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {})); } else { video.src = source; video.play().catch(() => {}); } }
     function renderEmpty(message = 'Ефір зараз не запущено') { stopVideo(); app.innerHTML = `<div class="empty"><section class="empty-card"><div class="kicker">VAKDAB LIVE</div><h2>${escape(message)}</h2><p>Власник VakDab налаштує наступну трансляцію в Telegram.</p></section></div>`; }
-    function render(state, source) {
+    function formatChatTime(value) { return value ? new Date(value).toLocaleTimeString('uk-UA', { hour:'2-digit', minute:'2-digit' }) : ''; }
+    function chatMessagesMarkup(messages) { const items = Array.isArray(messages) ? messages : []; return items.length ? items.map(message => `<div class="chat-message"><span class="chat-message__name">${escape(message.name || 'Глядач')}</span><span class="chat-message__time">${escape(formatChatTime(message.createdAt))}</span><div class="chat-message__text">${escape(message.text)}</div></div>`).join('') : '<div class="chat-empty">Повідомлень поки немає.</div>'; }
+    async function fetchChat() { try { const response = await fetch(CHAT_API, { cache:'no-store', headers:{ accept:'application/json' } }); if (!response.ok) return []; const payload = await response.json(); return Array.isArray(payload?.messages) ? payload.messages : []; } catch { return []; } }
+    function renderChatMessages(messages) { const target = document.querySelector('.chat-messages'); if (target) target.innerHTML = chatMessagesMarkup(messages); }
+    function bindChatComposer() {
+      const form = document.getElementById('liveChatForm');
+      const input = document.getElementById('liveChatInput');
+      const submit = document.getElementById('liveChatSubmit');
+      const status = document.getElementById('liveChatStatus');
+      if (!form || !input || !submit) return;
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+        submit.disabled = true;
+        if (status) status.textContent = '';
+        try {
+          const response = await fetch(CHAT_API, { method:'POST', headers:{ 'content-type':'application/json', 'x-telegram-init-data':window.Telegram?.WebApp?.initData || '' }, body:JSON.stringify({ text }) });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload.error || 'SEND_FAILED');
+          input.value = '';
+          chatMessages = await fetchChat();
+          renderChatMessages(chatMessages);
+        } catch (error) {
+          if (status) status.textContent = error.message === 'TELEGRAM_AUTH_REQUIRED' ? 'Відкрий цей чат через Telegram.' : 'Не вдалося надіслати повідомлення.';
+        } finally { submit.disabled = false; }
+      });
+    }
+    function render(state, source, messages = chatMessages) {
       const previousVideo = document.getElementById('liveVideo');
       const reuseVideo = Boolean(previousVideo && source && currentSource === source);
       if (!source) stopVideo();
       const target = state.status === 'running' ? state.endsAt : state.startsAt;
       currentTarget = Number(target || 0);
       const videoMarkup = source ? `<video id="liveVideo" autoplay muted playsinline preload="auto"></video>` : '<div class="stage-missing">Відео трансляції готується…</div>';
-      app.innerHTML = `<div class="live-layout"><div class="stage">${videoMarkup}<div class="live-badge"><i></i> LIVE</div><div class="caption"><strong>${escape(state.animeTitle || 'VakDab')}</strong><span>${escape(episodes(state))} · ${escape(state.dub || 'Озвучка')}</span></div></div><aside class="chat" aria-label="Чат трансляції"><div class="chat-head">Чат трансляції<small>Спільнота VakDab</small></div><div class="chat-empty">Повідомлень поки немає.</div></aside></div>`;
+      app.innerHTML = `<div class="live-layout"><div class="stage">${videoMarkup}<div class="live-badge"><i></i> LIVE</div><div class="caption"><strong>${escape(state.animeTitle || 'VakDab')}</strong><span>${escape(episodes(state))} · ${escape(state.dub || 'Озвучка')}</span></div></div><aside class="chat" aria-label="Чат трансляції"><div class="chat-head">Чат трансляції<small>Спільнота VakDab</small></div><div class="chat-messages">${chatMessagesMarkup(messages)}</div><form class="chat-composer" id="liveChatForm"><input id="liveChatInput" maxlength="500" autocomplete="off" placeholder="Написати в чат" aria-label="Повідомлення в чат"><button id="liveChatSubmit" type="submit">Надіслати</button></form><div class="chat-status" id="liveChatStatus" aria-live="polite"></div></aside></div>`;
+      bindChatComposer();
       const video = document.getElementById('liveVideo');
       if (reuseVideo) video?.replaceWith(previousVideo);
       const activeVideo = document.getElementById('liveVideo');
       if (activeVideo && source && !reuseVideo) attachVideo(activeVideo, source);
     }
-    async function load() { try { const response = await fetch(API, { cache:'no-store', headers:{ accept:'application/json' } }); if (!response.ok) throw new Error(); const payload = await response.json(); const state = payload?.live || payload; if (!state || state.status === 'idle') return renderEmpty(); const source = await resolveSource(state.videoUrl); render(state, source); } catch { renderEmpty('Не вдалося завантажити ефір'); } }
+    async function load() { try { const response = await fetch(API, { cache:'no-store', headers:{ accept:'application/json' } }); if (!response.ok) throw new Error(); const payload = await response.json(); const state = payload?.live || payload; if (!state || state.status === 'idle') return renderEmpty(); const source = await resolveSource(state.videoUrl); chatMessages = await fetchChat(); render(state, source, chatMessages); } catch { renderEmpty('Не вдалося завантажити ефір'); } }
     if (window.Telegram?.WebApp) { Telegram.WebApp.ready(); Telegram.WebApp.expand(); Telegram.WebApp.setHeaderColor?.('#ffffff'); Telegram.WebApp.setBackgroundColor?.('#ffffff'); }
     load();
     setInterval(() => { const node = document.querySelector('#countdown strong'); if (node && currentTarget) node.textContent = remaining(currentTarget); }, 1000);

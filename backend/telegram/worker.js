@@ -4,12 +4,15 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-7`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-8`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_WEBHOOK_PATH = '/telegram-webhook';
 const LIVE_STATE_KEY = 'live:current';
+const LIVE_CHAT_KEY = 'live:chat:messages';
+const LIVE_CHAT_MAX_MESSAGES = 100;
+const LIVE_CHAT_MAX_TEXT = 500;
 const LIVE_VIDEO_PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const LIVE_POLL_PREFIX = 'live:poll:';
 const LIVE_VOTE_PREFIX = 'live:vote:';
@@ -86,6 +89,9 @@ export default {
         if (url.pathname === '/api/live') {
           return await getLiveStateResponse(request, env);
         }
+        if (url.pathname === '/api/live-chat') {
+          return await liveChatResponse(request, env);
+        }
         if (url.pathname === '/set_webhook') {
           return await setWebhook(request, env, url);
         }
@@ -102,6 +108,10 @@ export default {
           return env.ASSETS.fetch(request);
         }
         return textResponse('VakDab Telegram Worker is running.');
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/live-chat') {
+        return await liveChatResponse(request, env);
       }
 
       if (request.method === 'POST' && (url.pathname === TELEGRAM_WEBHOOK_PATH || url.pathname === '/')) {
@@ -2540,8 +2550,8 @@ function liveCorsHeaders(request) {
   };
   if (LIVE_API_ORIGINS.has(origin)) {
     headers['access-control-allow-origin'] = origin;
-    headers['access-control-allow-methods'] = 'GET, OPTIONS';
-    headers['access-control-allow-headers'] = 'content-type';
+    headers['access-control-allow-methods'] = 'GET, POST, OPTIONS';
+    headers['access-control-allow-headers'] = 'content-type, x-telegram-init-data';
     headers.vary = 'Origin';
   }
   return headers;
@@ -2625,6 +2635,76 @@ async function getLiveStateResponse(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: liveCorsHeaders(request) });
   const state = await readLiveState(env);
   return new Response(JSON.stringify({ live: await publicLiveState(state, env) }), { status: 200, headers: liveCorsHeaders(request) });
+}
+
+async function readLiveChat(env) {
+  if (!env.MAKIMA_MEMORY) return [];
+  try {
+    const raw = await env.MAKIMA_MEMORY.get(LIVE_CHAT_KEY);
+    const messages = raw ? JSON.parse(raw) : [];
+    return Array.isArray(messages) ? messages.slice(-LIVE_CHAT_MAX_MESSAGES) : [];
+  } catch (error) {
+    console.error('[live-chat] read failed:', safeError(error));
+    return [];
+  }
+}
+
+function publicLiveChat(messages) {
+  return messages.map(message => ({
+    id: String(message?.id || ''),
+    name: String(message?.name || 'Глядач').slice(0, 80),
+    text: String(message?.text || '').slice(0, LIVE_CHAT_MAX_TEXT),
+    createdAt: Number(message?.createdAt || 0) || 0
+  })).filter(message => message.id && message.text);
+}
+
+async function verifyTelegramWebAppInitData(initData, env) {
+  const raw = String(initData || '').trim();
+  const token = String(env.TELEGRAM_BOT_TOKEN || '').trim();
+  if (!raw || !token) return null;
+  const params = new URLSearchParams(raw);
+  const receivedHash = params.get('hash') || '';
+  const authDate = Number(params.get('auth_date') || 0);
+  if (!receivedHash || !authDate || Math.abs(Date.now() / 1000 - authDate) > 24 * 60 * 60) return null;
+  const dataCheckString = [...params.entries()]
+    .filter(([key]) => key !== 'hash')
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\\n');
+  const encoder = new TextEncoder();
+  const hmac = async (keyBytes, message) => {
+    const key = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    return new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(message)));
+  };
+  const secret = await hmac(encoder.encode(token), 'WebAppData');
+  const calculated = [...await hmac(secret, dataCheckString)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  if (calculated !== receivedHash.toLowerCase()) return null;
+  try {
+    const user = JSON.parse(params.get('user') || '{}');
+    return user?.id ? { id: String(user.id), name: [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || (user.username ? `@${user.username}` : 'Глядач') } : null;
+  } catch {
+    return null;
+  }
+}
+
+async function liveChatResponse(request, env) {
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: liveCorsHeaders(request) });
+  const state = await readLiveState(env);
+  if (request.method === 'GET') {
+    return new Response(JSON.stringify({ messages: publicLiveChat(await readLiveChat(env)), running: state?.status === 'running' }), { status: 200, headers: liveCorsHeaders(request) });
+  }
+  if (request.method !== 'POST') return jsonResponse({ ok: false, error: 'METHOD_NOT_ALLOWED' }, 405);
+  if (state?.status !== 'running') return new Response(JSON.stringify({ ok: false, error: 'LIVE_NOT_RUNNING' }), { status: 409, headers: liveCorsHeaders(request) });
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ ok: false, error: 'INVALID_JSON' }), { status: 400, headers: liveCorsHeaders(request) }); }
+  const user = await verifyTelegramWebAppInitData(request.headers.get('x-telegram-init-data') || payload?.initData, env);
+  if (!user) return new Response(JSON.stringify({ ok: false, error: 'TELEGRAM_AUTH_REQUIRED' }), { status: 401, headers: liveCorsHeaders(request) });
+  const text = String(payload?.text || '').replace(/[\\u0000-\\u001f\\u007f]/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, LIVE_CHAT_MAX_TEXT);
+  if (!text) return new Response(JSON.stringify({ ok: false, error: 'MESSAGE_REQUIRED' }), { status: 400, headers: liveCorsHeaders(request) });
+  const messages = await readLiveChat(env);
+  messages.push({ id: `${Date.now()}-${user.id}`, userId: user.id, name: user.name, text, createdAt: Date.now() });
+  await env.MAKIMA_MEMORY.put(LIVE_CHAT_KEY, JSON.stringify(messages.slice(-LIVE_CHAT_MAX_MESSAGES)));
+  return new Response(JSON.stringify({ ok: true, message: publicLiveChat(messages).at(-1) }), { status: 201, headers: liveCorsHeaders(request) });
 }
 
 
