@@ -327,7 +327,7 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-18');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-19');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
@@ -346,7 +346,9 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /chat-messages">\$\{chatMessagesMarkup\(messages\)\}<\/div><div class="chat-status"[^>]*><\/div><form class="chat-composer"/);
   assert.match(liveAppSource, /x-telegram-init-data/);
   assert.match(workerSource, /url\.pathname === '\/api\/live-chat' && \['GET', 'POST', 'OPTIONS'\]\.includes\(request\.method\)/);
-  assert.match(workerSource, /TELEGRAM_AUTH_REQUIRED/);
+  assert.match(workerSource, /CHAT_ID_REQUIRED/);
+  assert.match(workerSource, /liveGuestChatUser/);
+  assert.match(workerSource, /x-live-viewer-id/);
   assert.match(workerSource, /LIVE_CHAT_KEY/);
   assert.match(workerSource, /LIVE_VIEWERS_KEY/);
   assert.match(workerSource, /viewerCount/);
@@ -364,7 +366,10 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /bottom:16px; z-index:4/);
   assert.match(liveAppSource, /id="liveViewerCount"/);
   assert.match(liveAppSource, /url\.searchParams\.set\('viewer', viewerId\)/);
-  assert.match(liveAppSource, /stage\.addEventListener\('click', \(\) => stage\.classList\.add\('controls-visible'\)\)/);
+  assert.match(liveAppSource, /stage\.addEventListener\('click', event => \{ if \(!event\.target\.closest\('button'\)\) showStageOverlay\(stage\); \}\)/);
+  assert.match(liveAppSource, /setTimeout\(\(\) => hideStageOverlay\(stage\), 3500\)/);
+  assert.match(liveAppSource, /if \(!stage\.contains\(event\.target\)\) hideStageOverlay\(stage\)/);
+  assert.match(liveAppSource, /x-live-viewer-id/);
   assert.match(liveAppSource, /stage\.addEventListener\('click'/);
   assert.match(liveAppSource, /\.live-badge \{[^}]*opacity:0/s);
   assert.match(liveAppSource, /\.caption \{[^}]*opacity:0/s);

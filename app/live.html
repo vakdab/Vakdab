@@ -26,7 +26,7 @@
     video { display:block; width:100%; height:100%; object-fit:contain; background:#000; pointer-events:none; }
 
     .stage-controls { position:absolute; right:16px; bottom:16px; z-index:4; display:flex; opacity:0; visibility:hidden; transform:translateY(4px); transition:opacity .18s ease,transform .18s ease,visibility .18s ease; }
-    .stage.controls-visible .stage-controls,.stage:focus-within .stage-controls,.stage:hover .stage-controls { opacity:1; visibility:visible; transform:none; }
+    .stage.controls-visible .stage-controls,.stage:focus-visible .stage-controls { opacity:1; visibility:visible; transform:none; }
     .chat-head-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .viewer-count { color:var(--muted); font-size:13px; font-weight:700; white-space:nowrap; }
     .stage-control { display:grid; width:44px; height:44px; place-items:center; padding:0; border:1px solid rgba(255,255,255,.28); border-radius:50%; color:#fff; background:rgba(8,8,10,.78); box-shadow:0 4px 14px rgba(0,0,0,.3); cursor:pointer; }
@@ -37,7 +37,7 @@
     .stage-missing { display:grid; height:100%; min-height:220px; place-items:center; color:var(--muted); font-weight:800; }
     .live-badge { position:absolute; top:16px; left:16px; z-index:2; display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; color:#fff; background:rgba(8,8,10,.82); font-size:12px; font-weight:900; letter-spacing:.12em; opacity:0; visibility:hidden; transform:translateY(-4px); transition:opacity .18s ease,transform .18s ease,visibility .18s ease; }
     .caption { position:absolute; right:0; bottom:0; left:0; z-index:2; padding:72px 17px 16px; background:linear-gradient(transparent,rgba(0,0,0,.9)); pointer-events:none; opacity:0; visibility:hidden; transform:translateY(4px); transition:opacity .18s ease,transform .18s ease,visibility .18s ease; }
-    .stage.controls-visible .live-badge,.stage.controls-visible .caption,.stage:focus-within .live-badge,.stage:focus-within .caption,.stage:hover .live-badge,.stage:hover .caption { opacity:1; visibility:visible; transform:none; }
+    .stage.controls-visible .live-badge,.stage.controls-visible .caption,.stage:focus-visible .live-badge,.stage:focus-visible .caption { opacity:1; visibility:visible; transform:none; }
     .caption strong,.caption span { display:block; color:#fff; }
     .caption strong { font-size:clamp(18px,4vw,25px); }
     .caption span { margin-top:4px; color:rgba(255,255,255,.77); font-size:14px; }
@@ -134,12 +134,21 @@
       mute.setAttribute('aria-label', muted ? 'Увімкнути звук' : 'Вимкнути звук');
       mute.innerHTML = muted ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="m18 9 3 6M21 9l-3 6"/></svg><span class="sr-only">Увімкнути звук</span>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="M18 9.5a4.5 4.5 0 0 1 0 5"/></svg><span class="sr-only">Вимкнути звук</span>';
     }
+    let stageOverlayTimer = 0;
+    function hideStageOverlay(stage) { window.clearTimeout(stageOverlayTimer); stageOverlayTimer = 0; stage?.classList.remove('controls-visible'); }
+    function showStageOverlay(stage) { if (!stage) return; window.clearTimeout(stageOverlayTimer); stage.classList.add('controls-visible'); stageOverlayTimer = window.setTimeout(() => hideStageOverlay(stage), 3500); }
     function bindStageControls(stage, video) {
       if (!stage || !video) return;
-      stage.addEventListener('click', () => stage.classList.add('controls-visible'));
+      stage.addEventListener('click', event => { if (!event.target.closest('button')) showStageOverlay(stage); });
+      document.addEventListener('pointerdown', event => { if (!stage.contains(event.target)) hideStageOverlay(stage); }, { passive:true });
       const mute = stage.querySelector('#liveMuteToggle');
-      mute?.addEventListener('click', event => { event.stopPropagation(); video.muted = !video.muted; video.defaultMuted = video.muted; updateStageControls(stage, video); });
+      mute?.addEventListener('click', event => { event.stopPropagation(); video.muted = !video.muted; video.defaultMuted = video.muted; showStageOverlay(stage); updateStageControls(stage, video); });
       updateStageControls(stage, video);
+    }
+    function closeChatKeyboard(input) {
+      input?.blur();
+      document.body.classList.remove('keyboard-open');
+      requestAnimationFrame(syncKeyboardViewport);
     }
     function bindChatComposer() {
       const form = document.getElementById('liveChatForm');
@@ -148,17 +157,22 @@
       const status = document.getElementById('liveChatStatus');
       if (!form || !input || !submit) return;
       input.addEventListener('focus', () => { requestAnimationFrame(syncKeyboardViewport); setTimeout(syncKeyboardViewport, 180); });
+      document.addEventListener('pointerdown', event => {
+        if (event.target !== input && !form.contains(event.target)) closeChatKeyboard(input);
+      }, { passive:true });
       form.addEventListener('submit', async event => {
         event.preventDefault();
         const text = input.value.trim();
         if (!text) return;
         submit.disabled = true;
+        closeChatKeyboard(input);
         if (status) status.textContent = '';
         try {
-          const response = await fetch(CHAT_API, { method:'POST', headers:{ 'content-type':'application/json', 'x-telegram-init-data':window.Telegram?.WebApp?.initData || '' }, body:JSON.stringify({ text }) });
+          const response = await fetch(CHAT_API, { method:'POST', headers:{ 'content-type':'application/json', 'x-telegram-init-data':window.Telegram?.WebApp?.initData || '', 'x-live-viewer-id':viewerId }, body:JSON.stringify({ text, viewer:viewerId }) });
           const payload = await response.json().catch(() => ({}));
           if (!response.ok) throw new Error(payload.error || 'SEND_FAILED');
           input.value = '';
+          closeChatKeyboard(input);
           chatMessages = await fetchChat();
           renderChatMessages(chatMessages);
         } catch (error) {

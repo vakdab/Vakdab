@@ -4,7 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-18`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-19`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -2668,6 +2668,12 @@ async function touchLiveViewer(request, env) {
   return Object.keys(viewers).length;
 }
 
+function liveGuestChatUser(request, payload) {
+  const value = String(request.headers.get('x-live-viewer-id') || payload?.viewer || '').trim();
+  if (!/^[A-Za-z0-9-]{16,120}$/.test(value)) return null;
+  return { id: `guest:${value}`, name: 'Глядач' };
+}
+
 function publicLiveChat(messages) {
   return messages.map(message => ({
     id: String(message?.id || ''),
@@ -2717,8 +2723,8 @@ async function liveChatResponse(request, env) {
   if (state?.status !== 'running') return new Response(JSON.stringify({ ok: false, error: 'LIVE_NOT_RUNNING' }), { status: 409, headers: liveCorsHeaders(request) });
   let payload;
   try { payload = await request.json(); } catch { return new Response(JSON.stringify({ ok: false, error: 'INVALID_JSON' }), { status: 400, headers: liveCorsHeaders(request) }); }
-  const user = await verifyTelegramWebAppInitData(request.headers.get('x-telegram-init-data') || payload?.initData, env);
-  if (!user) return new Response(JSON.stringify({ ok: false, error: 'TELEGRAM_AUTH_REQUIRED' }), { status: 401, headers: liveCorsHeaders(request) });
+  const user = await verifyTelegramWebAppInitData(request.headers.get('x-telegram-init-data') || payload?.initData, env) || liveGuestChatUser(request, payload);
+  if (!user) return new Response(JSON.stringify({ ok: false, error: 'CHAT_ID_REQUIRED' }), { status: 401, headers: liveCorsHeaders(request) });
   const text = String(payload?.text || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, LIVE_CHAT_MAX_TEXT);
   if (!text) return new Response(JSON.stringify({ ok: false, error: 'MESSAGE_REQUIRED' }), { status: 400, headers: liveCorsHeaders(request) });
   const messages = await readLiveChat(env);
