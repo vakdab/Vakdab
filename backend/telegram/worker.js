@@ -4,7 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-35`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-36`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -2797,7 +2797,7 @@ async function fetchLiveSeasonOptions(details) {
 }
 function extractMoonanimeManifest(html) {
   try {
-    const outer = String(html || '').match(/_eMdje[\s\S]{0,80}?atob\(\s*["']([^"']+)["']\s*\)/);
+    const outer = String(html || '').match(/atob\(\s*["']([A-Za-z0-9+/=]{100,})["']\s*\)/);
     if (!outer) return '';
     const bytes = Uint8Array.from(atob(outer[1]), char => char.charCodeAt(0));
     if (bytes.length < 34) return '';
@@ -2811,10 +2811,11 @@ function extractMoonanimeManifest(html) {
       rolling = (cipher + key) & 255;
     }
     const loader = new TextDecoder().decode(decoded);
-    const inner = loader.match(/file\s*:\s*_0xd\(\s*["']([^"']+)["']\s*\)/);
-    if (!inner) return '';
+    const inner = loader.match(/file\s*:\s*\w+\(\s*["']([^"']+)["']\s*\)/);
+    const keyMatch = loader.match(/function\s+\w+\(e\)\s*\{var k=["']([^"']+)["'];var b=atob/);
+    if (!inner || !keyMatch) return '';
     const encoded = atob(inner[1]);
-    const key = '4UexSfnyZybF';
+    const key = keyMatch[1];
     let file = '';
     for (let index = 0; index < encoded.length; index += 1) file += String.fromCharCode(encoded.charCodeAt(index) ^ key.charCodeAt(index % key.length));
     const manifest = decodeURIComponent(file);
