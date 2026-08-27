@@ -174,7 +174,8 @@
         closeChatKeyboard(input);
         if (status) status.textContent = '';
         try {
-          const response = await fetch(CHAT_API, { method:'POST', headers:{ 'content-type':'application/json', 'x-telegram-init-data':window.Telegram?.WebApp?.initData || '', 'x-live-viewer-id':viewerId }, body:JSON.stringify({ text, viewer:viewerId }) });
+          const initData = String(window.Telegram?.WebApp?.initData || '');
+          const response = await fetch(CHAT_API, { method:'POST', headers:{ 'content-type':'application/json', 'x-telegram-init-data':initData, 'x-live-viewer-id':viewerId }, body:JSON.stringify({ text, viewer:viewerId, initData }) });
           const payload = await response.json().catch(() => ({}));
           if (!response.ok) throw new Error(payload.error || 'SEND_FAILED');
           input.value = '';
