@@ -15,14 +15,14 @@
     html { background:#ffffff; }
     body { margin:0; min-width:320px; background:#ffffff; color:var(--text); font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
     button { font:inherit; }
-    .app { width:min(100%,960px); margin:0 auto; padding:0 0 calc(30px + env(safe-area-inset-bottom)); }
+    .app { width:100%; margin:0 auto; padding:0 10px calc(30px + env(safe-area-inset-bottom)); }
     .topbar { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
     .back { display:grid; width:42px; height:42px; flex:none; place-items:center; border:1px solid var(--line); border-radius:50%; color:var(--text); background:rgba(255,255,255,.08); font-size:25px; line-height:1; }
     .kicker { margin:0 0 4px; color:var(--accent); font-size:11px; font-weight:900; letter-spacing:.16em; text-transform:uppercase; }
     h1 { margin:0; font-size:clamp(25px,7vw,40px); line-height:1; letter-spacing:-.045em; }
     .status { display:flex; align-items:center; gap:7px; margin-left:auto; padding:9px 12px; border-radius:999px; color:#ffd9e2; background:rgba(240,76,112,.18); font-size:12px; font-weight:800; white-space:nowrap; }
     .status i,.live-badge i { display:block; width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px rgba(240,76,112,.18); }
-    .stage { position:relative; width:100%; overflow:hidden; aspect-ratio:16/9; border-radius:0; background:#000; box-shadow:none; }
+    .stage { position:relative; width:100%; overflow:hidden; aspect-ratio:16/9; border-radius:18px; background:#000; box-shadow:0 14px 40px rgba(0,0,0,.18); }
     video { display:block; width:100%; height:100%; object-fit:contain; background:#000; pointer-events:none; }
     .stage-missing { display:grid; height:100%; min-height:220px; place-items:center; color:var(--muted); font-weight:800; }
     .live-badge { position:absolute; top:13px; left:13px; z-index:2; display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; color:#fff; background:rgba(8,8,10,.82); font-size:12px; font-weight:900; letter-spacing:.12em; }
@@ -38,13 +38,20 @@
     .available { color:var(--muted); font-size:12px; }
     .countdown { min-height:20px; margin-top:14px; color:var(--muted); font-size:13px; }
     .countdown strong { color:#ff8099; font-variant-numeric:tabular-nums; }
+    .chat { margin-top:14px; overflow:hidden; border:1px solid var(--line); border-radius:18px; background:var(--panel); box-shadow:0 8px 24px rgba(20,20,30,.06); }
+    .chat-head { padding:15px 17px; font-weight:800; }
+    .chat-head small { display:block; margin-top:3px; color:var(--muted); font-size:11px; font-weight:500; }
+    .chat-empty { min-height:72px; padding:18px 17px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
 
     .empty,.loading { display:grid; min-height:55vh; place-items:center; text-align:center; color:var(--muted); }
     .empty-card { width:min(100%,420px); padding:28px 20px; border:1px solid var(--line); border-radius:20px; background:var(--panel); box-shadow:0 8px 24px rgba(20,20,30,.06); }
     .empty-card h2 { margin:12px 0 7px; color:var(--text); }
     .empty-card p { margin:0; line-height:1.5; }
-    @media (min-width:760px) { .app { padding-left:0; padding-right:0; } }
-    @media (max-width:520px) { .app { padding-top:0; } .stage { border-radius:0; } .caption { padding:52px 13px 13px; } .caption strong { font-size:17px; } .caption span { font-size:12px; } }
+    @media (min-width:760px) { .app { padding-left:10px; padding-right:10px; } }
+    @media (orientation:landscape) and (min-width:700px) { .app { width:100%; padding:12px 30px calc(12px + env(safe-area-inset-bottom)); } .stage { width:min(62vw,1466px); max-width:100%; margin:0; border-radius:0; box-shadow:none; } .chat { display:none; } }
+    @media (orientation:portrait) { .chat { display:block; } }
+    @media (max-width:520px) { .app { padding-top:0; } .stage { border-radius:18px; } .caption { padding:52px 13px 13px; } .caption strong { font-size:17px; } .caption span { font-size:12px; } }
+    @media (orientation:landscape) and (max-width:699px) { .app { padding-left:12px; padding-right:12px; } .stage { border-radius:0; } .chat { display:none; } }
   </style>
 </head>
 <body>
@@ -82,7 +89,7 @@
       const target = state.status === 'running' ? state.endsAt : state.startsAt;
       currentTarget = Number(target || 0);
       const videoMarkup = source ? `<video id="liveVideo" autoplay muted playsinline preload="auto"></video>` : '<div class="stage-missing">Відео трансляції готується…</div>';
-      app.innerHTML = `<div class="stage">${videoMarkup}<div class="live-badge"><i></i> LIVE</div><div class="caption"><strong>${escape(state.animeTitle || 'VakDab')}</strong><span>${escape(episodes(state))} · ${escape(state.dub || 'Озвучка')}</span></div></div>`;
+      app.innerHTML = `<div class="stage">${videoMarkup}<div class="live-badge"><i></i> LIVE</div><div class="caption"><strong>${escape(state.animeTitle || 'VakDab')}</strong><span>${escape(episodes(state))} · ${escape(state.dub || 'Озвучка')}</span></div></div><aside class="chat" aria-label="Чат трансляції"><div class="chat-head">Чат трансляції<small>Спільнота VakDab</small></div><div class="chat-empty">Повідомлень поки немає.</div></aside>`;
       const video = document.getElementById('liveVideo');
       if (reuseVideo) video?.replaceWith(previousVideo);
       const activeVideo = document.getElementById('liveVideo');

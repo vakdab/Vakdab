@@ -327,7 +327,7 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-2');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-3');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
@@ -348,8 +348,10 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /setBackgroundColor\?\.\('\#ffffff'\)/);
   assert.doesNotMatch(liveAppSource, /app\.innerHTML = `\\<div class="topbar"/);
   assert.doesNotMatch(liveAppSource, /app\.innerHTML = `[^`]*class="info"/);
-  assert.doesNotMatch(liveAppSource, /app\.innerHTML = `[^`]*class="chat"/);
   assert.match(liveAppSource, /app\.innerHTML = `\<div class="stage"/);
+  assert.match(liveAppSource, /<aside class="chat"/);
+  assert.match(liveAppSource, /orientation:landscape.*\.chat \{ display:none; \}/s);
+  assert.match(liveAppSource, /orientation:portrait.*\.chat \{ display:block; \}/s);
   assert.doesNotMatch(liveAppSource, /app\.innerHTML = `[^`]*class="wide"/);
   assert.doesNotMatch(liveAppSource, /<video[^>]+controls/);
 });
