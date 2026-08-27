@@ -1,6 +1,10 @@
 #liveStreamContainer { margin: 22px auto 0; max-width: 1120px; }
 .live-stream-card { border: 1px solid color-mix(in srgb, var(--border-color, #d7d7d7) 72%, transparent); border-radius: 26px; padding: 22px; background: color-mix(in srgb, var(--card-bg, #fff) 94%, #f4f1ff); box-shadow: 0 16px 40px rgba(28, 20, 45, .08); }
 .live-stream-card--idle { border-style: dashed; }
+.live-stream-card--compact { padding:12px; }
+.live-stream-card--compact .live-stream-card__actions { margin-top:12px; }
+.live-stream-card--compact .live-action { width:100%; }
+.live-stream-card--compact .live-video-stage { margin-top:0; }
 .live-stream-card.is-running { border-color: #ff4c6a; box-shadow: 0 16px 45px rgba(255, 76, 106, .13); }
 .live-stream-card__header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
 .live-kicker { display:block; color:#e33b59; font-size:.72rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; margin-bottom:4px; }

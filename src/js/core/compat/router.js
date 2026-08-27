@@ -7,6 +7,7 @@ import {
     renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
 } from '../../legacy/app-legacy.js?v=20260824-settings-redesign-v1';
+import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=20260827-live-screen-v1';
 
         export const Router = {
             currentRoute: 'main',
@@ -58,6 +59,14 @@ import {
                 document.getElementById('mangaPageContainer').style.display = 'none';
                 document.getElementById('novelPageContainer')?.classList.remove('active');
                 if (document.getElementById('novelPageContainer')) document.getElementById('novelPageContainer').style.display = 'none';
+                const liveWidget = document.getElementById('liveStreamContainer');
+                const livePage = document.getElementById('livePageContainer');
+                if (route !== 'live') destroyLivePage();
+                if (liveWidget) liveWidget.style.display = 'none';
+                if (livePage) {
+                    livePage.classList.remove('active');
+                    livePage.style.display = 'none';
+                }
 
                 const hero = document.getElementById('heroWrapper');
                 const actions = document.getElementById('actionsRow');
@@ -67,6 +76,7 @@ import {
                 if (route === 'main') {
                     hero.style.display = 'block';
                     actions.style.removeProperty('display');
+                    if (liveWidget) liveWidget.style.removeProperty('display');
                     if (logo) logo.style.display = 'flex';
                     if (searchBtn) searchBtn.style.display = 'flex';
                 } else {
@@ -113,6 +123,8 @@ import {
                     this.showRating();
                 } else if (route === 'schedule') {
                     this.showSchedule();
+                } else if (route === 'live') {
+                    this.showLive();
                 } else if (route === 'stickers') {
                     this.showStickers();
                 } else if (route === 'manga') {
@@ -226,6 +238,13 @@ import {
                 container.style.display = 'block';
                 container.classList.add('active');
                 renderSchedulePage();
+            },
+            showLive() {
+                const container = document.getElementById('livePageContainer');
+                if (!container) return;
+                container.style.display = 'block';
+                container.classList.add('active');
+                renderLivePage();
             },
             showStickers() {
                 const container = document.getElementById('stickersPageContainer');

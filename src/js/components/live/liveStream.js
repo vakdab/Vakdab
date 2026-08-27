@@ -89,18 +89,11 @@ function renderState(host, state) {
     const previousSource = previousVideo?.getAttribute('src') || previousVideo?.currentSrc || '';
     const previousWasPlaying = Boolean(previousVideo && !previousVideo.paused);
     if (!state || state.status === 'idle') return renderIdle(host);
-    const poll = state.poll || {};
     const isRunning = state.status === 'running';
     const hasWatch = Boolean(state.animeUrl);
-    const telegramLink = state.telegramUrl ? `<a class="live-action live-action--secondary" href="${escapeHtml(state.telegramUrl)}" target="_blank" rel="noopener">Відкрити Telegram</a>` : '';
-    const range = episodeLabel(state);
-    const season = state.season ? ` · ${escapeHtml(state.season)}` : '';
-    const duration = state.durationHours ? ` · ${escapeHtml(state.durationHours)} год.` : '';
-    const selected = state.animeTitle ? `<div class="live-selection"><strong>${escapeHtml(state.animeTitle)}</strong><span>${escapeHtml(range)}${season} · ${escapeHtml(state.dub || 'Озвучка не вказана')}${duration}</span>${state.availableEpisodeCount ? `<small>Доступно серій: ${escapeHtml(state.availableEpisodeCount)}</small>` : ''}</div>` : '';
-    const countdownTarget = isRunning ? state.endsAt : state.startsAt;
-    const countdown = countdownTarget ? `<span class="live-countdown" data-live-countdown="${Number(countdownTarget)}">${formatRemaining(countdownTarget)}</span>` : '';
+    const expandLink = (isRunning || hasWatch) ? '<button type="button" class="live-action live-action--primary" data-live-expand>Розгорнути</button>' : '';
     const videoStage = (isRunning || hasWatch) ? renderVideoStage(state) : '';
-    host.innerHTML = `<section class="live-stream-card${isRunning ? ' is-running' : ''}" aria-labelledby="liveStreamTitle"><div class="live-stream-card__header"><div><span class="live-kicker">LIVE VAKDAB</span><h2 id="liveStreamTitle">${isRunning ? 'Зараз дивимося разом' : 'Готуємо наступний стрім'}</h2></div><span class="live-status">${escapeHtml(statusLabel(state.status))}</span></div>${videoStage}${selected}<div class="live-stream-card__meta">${poll.stageLabel ? `<span>${escapeHtml(poll.stageLabel)}</span>` : ''}${countdown ? `<span>${isRunning ? 'До завершення' : 'До старту'}: ${countdown}</span>` : ''}</div>${poll.question ? `<div class="live-poll"><div class="live-poll__title">${escapeHtml(poll.question)}</div>${renderOptions(poll)}</div>` : ''}<div class="live-stream-card__actions">${telegramLink}</div></section>`;
+    host.innerHTML = `<section class="live-stream-card live-stream-card--compact${isRunning ? ' is-running' : ''}" aria-label="Поточний Anime Live ефір">${videoStage}<div class="live-stream-card__actions">${expandLink}</div></section>`;
     const renderedVideo = host.querySelector('#liveVideoElement');
     const sameSource = Boolean(renderedVideo && previousVideo && previousSource && previousSource === renderedVideo.getAttribute('src'));
     if (sameSource) renderedVideo.replaceWith(previousVideo);
@@ -113,6 +106,19 @@ function renderState(host, state) {
     } else if (liveVideo && previousWasPlaying && liveVideo.paused) {
         liveVideo.play().catch(error => console.warn('[VakDab] autoplay resume blocked:', error));
     }
+    host.querySelector('[data-live-expand]')?.addEventListener('click', () => { window.location.hash = 'live'; });
+}
+
+export async function loadLiveState() {
+    const response = await fetch(LIVE_API_URL, { cache: 'no-store', headers: { accept: 'application/json' } });
+    if (!response.ok) throw new Error(`LIVE_HTTP_${response.status}`);
+    const payload = await response.json();
+    const liveState = payload?.live || payload;
+    if (liveState?.videoUrl) {
+        const resolvedVideo = await resolveLiveVideoSource(liveState.videoUrl);
+        if (resolvedVideo) liveState.videoUrl = resolvedVideo;
+    }
+    return liveState;
 }
 
 function tickCountdown(host) {
@@ -123,15 +129,7 @@ function tickCountdown(host) {
 
 async function refreshLiveStream(host) {
     try {
-        const response = await fetch(LIVE_API_URL, { cache: 'no-store', headers: { accept: 'application/json' } });
-        if (!response.ok) throw new Error(`LIVE_HTTP_${response.status}`);
-        const payload = await response.json();
-        const liveState = payload?.live || payload;
-        if (liveState?.videoUrl) {
-            const resolvedVideo = await resolveLiveVideoSource(liveState.videoUrl);
-            if (resolvedVideo) liveState.videoUrl = resolvedVideo;
-        }
-        renderState(host, liveState);
+        renderState(host, await loadLiveState());
     } catch (error) {
         console.warn('[VakDab] live stream state unavailable:', error);
         if (!latestState) renderIdle(host);

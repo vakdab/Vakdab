@@ -408,3 +408,16 @@ test('live refresh preserves the active video element', () => {
   assert.match(liveSource, /autoplay muted playsinline/);
   assert.doesNotMatch(liveSource, /<video[^>]+controls/);
 });
+
+test('anime live screen is routed separately from the compact home widget', () => {
+  const routerSource = readFileSync(new URL('../../src/js/core/compat/router.js', import.meta.url), 'utf8');
+  const liveSource = readFileSync(new URL('../../src/js/components/live/liveStream.js', import.meta.url), 'utf8');
+  const pageSource = readFileSync(new URL('../../src/js/pages/live/livePage.js', import.meta.url), 'utf8');
+  assert.match(routerSource, /route === 'live'/);
+  assert.match(routerSource, /showLive\(\)/);
+  assert.match(liveSource, /data-live-expand/);
+  assert.match(liveSource, /window\.location\.hash = 'live'/);
+  assert.match(pageSource, /anime-live-page/);
+  assert.match(pageSource, /id="animeLiveVideo"/);
+  assert.match(pageSource, /destroyLivePage/);
+});
