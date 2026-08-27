@@ -4,7 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-44`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-45`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -2306,6 +2306,8 @@ export class ChatRouletteRoom {
       );
       CREATE INDEX IF NOT EXISTS reports_created_at_idx ON reports(created_at);
       CREATE INDEX IF NOT EXISTS bot_users_last_seen_at_idx ON bot_users(last_seen_at DESC);
+      CREATE TABLE IF NOT EXISTS live_state (id INTEGER PRIMARY KEY CHECK (id = 1), data TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS live_chat (id INTEGER PRIMARY KEY CHECK (id = 1), data TEXT NOT NULL);
     `);
     // Міграція старої таблиці reports, створеної до появи причин скарг.
     try {
@@ -2380,9 +2382,11 @@ export class ChatRouletteRoom {
       this.ctx.storage.sql.exec('DELETE FROM processed_updates WHERE processed_at < ?', Date.now() - 7 * 24 * 60 * 60 * 1000);
     }
     if (op === 'live_health') return { ok: true, durable: true };
-    if (op === 'live_state_get') return { ok: true, state: (await this.ctx.storage.get('live:state')) || null };
-    if (op === 'live_state_set') { await this.ctx.storage.put('live:state', payload.state || null); return { ok: true }; }
-    if (op === 'live_state_delete') { await this.ctx.storage.delete('live:state'); return { ok: true }; }
+    if (op === 'live_chat_get') { const row = this.ctx.storage.sql.exec('SELECT data FROM live_chat WHERE id = 1 LIMIT 1').toArray()[0]; const messages = row?.data ? JSON.parse(row.data) : []; return { ok: true, present: Boolean(row), messages: Array.isArray(messages) ? messages : [] }; }
+    if (op === 'live_chat_set') { const messages = Array.isArray(payload.messages) ? payload.messages : []; this.ctx.storage.sql.exec('INSERT OR REPLACE INTO live_chat (id, data) VALUES (1, ?)', JSON.stringify(messages)); return { ok: true }; }
+    if (op === 'live_state_get') { const row = this.ctx.storage.sql.exec('SELECT data FROM live_state WHERE id = 1 LIMIT 1').toArray()[0]; return { ok: true, state: row?.data ? JSON.parse(row.data) : null }; }
+    if (op === 'live_state_set') { this.ctx.storage.sql.exec('INSERT OR REPLACE INTO live_state (id, data) VALUES (1, ?)', JSON.stringify(payload.state || null)); return { ok: true }; }
+    if (op === 'live_state_delete') { this.ctx.storage.sql.exec('DELETE FROM live_state WHERE id = 1'); return { ok: true }; }
     const chatId = this.participantKey(payload.chatId);
     if (!chatId) return { ok: false, error: 'CHAT_REQUIRED' };
     if (op === 'track_user') return this.trackUser(payload);
@@ -2721,6 +2725,8 @@ async function getLiveStateResponse(request, env) {
 }
 
 async function readLiveChat(env) {
+  const durable = await liveStateDoRequest(env, { op: 'live_chat_get' });
+  if (durable?.present) return Array.isArray(durable.messages) ? durable.messages.slice(-LIVE_CHAT_MAX_MESSAGES) : [];
   if (!env.MAKIMA_MEMORY) return [];
   try {
     const raw = await env.MAKIMA_MEMORY.get(LIVE_CHAT_KEY);
@@ -2730,6 +2736,16 @@ async function readLiveChat(env) {
     console.error('[live-chat] read failed:', safeError(error));
     return [];
   }
+}
+
+async function writeLiveChat(messages, env) {
+  const safeMessages = Array.isArray(messages) ? messages.slice(-LIVE_CHAT_MAX_MESSAGES) : [];
+  if (env.MAKIMA_MEMORY) {
+    try { await env.MAKIMA_MEMORY.put(LIVE_CHAT_KEY, JSON.stringify(safeMessages)); return true; }
+    catch (error) { console.error('[live-chat] KV write failed, using durable fallback:', safeError(error)); }
+  }
+  const durable = await liveStateDoRequest(env, { op: 'live_chat_set', messages: safeMessages });
+  return Boolean(durable?.ok);
 }
 
 async function touchLiveViewer(request, env) {
@@ -2817,7 +2833,7 @@ async function liveChatResponse(request, env) {
   if (!text) return new Response(JSON.stringify({ ok: false, error: 'MESSAGE_REQUIRED' }), { status: 400, headers: liveCorsHeaders(request) });
   const messages = await readLiveChat(env);
   messages.push({ id: `${Date.now()}-${user.id}`, userId: user.id, username: user.username || '', name: user.name, text, createdAt: Date.now() });
-  await env.MAKIMA_MEMORY.put(LIVE_CHAT_KEY, JSON.stringify(messages.slice(-LIVE_CHAT_MAX_MESSAGES)));
+  if (!(await writeLiveChat(messages, env))) return new Response(JSON.stringify({ ok: false, error: 'CHAT_STORAGE_UNAVAILABLE' }), { status: 503, headers: liveCorsHeaders(request) });
   return new Response(JSON.stringify({ ok: true, message: publicLiveChat(messages).at(-1) }), { status: 201, headers: liveCorsHeaders(request) });
 }
 

@@ -327,20 +327,23 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-44');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-45');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
   assert.doesNotMatch(workerSource, /text: 'Live-опитування'/);
   assert.match(liveAppSource, /telegram-web-app\.js/);
+  assert.match(liveAppSource, /theme-color" content="#050505"/);
+  assert.match(liveAppSource, /color-scheme:dark/);
+  assert.match(liveAppSource, /background:#050505/);
   assert.match(liveAppSource, /https:\/\/vakdab\.animegran8\.workers\.dev\/api\/live/);
   assert.match(liveAppSource, /const CHAT_API = 'https:\/\/vakdab\.animegran8\.workers\.dev\/api\/live-chat'/);
   assert.match(liveAppSource, /id="liveChatInput" maxlength="500"/);
   assert.match(liveAppSource, /id="liveChatSubmit" type="submit" aria-label="Надіслати повідомлення"/);
   assert.match(liveAppSource, /class="sr-only">Надіслати<\/span><svg/);
   assert.match(liveAppSource, /enterkeyhint="send"/);
-  assert.match(liveAppSource, /background:#111114/);
-  assert.match(liveAppSource, /color:#fff; background:#111114/);
+  assert.match(liveAppSource, /background:#fff/);
+  assert.match(liveAppSource, /color:#050505; background:#fff/);
   assert.match(liveAppSource, /body\.keyboard-open \.chat-composer \{ position:fixed/);
   assert.match(liveAppSource, /scrollIntoView\(\{ block:'nearest'/);
   assert.match(liveAppSource, /chat-messages">\$\{chatMessagesMarkup\(messages\)\}<\/div><div class="chat-status"[^>]*><\/div><form class="chat-composer"/);
@@ -421,8 +424,8 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /\.caption \{[^}]*opacity:0/s);
   assert.match(liveAppSource, /\.caption \{ position:absolute; right:0; bottom:14px; left:0/);
   assert.match(liveAppSource, /if \(reuseVideo && previousStage\)/);
-  assert.match(liveAppSource, /theme-color" content="#ffffff"/);
-  assert.match(liveAppSource, /--bg:#ffffff/);
+  assert.match(liveAppSource, /theme-color" content="#050505"/);
+  assert.match(liveAppSource, /--bg:#050505/);
   assert.match(liveAppSource, /color:var\(--text\)/);
   assert.match(liveAppSource, /color:#fff; background:rgba\(8,8,10,.82\)/);
   assert.match(liveAppSource, /html \{ height:100%; overflow:hidden/);
@@ -436,8 +439,8 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.doesNotMatch(liveAppSource, /<p><b>VakDab:<\/b>/);
   assert.doesNotMatch(liveAppSource, /<p><b>Луна:<\/b>/);
   assert.doesNotMatch(liveAppSource, /<p><b>Система:<\/b>/);
-  assert.match(liveAppSource, /setHeaderColor\?\.\('\#ffffff'\)/);
-  assert.match(liveAppSource, /setBackgroundColor\?\.\('\#ffffff'\)/);
+  assert.match(liveAppSource, /setHeaderColor\?\.\('\#050505'\)/);
+  assert.match(liveAppSource, /setBackgroundColor\?\.\('\#050505'\)/);
   assert.doesNotMatch(liveAppSource, /app\.innerHTML = `\\<div class="topbar"/);
   assert.doesNotMatch(liveAppSource, /app\.innerHTML = `[^`]*class="info"/);
   assert.match(liveAppSource, /app\.innerHTML = `\<div class="live-layout"\>\<div class="stage"/);
