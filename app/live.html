@@ -47,10 +47,12 @@
     .chat-message__time { margin-left:6px; color:var(--muted); font-size:10px; }
     .chat-message__text { color:var(--text); }
     .chat-empty { color:var(--muted); font-size:13px; }
-    .chat-composer { display:flex; gap:8px; padding:10px; border-top:1px solid var(--line); }
-    .chat-composer input { min-width:0; flex:1; height:40px; padding:0 12px; border:1px solid var(--line); border-radius:12px; outline:none; background:var(--panel-2); color:var(--text); }
+    .chat-composer { display:flex; align-items:center; gap:8px; padding:10px; border-top:1px solid var(--line); background:var(--panel); }
+    .chat-composer input { min-width:0; flex:1; height:40px; padding:0 14px; border:1px solid var(--line); border-radius:20px; outline:none; background:var(--panel-2); color:var(--text); }
     .chat-composer input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(216,63,99,.12); }
-    .chat-composer button { flex:none; min-width:84px; height:40px; padding:0 13px; border:0; border-radius:12px; color:#fff; background:var(--accent); font-weight:800; cursor:pointer; }
+    .chat-composer button { display:grid; flex:none; width:40px; height:40px; place-items:center; padding:0; border:0; border-radius:50%; color:#fff; background:var(--accent); cursor:pointer; }
+    .chat-composer button svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; transform:translateX(-1px); }
+    .chat-composer button .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
     .chat-composer button:disabled { opacity:.55; cursor:wait; }
     .chat-status { min-height:16px; padding:0 12px 8px; color:var(--muted); font-size:11px; }
 
@@ -131,7 +133,7 @@
       const target = state.status === 'running' ? state.endsAt : state.startsAt;
       currentTarget = Number(target || 0);
       const videoMarkup = source ? `<video id="liveVideo" autoplay muted playsinline preload="auto"></video>` : '<div class="stage-missing">Відео трансляції готується…</div>';
-      app.innerHTML = `<div class="live-layout"><div class="stage">${videoMarkup}<div class="live-badge"><i></i> LIVE</div><div class="caption"><strong>${escape(state.animeTitle || 'VakDab')}</strong><span>${escape(episodes(state))} · ${escape(state.dub || 'Озвучка')}</span></div></div><aside class="chat" aria-label="Чат трансляції"><div class="chat-head">Чат трансляції<small>Спільнота VakDab</small></div><div class="chat-messages">${chatMessagesMarkup(messages)}</div><form class="chat-composer" id="liveChatForm"><input id="liveChatInput" maxlength="500" autocomplete="off" placeholder="Написати в чат" aria-label="Повідомлення в чат"><button id="liveChatSubmit" type="submit">Надіслати</button></form><div class="chat-status" id="liveChatStatus" aria-live="polite"></div></aside></div>`;
+      app.innerHTML = `<div class="live-layout"><div class="stage">${videoMarkup}<div class="live-badge"><i></i> LIVE</div><div class="caption"><strong>${escape(state.animeTitle || 'VakDab')}</strong><span>${escape(episodes(state))} · ${escape(state.dub || 'Озвучка')}</span></div></div><aside class="chat" aria-label="Чат трансляції"><div class="chat-head">Чат трансляції<small>Спільнота VakDab</small></div><div class="chat-messages">${chatMessagesMarkup(messages)}</div><form class="chat-composer" id="liveChatForm"><input id="liveChatInput" maxlength="500" autocomplete="off" enterkeyhint="send" placeholder="Написати в чат" aria-label="Повідомлення в чат"><button id="liveChatSubmit" type="submit" aria-label="Надіслати повідомлення"><span class="sr-only">Надіслати</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 21 3l-6.5 18-3.2-7.3L3 11.5Z"/><path d="m11.3 13.7 4.8-4.8"/></svg></button></form><div class="chat-status" id="liveChatStatus" aria-live="polite"></div></aside></div>`;
       bindChatComposer();
       const video = document.getElementById('liveVideo');
       if (reuseVideo) video?.replaceWith(previousVideo);
