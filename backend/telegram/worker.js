@@ -2379,6 +2379,10 @@ export class ChatRouletteRoom {
       this.ctx.storage.sql.exec('INSERT INTO processed_updates (update_id, processed_at) VALUES (?, ?)', key, Date.now());
       this.ctx.storage.sql.exec('DELETE FROM processed_updates WHERE processed_at < ?', Date.now() - 7 * 24 * 60 * 60 * 1000);
     }
+    if (op === 'live_health') return { ok: true, durable: true };
+    if (op === 'live_state_get') return { ok: true, state: (await this.ctx.storage.get('live:state')) || null };
+    if (op === 'live_state_set') { await this.ctx.storage.put('live:state', payload.state || null); return { ok: true }; }
+    if (op === 'live_state_delete') { await this.ctx.storage.delete('live:state'); return { ok: true }; }
     const chatId = this.participantKey(payload.chatId);
     if (!chatId) return { ok: false, error: 'CHAT_REQUIRED' };
     if (op === 'track_user') return this.trackUser(payload);
@@ -2547,20 +2551,45 @@ export class ChatRouletteRoom {
 
 // ==================== VakDab live stream voting ====================
 
-async function readLiveState(env) {
-  if (!env.MAKIMA_MEMORY) return null;
+async function liveStateDoRequest(env, payload) {
+  if (!env.CHAT_ROULETTE) return null;
   try {
-    const raw = await env.MAKIMA_MEMORY.get(LIVE_STATE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const id = env.CHAT_ROULETTE.idFromName('vakdab-live-state');
+    const stub = env.CHAT_ROULETTE.get(id);
+    const response = await stub.fetch('https://live-state.internal/state', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+    const result = await response.json();
+    return result?.ok ? result : { ok: false, error: `DO ${response.status}: ${String(result?.error || 'unknown')}` };
   } catch (error) {
-    console.error('[live] state read failed:', safeError(error));
+    console.error('[live] durable state request failed:', safeError(error));
     return null;
   }
 }
 
+async function readLiveState(env) {
+  if (env.MAKIMA_MEMORY) {
+    try {
+      const raw = await env.MAKIMA_MEMORY.get(LIVE_STATE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (error) {
+      console.error('[live] KV state read failed:', safeError(error));
+    }
+  }
+  const result = await liveStateDoRequest(env, { op: 'live_state_get' });
+  return result?.state || null;
+}
+
 async function writeLiveState(state, env) {
-  if (!env.MAKIMA_MEMORY) throw new Error('MAKIMA_MEMORY is not configured');
-  await env.MAKIMA_MEMORY.put(LIVE_STATE_KEY, JSON.stringify(state));
+  const serialized = JSON.stringify(state);
+  if (env.MAKIMA_MEMORY) {
+    try {
+      await env.MAKIMA_MEMORY.put(LIVE_STATE_KEY, serialized);
+      return state;
+    } catch (error) {
+      console.error('[live] KV state write failed, using durable fallback:', safeError(error));
+    }
+  }
+  const result = await liveStateDoRequest(env, { op: 'live_state_set', state });
+  if (!result?.ok) throw new Error('Live state storage is unavailable');
   return state;
 }
 
@@ -3033,7 +3062,11 @@ async function prepareLiveNextRange(chatId, env) {
 }
 async function cancelLiveSession(chatId, env) {
   const state = await readLiveState(env);
-  if (state?.chatId === String(chatId)) await env.MAKIMA_MEMORY.delete(LIVE_STATE_KEY);
+  if (state?.chatId === String(chatId)) {
+    let deleted = false;
+    if (env.MAKIMA_MEMORY) { try { await env.MAKIMA_MEMORY.delete(LIVE_STATE_KEY); deleted = true; } catch (error) { console.error('[live] KV state delete failed:', safeError(error)); } }
+    if (!deleted) await liveStateDoRequest(env, { op: 'live_state_delete' });
+  }
   await sendMessage(chatId, 'Live-сесію скасовано.', {}, env);
 }
 async function resolveLiveAnimeByTitle(title) {
