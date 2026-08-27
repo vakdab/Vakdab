@@ -4,7 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-45`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-46`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -2384,9 +2384,9 @@ export class ChatRouletteRoom {
     if (op === 'live_health') return { ok: true, durable: true };
     if (op === 'live_chat_get') { const row = this.ctx.storage.sql.exec('SELECT data FROM live_chat WHERE id = 1 LIMIT 1').toArray()[0]; const messages = row?.data ? JSON.parse(row.data) : []; return { ok: true, present: Boolean(row), messages: Array.isArray(messages) ? messages : [] }; }
     if (op === 'live_chat_set') { const messages = Array.isArray(payload.messages) ? payload.messages : []; this.ctx.storage.sql.exec('INSERT OR REPLACE INTO live_chat (id, data) VALUES (1, ?)', JSON.stringify(messages)); return { ok: true }; }
-    if (op === 'live_state_get') { const row = this.ctx.storage.sql.exec('SELECT data FROM live_state WHERE id = 1 LIMIT 1').toArray()[0]; return { ok: true, state: row?.data ? JSON.parse(row.data) : null }; }
-    if (op === 'live_state_set') { this.ctx.storage.sql.exec('INSERT OR REPLACE INTO live_state (id, data) VALUES (1, ?)', JSON.stringify(payload.state || null)); return { ok: true }; }
-    if (op === 'live_state_delete') { this.ctx.storage.sql.exec('DELETE FROM live_state WHERE id = 1'); return { ok: true }; }
+    if (op === 'live_state_get') { const row = this.ctx.storage.sql.exec('SELECT data FROM live_state WHERE id = 1 LIMIT 1').toArray()[0]; return { ok: true, present: Boolean(row), state: row?.data ? JSON.parse(row.data) : null }; }
+    if (op === 'live_state_set') { this.ctx.storage.sql.exec('INSERT OR REPLACE INTO live_state (id, data) VALUES (1, ?)', JSON.stringify(payload.state ?? null)); return { ok: true }; }
+    if (op === 'live_state_delete') { this.ctx.storage.sql.exec('INSERT OR REPLACE INTO live_state (id, data) VALUES (1, ?)', 'null'); return { ok: true }; }
     const chatId = this.participantKey(payload.chatId);
     if (!chatId) return { ok: false, error: 'CHAT_REQUIRED' };
     if (op === 'track_user') return this.trackUser(payload);
@@ -2570,6 +2570,8 @@ async function liveStateDoRequest(env, payload) {
 }
 
 async function readLiveState(env) {
+  const durable = await liveStateDoRequest(env, { op: 'live_state_get' });
+  if (durable?.present) return durable.state || null;
   if (env.MAKIMA_MEMORY) {
     try {
       const raw = await env.MAKIMA_MEMORY.get(LIVE_STATE_KEY);
@@ -2578,23 +2580,21 @@ async function readLiveState(env) {
       console.error('[live] KV state read failed:', safeError(error));
     }
   }
-  const result = await liveStateDoRequest(env, { op: 'live_state_get' });
-  return result?.state || null;
+  return null;
 }
 
 async function writeLiveState(state, env) {
-  const serialized = JSON.stringify(state);
+  const durable = await liveStateDoRequest(env, { op: 'live_state_set', state });
+  if (durable?.ok) return state;
   if (env.MAKIMA_MEMORY) {
     try {
-      await env.MAKIMA_MEMORY.put(LIVE_STATE_KEY, serialized);
+      await env.MAKIMA_MEMORY.put(LIVE_STATE_KEY, JSON.stringify(state));
       return state;
     } catch (error) {
-      console.error('[live] KV state write failed, using durable fallback:', safeError(error));
+      console.error('[live] KV state write failed:', safeError(error));
     }
   }
-  const result = await liveStateDoRequest(env, { op: 'live_state_set', state });
-  if (!result?.ok) throw new Error('Live state storage is unavailable');
-  return state;
+  throw new Error('Live state storage is unavailable');
 }
 
 function liveCorsHeaders(request) {
@@ -3079,9 +3079,8 @@ async function prepareLiveNextRange(chatId, env) {
 async function cancelLiveSession(chatId, env) {
   const state = await readLiveState(env);
   if (state?.chatId === String(chatId)) {
-    let deleted = false;
-    if (env.MAKIMA_MEMORY) { try { await env.MAKIMA_MEMORY.delete(LIVE_STATE_KEY); deleted = true; } catch (error) { console.error('[live] KV state delete failed:', safeError(error)); } }
-    if (!deleted) await liveStateDoRequest(env, { op: 'live_state_delete' });
+    const durable = await liveStateDoRequest(env, { op: 'live_state_delete' });
+    if (!durable?.ok && env.MAKIMA_MEMORY) { try { await env.MAKIMA_MEMORY.delete(LIVE_STATE_KEY); } catch (error) { console.error('[live] KV state delete failed:', safeError(error)); } }
   }
   await sendMessage(chatId, 'Live-сесію скасовано.', {}, env);
 }
