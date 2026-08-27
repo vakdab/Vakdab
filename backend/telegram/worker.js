@@ -4,7 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-32`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-34`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -2579,7 +2579,8 @@ async function repairLiveVideoState(state, env) {
       const match = await resolveLiveAnimeByTitle(state.selected.anime.label);
       if (match?.url) state.selected.anime = { ...state.selected.anime, url: match.url, image: state.selected.anime.image || match.image || match.poster || '' };
     }
-    if (state.selected.anime.url && (!state.playLinksByDub || !Object.keys(state.playLinksByDub).length)) {
+    const shouldRefreshPlayback = !state.videoUrl || /ashdi\.vip\/vod\//i.test(String(state.videoUrl));
+    if (state.selected.anime.url && (shouldRefreshPlayback || !state.playLinksByDub || !Object.keys(state.playLinksByDub).length)) {
       const meta = await fetchLiveAnimeMeta(state.selected.anime.url);
       state.availableEpisodeCount = Number(state.availableEpisodeCount || meta.availableEpisodeCount || 0) || 0;
       state.playLinksByDub = meta.playLinksByDub || {};
@@ -2588,8 +2589,7 @@ async function repairLiveVideoState(state, env) {
       if (!state.selected.season) state.selected.season = state.seasonOptions[0] || liveOption(state.selected.anime.label, state.selected.anime.url);
     }
     const playLink = state.playLinksByDub?.[String(state.selected?.dub?.value)]?.[String(episodeStart)] || '';
-    const needsPlaybackRefresh = !state.videoUrl || /ashdi\.vip\/vod\//i.test(String(state.videoUrl));
-    if (needsPlaybackRefresh && playLink) state.videoUrl = await resolveLivePlaybackUrl(playLink);
+    if (shouldRefreshPlayback && playLink) state.videoUrl = await resolveLivePlaybackUrl(playLink);
     state.selected.episodeStart = episodeStart;
     if (!state.selected.episodeEnd) state.selected.episodeEnd = episodeStart + Math.max(0, Number(state.selected?.episodeCount?.value || 1) - 1);
     state.updatedAt = Date.now();
@@ -2797,7 +2797,7 @@ async function fetchLiveSeasonOptions(details) {
 }
 function extractMoonanimeManifest(html) {
   try {
-    const outer = String(html || '').match(/var\s+_eMdje\s*=\s*atob\("([^"]+)"\)/);
+    const outer = String(html || '').match(/_eMdje[\s\S]{0,80}?atob\(\s*["']([^"']+)["']\s*\)/);
     if (!outer) return '';
     const bytes = Uint8Array.from(atob(outer[1]), char => char.charCodeAt(0));
     if (bytes.length < 34) return '';
@@ -2811,7 +2811,7 @@ function extractMoonanimeManifest(html) {
       rolling = (cipher + key) & 255;
     }
     const loader = new TextDecoder().decode(decoded);
-    const inner = loader.match(/file:\s*_0xd\("([^"]+)"\)/);
+    const inner = loader.match(/file\s*:\s*_0xd\(\s*["']([^"']+)["']\s*\)/);
     if (!inner) return '';
     const encoded = atob(inner[1]);
     const key = '4UexSfnyZybF';
@@ -2834,6 +2834,10 @@ async function resolveLivePlaybackUrl(playLink) {
       if (response.ok) {
         const html = String(await response.text()).replace(/\\u002F/g, '/').replace(/\\\//g, '/');
         manifest = (html.match(/https?:\/\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?/i) || [])[0] || extractMoonanimeManifest(html) || source;
+        if (manifest === source && /moonanime\.art/i.test(source)) {
+          const direct = await fetch(source, { headers: { accept: 'text/html,application/xhtml+xml', 'user-agent': 'VakDabLive/1.0' } });
+          if (direct.ok) manifest = extractMoonanimeManifest(await direct.text()) || manifest;
+        }
       }
     } catch (error) {
       console.warn('[live] playback resolution failed:', safeError(error));
