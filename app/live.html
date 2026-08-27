@@ -23,7 +23,7 @@
     .status { display:flex; align-items:center; gap:7px; margin-left:auto; padding:9px 12px; border-radius:999px; color:#ffd9e2; background:rgba(240,76,112,.18); font-size:12px; font-weight:800; white-space:nowrap; }
     .status i,.live-badge i { display:block; width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px rgba(240,76,112,.18); }
     .stage { position:relative; width:100%; overflow:hidden; aspect-ratio:16/9; border-radius:18px; background:#000; box-shadow:0 14px 40px rgba(0,0,0,.18); cursor:pointer; }
-    video { display:block; width:100%; height:100%; object-fit:contain; background:#000; pointer-events:none; }
+    video { display:block; width:100%; height:100%; object-fit:cover; background:#000; pointer-events:none; }
 
     .chat-head-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .viewer-count { color:var(--muted); font-size:13px; font-weight:700; white-space:nowrap; }
@@ -91,6 +91,7 @@
     let currentEpisodeSources = [];
     let currentEpisodeIndex = 0;
     let liveSyncTimer = null;
+    let recoveryTimer = 0;
     let chatMessages = [];
     let viewerCount = 0;
     let serverClockOffset = 0;
@@ -119,10 +120,12 @@
     function syncVideoToLiveClock(video = document.getElementById('liveVideo')) { if (!video || !currentLiveStart || video.readyState < 1) return; const target = livePositionForVideo(video, currentLiveStart, currentEpisodeOffset); if (!(target > 0)) return; if (Math.abs(Number(video.currentTime || 0) - target) > 2) { try { video.currentTime = target; } catch {} } if (video.paused && !video.ended) video.play().catch(() => {}); }
     function startLiveSync(video, episodeOffset = currentEpisodeOffset) { currentEpisodeOffset = Number(episodeOffset || 0); if (liveSyncTimer) clearInterval(liveSyncTimer); liveSyncTimer = window.setInterval(() => syncVideoToLiveClock(video), 5000); syncVideoToLiveClock(video); }
     function resumeVideo(video, source, liveStartedAt, positionKey, episodeOffset = 0) { if (!video) return; let applied = false; const seek = () => { if (applied) return; const target = livePositionForVideo(video, liveStartedAt, episodeOffset); if (!(target > 0)) return; try { video.currentTime = target; } catch {} video.muted = false; video.defaultMuted = false; video.volume = 1; applied = true; ['loadedmetadata','durationchange','progress','canplay'].forEach(event => video.removeEventListener(event, seek)); video.play().catch(() => {}); }; ['loadedmetadata','durationchange','progress','canplay'].forEach(event => video.addEventListener(event, seek)); seek(); [500, 1500, 3000].forEach(delay => window.setTimeout(seek, delay)); }
-    function destroyPlayback() { if (hls) { hls.destroy(); hls = null; } }
+    function schedulePlaybackRecovery(reason = 'stalled') { window.clearTimeout(recoveryTimer); recoveryTimer = window.setTimeout(() => { const video = document.getElementById('liveVideo'); if (!video || video.ended) return; try { if (hls) { if (video.error) hls.recoverMediaError(); hls.startLoad(-1); } video.play().catch(() => {}); } catch {} }, reason === 'error' ? 250 : 1200); }
+    function sourceExpiresSoon(value) { try { const raw = String(value || ''); const match = raw.match(/[?&]url=([^&]+)/i); const nested = match ? decodeURIComponent(match[1]) : raw; const expires = Number(new URL(nested).searchParams.get('expires')); return Number.isFinite(expires) && expires > 0 && expires - Math.floor(Date.now() / 1000) < 180; } catch { return false; } }
+    function destroyPlayback() { window.clearTimeout(recoveryTimer); if (hls) { hls.destroy(); hls = null; } }
     function stopVideo() { if (liveSyncTimer) { clearInterval(liveSyncTimer); liveSyncTimer = null; } destroyPlayback(); currentSource = ''; currentPositionKey = ''; currentLiveStart = 0; currentEpisodeOffset = 0; currentEpisodeSources = []; currentEpisodeIndex = 0; }
     function advanceEpisodeIfNeeded(video) { const duration = Number(video?.duration); if (!video || !Number.isFinite(duration) || duration <= 1 || currentEpisodeIndex >= currentEpisodeSources.length - 1) return; const elapsed = liveElapsedSeconds(currentLiveStart); if (elapsed < currentEpisodeOffset + duration - 0.75 && !video.ended) return; currentEpisodeOffset += duration; currentEpisodeIndex += 1; loadEpisode(video, currentEpisodeSources[currentEpisodeIndex]?.url, currentLiveStart, currentPositionKey, currentEpisodeOffset, currentEpisodeIndex); }
-    function loadEpisode(video, source, liveStartedAt, positionKey, episodeOffset, episodeIndex) { if (!video || !source) return; destroyPlayback(); currentSource = source; currentPositionKey = String(positionKey || source); currentEpisodeOffset = Number(episodeOffset || 0); currentEpisodeIndex = Number(episodeIndex || 0); const boundary = () => advanceEpisodeIfNeeded(video); video.addEventListener('ended', boundary); video.addEventListener('durationchange', boundary); video.addEventListener('loadedmetadata', boundary); if (window.Hls?.isSupported?.() && /\.m3u8(?:[?#]|$)/i.test(source)) { hls = new Hls({ enableWorker:false, lowLatencyMode:false, backBufferLength:90 }); hls.loadSource(source); hls.attachMedia(video); hls.on(Hls.Events.ERROR, (_, data) => { if (!data?.fatal || !hls) return; if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad(); else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError(); }); hls.on(Hls.Events.MANIFEST_PARSED, () => { resumeVideo(video, source, liveStartedAt, currentPositionKey, currentEpisodeOffset); startLiveSync(video, currentEpisodeOffset); window.setTimeout(boundary, 400); }); } else { video.src = source; resumeVideo(video, source, liveStartedAt, currentPositionKey, currentEpisodeOffset); startLiveSync(video, currentEpisodeOffset); } }
+    function loadEpisode(video, source, liveStartedAt, positionKey, episodeOffset, episodeIndex) { if (!video || !source) return; destroyPlayback(); currentSource = source; currentPositionKey = String(positionKey || source); currentEpisodeOffset = Number(episodeOffset || 0); currentEpisodeIndex = Number(episodeIndex || 0); const boundary = () => advanceEpisodeIfNeeded(video); video.onended = boundary; video.ondurationchange = boundary; video.onloadedmetadata = boundary; video.onstalled = () => schedulePlaybackRecovery('stalled'); video.onwaiting = () => schedulePlaybackRecovery('waiting'); video.onerror = () => schedulePlaybackRecovery('error'); if (window.Hls?.isSupported?.() && /\.m3u8(?:[?#]|$)/i.test(source)) { hls = new Hls({ enableWorker:false, lowLatencyMode:false, backBufferLength:90, maxBufferLength:30, maxMaxBufferLength:60, fragLoadingMaxRetry:6, manifestLoadingMaxRetry:6, levelLoadingMaxRetry:6 }); hls.loadSource(source); hls.attachMedia(video); hls.on(Hls.Events.ERROR, (_, data) => { if (!data?.fatal || !hls) return; schedulePlaybackRecovery(data.type || 'hls'); if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad(-1); else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError(); }); hls.on(Hls.Events.MANIFEST_PARSED, () => { resumeVideo(video, source, liveStartedAt, currentPositionKey, currentEpisodeOffset); startLiveSync(video, currentEpisodeOffset); window.setTimeout(boundary, 400); }); } else { video.src = source; resumeVideo(video, source, liveStartedAt, currentPositionKey, currentEpisodeOffset); startLiveSync(video, currentEpisodeOffset); } }
     function attachVideo(video, playlist, liveStartedAt, positionKey) { stopVideo(); currentEpisodeSources = Array.isArray(playlist) ? playlist.filter(item => item?.url) : []; if (!currentEpisodeSources.length) return; currentPositionKey = String(positionKey || currentEpisodeSources[0].url); currentLiveStart = Number(liveStartedAt || 0); loadEpisode(video, currentEpisodeSources[0].url, currentLiveStart, currentPositionKey, 0, 0); }
     function renderEmpty(message = 'Ефір зараз не запущено') { stopVideo(); app.innerHTML = `<div class="empty"><section class="empty-card"><div class="kicker">VAKDAB LIVE</div><h2>${escape(message)}</h2><p>Власник VakDab налаштує наступну трансляцію в Telegram.</p></section></div>`; }
     function formatChatTime(value) { return value ? new Date(value).toLocaleTimeString('uk-UA', { hour:'2-digit', minute:'2-digit' }) : ''; }
@@ -182,14 +185,18 @@
     function render(state, source, playlist = [], messages = chatMessages) {
       const previousVideo = document.getElementById('liveVideo');
       const previousStage = document.querySelector('.stage');
-      const playlistKey = playlist.length ? `${playlist.map(item => `${item.episode}:${item.url}`).join('|')}|${Number(state.startsAt || 0)}` : (source ? `${source}|${Number(state.startsAt || 0)}` : '');
-      const reuseVideo = Boolean(previousVideo && playlist.length && currentPositionKey === playlistKey);
+      const playlistKey = playlist.length ? `${playlist.map(item => item.episode).join('|')}|${Number(state.startsAt || 0)}` : (source ? `single|${Number(state.startsAt || 0)}` : '');
+      const playbackUnhealthy = Boolean(previousVideo && (previousVideo.error || (previousVideo.readyState === 0 && previousVideo.networkState === 3)));
+      const reuseVideo = Boolean(previousVideo && playlist.length && currentPositionKey === playlistKey && !playbackUnhealthy);
       if (reuseVideo && previousStage) {
         currentTarget = Number(state.status === 'running' ? state.endsAt : state.startsAt || 0);
         const title = previousStage.querySelector('.caption strong');
         const meta = previousStage.querySelector('.caption span');
         if (title) title.textContent = state.animeTitle || 'VakDab';
         if (meta) meta.textContent = `${episodes(state)} · ${state.dub || 'Озвучка'}`;
+        currentEpisodeSources = playlist;
+        const refreshed = playlist[currentEpisodeIndex]?.url;
+        if (refreshed && refreshed !== currentSource && sourceExpiresSoon(currentSource)) loadEpisode(previousVideo, refreshed, currentLiveStart, currentPositionKey, currentEpisodeOffset, currentEpisodeIndex);
         renderChatMessages(messages);
         return;
       }
@@ -214,7 +221,7 @@
     syncKeyboardViewport();
     load();
     setInterval(() => { const node = document.querySelector('#countdown strong'); if (node && currentTarget) node.textContent = remaining(currentTarget); }, 1000);
-    setInterval(load, 15000);
+    setInterval(load, 30000);
   </script>
 </body>
 </html>

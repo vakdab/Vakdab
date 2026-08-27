@@ -327,7 +327,7 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-43');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-44');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
@@ -371,12 +371,15 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(workerSource, /x-telegram-init-data/);
   assert.match(liveAppSource, /id="liveVideo" autoplay playsinline/);
   assert.doesNotMatch(liveAppSource, /id="liveVideo" autoplay muted playsinline/);
-  assert.match(liveAppSource, /const reuseVideo = Boolean\(previousVideo && playlist\.length && currentPositionKey === playlistKey\)/);
+  assert.match(liveAppSource, /const reuseVideo = Boolean\(previousVideo && playlist\.length && currentPositionKey === playlistKey && !playbackUnhealthy\)/);
   assert.doesNotMatch(liveAppSource, /LIVE_POSITION_KEY/);
   assert.doesNotMatch(liveAppSource, /saveVideoPosition/);
   assert.match(liveAppSource, /resumeVideo\(video, source, liveStartedAt, currentPositionKey, currentEpisodeOffset\)/);
   assert.match(liveAppSource, /const playlistKey = playlist\.length/);
   assert.match(liveAppSource, /video\.seekable/);
+  assert.match(liveAppSource, /object-fit:cover/);
+  assert.match(liveAppSource, /function sourceExpiresSoon/);
+  assert.match(liveAppSource, /schedulePlaybackRecovery/);
   assert.match(liveAppSource, /\['loadedmetadata','durationchange','progress','canplay'\]/);
   assert.match(liveAppSource, /attachVideo\(activeVideo, playlist\.length \? playlist/);
   assert.match(liveAppSource, /let serverClockOffset = 0/);
@@ -393,7 +396,7 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /function syncVideoToLiveClock/);
   assert.match(liveAppSource, /setInterval\(\(\) => syncVideoToLiveClock\(video\), 5000\)/);
   assert.match(liveAppSource, /Hls\.ErrorTypes\.NETWORK_ERROR/);
-  assert.match(liveAppSource, /hls\.startLoad\(\)/);
+  assert.match(liveAppSource, /hls\.startLoad\(-1\)/);
   assert.match(liveAppSource, /Hls\.ErrorTypes\.MEDIA_ERROR/);
   assert.match(liveAppSource, /hls\.recoverMediaError\(\)/);
   assert.match(liveAppSource, /visibilitychange.*syncVideoToLiveClock/s);
