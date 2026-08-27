@@ -327,7 +327,7 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-25');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-26');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
@@ -364,8 +364,8 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(workerSource, /x-telegram-init-data/);
   assert.match(liveAppSource, /id="liveVideo" autoplay muted playsinline/);
   assert.match(liveAppSource, /const reuseVideo = Boolean\(previousVideo && source && currentSource === source && currentPositionKey === positionKey\)/);
-  assert.match(liveAppSource, /LIVE_POSITION_KEY/);
-  assert.match(liveAppSource, /localStorage\.setItem\(LIVE_POSITION_KEY/);
+  assert.doesNotMatch(liveAppSource, /LIVE_POSITION_KEY/);
+  assert.doesNotMatch(liveAppSource, /saveVideoPosition/);
   assert.match(liveAppSource, /resumeVideo\(video, source, liveStartedAt, positionKey\)/);
   assert.match(liveAppSource, /const positionKey = source \? `\$\{source\}\|\$\{Number\(state\.startsAt \|\| 0\)\}`/);
   assert.match(liveAppSource, /video\.seekable/);
@@ -375,8 +375,9 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(liveAppSource, /serverClockOffset = serverNow - Date\.now\(\)/);
   assert.match(liveAppSource, /syncServerClock\(payload\?\.serverNow \|\| payload\?\.live\?\.serverNow\)/);
   assert.match(liveAppSource, /liveNow\(\) - liveStartedAt/);
-  assert.match(liveAppSource, /Math\.max\(elapsed, savedPosition\)/);
-  assert.match(liveAppSource, /pagehide.*saveVideoPosition/s);
+  assert.match(liveAppSource, /let position = elapsed/);
+  assert.doesNotMatch(liveAppSource, /Math\.max\(elapsed, savedPosition\)/);
+  assert.match(liveAppSource, /visibilitychange.*resumeVideo/s);
   assert.match(liveAppSource, /id="liveMuteToggle"/);
   assert.doesNotMatch(liveAppSource, /id="liveFullscreenToggle"/);
   assert.doesNotMatch(liveAppSource, /id="liveExitFullscreenToggle"/);
