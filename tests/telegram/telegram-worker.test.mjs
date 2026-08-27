@@ -327,7 +327,7 @@ test('schedule fallback keyboard opens the dedicated Mini App page', () => {
 test('live keyboard opens the dedicated Telegram Web App page', () => {
   const button = liveWebAppKeyboard().inline_keyboard[0][0];
   assert.equal(button.text, 'Відкрити Аніме Ефір');
-  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-41');
+  assert.equal(button.web_app.url, 'https://vakdab.github.io/Vakdab/app/live.html?v=mono-20260827-live-43');
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
   const liveAppSource = readFileSync(new URL('../../app/live.html', import.meta.url), 'utf8');
   assert.match(workerSource, /\[\{ text: 'Аніме Ефір', web_app: \{ url: LIVE_WEB_APP_URL \} \}\]/);
@@ -371,23 +371,23 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(workerSource, /x-telegram-init-data/);
   assert.match(liveAppSource, /id="liveVideo" autoplay playsinline/);
   assert.doesNotMatch(liveAppSource, /id="liveVideo" autoplay muted playsinline/);
-  assert.match(liveAppSource, /const reuseVideo = Boolean\(previousVideo && source && currentSource === source && currentPositionKey === positionKey\)/);
+  assert.match(liveAppSource, /const reuseVideo = Boolean\(previousVideo && playlist\.length && currentPositionKey === playlistKey\)/);
   assert.doesNotMatch(liveAppSource, /LIVE_POSITION_KEY/);
   assert.doesNotMatch(liveAppSource, /saveVideoPosition/);
-  assert.match(liveAppSource, /resumeVideo\(video, source, liveStartedAt, positionKey\)/);
-  assert.match(liveAppSource, /const positionKey = source \? `\$\{source\}\|\$\{Number\(state\.startsAt \|\| 0\)\}`/);
+  assert.match(liveAppSource, /resumeVideo\(video, source, liveStartedAt, currentPositionKey, currentEpisodeOffset\)/);
+  assert.match(liveAppSource, /const playlistKey = playlist\.length/);
   assert.match(liveAppSource, /video\.seekable/);
   assert.match(liveAppSource, /\['loadedmetadata','durationchange','progress','canplay'\]/);
-  assert.match(liveAppSource, /attachVideo\(activeVideo, source, state\.startsAt, positionKey\)/);
+  assert.match(liveAppSource, /attachVideo\(activeVideo, playlist\.length \? playlist/);
   assert.match(liveAppSource, /let serverClockOffset = 0/);
   assert.match(liveAppSource, /serverClockOffset = serverNow - Date\.now\(\)/);
   assert.match(liveAppSource, /syncServerClock\(payload\?\.serverNow \|\| payload\?\.live\?\.serverNow\)/);
   assert.match(liveAppSource, /state\.status !== 'running'/);
   assert.match(liveAppSource, /state\?\.status === 'finished' \? 'Ефір завершено'/);
   assert.match(liveAppSource, /liveNow\(\) - liveStartedAt/);
-  assert.match(liveAppSource, /const elapsed = liveElapsedSeconds\(liveStartedAt\)/);
+  assert.match(liveAppSource, /const elapsed = Math\.max\(0, liveElapsedSeconds\(liveStartedAt\)/);
   assert.doesNotMatch(liveAppSource, /Math\.max\(elapsed, savedPosition\)/);
-  assert.match(liveAppSource, /function livePositionForVideo\(video, liveStartedAt\)/);
+  assert.match(liveAppSource, /function livePositionForVideo\(video, liveStartedAt/);
   assert.match(liveAppSource, /function extractMoonanimeManifest/);
   assert.match(liveAppSource, /extractMoonanimeManifest\(html\)/);
   assert.match(liveAppSource, /function syncVideoToLiveClock/);

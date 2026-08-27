@@ -4,7 +4,7 @@ const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
-const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-41`;
+const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-43`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
 const PAGE_SIZE = 10;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -2629,6 +2629,14 @@ async function publicLiveState(state, env) {
     stageLabel: state.poll.stageLabel,
     options: (state.poll.options || []).map(item => ({ label: item.label, votes: Number(item.votes || 0) }))
   } : null;
+  const selectedDub = String(state.selected?.dub?.value || '');
+  const selectedStart = Number(state.selected?.episodeStart || 0) || 1;
+  const selectedEnd = Number(state.selected?.episodeEnd || selectedStart) || selectedStart;
+  const selectedLinks = state.playLinksByDub?.[selectedDub] || {};
+  const episodeSources = Array.from({ length: Math.max(1, selectedEnd - selectedStart + 1) }, (_, index) => {
+    const episode = selectedStart + index;
+    return { episode, url: String(selectedLinks[String(episode)] || (episode === selectedStart ? state.videoUrl || '' : '')).trim() };
+  }).filter(item => item.url);
   return {
     status: publicStatus,
     poll,
@@ -2644,6 +2652,7 @@ async function publicLiveState(state, env) {
     availableEpisodeCount: Number(state.availableEpisodeCount || 0) || 0,
     dub: state.selected?.dub?.value || '',
     videoUrl: state.videoUrl || '',
+    episodeSources,
     durationHours: Number(state.selected?.duration?.value || 0) || 0,
     startsAt: Number(state.startsAt || 0) || 0,
     endsAt: Number(state.endsAt || 0) || 0,
