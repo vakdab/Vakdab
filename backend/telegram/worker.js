@@ -3115,11 +3115,12 @@ async function handleLiveOwnerText(message, env) {
     state.inputStage = 'range';
     state.updatedAt = Date.now();
     await writeLiveState(state, env);
-    await sendMessage(state.chatId, state.isMovie ? 'Це фільм. Напиши `1-1` для перегляду або скасуй командою /livecancel.' : 'Напиши діапазон серій текстом, наприклад `1-5` або `5-12`.', {}, env);
+    await sendMessage(state.chatId, state.isMovie || state.availableEpisodeCount === 1 ? 'Доступна одна частина. Напиши `1` для перегляду або скасуй командою /livecancel.' : 'Напиши діапазон серій текстом, наприклад `1-5` або `5-12`.', {}, env);
     return true;
   }
   if (state.inputStage === 'range') {
-    const range = parseLiveEpisodeRange(text);
+    const singleEpisode = text.match(/^(\d+)$/);
+    const range = parseLiveEpisodeRange(text) || (singleEpisode && Number(singleEpisode[1]) === 1 && (state.isMovie || state.availableEpisodeCount === 1) ? { start: 1, end: 1, count: 1, value: '1-1' } : null);
     if (!range) {
       await sendMessage(state.chatId, 'Невірний формат. Напиши діапазон так: `1-5` або `5-12`.', {}, env);
       return true;

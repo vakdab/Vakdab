@@ -363,6 +363,8 @@ test('live keyboard opens the dedicated Telegram Web App page', () => {
   assert.match(workerSource, /serverNow: Date\.now\(\)/);
   assert.match(workerSource, /providers\.find\(item => \/MOONANIME\/i/);
   assert.match(workerSource, /function extractMoonanimeManifest/);
+  assert.match(workerSource, /state\.isMovie \|\| state\.availableEpisodeCount === 1/);
+  assert.match(workerSource, /const singleEpisode = text\.match/);
   assert.match(workerSource, /let shouldRefreshPlayback = !isResolvedLiveVideoUrl\(state\.videoUrl\);/);
   assert.match(workerSource, /shouldRefreshPlayback \|\| !state\.playLinksByDub/);
   assert.match(workerSource, /extractMoonanimeManifest\(html\)/);
