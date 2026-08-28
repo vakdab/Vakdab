@@ -1691,6 +1691,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
         export async function loadAndDisplayGenreSections() {
             const requestId = ++homeSectionsRequestId;
+            const catalogRequestId = ++homeCatalogRequestId;
             const container = document.getElementById('genreSectionsContainer');
             if (!container) return;
             container.style.display = 'flex';
@@ -1726,6 +1727,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 syncHomeCatalogGenreControl(container);
                 renderHomeCatalogGrid();
                 syncHomeCatalogMoreButton();
+                if (!homeCatalogQuery && !homeCatalogFilterResultItems) loadRemainingHomeCatalogPages(catalogRequestId).catch(error => console.warn('[VakDab] full catalog loading:', error));
                 if (homeCatalogMode === 'novel') {
                     fetchRanobeCatalogTotal(homeCatalogQuery).then(total => {
                         if (requestId !== homeSectionsRequestId || !total) return;
