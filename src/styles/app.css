@@ -102,7 +102,7 @@ img,video,iframe{max-width:100%}
     width: 100%;
     max-width: 100%;
     flex: 0 0 auto;
-    min-height: 2.12em;
+    min-height: 0;
     max-height: 2.12em;
     box-sizing: border-box;
     font-size: clamp(1.55rem, 7.2vw, 2.15rem);
