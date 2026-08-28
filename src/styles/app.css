@@ -40,7 +40,7 @@
 @import url('./player/player-polish.css?v=20260824-settings-redesign-v1');
 @import url('./player/video-overlay.css?v=20260824-settings-redesign-v1');
 @import url('./pages/design-polish.css?v=20260824-settings-redesign-v1');
-@import url('./pages/ux-2026.css?v=20260826-grid-v2');
+@import url('./pages/ux-2026.css?v=20260828-hero-banner-v1');
 @import url('./pages/settings-2026.css?v=20260824-settings-redesign-v1');
 @import url('./components/live-stream.css?v=20260827-live-widget-v2');
 @import url('./pages/live.css?v=20260827-live-screen-v1');
@@ -80,4 +80,50 @@ img,video,iframe{max-width:100%}
 }
 @media(max-width:380px){
   .app-container{padding-inline:9px!important}.header{padding-top:.5rem}.agnative-topnav-clock{font-size:.62rem}.hero-wrapper{height:390px;min-height:390px}.hero-slide-content{padding-inline:13px}.hero-slide-title{font-size:1.55rem}.hero-slide-desc{font-size:.72rem}.action-pill{font-size:.66rem}.home-catalog-section{padding-inline:10px}.home-catalog-tab{font-size:.62rem}.home-catalog-card__watch span{display:none}.home-catalog-card__watch{padding-inline:7px}.bn-label{font-size:11px}
+  }
+
+/* Hero banner stability override: keep every content layer inside the mobile stage. */
+.hero-wrapper,
+.hero-slide,
+#heroSlidesContainer { contain: layout paint; }
+.hero-slide-content { overflow: visible; }
+@media (max-width: 599px) {
+  .hero-wrapper {
+    height: clamp(500px, 128vw, 560px) !important;
+    min-height: 500px !important;
+    max-height: 560px !important;
+  }
+  .hero-slide-content {
+    justify-content: flex-end;
+    gap: 9px;
+    padding: 26px 16px calc(86px + env(safe-area-inset-bottom));
+    overflow: visible;
+  }
+  .hero-slide-title {
+    width: 100%;
+    max-width: 100%;
+    font-size: clamp(1.55rem, 7.2vw, 2.15rem);
+    line-height: 1.06;
+    letter-spacing: -.035em;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .hero-slide-desc {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(1.45em * 3);
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+  }
+  .hero-slide-tags { flex-shrink: 0; }
+  .hero-info-pill, .hero-cta-row { flex-shrink: 0; }
+}
+@media (max-width: 380px) {
+  .hero-wrapper { height: 500px !important; min-height: 500px !important; }
+  .hero-slide-content { padding-inline: 14px; gap: 8px; }
+  .hero-slide-title { font-size: 1.5rem; }
+  .hero-slide-desc { font-size: .78rem; }
 }
