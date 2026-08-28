@@ -134,3 +134,6 @@ img,video,iframe{max-width:100%}
   .hero-slide-title { font-size: 1.5rem; }
   .hero-slide-desc { font-size: .78rem; }
 }
+
+/* The home catalog is continuation-free for anime, manga and novels. */
+.home-catalog-more { display: none !important; }
