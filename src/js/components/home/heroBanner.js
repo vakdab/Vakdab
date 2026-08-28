@@ -194,10 +194,10 @@ import { DailyStats, Router, Storage, openPlayerPage, showToast } from '../../le
                 <div class="hero-slide-content">
                     <span class="hero-slide-kicker">Обрано для тебе</span>
                     <div class="hero-slide-title">${escapeHeroText(title)}</div>
-                    ${synopsisHtml}
                     <div class="hero-slide-tags">
                         ${genres.slice(0, 3).map(g => `<span class="hero-tag genre-tag">${escapeHeroText(g)}</span>`).join('')}
                     </div>
+                    ${synopsisHtml}
                     <div class="hero-info-pill hero-rating-row hero-rating-row--bottom">
                         <span class="hero-rating-badge"><span class="star">★</span> ${rating}</span>
                         ${metaHtml}
