@@ -1619,7 +1619,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 syncHomeCatalogGenreControl();
                 renderHomeCatalogGrid();
                 syncHomeCatalogMoreButton();
-                if (!homeCatalogQuery && !homeCatalogFilterResultItems) loadRemainingHomeCatalogPages(requestId).catch(error => console.warn('[VakDab] full catalog loading:', error));
             } catch (error) {
                 if (requestId !== homeCatalogRequestId) return;
                 grid.innerHTML = `<div class="home-catalog-empty">Не вдалося завантажити каталог. Спробуйте ще раз.</div>`;
@@ -1727,7 +1726,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 syncHomeCatalogGenreControl(container);
                 renderHomeCatalogGrid();
                 syncHomeCatalogMoreButton();
-                if (!homeCatalogQuery && !homeCatalogFilterResultItems) loadRemainingHomeCatalogPages(catalogRequestId).catch(error => console.warn('[VakDab] full catalog loading:', error));
                 if (homeCatalogMode === 'novel') {
                     fetchRanobeCatalogTotal(homeCatalogQuery).then(total => {
                         if (requestId !== homeSectionsRequestId || !total) return;
