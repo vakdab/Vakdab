@@ -611,13 +611,10 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
         window.toggleLeftdock = toggleLeftdock;
         window.profileEditNick = profileEditNick;
         window.profileEditBio = profileEditBio;
-        window.changeGenrePage = changeGenrePage;
         window.loadGenrePageContent = loadGenrePageContent;
         window.renderProfilePage = renderProfilePage;
         window.performSearchPage = performSearchPage;
-        window.changeSearchPage = changeSearchPage;
         window.renderSettingsPage = renderSettingsPage;
-        window.openSearchPage = openSearchPage;
         window.openBottomSheet = openBottomSheet;
         window.closeBottomSheet = closeBottomSheet;
         window.toggleLike = toggleLike;

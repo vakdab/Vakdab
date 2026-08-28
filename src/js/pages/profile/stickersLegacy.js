@@ -123,7 +123,10 @@ import { uploadBlobToCloudinary } from '../home/homeLegacy.js?v=20260824-setting
                 return _everyoneStickersCache;
             } catch (e) {
                 console.error('[Stickers] Global fetch failed:', e);
-                return { sets: [], singles: [], users: [] };
+                // Кешуємо порожній результат, щоб render() не входив у нескінченну рекурсію
+                // (fetchEveryoneStickers().then(() => render()) при повторних невдачах)
+                _everyoneStickersCache = { sets: [], singles: [], users: [] };
+                return _everyoneStickersCache;
             }
         }
 
