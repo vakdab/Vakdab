@@ -1327,7 +1327,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             grid.classList.toggle('is-list', homeCatalogView === 'list');
             grid.innerHTML = visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Нічого не знайдено за цими параметрами.</div>';
             bindHomeCatalogCards(grid);
-            prefetchHomeCatalogReaderUrls(grid);
             if (!homeCatalogHasMore) {
                 document.getElementById('homeCatalogMoreBtn')?.remove();
             }
