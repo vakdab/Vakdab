@@ -1255,7 +1255,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 ${homeCatalogModeFilterHtml()}
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
-                <button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>
             </section>`;
         }
 
@@ -1657,18 +1656,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             } finally { homeCatalogLoading = false; }
         }
         export function syncHomeCatalogMoreButton() {
-            const grid = document.getElementById('homeCatalogGrid');
-            let button = document.getElementById('homeCatalogMoreBtn');
-            if (!homeCatalogHasMore) { button?.remove(); return; }
-            if (!button && grid) {
-                grid.insertAdjacentHTML('afterend', '<button class="home-catalog-more" id="homeCatalogMoreBtn" type="button"><i class="fas fa-plus"></i> Продовжити</button>');
-                button = document.getElementById('homeCatalogMoreBtn');
-                if (button) button.onclick = loadHomeCatalogMore;
-            }
-            // The grid is re-rendered independently from the button. Assigning
-            // onclick every time makes the control reliable after filters, view
-            // changes, and lazy reader resolution.
-            if (button) button.onclick = loadHomeCatalogMore;
+            // The home catalog is intentionally continuation-free for anime,
+            // manga, and novels. Remove any stale button from older cached markup.
+            document.getElementById('homeCatalogMoreBtn')?.remove();
         }
         window.loadHomeCatalogMore = loadHomeCatalogMore;
 
