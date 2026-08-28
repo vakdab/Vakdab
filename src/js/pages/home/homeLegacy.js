@@ -1021,6 +1021,32 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             return items;
         }
 
+        async function loadRemainingHomeCatalogPages(requestId) {
+            if (homeCatalogQuery || homeCatalogFilterResultItems || !homeCatalogHasMore) return;
+            let nextPage = Math.max(2, Number(homeCatalogPage || 1) + 1);
+            const maxPages = 250;
+            while (homeCatalogHasMore && nextPage <= maxPages) {
+                if (requestId !== homeCatalogRequestId) return;
+                const pageNumbers = [nextPage, nextPage + 1, nextPage + 2, nextPage + 3];
+                const pageResults = await Promise.all(pageNumbers.map(page => fetchHomeCatalogPage(page).catch(() => [])));
+                if (requestId !== homeCatalogRequestId) return;
+                const additions = pageResults.flat().filter(item => item?.url);
+                const existing = new Set(homeCatalogItems.map(item => item.url));
+                homeCatalogItems.push(...additions.filter(item => !existing.has(item.url)));
+                const lastResult = pageResults[pageResults.length - 1] || [];
+                const anyPageHasNext = pageResults.some(items => items?.hasNextPage !== false && items.length > 0);
+                homeCatalogPage = pageNumbers[pageNumbers.length - 1];
+                homeCatalogHasMore = Boolean(anyPageHasNext && lastResult.length);
+                renderHomeCatalogGrid();
+                nextPage += pageNumbers.length;
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+            if (requestId === homeCatalogRequestId) {
+                homeCatalogHasMore = false;
+                renderHomeCatalogGrid();
+            }
+        }
+
         export function getHomeCatalogVisibleItems() {
             if (homeCatalogMode === 'manga') {
                 if (homeCatalogFilterResultItems) return [...homeCatalogItems];
@@ -1593,6 +1619,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 syncHomeCatalogGenreControl();
                 renderHomeCatalogGrid();
                 syncHomeCatalogMoreButton();
+                if (!homeCatalogQuery && !homeCatalogFilterResultItems) loadRemainingHomeCatalogPages(requestId).catch(error => console.warn('[VakDab] full catalog loading:', error));
             } catch (error) {
                 if (requestId !== homeCatalogRequestId) return;
                 grid.innerHTML = `<div class="home-catalog-empty">Не вдалося завантажити каталог. Спробуйте ще раз.</div>`;
