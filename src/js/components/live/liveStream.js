@@ -95,7 +95,9 @@ function renderState(host, state) {
     const telegramLiveUrl = `${telegramBaseUrl}${telegramBaseUrl.includes('?') ? '&' : '?'}startapp=live`;
     const expandLink = (isRunning || hasWatch) ? `<a class="live-action live-action--primary" data-live-expand href="${escapeHtml(telegramLiveUrl)}">Розгорнути</a>` : '';
     const videoStage = (isRunning || hasWatch) ? renderVideoStage(state) : '';
-    host.innerHTML = `<section class="live-stream-card live-stream-card--compact${isRunning ? ' is-running' : ''}" aria-label="Поточний Anime Live ефір">${videoStage}<div class="live-stream-card__actions">${expandLink}</div></section>`;
+    const countdownTarget = isRunning ? state.endsAt : state.startsAt;
+    const countdownLine = countdownTarget ? `<div class="live-stream-card__meta"><span>${isRunning ? 'До завершення' : 'До старту'}: <span class="live-countdown" data-live-countdown="${countdownTarget}">${formatRemaining(countdownTarget)}</span></span></div>` : '';
+    host.innerHTML = `<section class="live-stream-card live-stream-card--compact${isRunning ? ' is-running' : ''}" aria-label="Поточний Anime Live ефір">${videoStage}${countdownLine}<div class="live-stream-card__actions">${expandLink}</div></section>`;
     const renderedVideo = host.querySelector('#liveVideoElement');
     const sameSource = Boolean(renderedVideo && previousVideo && previousSource && previousSource === renderedVideo.getAttribute('src'));
     if (sameSource) renderedVideo.replaceWith(previousVideo);

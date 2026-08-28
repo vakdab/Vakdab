@@ -37,14 +37,6 @@
     .caption strong,.caption span { display:block; color:#fff; }
     .caption strong { font-size:clamp(18px,4vw,25px); }
     .caption span { margin-top:4px; color:rgba(255,255,255,.77); font-size:14px; }
-    .info { margin-top:14px; padding:18px; border:1px solid var(--line); border-radius:18px; background:var(--panel); }
-    .info-head { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; }
-    .info h2 { margin:0; font-size:clamp(22px,6vw,32px); letter-spacing:-.04em; }
-    .on-air { color:#f7a0b3; font-size:12px; font-weight:800; white-space:nowrap; }
-    .meta { margin:10px 0 3px; color:#e1e1e5; font-size:14px; line-height:1.5; }
-    .available { color:var(--muted); font-size:12px; }
-    .countdown { min-height:20px; margin-top:14px; color:var(--muted); font-size:13px; }
-    .countdown strong { color:#ff8099; font-variant-numeric:tabular-nums; }
     .chat { display:flex; flex-direction:column; min-height:0; margin-top:14px; overflow:hidden; border:1px solid var(--line); border-radius:18px; background:var(--panel); box-shadow:0 8px 24px rgba(20,20,30,.06); }
     .chat-head { padding:15px 17px; font-weight:800; }
     .chat-head strong { font-size:16px; }
@@ -87,7 +79,6 @@
     let hls = null;
     let currentSource = '';
     let currentPositionKey = '';
-    let currentTarget = 0;
     let currentLiveStart = 0;
     let currentEpisodeOffset = 0;
     let currentEpisodeSources = [];
@@ -102,7 +93,6 @@
     const syncServerClock = value => { const serverNow = Number(value); if (Number.isFinite(serverNow) && serverNow > 0) serverClockOffset = serverNow - Date.now(); };
     const escape = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[char]));
     const isDirect = value => /\.(?:m3u8|mp4)(?:[?#].*)?$/i.test(String(value || '')) || /[?&]url=[^&]*(?:m3u8|mp4)/i.test(String(value || ''));
-    const remaining = target => { const seconds = Math.max(0, Math.floor((Number(target || 0) - liveNow()) / 1000)); const hours = Math.floor(seconds / 3600); const minutes = Math.floor((seconds % 3600) / 60); return hours ? `${hours} год ${String(minutes).padStart(2,'0')} хв` : `${minutes}:${String(seconds % 60).padStart(2,'0')}`; };
     const episodes = state => { const start = Number(state.episodeStart || 0); const end = Number(state.episodeEnd || 0); const count = Number(state.episodeCount || 0); if (start && end) return `Серії ${start}–${end}${count ? ` (${count} ${count === 1 ? 'серія' : 'серій'})` : ''}`; if (state.isMovie) return 'Фільм'; return count ? `${count} ${count === 1 ? 'серія' : 'серій'}` : 'Ефір'; };
     function extractMoonanimeManifest(html) { try { const outer = String(html || '').match(/atob\(\s*["']([A-Za-z0-9+/=]{100,})["']\s*\)/); if (!outer) return ''; const bytes = Uint8Array.from(atob(outer[1]), char => char.charCodeAt(0)); if (bytes.length < 34) return ''; const seed = bytes.slice(1, 33); const decoded = new Uint8Array(bytes.length - 33); let rolling = bytes[0]; for (let index = 0; index < decoded.length; index += 1) { const cipher = bytes[index + 33]; const key = seed[index % 32]; decoded[index] = cipher ^ key ^ rolling; rolling = (cipher + key) & 255; } const loader = new TextDecoder().decode(decoded); const inner = loader.match(/file\s*:\s*\w+\(\s*["']([^"']+)["']\s*\)/); const keyMatch = loader.match(/function\s+\w+\(e\)\s*\{var k=["']([^"']+)["'];var b=atob/); if (!inner || !keyMatch) return ''; const encoded = atob(inner[1]); const key = keyMatch[1]; let file = ''; for (let index = 0; index < encoded.length; index += 1) file += String.fromCharCode(encoded.charCodeAt(index) ^ key.charCodeAt(index % key.length)); const manifest = decodeURIComponent(file); return /^https?:\/\/[^\s]+\.m3u8(?:[?#].*)?$/i.test(manifest) ? manifest : ''; } catch { return ''; } }
     async function resolveSource(value) {
@@ -192,7 +182,6 @@
       const playbackUnhealthy = Boolean(previousVideo && (previousVideo.error || (previousVideo.readyState === 0 && previousVideo.networkState === 3)));
       const reuseVideo = Boolean(previousVideo && playlist.length && currentPositionKey === playlistKey && !playbackUnhealthy);
       if (reuseVideo && previousStage) {
-        currentTarget = Number(state.status === 'running' ? state.endsAt : state.startsAt || 0);
         const title = previousStage.querySelector('.caption strong');
         const meta = previousStage.querySelector('.caption span');
         if (title) title.textContent = state.animeTitle || 'VakDab';
@@ -204,8 +193,6 @@
         return;
       }
       if (!source) stopVideo();
-      const target = state.status === 'running' ? state.endsAt : state.startsAt;
-      currentTarget = Number(target || 0);
       const videoMarkup = source ? `<video id="liveVideo" autoplay playsinline preload="auto"></video><div class="stage-loading">Завантаження ефіру…</div>` : '<div class="stage-missing">Відео трансляції готується…</div>';
       app.innerHTML = `<div class="live-layout"><div class="stage">${videoMarkup}<div class="live-badge"><i></i> LIVE</div><div class="caption"><strong>${escape(state.animeTitle || 'VakDab')}</strong><span>${escape(episodes(state))} · ${escape(state.dub || 'Озвучка')}</span></div></div><aside class="chat" aria-label="Чат трансляції"><div class="chat-head"><div class="chat-head-row"><strong>Чат трансляції</strong><span class="viewer-count" id="liveViewerCount">${viewerCount} ${viewerCount === 1 ? 'глядач' : 'глядачів'}</span></div><small>Спільнота VakDab</small></div><div class="chat-messages">${chatMessagesMarkup(messages)}</div><div class="chat-status" id="liveChatStatus" aria-live="polite"></div><form class="chat-composer" id="liveChatForm"><input id="liveChatInput" maxlength="500" autocomplete="off" enterkeyhint="send" placeholder="Написати в чат" aria-label="Повідомлення в чат"><button id="liveChatSubmit" type="submit" aria-label="Надіслати повідомлення"><span class="sr-only">Надіслати</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 21 3l-6.5 18-3.2-7.3L3 11.5Z"/><path d="m11.3 13.7 4.8-4.8"/></svg></button></form></aside></div>`;
       bindChatComposer();
@@ -224,7 +211,6 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden) syncVideoToLiveClock(); }, { passive:true });
     syncKeyboardViewport();
     load();
-    setInterval(() => { const node = document.querySelector('#countdown strong'); if (node && currentTarget) node.textContent = remaining(currentTarget); }, 1000);
     setInterval(load, 30000);
   </script>
 </body>

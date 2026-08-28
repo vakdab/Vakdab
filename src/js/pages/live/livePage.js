@@ -86,7 +86,7 @@ function renderPage(container, state) {
                     <div class="anime-live-info-heading"><div><span class="anime-live-kicker">ЗАРАЗ В ЕФІРІ</span><h2 data-live-info-title>${escapeHtml(state.animeTitle || 'Спільний перегляд')}</h2></div><span class="anime-live-viewer-dot">● наживо</span></div>
                     <p data-live-info-meta>${escapeHtml(episodeLabel(state))} · ${escapeHtml(state.dub || 'Озвучка не вказана')}${state.season ? ` · ${escapeHtml(state.season)}` : ''}</p>
                     ${state.availableEpisodeCount ? `<small>Доступно серій: ${escapeHtml(state.availableEpisodeCount)}</small>` : ''}
-                    <div class="anime-live-countdown" data-live-countdown>${countdownTarget ? `${state.status === 'running' ? 'До завершення' : 'До старту'}: <strong>${formatRemaining(countdownTarget)}</strong>` : ''}</div>
+                    <div class="anime-live-countdown" data-live-countdown>${countdownTarget ? `${state.status === 'running' ? 'До завершення' : 'До старту'}: <strong data-target="${countdownTarget}">${formatRemaining(countdownTarget)}</strong>` : ''}</div>
                 </section>
             </main>
             <aside class="anime-live-chat" aria-label="Чат трансляції">
@@ -118,7 +118,7 @@ function updatePage(container, state) {
     container.querySelector('[data-live-episode]')?.replaceChildren(document.createTextNode(`${episodeLabel(state)} · ${state.dub || 'Озвучка'}`));
     const target = state.status === 'running' ? state.endsAt : state.startsAt;
     const countdown = container.querySelector('[data-live-countdown]');
-    if (countdown) countdown.innerHTML = target ? `${state.status === 'running' ? 'До завершення' : 'До старту'}: <strong>${formatRemaining(target)}</strong>` : '';
+    if (countdown) countdown.innerHTML = target ? `${state.status === 'running' ? 'До завершення' : 'До старту'}: <strong data-target="${target}">${formatRemaining(target)}</strong>` : '';
 }
 
 function bindBackButtons(container) {
