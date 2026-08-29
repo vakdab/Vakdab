@@ -1,7 +1,7 @@
 import { GENRE_MAP } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 import { Router } from '../../core/compat/router.js?v=20260824-settings-redesign-v1';
 import { fetchHikkaByGenre, fetchHikkaMain } from '../../services/catalog/catalog.js?v=20260824-settings-redesign-v1';
-import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CARD_PLACEHOLDER } from '../../legacy/app-legacy.js?v=20260829-vertical-catalog-40-v1';
+import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CARD_PLACEHOLDER } from '../../legacy/app-legacy.js?v=20260829-vertical-catalog-28-v1';
 
         const FILTER_STATUS_OPTIONS = [
             { key: 'anons', label: 'Анонс' },

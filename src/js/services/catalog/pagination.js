@@ -1,4 +1,4 @@
-export const DEFAULT_CATALOG_PAGE_SIZE = 24;
+export const DEFAULT_CATALOG_PAGE_SIZE = 28;
 
 export function readCatalogMeta(data, page, pageSize = DEFAULT_CATALOG_PAGE_SIZE, itemCount = 0) {
     const pagination = data?.pagination || data?.meta?.pagination || {};

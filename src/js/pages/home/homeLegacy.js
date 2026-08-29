@@ -3,7 +3,7 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260829-vertical-catalog-40-v1';
+} from '../../legacy/app-legacy.js?v=20260829-vertical-catalog-28-v1';
 import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
 import { debugLog } from '../../utils/debug.js';
 import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260824-settings-redesign-v1';
@@ -920,7 +920,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 honeyCatalogPageCache.set(cacheKey, { total: homeCatalogTotal, items, hasMore: false });
                 return items;
             }
-            const pageSize = 30;
+            const pageSize = 28;
             const payload = await fetchHoneyJson('/v2/manga/cursor-list', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ page, pageSize, sort: { sortBy: 'lastUpdated', sortOrder: 'DESC' }, filters: honeyCatalogFilters({ adult: homeCatalogAdult }) })
@@ -1017,7 +1017,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (homeCatalogMode === 'anime' && homeCatalogAdult) requestBody.rating = ['rx'];
             const items = await hikkaCatalog(endpoint, page, requestBody);
             homeCatalogTotal = Number(items.total || items.pagination?.total || 0);
-            homeCatalogHasMore = items.hasNextPage !== undefined ? Boolean(items.hasNextPage) : items.length >= 24;
+            homeCatalogHasMore = items.hasNextPage !== undefined ? Boolean(items.hasNextPage) : items.length >= 28;
             return items;
         }
 
@@ -1090,7 +1090,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
         function homeCatalogPageSize() {
             // One predictable vertical page for every catalog type.
-            return 40;
+            return 28;
         }
 
         function homeCatalogPageCount() {
@@ -2111,7 +2111,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             try {
                 const list = await searchHikka(query, searchPageState.page);
                 searchPageState.list = list;
-                searchPageState.hasNextPage = list.hasNextPage !== undefined ? Boolean(list.hasNextPage) : list.length >= 24;
+                searchPageState.hasNextPage = list.hasNextPage !== undefined ? Boolean(list.hasNextPage) : list.length >= 28;
                 searchPageState.total = Number(list.total || list.pagination?.total || 0);
                 searchPageState.loading = false;
                 if (!list.length) {
