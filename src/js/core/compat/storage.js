@@ -1,5 +1,5 @@
 import { Auth } from './auth.js';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260824-settings-redesign-v1';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260829-vertical-catalog-40-v1';
         export const Storage = {
             _syncTimer: null,
             _pendingSyncScope: null,

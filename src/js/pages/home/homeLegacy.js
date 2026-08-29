@@ -3,7 +3,7 @@ import {
     Auth, DailyStats, Router, Storage, escapeHtml,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260824-settings-redesign-v1';
+} from '../../legacy/app-legacy.js?v=20260829-vertical-catalog-40-v1';
 import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
 import { debugLog } from '../../utils/debug.js';
 import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260824-settings-redesign-v1';
@@ -1089,9 +1089,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         }
 
         function homeCatalogPageSize() {
-            if (homeCatalogMode === 'novel') return 60;
-            if (homeCatalogMode === 'manga') return 30;
-            return 24;
+            // One predictable vertical page for every catalog type.
+            return 40;
         }
 
         function homeCatalogPageCount() {
@@ -1331,7 +1330,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
                 ${homeCatalogModeFilterHtml()}
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
-                <div class="home-catalog-swipe-hint${homeCatalogView === 'grid' ? '' : ' is-hidden'}" aria-hidden="true"><i class="fas fa-arrows-left-right"></i><span>Гортайте вбік, щоб переглянути більше</span></div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ' is-swipe'}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
                 <div class="home-catalog-pagination" id="homeCatalogPagination" hidden aria-label="Навігація сторінками каталогу">
                     <button type="button" class="home-catalog-page-btn" data-catalog-page="prev"><i class="fas fa-chevron-left"></i><span>Назад</span></button>
@@ -1383,7 +1381,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const visibleItems = getHomeCatalogVisibleItems();
             grid.classList.toggle('is-list', homeCatalogView === 'list');
             grid.classList.toggle('is-swipe', homeCatalogView === 'grid');
-            document.querySelector('.home-catalog-swipe-hint')?.classList.toggle('is-hidden', homeCatalogView !== 'grid');
             grid.innerHTML = visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Нічого не знайдено за цими параметрами.</div>';
             bindHomeCatalogCards(grid);
             if (!homeCatalogHasMore) {

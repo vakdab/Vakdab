@@ -4,7 +4,7 @@ import { db, initialized as firebaseInitialized } from '../../services/firebase/
 import {
     ACHIEVEMENTS, Auth, DailyStats, Router, calcTotalXP, escapeHtml,
     getLevel, isGifUrl, openPlayerPage, profileMediaMarkup, showToast
-} from '../../legacy/app-legacy.js?v=20260824-settings-redesign-v1';
+} from '../../legacy/app-legacy.js?v=20260829-vertical-catalog-40-v1';
 import { getProfile } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
 import { loadHikkaDetail, searchHikka } from '../../services/catalog/catalog.js?v=20260824-settings-redesign-v1';
 

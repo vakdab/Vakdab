@@ -12,11 +12,11 @@ import {
 } from '../../services/catalog/catalog.js?v=20260824-settings-redesign-v1';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
-} from '../home/homeLegacy.js?v=20260824-settings-redesign-v1';
+} from '../home/homeLegacy.js?v=20260829-vertical-catalog-40-v1';
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260824-settings-redesign-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260824-settings-redesign-v1';
+} from '../../legacy/app-legacy.js?v=20260829-vertical-catalog-40-v1';
 import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-redesign-v1';
 
         // ====================================================================
