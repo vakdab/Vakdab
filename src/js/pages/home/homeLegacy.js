@@ -1088,6 +1088,33 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             return new Intl.NumberFormat('uk-UA').format(Number(value) || 0).replace(/\u00a0/g, ' ');
         }
 
+        function homeCatalogPageSize() {
+            if (homeCatalogMode === 'novel') return 60;
+            if (homeCatalogMode === 'manga') return 30;
+            return 24;
+        }
+
+        function homeCatalogPageCount() {
+            const total = homeCatalogFilterResultItems?.length || homeCatalogTotal;
+            return total ? Math.max(1, Math.ceil(total / homeCatalogPageSize())) : 0;
+        }
+
+        export function syncHomeCatalogPagination() {
+            const pagination = document.getElementById('homeCatalogPagination');
+            if (!pagination) return;
+            const pageCount = homeCatalogPageCount();
+            const previous = pagination.querySelector('[data-catalog-page="prev"]');
+            const next = pagination.querySelector('[data-catalog-page="next"]');
+            const label = pagination.querySelector('[data-catalog-page-label]');
+            const canNext = pageCount ? homeCatalogPage < pageCount : homeCatalogHasMore;
+            pagination.hidden = !pageCount && homeCatalogPage <= 1 && !homeCatalogHasMore;
+            if (previous) previous.disabled = homeCatalogPage <= 1 || homeCatalogLoading;
+            if (next) next.disabled = !canNext || homeCatalogLoading;
+            if (label) label.textContent = pageCount
+                ? `Сторінка ${formatHomeCatalogNumber(homeCatalogPage)} із ${formatHomeCatalogNumber(pageCount)}`
+                : `Сторінка ${formatHomeCatalogNumber(homeCatalogPage)}`;
+        }
+
         export function homeCatalogCountText(visibleCount) {
             const isFilteredManga = homeCatalogMode === 'manga' && (homeCatalogAdult || homeCatalogAge !== 'all' || homeCatalogFilterResultItems !== null);
             const isFilteredAnime = homeCatalogMode === 'anime' && (homeCatalogGenre !== 'all' || homeCatalogAge !== 'all' || homeCatalogStatus !== 'all' || homeCatalogType !== 'all' || homeCatalogYearMin || homeCatalogYearMax || homeCatalogScoreMin);
@@ -1220,19 +1247,43 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 // events that originate from it, or tapping the heart would also
                 // open the reader/player underneath it.
                 const isFavTarget = event => Boolean(event.target.closest?.('.home-catalog-card__fav'));
-                let lastTouchActivation = 0;
+                let pointerStart = null;
+                let pointerMoved = false;
+                let suppressClickUntil = 0;
                 const activateCard = event => {
                     if (isFavTarget(event)) return;
-                    if (event.type === 'pointerup' && event.pointerType !== 'mouse') {
-                        lastTouchActivation = Date.now();
+                    if (event.type === 'click' && (pointerMoved || Date.now() < suppressClickUntil)) {
                         event.preventDefault();
-                        open();
+                        event.stopPropagation();
+                        pointerMoved = false;
                         return;
                     }
-                    if (event.type === 'click' && Date.now() - lastTouchActivation < 700) return;
+                    // Deliberately use click rather than pointerup for opening. This
+                    // prevents a light touch or the end of a swipe from launching a title.
                     open();
                 };
-                card.addEventListener('pointerup', activateCard, { passive: false });
+                card.addEventListener('pointerdown', event => {
+                    if (event.pointerType === 'mouse' || isFavTarget(event)) return;
+                    pointerStart = { x: event.clientX, y: event.clientY };
+                    pointerMoved = false;
+                }, { passive: true });
+                card.addEventListener('pointermove', event => {
+                    if (!pointerStart || event.pointerType === 'mouse') return;
+                    const dx = event.clientX - pointerStart.x;
+                    const dy = event.clientY - pointerStart.y;
+                    if (Math.hypot(dx, dy) > 10) {
+                        pointerMoved = true;
+                        suppressClickUntil = Date.now() + 500;
+                    }
+                }, { passive: true });
+                card.addEventListener('pointerup', () => {
+                    pointerStart = null;
+                }, { passive: true });
+                card.addEventListener('pointercancel', () => {
+                    pointerStart = null;
+                    pointerMoved = true;
+                    suppressClickUntil = Date.now() + 500;
+                }, { passive: true });
                 card.addEventListener('click', activateCard);
                 card.addEventListener('keydown', event => {
                     if (isFavTarget(event)) return;
@@ -1280,7 +1331,13 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
                 ${homeCatalogModeFilterHtml()}
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
-                <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ''}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
+                <div class="home-catalog-swipe-hint${homeCatalogView === 'grid' ? '' : ' is-hidden'}" aria-hidden="true"><i class="fas fa-arrows-left-right"></i><span>Гортайте вбік, щоб переглянути більше</span></div>
+                <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ' is-swipe'}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
+                <div class="home-catalog-pagination" id="homeCatalogPagination" hidden aria-label="Навігація сторінками каталогу">
+                    <button type="button" class="home-catalog-page-btn" data-catalog-page="prev"><i class="fas fa-chevron-left"></i><span>Назад</span></button>
+                    <span class="home-catalog-page-label" data-catalog-page-label>Сторінка 1</span>
+                    <button type="button" class="home-catalog-page-btn" data-catalog-page="next"><span>Далі</span><i class="fas fa-chevron-right"></i></button>
+                </div>
             </section>`;
         }
 
@@ -1325,6 +1382,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (!grid) return;
             const visibleItems = getHomeCatalogVisibleItems();
             grid.classList.toggle('is-list', homeCatalogView === 'list');
+            grid.classList.toggle('is-swipe', homeCatalogView === 'grid');
+            document.querySelector('.home-catalog-swipe-hint')?.classList.toggle('is-hidden', homeCatalogView !== 'grid');
             grid.innerHTML = visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Нічого не знайдено за цими параметрами.</div>';
             bindHomeCatalogCards(grid);
             if (!homeCatalogHasMore) {
@@ -1334,6 +1393,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const label = document.getElementById('homeCatalogResultsLabel');
             if (label) label.textContent = homeCatalogCountText(visibleItems.length);
             if (number) number.textContent = formatHomeCatalogNumber(homeCatalogTotal || visibleItems.length);
+            syncHomeCatalogPagination();
         }
 
         export function openHomeCatalogFilters(root = document) {
@@ -1458,9 +1518,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 const result = filterMangaCatalogItems(source);
                 homeCatalogFilterResultItems = result;
                 homeCatalogFilterIndexReady = true;
-                homeCatalogFilterResultOffset = Math.min(24, result.length);
+                homeCatalogFilterResultOffset = Math.min(homeCatalogPageSize(), result.length);
                 homeCatalogItems = result.slice(0, homeCatalogFilterResultOffset);
-                homeCatalogPage = 0;
+                homeCatalogPage = 1;
                 homeCatalogHasMore = homeCatalogFilterResultOffset < result.length;
                 homeCatalogTotal = result.length;
                 homeCatalogAvailableTotal = result.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
@@ -1552,6 +1612,10 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             root.querySelector('#homeCatalogScheduleBtn')?.addEventListener('click', () => {
                 Router.goTo('schedule');
             });
+            root.querySelectorAll('[data-catalog-page]').forEach(button => button.addEventListener('click', () => {
+                const delta = button.dataset.catalogPage === 'prev' ? -1 : 1;
+                void loadHomeCatalogPage(homeCatalogPage + delta);
+            }));
 
         }
 
@@ -1567,6 +1631,48 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 adultButton.hidden = homeCatalogMode !== 'manga';
                 adultButton.classList.toggle('active', homeCatalogAdult && homeCatalogMode === 'manga');
                 adultButton.setAttribute('aria-pressed', String(homeCatalogAdult && homeCatalogMode === 'manga'));
+            }
+        }
+
+        export async function loadHomeCatalogPage(targetPage = 1) {
+            if (homeCatalogLoading) return;
+            const grid = document.getElementById('homeCatalogGrid');
+            if (!grid) return;
+            const page = Math.max(1, Number(targetPage) || 1);
+            const pageSize = homeCatalogPageSize();
+            const knownPages = homeCatalogPageCount();
+            if (knownPages && page > knownPages) return;
+            homeCatalogLoading = true;
+            syncHomeCatalogPagination();
+            grid.innerHTML = '<div class="loader home-catalog-loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження сторінки...</div>';
+            try {
+                if (homeCatalogFilterResultItems) {
+                    const start = (page - 1) * pageSize;
+                    homeCatalogItems = homeCatalogFilterResultItems.slice(start, start + pageSize);
+                    homeCatalogFilterResultOffset = Math.min(start + pageSize, homeCatalogFilterResultItems.length);
+                    homeCatalogPage = page;
+                    homeCatalogHasMore = homeCatalogFilterResultOffset < homeCatalogFilterResultItems.length;
+                } else {
+                    const items = await fetchHomeCatalogPageSafe(page);
+                    homeCatalogItems = (Array.isArray(items) ? items : []).filter(item => item?.url);
+                    homeCatalogPage = page;
+                    homeCatalogHasMore = items?.hasNextPage !== undefined
+                        ? Boolean(items.hasNextPage)
+                        : Boolean(homeCatalogHasMore);
+                }
+                if (homeCatalogMode === 'manga') {
+                    homeCatalogAvailableTotal = homeCatalogItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
+                }
+                syncHomeCatalogGenreControl();
+                renderHomeCatalogGrid();
+                document.getElementById('homeCatalogGrid')?.scrollTo({ left: 0, behavior: 'instant' });
+                document.getElementById('homeCatalogSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (error) {
+                grid.innerHTML = '<div class="home-catalog-empty">Не вдалося завантажити сторінку. Спробуйте ще раз.</div>';
+                showToast('Не вдалося завантажити сторінку каталогу');
+            } finally {
+                homeCatalogLoading = false;
+                syncHomeCatalogPagination();
             }
         }
 
@@ -1601,7 +1707,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                         if (requestId !== homeCatalogRequestId || homeCatalogMode !== 'manga' || homeCatalogAge === 'all') return;
                         homeCatalogFilterResultItems = filterMangaCatalogItems(fullCatalog);
                         homeCatalogFilterIndexReady = true;
-                        homeCatalogFilterResultOffset = Math.min(24, homeCatalogFilterResultItems.length);
+                        homeCatalogFilterResultOffset = Math.min(homeCatalogPageSize(), homeCatalogFilterResultItems.length);
                         homeCatalogItems = homeCatalogFilterResultItems.slice(0, homeCatalogFilterResultOffset);
                         homeCatalogTotal = homeCatalogFilterResultItems.length;
                         homeCatalogAvailableTotal = homeCatalogItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
@@ -1639,7 +1745,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     const fullCatalog = await loadHoneyMangaFullCatalog();
                     homeCatalogFilterResultItems = filterMangaCatalogItems(fullCatalog);
                     homeCatalogFilterIndexReady = true;
-                    homeCatalogFilterResultOffset = Math.min(homeCatalogItems.length || 24, homeCatalogFilterResultItems.length);
+                    homeCatalogFilterResultOffset = Math.min(homeCatalogItems.length || homeCatalogPageSize(), homeCatalogFilterResultItems.length);
                     homeCatalogItems = homeCatalogFilterResultItems.slice(0, homeCatalogFilterResultOffset);
                     homeCatalogTotal = homeCatalogFilterResultItems.length;
                     homeCatalogAvailableTotal = homeCatalogItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;

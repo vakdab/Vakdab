@@ -343,7 +343,36 @@ a:active { transform: scale(.97); }
 .home-catalog-card__title { min-height: 2.6em; margin: 10px 3px 0; font-size: clamp(.72rem, 1.7vw, .9rem); line-height: 1.24; }
 .home-catalog-card__meta { margin: 4px 3px 0; font-size: .64rem; }
 .home-catalog-more { min-height: var(--ui-control-height); margin-top: 18px; padding-inline: 22px; border-radius: 15px; }
+.home-catalog-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 18px;
+}
+.home-catalog-pagination[hidden] { display: none; }
+.home-catalog-page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: .76rem;
+}
+.home-catalog-page-btn:disabled { opacity: .42; cursor: not-allowed; }
+.home-catalog-page-label { min-width: 130px; text-align: center; color: var(--muted); font-size: .75rem; }
 
+.home-catalog-swipe-hint {
+    display: none;
+}
+.home-catalog-swipe-hint.is-hidden {
+    display: none !important;
+}
 .home-catalog-grid.is-list { gap: 10px; }
 .home-catalog-grid.is-list .home-catalog-card { padding: 8px; border-radius: 16px; }
 .home-catalog-grid.is-list .home-catalog-card__poster { border-radius: 11px; }
@@ -368,6 +397,38 @@ a:active { transform: scale(.97); }
     .hero-fav-btn { border-radius: 14px; }
     .home-catalog-controls { grid-template-columns: minmax(0, 1fr) auto; }
     .home-catalog-quick-actions { grid-column: 1 / -1; justify-content: flex-start; }
+    .home-catalog-swipe-hint {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin: -3px 2px 9px;
+        color: var(--muted);
+        font-size: .67rem;
+        line-height: 1.2;
+    }
+    .home-catalog-swipe-hint i { color: var(--accent); font-size: .72rem; }
+    .home-catalog-pagination { gap: 7px; margin-top: 14px; }
+    .home-catalog-page-btn { min-width: 42px; min-height: 44px; padding-inline: 10px; }
+    .home-catalog-page-btn span { display: none; }
+    .home-catalog-page-label { min-width: 112px; font-size: .68rem; }
+    .home-catalog-grid.is-swipe {
+        display: flex;
+        gap: 10px;
+        margin-inline: -2px;
+        padding: 0 2px 10px;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x proximity;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x;
+    }
+    .home-catalog-grid.is-swipe::-webkit-scrollbar { display: none; }
+    .home-catalog-grid.is-swipe .home-catalog-card {
+        flex: 0 0 clamp(142px, 42vw, 178px);
+        scroll-snap-align: start;
+    }
+    .home-catalog-grid.is-swipe .home-catalog-empty { flex: 1 0 100%; }
     .home-catalog-quick-actions .home-catalog-filter-btn { min-width: 48px; min-height: 48px; width: 48px; padding: 0; }
     .home-catalog-quick-actions .home-catalog-filter-btn span { display: none; }
     .home-catalog-quick-actions .home-catalog-adult-btn span { display: inline !important; }
