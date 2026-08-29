@@ -43,7 +43,7 @@ import {
 } from '../pages/home/homeLegacy.js?v=20260829-vertical-catalog-28-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeAnimeUrl, normalizePosterUrl, normalizeGenreList, normalizeSynopsisText, hikkaType, animeTypeLabel, extractExternalAnimeIds, hikkaItem, hikkaRequest, hikkaCatalog, fetchHikkaMain, searchHikka, fetchHikkaByCategory, fetchHikkaTop100, fetchHikkaByGenre, fetchAnimeLite, getExternalWatchUrl, getMikaiUrl, getAnimeOnUrl, getAnimeOnId, fetchAnimeOnJson, loadAnimeOnSeasons, resolveMikaiNuxtPayload, addNoAdsQuery, fetchMikaiHtml, getMikaiTeamLogoUrl, parseMikaiSeasonsFromHtml, ashdiPlaybackCache, resolveAshdiPlaybackUrl, inferAnimeSeasonNumber, loadMikaiSeasons, pickPreferredDub, loadHikkaDetail, unifyAnimeDataWithExternalDubs, sourceCache, getCachedSource, setCachedSource, switchProviderSource, refreshAfterSourceSwitch, extractPlayerIframeUrls, extractSourcesFromText
-} from '../services/catalog/catalog.js?v=20260824-settings-redesign-v1';
+} from '../services/catalog/catalog.js?v=20260829-catalog-28-v1';
 
 export { Auth, Router, Storage, renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage, renderSettingsPage };
 export { renderFilterPage, applyFilters };

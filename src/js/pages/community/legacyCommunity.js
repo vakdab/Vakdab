@@ -6,7 +6,7 @@ import {
     getLevel, isGifUrl, openPlayerPage, profileMediaMarkup, showToast
 } from '../../legacy/app-legacy.js?v=20260829-vertical-catalog-28-v1';
 import { getProfile } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
-import { loadHikkaDetail, searchHikka } from '../../services/catalog/catalog.js?v=20260824-settings-redesign-v1';
+import { loadHikkaDetail, searchHikka } from '../../services/catalog/catalog.js?v=20260829-catalog-28-v1';
 
         function _renderReplyBanner() {
             const wrap = document.getElementById('comReplyBannerWrap');

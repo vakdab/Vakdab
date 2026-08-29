@@ -2,7 +2,7 @@ import { HIKKA_API, HIKKA_PROXY_URL } from '../../config/constants.js?v=20260824
 import { safeQueryAll } from '../../utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from '../../utils/image.js';
 import { debugLog } from '../../utils/debug.js';
-import { DEFAULT_CATALOG_PAGE_SIZE, readCatalogMeta, attachCatalogMeta } from './pagination.js';
+import { DEFAULT_CATALOG_PAGE_SIZE, readCatalogMeta, attachCatalogMeta } from './pagination.js?v=20260829-catalog-28-v1';
 import {
     externalSourceCache, playerPageAnime, playerPageAnimeuaSeasons,
     setPlayerPageCurrentDub, setPlayerPageCurrentSeason, setPlayerPageCurrentSource,
