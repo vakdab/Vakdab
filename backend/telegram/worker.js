@@ -605,6 +605,9 @@ export function getLunaDirectReply(userMessage) {
 }
 
 async function handleLunaMessage(chatId, memoryKey, userMessage, env) {
+  const state = getState(chatId);
+  state.screen = 'luna';
+  state.searchQuery = '';
   try {
     await telegram('sendChatAction', { chat_id: chatId, action: 'typing' }, env);
 
