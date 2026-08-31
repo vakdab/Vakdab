@@ -348,6 +348,14 @@ async function handleMessage(message, env) {
     return;
   }
 
+  // Активна розмова з Луною має пріоритет над live-чернеткою власника.
+  // Інакше звичайний текст (наприклад, «Нічого») помилково сприймається
+  // як назва аніме або діапазон серій.
+  if (state.screen === 'luna') {
+    await handleLunaMessage(chatId, memoryKey, text, env);
+    return;
+  }
+
   if (await handleLiveOwnerText(message, env)) return;
   // За замовчуванням — вільна розмова з Луною
   await handleLunaMessage(chatId, memoryKey, text, env);

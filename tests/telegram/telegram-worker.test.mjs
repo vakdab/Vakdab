@@ -108,6 +108,14 @@ test('Luna commands clear visible chat without using the memory wipe commands', 
   assert.doesNotMatch(workerSource, /sendTrackedMessage\(chatId, memoryKey, escapeHtml\(responseText\), \{ reply_markup:/);
 });
 
+test('Luna mode takes priority over live draft text routing', () => {
+  const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
+  const lunaPriority = workerSource.indexOf("if (state.screen === 'luna') {");
+  const liveOwnerRouting = workerSource.indexOf('if (await handleLiveOwnerText(message, env)) return;');
+  assert.ok(lunaPriority >= 0);
+  assert.ok(liveOwnerRouting > lunaPriority);
+});
+
 test('Luna exposes transparent memory controls without an AI round trip', () => {
   assert.equal(isMemoryRequest('Що ти про мене пам’ятаєш?'), true);
   assert.equal(isMemoryRequest('покажи мою пам’ять'), true);
