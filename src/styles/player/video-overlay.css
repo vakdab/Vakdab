@@ -1,15 +1,10 @@
 /*
- * VakDab video block and in-video overlay styles.
+ * VakDab video block and in-video overlay styles — consolidated monochrome edition.
  *
- * Consolidated version — this used to be three stacked redesigns of the
- * same selectors (a base version, a "dark glass" pass, and a "white glass"
- * pass layered on top), which meant most rules were dead weight silently
- * overridden by whatever came later in the cascade. This file keeps only
- * the effective end result, written once, so every rule here actually
- * applies. Design language: dark glass chrome on the top bar and center
- * play button (reads over any video frame), a light floating dock for the
- * transport controls (Apple TV–style contrast), one accent color used
- * sparingly as the signature moment.
+ * This is a single, clean pass in a pure black‑and‑white visual language.
+ * Every rule here is effective; no dead overrides, no stacked redesigns.
+ * Dark glass on the top bar and centre play button, a dark gradient transport
+ * dock that blends into the video, and white as the only accent colour.
  *
  * Modal shell, episode selectors and anime information live in their own
  * player CSS files.
@@ -31,7 +26,7 @@
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, .14);
     border-radius: clamp(16px, 2.4vw, 24px);
-    background: #070910;
+    background: #000;
     box-shadow: 0 24px 70px rgba(0, 0, 0, .32), 0 0 0 1px rgba(255, 255, 255, .04);
 }
 
@@ -43,7 +38,7 @@
     inset: 0;
     pointer-events: none;
     border-radius: inherit;
-    background: linear-gradient(180deg, rgba(5, 7, 14, .55) 0%, transparent 24%, transparent 58%, rgba(5, 7, 14, .65) 100%);
+    background: linear-gradient(180deg, rgba(0, 0, 0, .55) 0%, transparent 24%, transparent 58%, rgba(0, 0, 0, .65) 100%);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
 }
 
@@ -106,7 +101,7 @@
     justify-content: space-between;
     padding: 13px 15px 20px;
     pointer-events: none;
-    background: linear-gradient(180deg, rgba(4, 6, 12, .84), rgba(4, 6, 12, .25) 72%, transparent);
+    background: linear-gradient(180deg, rgba(0, 0, 0, .84), rgba(0, 0, 0, .25) 72%, transparent);
     opacity: 1;
     transition: opacity .25s ease, transform .25s ease;
 }
@@ -147,7 +142,7 @@
     padding: 8px 13px;
     border: 1px solid rgba(255, 255, 255, .22);
     border-radius: 7px;
-    background: rgba(255, 255, 255, .1);
+    background: rgba(0, 0, 0, .5);
     color: #fff;
     font-size: 12px;
     font-weight: 700;
@@ -167,7 +162,7 @@
     pointer-events: auto;
     border: 1px solid rgba(255, 255, 255, .2);
     border-radius: 12px;
-    background: rgba(10, 12, 20, .52);
+    background: rgba(0, 0, 0, .52);
     color: #fff;
     box-shadow: 0 8px 18px rgba(0, 0, 0, .18);
     backdrop-filter: blur(10px);
@@ -175,8 +170,8 @@
 }
 #playerPageModal .video-overlay-topbar .icon-btn:hover,
 #playerPageModal .video-overlay-topbar .icon-btn:focus-visible {
-    border-color: color-mix(in srgb, var(--accent) 70%, white);
-    background: color-mix(in srgb, var(--accent) 30%, rgba(10, 12, 20, .72));
+    border-color: #fff;
+    background: rgba(255, 255, 255, .2);
     transform: scale(1.08);
     outline: none;
 }
@@ -201,27 +196,28 @@
     padding: 7px 10px;
     border: 1px solid rgba(255, 255, 255, .25);
     border-radius: 8px;
-    background: rgba(255, 255, 255, .1);
+    background: rgba(0, 0, 0, .5);
     color: #fff;
     backdrop-filter: blur(8px);
     transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
 }
-#playerPageModal .video-dub-row .format-pill:hover { background: rgba(255, 255, 255, .22); transform: translateY(-1px); }
-#playerPageModal .video-dub-row .format-pill.active-format { background: var(--accent); color: #000; border-color: var(--accent); }
+#playerPageModal .video-dub-row .format-pill:hover { background: rgba(255, 255, 255, .2); transform: translateY(-1px); }
+#playerPageModal .video-dub-row .format-pill.active-format { background: #fff; color: #000; border-color: #fff; }
 
-/* ============== Bottom control dock (light glass) ============== */
+/* ============== Bottom control dock (dark gradient over video) ============== */
 #playerPageModal .lp-controls {
     position: absolute;
     z-index: 14;
-    right: 10px;
-    bottom: 10px;
-    left: 10px;
-    padding: 10px 12px 11px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, .92);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, .28), 0 0 0 1px rgba(0, 0, 0, .04);
-    backdrop-filter: blur(20px) saturate(1.4);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 7px 14px 11px;
+    border: 0;
+    border-radius: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, .54) 22%, rgba(0, 0, 0, .94) 100%);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     opacity: 1;
     transform: translateY(0);
     transition: opacity .22s ease, transform .22s cubic-bezier(.23, 1, .32, 1);
@@ -235,19 +231,19 @@
 #playerPageModal .lp-progress-wrap {
     position: relative;
     height: 4px;
-    margin: 0 1px 8px;
+    margin: 0 0 7px;
     overflow: visible;
-    border-radius: 999px;
-    background: rgba(23, 24, 28, .14);
+    border-radius: 0;
+    background: rgba(255, 255, 255, .38);
     cursor: pointer;
     transition: height .15s ease;
 }
-#playerPageModal .lp-progress-wrap:hover { height: 6px; }
+#playerPageModal .lp-progress-wrap:hover { height: 5px; }
 #playerPageModal .lp-progress-fill {
     position: relative;
     height: 100%;
-    border-radius: 999px;
-    background: #17181c;
+    border-radius: 0;
+    background: #fff;
     transition: width .12s linear;
 }
 #playerPageModal .lp-progress-fill::after {
@@ -255,57 +251,57 @@
     position: absolute;
     top: 50%;
     right: -5px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #17181c;
-    box-shadow: 0 0 0 3px rgba(23, 24, 28, .12), 0 2px 6px rgba(0, 0, 0, .2);
+    width: 10px;
+    height: 10px;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
     transform: translateY(-50%) scale(0);
     transition: transform .15s ease;
 }
 #playerPageModal .lp-progress-wrap:hover .lp-progress-fill::after { transform: translateY(-50%) scale(1); }
 
-#playerPageModal .lp-bottom-row { display: flex; min-height: 34px; align-items: center; gap: 4px; }
+#playerPageModal .lp-bottom-row { display: flex; min-height: 28px; align-items: center; gap: 8px; }
 #playerPageModal .lp-spacer { flex: 1; }
 
 #playerPageModal .lp-btn {
     display: inline-flex;
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     align-items: center;
     justify-content: center;
     padding: 0;
-    border: 1px solid transparent;
-    border-radius: 9px;
+    border: 0;
+    border-radius: 2px;
     background: transparent;
-    color: #17181c;
+    color: #fff;
     cursor: pointer;
     transition: background-color .15s ease, border-color .15s ease, transform .15s cubic-bezier(.34, 1.56, .64, 1);
 }
 #playerPageModal .lp-btn svg { width: 18px; height: 18px; fill: currentColor; }
 #playerPageModal .lp-btn:hover,
-#playerPageModal .lp-btn:focus-visible { background: rgba(23, 24, 28, .08); outline: none; }
-#playerPageModal .lp-btn:active { transform: scale(.9); }
+#playerPageModal .lp-btn:focus-visible { background: rgba(255, 255, 255, .14); outline: none; }
+#playerPageModal .lp-btn:active { transform: scale(.94); }
 
 #playerPageModal .lp-main-btn {
-    width: 36px;
-    height: 36px;
-    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
-    color: #17181c;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 2px;
+    background: transparent;
+    color: #fff;
 }
 #playerPageModal .lp-main-btn:hover,
 #playerPageModal .lp-main-btn:focus-visible {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-text, #17181c);
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
 }
 #playerPageModal .lp-skip-btn svg { width: 20px; height: 20px; }
 
 #playerPageModal .lp-time {
-    margin-left: 2px;
-    color: rgba(23, 24, 28, .62);
-    font-size: 12px;
+    margin-left: 1px;
+    color: rgba(255, 255, 255, .9);
+    font-size: 11px;
     font-weight: 500;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -318,33 +314,34 @@
 #playerPageModal .lp-control-pill {
     display: inline-flex;
     min-width: 42px;
-    height: 30px;
+    height: 28px;
     align-items: center;
     justify-content: center;
     gap: 5px;
-    padding: 0 10px;
-    border: 1px solid rgba(23, 24, 28, .1);
-    border-radius: 8px;
-    background: rgba(23, 24, 28, .06);
-    color: #17181c;
-    font-size: 12px;
+    padding: 0 8px;
+    border: 1px solid rgba(255, 255, 255, .28);
+    border-radius: 2px;
+    background: rgba(0, 0, 0, .5);
+    color: #fff;
+    font-size: 11px;
     font-weight: 600;
     line-height: 1;
     cursor: pointer;
     transition: background .2s ease, border-color .2s ease, transform .15s ease;
 }
 #playerPageModal .lp-control-pill:hover,
-#playerPageModal .lp-control-pill:focus-visible {
-    background: rgba(23, 24, 28, .1);
-    border-color: rgba(23, 24, 28, .2);
+#playerPageModal .lp-control-pill:focus-visible,
+#playerPageModal .lp-control-pill.is-open {
+    border-color: rgba(255, 255, 255, .72);
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
     outline: none;
 }
 #playerPageModal .lp-control-pill:active { transform: scale(.95); }
-#playerPageModal .lp-control-pill.is-open { background: rgba(23, 24, 28, .12); border-color: rgba(23, 24, 28, .24); }
 #playerPageModal .lp-quality-pill { min-width: 52px; }
 #playerPageModal .lp-pill-label { white-space: nowrap; }
 #playerPageModal .lp-chevron {
-    color: #17181c;
+    color: #fff;
     opacity: .55;
     transition: transform .25s cubic-bezier(.4, 0, .2, 1), opacity .2s ease;
 }
@@ -355,14 +352,14 @@
     right: 0;
     bottom: calc(100% + 8px);
     z-index: 80;
-    min-width: 112px;
-    padding: 6px;
-    border: 1px solid rgba(23, 24, 28, .08);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, .98);
-    box-shadow: 0 12px 34px rgba(0, 0, 0, .22), 0 0 0 1px rgba(0, 0, 0, .03);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    min-width: 92px;
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 2px;
+    background: rgba(0, 0, 0, .94);
+    box-shadow: 0 8px 26px rgba(0, 0, 0, .45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     opacity: 0;
     visibility: hidden;
     transform: translateY(6px) scale(.96);
@@ -373,9 +370,9 @@
 #playerPageModal .lp-popover.is-open { opacity: 1; visibility: visible; transform: translateY(0) scale(1); pointer-events: auto; }
 #playerPageModal .lp-popover[hidden] { display: none; }
 #playerPageModal .lp-popover-label {
-    padding: 4px 10px 6px;
-    color: rgba(23, 24, 28, .45);
-    font-size: 10px;
+    padding: 5px 8px 4px;
+    color: rgba(255, 255, 255, .56);
+    font-size: 9px;
     font-weight: 700;
     letter-spacing: .06em;
     text-transform: uppercase;
@@ -383,15 +380,15 @@
 #playerPageModal .lp-popover button {
     display: flex;
     width: 100%;
-    min-height: 34px;
+    min-height: 32px;
     align-items: center;
     justify-content: space-between;
-    padding: 0 10px;
+    padding: 0 8px;
     border: 0;
-    border-radius: 8px;
+    border-radius: 2px;
     background: transparent;
-    color: rgba(23, 24, 28, .72);
-    font-size: 12px;
+    color: rgba(255, 255, 255, .78);
+    font-size: 11px;
     font-weight: 600;
     text-align: left;
     cursor: pointer;
@@ -399,20 +396,25 @@
 }
 #playerPageModal .lp-popover button span { flex: 1; }
 #playerPageModal .lp-popover button .lp-check {
-    color: #17181c;
+    color: #fff;
     opacity: 0;
     transform: scale(.7);
     transition: opacity .2s ease, transform .2s cubic-bezier(.34, 1.56, .64, 1);
 }
 #playerPageModal .lp-popover button:hover,
-#playerPageModal .lp-popover button:focus-visible { background: rgba(23, 24, 28, .07); color: #17181c; outline: none; }
-#playerPageModal .lp-popover button.is-active { background: rgba(23, 24, 28, .05); color: #17181c; }
+#playerPageModal .lp-popover button:focus-visible,
+#playerPageModal .lp-popover button.is-active {
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
+    outline: none;
+}
 #playerPageModal .lp-popover button.is-active .lp-check { opacity: 1; transform: scale(1); }
 
 /* volume — mute toggle only, no slider by design */
-#playerPageModal .lp-volume-group { display: flex; align-items: center; gap: 3px; }
+#playerPageModal .lp-volume-group { display: flex; align-items: center; gap: 0; }
+#playerPageModal .lp-volume { display: none; }
 
-/* ============== Center / preview play ============== */
+/* ============== Center / preview play (dark glass) ============== */
 #playerPageModal .lp-center-play,
 #playerPageModal .player-preview-play {
     position: absolute;
@@ -424,28 +426,32 @@
 #playerPageModal .lp-center-play-btn,
 #playerPageModal .player-preview-play {
     display: grid;
-    width: 82px;
-    height: 82px;
+    width: 62px;
+    height: 62px;
     place-items: center;
-    border: 1px solid rgba(255, 255, 255, .34);
+    border: 1px solid rgba(255, 255, 255, .52);
     border-radius: 50%;
-    background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 82%, #fff), var(--accent));
-    color: var(--accent-text, #080910);
+    background: rgba(0, 0, 0, .68);
+    color: #fff;
     cursor: pointer;
-    box-shadow: 0 15px 38px rgba(0, 0, 0, .42), 0 0 0 10px rgba(255, 255, 255, .07), 0 0 34px color-mix(in srgb, var(--accent) 38%, transparent);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .38), 0 0 0 5px rgba(255, 255, 255, .08);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
     backdrop-filter: blur(12px);
     transition: opacity .22s ease, transform .22s cubic-bezier(.23, 1, .32, 1), box-shadow .22s ease, filter .22s ease;
 }
 #playerPageModal .lp-center-play-btn svg,
-#playerPageModal .player-preview-play svg { width: 30%; height: 30%; margin-left: 4%; fill: currentColor; }
+#playerPageModal .player-preview-play svg { width: 27%; height: 27%; margin-left: 4%; fill: #fff; }
 #playerPageModal .lp-center-play-btn:hover,
 #playerPageModal .player-preview-play:hover {
+    background: rgba(0, 0, 0, .82);
+    border-color: rgba(255, 255, 255, .82);
+    filter: none;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .45), 0 0 0 7px rgba(255, 255, 255, .1);
     transform: translate(-50%, -50%) scale(1.08);
-    filter: brightness(1.08);
-    box-shadow: 0 18px 44px rgba(0, 0, 0, .48), 0 0 0 12px rgba(255, 255, 255, .08), 0 0 42px color-mix(in srgb, var(--accent) 52%, transparent);
 }
 #playerPageModal .lp-center-play-btn:active,
-#playerPageModal .player-preview-play:active { transform: translate(-50%, -50%) scale(.96); }
+#playerPageModal .player-preview-play:active { transform: translate(-50%, -50%) scale(.94); }
 #playerPageModal .player-preview-play.is-hidden { pointer-events: none; opacity: 0; transform: translate(-50%, -50%) scale(.78); }
 
 /* ============== Loading spinner ============== */
@@ -457,7 +463,7 @@
     width: 34px;
     height: 34px;
     border: 3px solid rgba(255, 255, 255, .25);
-    border-top-color: var(--accent);
+    border-top-color: #fff;
     border-radius: 50%;
     transform: translate(-50%, -50%);
     animation: playerSpin .8s linear infinite;
@@ -479,7 +485,7 @@
     padding: 24px 22px;
     border: 1px solid rgba(255, 255, 255, .16);
     border-radius: 20px;
-    background: rgba(12, 12, 12, .86);
+    background: rgba(0, 0, 0, .86);
     color: #fff;
     text-align: center;
     box-shadow: 0 20px 60px rgba(0, 0, 0, .35);
@@ -489,7 +495,7 @@
 #playerPageModal .lp-error strong,
 #playerPageModal .player-video-error span { font-size: clamp(16px, 3vw, 21px); font-weight: 800; }
 #playerPageModal .lp-error span { color: rgba(255, 255, 255, .72); font-size: 13px; line-height: 1.55; }
-#playerPageModal .player-video-error i { color: var(--accent); font-size: 24px; }
+#playerPageModal .player-video-error i { color: #fff; font-size: 24px; }
 
 #playerPageModal .lp-error-retry {
     display: inline-flex;
@@ -499,9 +505,9 @@
     min-height: 42px;
     margin-top: 4px;
     padding: 0 16px;
-    border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+    border: 1px solid rgba(255, 255, 255, .6);
     border-radius: 999px;
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    background: rgba(255, 255, 255, .18);
     color: #fff;
     font: inherit;
     font-size: 13px;
@@ -511,203 +517,14 @@
 }
 #playerPageModal .lp-error-retry:hover,
 #playerPageModal .lp-error-retry:focus-visible {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-text);
+    background: #fff;
+    border-color: #fff;
+    color: #000;
     transform: translateY(-1px);
 }
 #playerPageModal .lp-error-retry:active { transform: scale(.97); }
 
-/* ============== Selectors row consolidated elsewhere; deprecated markup hidden here ============== */
-#playerPageModal #playerFormatRow,
-#playerPageModal #playerVideoDubRow,
-#playerPageModal #videoBackBtn,
-#playerPageModal #playerVideoEpisodeOverlay,
-#playerPageModal #playerVideoSeasonOverlay,
-#playerPageModal #playerPlayFab,
-#playerPageModal .player-controls { display: none; }
-
-/* ============== Responsive (single consolidated set) ============== */
-@media (max-width: 620px) {
-    #playerPageModal .modal-content { width: 100%; height: 100dvh; margin: 0; border-radius: 0; border: none; }
-    #playerPageModal .player-video-container { min-height: 180px; border-radius: 0; border-right: 0; border-left: 0; }
-
-    #playerPageModal .video-overlay-topbar { min-height: 52px; padding: 10px 10px 16px; }
-    #playerPageModal .video-overlay-left::before { font-size: 8px; }
-    #playerPageModal .video-overlay-title { font-size: 12px; }
-    #playerPageModal .video-overlay-topbar .icon-btn { width: 34px; height: 34px; flex-basis: 34px; border-radius: 10px; }
-
-    #playerPageModal .lp-controls { right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); left: 8px; padding: 8px 9px 9px; border-radius: 14px; }
-    #playerPageModal .lp-btn { width: 28px; height: 28px; }
-    #playerPageModal .lp-time { font-size: 11px; }
-    #playerPageModal .lp-settings-wrap { gap: 4px; }
-    #playerPageModal .lp-control-pill { min-width: 38px; height: 28px; padding: 0 8px; font-size: 11px; }
-    #playerPageModal .lp-quality-pill { min-width: 46px; }
-    #playerPageModal .lp-popover { min-width: 96px; }
-
-    #playerPageModal .lp-center-play-btn,
-    #playerPageModal .player-preview-play { width: 66px; height: 66px; }
-}
-
-@media (max-width: 430px) {
-    #playerPageModal .player-video-container { min-height: 160px; }
-    #playerPageModal .lp-bottom-row { gap: 2px; }
-    #playerPageModal .lp-settings-wrap { gap: 2px; }
-    #playerPageModal .lp-control-pill { min-width: 34px; padding: 0 6px; }
-    #playerPageModal .lp-time { font-size: 10px; }
-}
-
-/* ============== Accessibility ============== */
-@media (prefers-reduced-motion: reduce) {
-    #playerPageModal .lp-controls,
-    #playerPageModal .lp-btn,
-    #playerPageModal .lp-control-pill,
-    #playerPageModal .lp-popover,
-    #playerPageModal .player-preview-play,
-    #playerPageModal .lp-center-play-btn,
-    #playerPageModal .lampa-player-container,
-    #playerPageModal .lampa-player-container video,
-    #playerPageModal .lampa-player-container iframe,
-    #playerPageModal .player-frame-poster { transition: none; animation-duration: .01ms !important; }
-}
-
-
-/* ============== Reference-style controls over video ============== */
-#playerPageModal .player-video-container {
-    background: #000;
-}
-#playerPageModal .lp-controls {
-    right: 0;
-    bottom: 0;
-    left: 0;
-    padding: 7px 14px 11px;
-    border: 0;
-    border-radius: 0;
-    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, .54) 22%, rgba(0, 0, 0, .94) 100%);
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-}
-#playerPageModal .lp-progress-wrap {
-    height: 4px;
-    margin: 0 0 7px;
-    border-radius: 0;
-    background: rgba(255, 255, 255, .38);
-}
-#playerPageModal .lp-progress-wrap:hover { height: 5px; }
-#playerPageModal .lp-progress-fill {
-    border-radius: 0;
-    background: #fff;
-}
-#playerPageModal .lp-progress-fill::after {
-    width: 10px;
-    height: 10px;
-    border-radius: 0;
-    background: #fff;
-    box-shadow: none;
-}
-#playerPageModal .lp-progress-wrap:hover .lp-progress-fill::after { transform: translateY(-50%) scale(1); }
-#playerPageModal .lp-bottom-row {
-    min-height: 28px;
-    gap: 8px;
-}
-#playerPageModal .lp-btn {
-    width: 30px;
-    height: 30px;
-    border: 0;
-    border-radius: 2px;
-    color: #fff;
-}
-#playerPageModal .lp-btn svg { width: 18px; height: 18px; }
-#playerPageModal .lp-btn:hover,
-#playerPageModal .lp-btn:focus-visible {
-    background: rgba(255, 255, 255, .14);
-    color: #fff;
-}
-#playerPageModal .lp-btn:active { transform: scale(.94); }
-#playerPageModal .lp-main-btn {
-    width: 30px;
-    height: 30px;
-    border: 0;
-    border-radius: 2px;
-    background: transparent;
-    color: #fff;
-}
-#playerPageModal .lp-main-btn:hover,
-#playerPageModal .lp-main-btn:focus-visible {
-    border: 0;
-    background: rgba(255, 255, 255, .14);
-    color: #fff;
-}
-#playerPageModal .lp-time {
-    margin-left: 1px;
-    color: rgba(255, 255, 255, .9);
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
-}
-#playerPageModal .lp-settings-wrap { gap: 6px; }
-#playerPageModal .lp-control-pill {
-    min-width: 42px;
-    height: 28px;
-    padding: 0 8px;
-    border: 1px solid rgba(255, 255, 255, .28);
-    border-radius: 2px;
-    background: rgba(0, 0, 0, .5);
-    color: #fff;
-    font-size: 11px;
-}
-#playerPageModal .lp-control-pill:hover,
-#playerPageModal .lp-control-pill:focus-visible,
-#playerPageModal .lp-control-pill.is-open {
-    border-color: rgba(255, 255, 255, .72);
-    background: rgba(255, 255, 255, .16);
-    color: #fff;
-}
-#playerPageModal .lp-chevron { color: #fff; }
-#playerPageModal .lp-popover {
-    min-width: 92px;
-    padding: 4px;
-    border: 1px solid rgba(255, 255, 255, .2);
-    border-radius: 2px;
-    background: rgba(0, 0, 0, .94);
-    box-shadow: 0 8px 26px rgba(0, 0, 0, .45);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-}
-#playerPageModal .lp-popover-label {
-    padding: 5px 8px 4px;
-    color: rgba(255, 255, 255, .56);
-    font-size: 9px;
-}
-#playerPageModal .lp-popover button {
-    min-height: 32px;
-    padding: 0 8px;
-    border-radius: 2px;
-    color: rgba(255, 255, 255, .78);
-    font-size: 11px;
-}
-#playerPageModal .lp-popover button:hover,
-#playerPageModal .lp-popover button:focus-visible,
-#playerPageModal .lp-popover button.is-active {
-    background: rgba(255, 255, 255, .16);
-    color: #fff;
-}
-#playerPageModal .lp-popover button .lp-check { color: #fff; }
-#playerPageModal .lp-volume-group { gap: 0; }
-#playerPageModal .lp-volume { display: none; }
-
-@media (max-width: 620px) {
-    #playerPageModal .lp-controls { padding: 6px 8px max(8px, env(safe-area-inset-bottom)); }
-    #playerPageModal .lp-bottom-row { gap: 3px; }
-    #playerPageModal .lp-btn,
-    #playerPageModal .lp-main-btn { width: 28px; height: 28px; }
-    #playerPageModal .lp-time { font-size: 10px; }
-    #playerPageModal .lp-settings-wrap { gap: 3px; }
-    #playerPageModal .lp-control-pill { min-width: 36px; height: 26px; padding-inline: 6px; font-size: 10px; }
-    #playerPageModal .lp-quality-pill { min-width: 42px; }
-}
-
-
+/* ============== Quality rail (right side, vertical) ============== */
 #playerPageModal .lp-quality-rail {
     position: absolute;
     z-index: 13;
@@ -749,55 +566,56 @@
 }
 #playerPageModal .lp-quality-rail button:active { transform: scale(.94); }
 #playerPageModal .lp-quality-rail button.is-active {
-    border-color: rgba(255, 255, 255, .9);
+    border-color: #fff;
     background: #fff;
-    color: #111;
+    color: #000;
 }
+
+/* ============== Selectors row consolidated elsewhere; deprecated markup hidden here ============== */
+#playerPageModal #playerFormatRow,
+#playerPageModal #playerVideoDubRow,
+#playerPageModal #videoBackBtn,
+#playerPageModal #playerVideoEpisodeOverlay,
+#playerPageModal #playerVideoSeasonOverlay,
+#playerPageModal #playerPlayFab,
+#playerPageModal .player-controls { display: none; }
+
+/* ============== Responsive (single consolidated set) ============== */
 @media (max-width: 620px) {
+    #playerPageModal .modal-content { width: 100%; height: 100dvh; margin: 0; border-radius: 0; border: none; }
+    #playerPageModal .player-video-container { min-height: 180px; border-radius: 0; border-right: 0; border-left: 0; }
+
+    #playerPageModal .video-overlay-topbar { min-height: 52px; padding: 10px 10px 16px; }
+    #playerPageModal .video-overlay-left::before { font-size: 8px; }
+    #playerPageModal .video-overlay-title { font-size: 12px; }
+    #playerPageModal .video-overlay-topbar .icon-btn { width: 34px; height: 34px; flex-basis: 34px; border-radius: 10px; }
+
+    #playerPageModal .lp-controls { padding: 6px 8px max(8px, env(safe-area-inset-bottom)); }
+    #playerPageModal .lp-bottom-row { gap: 3px; }
+    #playerPageModal .lp-btn,
+    #playerPageModal .lp-main-btn { width: 28px; height: 28px; }
+    #playerPageModal .lp-time { font-size: 10px; }
+    #playerPageModal .lp-settings-wrap { gap: 3px; }
+    #playerPageModal .lp-control-pill { min-width: 36px; height: 26px; padding-inline: 6px; font-size: 10px; }
+    #playerPageModal .lp-quality-pill { min-width: 42px; }
+    #playerPageModal .lp-popover { min-width: 96px; }
+
+    #playerPageModal .lp-center-play-btn,
+    #playerPageModal .player-preview-play { width: 56px; height: 56px; }
+
     #playerPageModal .lp-quality-rail { right: 8px; gap: 3px; }
     #playerPageModal .lp-quality-rail button { min-width: 38px; min-height: 25px; padding-inline: 5px; font-size: 9px; }
 }
 
-
-/* Once the custom video controls exist, keep fullscreen in the same lower rail as the reference player. */
-#playerPageModal .player-video-container:has(.lampa-player-container) .video-overlay-topbar .icon-btn {
-    display: none;
+@media (max-width: 430px) {
+    #playerPageModal .player-video-container { min-height: 160px; }
+    #playerPageModal .lp-bottom-row { gap: 2px; }
+    #playerPageModal .lp-settings-wrap { gap: 2px; }
+    #playerPageModal .lp-control-pill { min-width: 34px; padding: 0 6px; }
+    #playerPageModal .lp-time { font-size: 10px; }
 }
 
-
-/* Mobile Play button: quiet dark glass, clear white icon, first-tap friendly. */
-#playerPageModal .lp-center-play-btn,
-#playerPageModal .player-preview-play {
-    width: 62px;
-    height: 62px;
-    border: 1px solid rgba(255, 255, 255, .52);
-    border-radius: 50%;
-    background: rgba(0, 0, 0, .68);
-    color: #fff;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .38), 0 0 0 5px rgba(255, 255, 255, .08);
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-}
-#playerPageModal .lp-center-play-btn:hover,
-#playerPageModal .player-preview-play:hover {
-    background: rgba(0, 0, 0, .82);
-    border-color: rgba(255, 255, 255, .82);
-    filter: none;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, .45), 0 0 0 7px rgba(255, 255, 255, .1);
-}
-#playerPageModal .lp-center-play-btn:active,
-#playerPageModal .player-preview-play:active {
-    transform: translate(-50%, -50%) scale(.94);
-}
-#playerPageModal .lp-center-play-btn svg,
-#playerPageModal .player-preview-play svg { width: 27%; height: 27%; fill: #fff; }
-@media (max-width: 620px) {
-    #playerPageModal .lp-center-play-btn,
-    #playerPageModal .player-preview-play { width: 56px; height: 56px; }
-}
-
-
-/* On touch devices keep the transport rail visible; there is no reliable hover to reveal it. */
+/* ============== Touch device: keep rail visible ============== */
 @media (max-width: 760px) {
     #playerPageModal .lampa-player-container .lp-controls,
     #playerPageModal .lampa-player-container .lp-controls.hidden,
@@ -806,4 +624,18 @@
         pointer-events: auto;
         transform: none;
     }
+}
+
+/* ============== Accessibility ============== */
+@media (prefers-reduced-motion: reduce) {
+    #playerPageModal .lp-controls,
+    #playerPageModal .lp-btn,
+    #playerPageModal .lp-control-pill,
+    #playerPageModal .lp-popover,
+    #playerPageModal .player-preview-play,
+    #playerPageModal .lp-center-play-btn,
+    #playerPageModal .lampa-player-container,
+    #playerPageModal .lampa-player-container video,
+    #playerPageModal .lampa-player-container iframe,
+    #playerPageModal .player-frame-poster { transition: none; animation-duration: .01ms !important; }
 }
