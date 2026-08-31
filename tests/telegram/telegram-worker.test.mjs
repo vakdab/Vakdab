@@ -45,29 +45,14 @@ test('main menu contains the about button and removed features stay absent', () 
   assert.doesNotMatch(source, /text: 'Аніме Live'/);
 });
 
-test('Qwen configuration takes priority when configured', () => {
+test('Qwen configuration is used when configured', () => {
   const config = getAIProviderConfig({
-    QWEN_API_KEY: 'test-qwen-key',
-    GROQ_API_KEY: 'test-groq-key',
-    OPENAI_API_KEY: 'test-openai-key',
-    BAZAARLINK_API_KEY: 'test-bazaarlink-key'
+    QWEN_API_KEY: 'test-qwen-key'
   });
   assert.equal(config.provider, 'Qwen');
   assert.equal(config.baseUrl, 'https://dashscope.aliyuncs.com/compatible-mode/v1');
   assert.equal(config.model, 'qwen3.8-max');
   assert.equal(config.apiKey, 'test-qwen-key');
-});
-
-test('Groq configuration takes priority over legacy providers when Qwen is absent', () => {
-  const config = getAIProviderConfig({
-    GROQ_API_KEY: 'test-groq-key',
-    OPENAI_API_KEY: 'test-openai-key',
-    BAZAARLINK_API_KEY: 'test-bazaarlink-key'
-  });
-  assert.equal(config.provider, 'Groq');
-  assert.equal(config.baseUrl, 'https://api.groq.com/openai/v1');
-  assert.equal(config.model, 'qwen/qwen3.6-27b');
-  assert.equal(config.apiKey, 'test-groq-key');
 });
 
 test('Luna persona is a concise all-topic companion rather than a service assistant', () => {
@@ -142,23 +127,8 @@ test('Luna context keeps recent valid messages and clips oversized entries', () 
   assert.ok(recent[0].content.length <= 3200);
 });
 
-test('BazaarLink configuration is used when OpenAI is absent', () => {
-  const config = getAIProviderConfig({ BAZAARLINK_API_KEY: 'test-bazaarlink-key' });
-  assert.equal(config.provider, 'BazaarLink');
-  assert.equal(config.baseUrl, 'https://api.bazaarlink.ai/v1');
-  assert.equal(config.model, 'qwen/qwen3.7-flash:free');
-  assert.equal(config.apiKey, 'test-bazaarlink-key');
-});
-
-test('legacy Groq configuration remains a fallback when BazaarLink is absent', () => {
-  const config = getAIProviderConfig({ GROQ_API_KEY: 'test-groq-key', GROQ_MODEL: 'test-model' });
-  assert.equal(config.provider, 'Groq');
-  assert.equal(config.baseUrl, 'https://api.groq.com/openai/v1');
-  assert.equal(config.model, 'test-model');
-});
-
-test('missing AI credentials fails with a clear provider configuration error', () => {
-  assert.throws(() => getAIProviderConfig({}), /No AI provider API key is configured/);
+test('missing Qwen credentials fails clearly', () => {
+  assert.throws(() => getAIProviderConfig({}), /QWEN_API_KEY is not configured/);
 });
 
 test('repairMojibake restores Ukrainian UTF-8 text and preserves valid text', () => {
@@ -175,7 +145,7 @@ test('Luna gives a conversational temporary reply when the provider is unavailab
   assert.equal(getLunaTemporaryReply('Розкажи про війну'), 'Про війну я не говорю. Давай краще про будь-що інше.');
 });
 
-test('Compatible chat retries transient provider failures before succeeding', async () => {
+test('Qwen chat retries transient provider failures before succeeding', async () => {
   const originalFetch = globalThis.fetch;
   let calls = 0;
   globalThis.fetch = async () => {
@@ -185,7 +155,7 @@ test('Compatible chat retries transient provider failures before succeeding', as
   };
 
   try {
-    const result = await callCompatibleChat([{ role: 'user', content: 'Продовжимо' }], { GROQ_API_KEY: 'test-key' }, { maxTokens: 64 });
+    const result = await callCompatibleChat([{ role: 'user', content: 'Продовжимо' }], { QWEN_API_KEY: 'test-key' }, { maxTokens: 64 });
     assert.equal(result, 'Повернулась 🙂');
   } finally {
     globalThis.fetch = originalFetch;
@@ -220,7 +190,7 @@ test('Qwen requests use the OpenAI-compatible payload and configured model', asy
   assert.equal(Object.hasOwn(requestPayload, 'max_completion_tokens'), false);
 });
 
-test('Groq Qwen requests use completion tokens and disable reasoning output', async () => {
+test('Qwen requests keep standard completion tokens', async () => {
   const originalFetch = globalThis.fetch;
   let requestPayload;
   globalThis.fetch = async (_url, init) => {
@@ -229,34 +199,33 @@ test('Groq Qwen requests use completion tokens and disable reasoning output', as
   };
 
   try {
-    const result = await callCompatibleChat([{ role: 'user', content: 'Привіт' }], { GROQ_API_KEY: 'test-key' }, { maxTokens: 256 });
+    const result = await callCompatibleChat([{ role: 'user', content: 'Привіт' }], { QWEN_API_KEY: 'test-key' }, { maxTokens: 256 });
     assert.equal(result, 'Привіт, я Луна!');
   } finally {
     globalThis.fetch = originalFetch;
   }
 
-  assert.equal(requestPayload.model, 'qwen/qwen3.6-27b');
-  assert.equal(requestPayload.max_completion_tokens, 256);
-  assert.equal(requestPayload.reasoning_effort, 'none');
-  assert.equal(Object.hasOwn(requestPayload, 'max_tokens'), false);
+  assert.equal(requestPayload.model, 'qwen3.8-max');
+  assert.equal(requestPayload.max_tokens, 256);
+  assert.equal(Object.hasOwn(requestPayload, 'max_completion_tokens'), false);
 });
 
-test('BazaarLink retries through auto:free when the configured model fails', async () => {
+test('Qwen retries with the configured model after a transient failure', async () => {
   const originalFetch = globalThis.fetch;
   const requests = [];
   globalThis.fetch = async (_url, init) => {
     const payload = JSON.parse(init.body);
     requests.push(payload);
     if (requests.length === 1) {
-      return new Response(JSON.stringify({ error: { message: 'model unavailable' } }), { status: 400 });
+      return new Response(JSON.stringify({ error: { message: 'temporarily unavailable' } }), { status: 503 });
     }
     return new Response(JSON.stringify({ choices: [{ message: { content: 'Привіт, я Луна!' } }] }), { status: 200 });
   };
 
   try {
     const result = await callCompatibleChat([{ role: 'user', content: 'Привіт' }], {
-      BAZAARLINK_API_KEY: 'test-key',
-      BAZAARLINK_MODEL: 'qwen/qwen3.7-flash:free'
+      QWEN_API_KEY: 'test-key',
+      QWEN_MODEL: 'qwen-plus'
     });
     assert.equal(result, 'Привіт, я Луна!');
   } finally {
@@ -264,9 +233,8 @@ test('BazaarLink retries through auto:free when the configured model fails', asy
   }
 
   assert.equal(requests.length, 2);
-  assert.deepEqual(requests[0].models, ['qwen/qwen3.7-flash:free', 'auto:free']);
-  assert.equal(requests[1].model, 'auto:free');
-  assert.equal(Object.hasOwn(requests[1], 'models'), false);
+  assert.equal(requests[0].model, 'qwen-plus');
+  assert.equal(requests[1].model, 'qwen-plus');
 });
 
 test('content type descriptor supports anime, manga and novel with anime fallback', () => {

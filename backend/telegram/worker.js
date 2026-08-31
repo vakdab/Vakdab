@@ -431,10 +431,7 @@ function formatUsageDate(timestamp) {
   }
 }
 
-// ==================== GROQ / Luna ====================
-const OPENAI_API_BASE = 'https://api.openai.com/v1';
-const BAZAARLINK_API_BASE = 'https://api.bazaarlink.ai/v1';
-const GROQ_API_BASE = 'https://api.groq.com/openai/v1';
+// ==================== QWEN / Luna ====================
 const QWEN_API_BASE = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
 
 const LUNA_SYSTEM_PROMPT = `Тебе звати Луна. Ти — цифрова компанйонка VakDab для живого, невимушеного спілкування на будь-які теми.
@@ -669,37 +666,7 @@ function getAIProviderConfig(env) {
     };
   }
 
-  const groqKey = String(env.GROQ_API_KEY || '').trim();
-  if (groqKey) {
-    return {
-      provider: 'Groq',
-      apiKey: groqKey,
-      baseUrl: GROQ_API_BASE,
-      model: String(env.GROQ_MODEL || 'qwen/qwen3.6-27b').trim()
-    };
-  }
-
-  const openaiKey = String(env.OPENAI_API_KEY || '').trim();
-  if (openaiKey) {
-    return {
-      provider: 'OpenAI',
-      apiKey: openaiKey,
-      baseUrl: String(env.OPENAI_BASE_URL || OPENAI_API_BASE).replace(/\/+$/, ''),
-      model: String(env.OPENAI_MODEL || 'gpt-4o-mini').trim()
-    };
-  }
-
-  const bazaarlinkKey = String(env.BAZAARLINK_API_KEY || '').trim();
-  if (bazaarlinkKey) {
-    return {
-      provider: 'BazaarLink',
-      apiKey: bazaarlinkKey,
-      baseUrl: String(env.BAZAARLINK_BASE_URL || BAZAARLINK_API_BASE).replace(/\/+$/, ''),
-      model: String(env.BAZAARLINK_MODEL || 'qwen/qwen3.7-flash:free').trim()
-    };
-  }
-
-  throw new Error('No AI provider API key is configured');
+  throw new Error('QWEN_API_KEY is not configured');
 }
 
 const TRANSIENT_AI_STATUS_CODES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
@@ -717,36 +684,6 @@ function getConfiguredProviderConfigs(env) {
     });
   }
 
-  const groqKey = String(env.GROQ_API_KEY || '').trim();
-  if (groqKey) {
-    configs.push({
-      provider: 'Groq',
-      apiKey: groqKey,
-      baseUrl: GROQ_API_BASE,
-      model: String(env.GROQ_MODEL || 'qwen/qwen3.6-27b').trim()
-    });
-  }
-
-  const openaiKey = String(env.OPENAI_API_KEY || '').trim();
-  if (openaiKey) {
-    configs.push({
-      provider: 'OpenAI',
-      apiKey: openaiKey,
-      baseUrl: String(env.OPENAI_BASE_URL || OPENAI_API_BASE).replace(/\/+$/, ''),
-      model: String(env.OPENAI_MODEL || 'gpt-4o-mini').trim()
-    });
-  }
-
-  const bazaarlinkKey = String(env.BAZAARLINK_API_KEY || '').trim();
-  if (bazaarlinkKey) {
-    configs.push({
-      provider: 'BazaarLink',
-      apiKey: bazaarlinkKey,
-      baseUrl: String(env.BAZAARLINK_BASE_URL || BAZAARLINK_API_BASE).replace(/\/+$/, ''),
-      model: String(env.BAZAARLINK_MODEL || 'qwen/qwen3.7-flash:free').trim()
-    });
-  }
-
   return configs;
 }
 
@@ -756,17 +693,11 @@ function wait(milliseconds) {
 
 export async function callCompatibleChat(messages, env, options = {}) {
   const providerConfigs = getConfiguredProviderConfigs(env);
-  if (!providerConfigs.length) throw new Error('No AI provider API key is configured');
+  if (!providerConfigs.length) throw new Error('QWEN_API_KEY is not configured');
   let lastError = null;
 
   for (const config of providerConfigs) {
-    const modelsToTry = config.provider === 'BazaarLink' && config.model !== 'auto:free'
-      ? [
-          { model: config.model, models: [config.model, 'auto:free'] },
-          { model: 'auto:free' },
-          { model: config.model }
-        ]
-      : [{ model: config.model }];
+    const modelsToTry = [{ model: config.model }];
 
     for (const attempt of modelsToTry) {
       const retryCount = options.retryTransient === false ? 0 : (options.retryCount ?? AI_RETRY_DELAYS_MS.length);
@@ -776,14 +707,7 @@ export async function callCompatibleChat(messages, env, options = {}) {
         messages,
         temperature: options.temperature ?? 0.7,
         max_tokens: options.maxTokens ?? 1024,
-        ...(attempt.models ? { models: attempt.models } : {})
       };
-      if (config.provider === 'Groq') {
-        delete payload.max_tokens;
-        payload.max_completion_tokens = options.maxTokens ?? 1024;
-        if (config.model.startsWith('openai/gpt-oss')) payload.include_reasoning = false;
-        if (config.model === 'qwen/qwen3.6-27b') payload.reasoning_effort = 'none';
-      }
       try {
         const response = await fetch(`${config.baseUrl}/chat/completions`, {
           method: 'POST',
@@ -836,7 +760,7 @@ export async function callCompatibleChat(messages, env, options = {}) {
     }
   }
 
-  throw lastError || new Error('All configured AI providers returned no text');
+  throw lastError || new Error('Qwen returned no text');
 }
 
 async function callLunaAI(prompt, fullHistory, profile, summary, env) {
