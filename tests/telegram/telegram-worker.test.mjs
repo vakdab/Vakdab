@@ -45,7 +45,20 @@ test('main menu contains the about button and removed features stay absent', () 
   assert.doesNotMatch(source, /text: 'Аніме Live'/);
 });
 
-test('Groq configuration takes priority when both providers are configured', () => {
+test('Qwen configuration takes priority when configured', () => {
+  const config = getAIProviderConfig({
+    QWEN_API_KEY: 'test-qwen-key',
+    GROQ_API_KEY: 'test-groq-key',
+    OPENAI_API_KEY: 'test-openai-key',
+    BAZAARLINK_API_KEY: 'test-bazaarlink-key'
+  });
+  assert.equal(config.provider, 'Qwen');
+  assert.equal(config.baseUrl, 'https://dashscope.aliyuncs.com/compatible-mode/v1');
+  assert.equal(config.model, 'qwen3.8-max');
+  assert.equal(config.apiKey, 'test-qwen-key');
+});
+
+test('Groq configuration takes priority over legacy providers when Qwen is absent', () => {
   const config = getAIProviderConfig({
     GROQ_API_KEY: 'test-groq-key',
     OPENAI_API_KEY: 'test-openai-key',
@@ -144,8 +157,8 @@ test('legacy Groq configuration remains a fallback when BazaarLink is absent', (
   assert.equal(config.model, 'test-model');
 });
 
-test('missing AI credentials fails with a clear Groq configuration error', () => {
-  assert.throws(() => getAIProviderConfig({}), /GROQ_API_KEY is not configured/);
+test('missing AI credentials fails with a clear provider configuration error', () => {
+  assert.throws(() => getAIProviderConfig({}), /No AI provider API key is configured/);
 });
 
 test('repairMojibake restores Ukrainian UTF-8 text and preserves valid text', () => {
@@ -178,6 +191,33 @@ test('Compatible chat retries transient provider failures before succeeding', as
     globalThis.fetch = originalFetch;
   }
   assert.equal(calls, 2);
+});
+
+test('Qwen requests use the OpenAI-compatible payload and configured model', async () => {
+  const originalFetch = globalThis.fetch;
+  let requestUrl;
+  let requestPayload;
+  globalThis.fetch = async (url, init) => {
+    requestUrl = url;
+    requestPayload = JSON.parse(init.body);
+    return new Response(JSON.stringify({ choices: [{ message: { content: 'Привіт, я Луна!' } }] }), { status: 200 });
+  };
+
+  try {
+    const result = await callCompatibleChat([{ role: 'user', content: 'Привіт' }], {
+      QWEN_API_KEY: 'test-qwen-key',
+      QWEN_MODEL: 'qwen-plus'
+    }, { maxTokens: 256 });
+    assert.equal(result, 'Привіт, я Луна!');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(requestUrl, 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions');
+  assert.equal(requestPayload.model, 'qwen-plus');
+  assert.deepEqual(requestPayload.messages, [{ role: 'user', content: 'Привіт' }]);
+  assert.equal(requestPayload.max_tokens, 256);
+  assert.equal(Object.hasOwn(requestPayload, 'max_completion_tokens'), false);
 });
 
 test('Groq Qwen requests use completion tokens and disable reasoning output', async () => {

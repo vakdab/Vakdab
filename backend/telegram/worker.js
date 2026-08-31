@@ -435,6 +435,7 @@ function formatUsageDate(timestamp) {
 const OPENAI_API_BASE = 'https://api.openai.com/v1';
 const BAZAARLINK_API_BASE = 'https://api.bazaarlink.ai/v1';
 const GROQ_API_BASE = 'https://api.groq.com/openai/v1';
+const QWEN_API_BASE = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
 
 const LUNA_SYSTEM_PROMPT = `Тебе звати Луна. Ти — цифрова компанйонка VakDab для живого, невимушеного спілкування на будь-які теми.
 Ти дівчина, тому коли говориш про себе, використовуй жіночий рід: «я рада», «я подумала», «я знайшла».
@@ -658,6 +659,16 @@ export function getLunaTemporaryReply(userMessage = '') {
 }
 
 function getAIProviderConfig(env) {
+  const qwenKey = String(env.QWEN_API_KEY || '').trim();
+  if (qwenKey) {
+    return {
+      provider: 'Qwen',
+      apiKey: qwenKey,
+      baseUrl: String(env.QWEN_BASE_URL || QWEN_API_BASE).replace(/\/+$/, ''),
+      model: String(env.QWEN_MODEL || 'qwen3.8-max').trim()
+    };
+  }
+
   const groqKey = String(env.GROQ_API_KEY || '').trim();
   if (groqKey) {
     return {
@@ -688,7 +699,7 @@ function getAIProviderConfig(env) {
     };
   }
 
-  throw new Error('GROQ_API_KEY is not configured');
+  throw new Error('No AI provider API key is configured');
 }
 
 const TRANSIENT_AI_STATUS_CODES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
@@ -696,6 +707,16 @@ const AI_RETRY_DELAYS_MS = [250, 700];
 
 function getConfiguredProviderConfigs(env) {
   const configs = [];
+  const qwenKey = String(env.QWEN_API_KEY || '').trim();
+  if (qwenKey) {
+    configs.push({
+      provider: 'Qwen',
+      apiKey: qwenKey,
+      baseUrl: String(env.QWEN_BASE_URL || QWEN_API_BASE).replace(/\/+$/, ''),
+      model: String(env.QWEN_MODEL || 'qwen3.8-max').trim()
+    });
+  }
+
   const groqKey = String(env.GROQ_API_KEY || '').trim();
   if (groqKey) {
     configs.push({
@@ -735,7 +756,7 @@ function wait(milliseconds) {
 
 export async function callCompatibleChat(messages, env, options = {}) {
   const providerConfigs = getConfiguredProviderConfigs(env);
-  if (!providerConfigs.length) throw new Error('GROQ_API_KEY is not configured');
+  if (!providerConfigs.length) throw new Error('No AI provider API key is configured');
   let lastError = null;
 
   for (const config of providerConfigs) {
