@@ -65,7 +65,7 @@ TELEGRAM_WEBHOOK_SECRET_TOKEN  # рекомендовано для переві�
 QWEN_API_KEY                    # секрет для AI-режиму Луни
 ```
 
-Для AI-асистентки додайте secret `QWEN_API_KEY`. Worker використовує OpenAI-compatible endpoint `https://dashscope.aliyuncs.com/compatible-mode/v1` і модель `qwen3.8-max` за замовчуванням; її можна змінити через змінну `QWEN_MODEL`. Якщо memory storage використовується у production, binding KV має залишатися доступним як `MAKIMA_MEMORY`, щоб не втратити стару історію після перейменування на Луну.
+Для AI-асистентки додайте secret `QWEN_API_KEY`. Worker використовує OpenAI-compatible endpoint `https://dashscope-intl.aliyuncs.com/compatible-mode/v1` і модель `qwen3.8-max` за замовчуванням; її можна змінити через змінну `QWEN_MODEL`. Якщо memory storage використовується у production, binding KV має залишатися доступним як `MAKIMA_MEMORY`, щоб не втратити стару історію після перейменування на Луну.
 
 Секрети не зберігаються в GitHub і не записуються в код. Додайте ключ до Worker командою `npx wrangler secret put QWEN_API_KEY` з каталогу `backend/telegram`; вставляйте повне значення лише в інтерактивний prompt Wrangler. Не додавайте його до `.env`, комітів, issue або повідомлень чату.
 

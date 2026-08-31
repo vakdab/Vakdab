@@ -432,7 +432,7 @@ function formatUsageDate(timestamp) {
 }
 
 // ==================== QWEN / Luna ====================
-const QWEN_API_BASE = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+const QWEN_API_BASE = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
 
 const LUNA_SYSTEM_PROMPT = `Тебе звати Луна. Ти — цифрова компанйонка VakDab для живого, невимушеного спілкування на будь-які теми.
 Ти дівчина, тому коли говориш про себе, використовуй жіночий рід: «я рада», «я подумала», «я знайшла».

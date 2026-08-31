@@ -50,7 +50,7 @@ test('Qwen configuration is used when configured', () => {
     QWEN_API_KEY: 'test-qwen-key'
   });
   assert.equal(config.provider, 'Qwen');
-  assert.equal(config.baseUrl, 'https://dashscope.aliyuncs.com/compatible-mode/v1');
+  assert.equal(config.baseUrl, 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1');
   assert.equal(config.model, 'qwen3.8-max');
   assert.equal(config.apiKey, 'test-qwen-key');
 });
@@ -183,7 +183,7 @@ test('Qwen requests use the OpenAI-compatible payload and configured model', asy
     globalThis.fetch = originalFetch;
   }
 
-  assert.equal(requestUrl, 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions');
+  assert.equal(requestUrl, 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions');
   assert.equal(requestPayload.model, 'qwen-plus');
   assert.deepEqual(requestPayload.messages, [{ role: 'user', content: 'Привіт' }]);
   assert.equal(requestPayload.max_tokens, 256);
