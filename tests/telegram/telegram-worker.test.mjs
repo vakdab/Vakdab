@@ -281,19 +281,11 @@ test('manga and novel details use VakDab reader routes and a concise bot button'
 });
 
 
-test('start flow gates the main menu behind @vakluna subscription', () => {
+test('start flow opens the main menu without a channel subscription gate', () => {
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
-  assert.match(workerSource, /REQUIRED_CHANNEL_USERNAME = '@vakluna'/);
-  assert.match(workerSource, /REQUIRED_CHANNEL_URL = 'https:\/\/t\.me\/vakluna'/);
-  assert.match(workerSource, /getChatMember/);
-  assert.match(workerSource, /subscription:check/);
-  assert.match(workerSource, /await isSubscriptionSatisfied\(message\.from, env\)/);
-  assert.match(workerSource, /if \(isBotOwner\(from\)\) return true/);
-  assert.match(workerSource, /await sendTrackedMessage\(chatId, memoryKey, subscriptionGateText\(\)/);
-  assert.match(workerSource, /Підписатися на канал/);
-  assert.match(workerSource, /Підписався\(лась\)/);
-  assert.match(workerSource, /return '&#8203;'/);
-  assert.match(workerSource, /getChatMember request failed/);
+  assert.doesNotMatch(workerSource, /vakluna|REQUIRED_CHANNEL|isSubscriptionSatisfied|isChannelSubscriber|subscription:check|getChatMember/);
+  assert.match(workerSource, /if \(text === '\/start'\)/);
+  assert.match(workerSource, /await sendMessage\(chatId, 'Оберіть дію:'/);
 });
 
 test('live serial flow uses anime, season, episode count and dub stages without timers', () => {

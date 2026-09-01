@@ -23,9 +23,6 @@ const LIVE_POLL_MAX_OPTIONS = 10;
 const LIVE_OWNER_DURATION_HOURS = 2;
 const LIVE_EPISODE_COUNT_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 10];
 const LIVE_API_ORIGINS = new Set(['https://vakdab.github.io', 'https://vakdab.web.app']);
-const REQUIRED_CHANNEL_USERNAME = '@vakluna';
-const REQUIRED_CHANNEL_URL = 'https://t.me/vakluna';
-
 const CONTENT_TYPES = Object.freeze({
   anime: { key: 'anime', label: 'Аніме', endpoint: 'anime' },
   manga: { key: 'manga', label: 'Манґа', endpoint: 'manga' },
@@ -203,20 +200,9 @@ async function handleMessage(message, env) {
   }
   if (text === '/start') {
     await ensureBotCommands(env);
-    if (await isSubscriptionSatisfied(message.from, env)) {
-      const state = getState(chatId);
-      state.screen = 'home';
-      await sendMessage(chatId, 'Підписку підтверджено. Оберіть дію:', { reply_markup: mainKeyboard() }, env);
-    } else {
-      getState(chatId).screen = 'awaiting_subscription';
-      await sendTrackedMessage(chatId, memoryKey, subscriptionGateText(), { reply_markup: subscriptionKeyboard() }, env);
-    }
-    return;
-  }
-  const isLiveCommand = /^\/(?:live|livenext|livestart|livecancel)(?:@\w+)?(?:\s|$)/i.test(text);
-  if (!isLiveCommand && !(await isSubscriptionSatisfied(message.from, env))) {
-    getState(chatId).screen = 'awaiting_subscription';
-    await sendTrackedMessage(chatId, memoryKey, subscriptionGateText(), { reply_markup: subscriptionKeyboard() }, env);
+    const state = getState(chatId);
+    state.screen = 'home';
+    await sendMessage(chatId, 'Оберіть дію:', { reply_markup: mainKeyboard() }, env);
     return;
   }
   if (/^\/f8(?:@\w+)?(?:\s|$)/i.test(text)) {
@@ -388,26 +374,10 @@ async function handleCallbackQuery(callback, env) {
   }
 
   if (message?.chat?.type === 'private') await trackBotUser(callback.from, chatId, env);
-  if (data !== 'subscription:check') await answerCallback(callbackId, '', env);
+  await answerCallback(callbackId, '', env);
   const state = getState(chatId);
-  if (data !== 'subscription:check' && !(await isSubscriptionSatisfied(callback.from, env))) {
-    state.screen = 'awaiting_subscription';
-    await replaceMessage(chatId, messageId, subscriptionGateText(), false, { reply_markup: subscriptionKeyboard() }, env);
-    return;
-  }
 
   try {
-    if (data === 'subscription:check') {
-      if (!(await isSubscriptionSatisfied(callback.from, env))) {
-        await answerCallback(callbackId, 'Підписка не підтверджена', env, { show_alert: true });
-        return;
-      }
-      await answerCallback(callbackId, '', env);
-      state.screen = 'home';
-      await replaceMessage(chatId, messageId, 'Підписку підтверджено. Оберіть дію:', false, { reply_markup: mainKeyboard() }, env);
-      return;
-    }
-
     if (data === 'live:start') {
       if (!isBotOwner(callback.from)) {
         await answerCallback(callbackId, 'Тільки власник бота може запустити live.', env, { show_alert: true });
@@ -455,11 +425,6 @@ async function handleCallbackQuery(callback, env) {
     }
 
     if (data === 'home') {
-      if (!(await isSubscriptionSatisfied(callback.from, env))) {
-        state.screen = 'awaiting_subscription';
-        await replaceMessage(chatId, messageId, subscriptionGateText(), false, { reply_markup: subscriptionKeyboard() }, env);
-        return;
-      }
       state.screen = 'home';
       state.previous = null;
       await deleteMessage(chatId, messageId, env);
@@ -617,44 +582,6 @@ async function handleCallbackQuery(callback, env) {
   } catch (error) {
     console.error('[callback] failed:', safeError(error));
     await replaceMessage(chatId, messageId, 'Не вдалося отримати дані. Спробуйте ще раз.', false, { reply_markup: mainKeyboard() }, env);
-  }
-}
-
-function subscriptionGateText() {
-  // Telegram потребує непорожній text для sendMessage; zero-width entity візуально не відображається.
-  return '&#8203;';
-}
-
-function subscriptionKeyboard() {
-  return { inline_keyboard: [
-    [{ text: 'Підписатися на канал', url: REQUIRED_CHANNEL_URL }],
-    [{ text: 'Підписався(лась)', callback_data: 'subscription:check' }]
-  ] };
-}
-
-async function isSubscriptionSatisfied(from, env) {
-  // Власник бота не повинен блокуватися власним gate, навіть якщо Telegram тимчасово не повертає membership.
-  if (isBotOwner(from)) return true;
-  return isChannelSubscriber(from?.id, env);
-}
-
-async function isChannelSubscriber(userId, env) {
-  if (!userId) return false;
-  try {
-    const result = await telegram('getChatMember', {
-      chat_id: REQUIRED_CHANNEL_USERNAME,
-      user_id: userId
-    }, env);
-    if (!result?.ok) {
-      console.error('[subscription] getChatMember failed');
-      return false;
-    }
-    const status = result.result?.status;
-    return status === 'creator' || status === 'administrator' || status === 'member'
-      || (status === 'restricted' && result.result?.is_member === true);
-  } catch (error) {
-    console.error('[subscription] getChatMember request failed:', safeError(error));
-    return false;
   }
 }
 
