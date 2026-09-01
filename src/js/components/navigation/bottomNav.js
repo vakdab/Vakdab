@@ -1,6 +1,6 @@
 import { loadFeature } from '../../core/feature-loader.js';
-import { Router } from '../../core/compat/router.js?v=20260824-settings-redesign-v1';
-import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260901-startup-fix-2';
+import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
+import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260901-home-recs-v3';
 
 export function initBottomNav() {
 

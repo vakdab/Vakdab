@@ -3,7 +3,7 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260901-startup-fix-2';
+} from '../../legacy/app-legacy.js?v=20260901-home-recs-v3';
 import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../pages/settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
 import { Storage } from './storage.js?v=20260824-settings-redesign-v1';
 import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-settings-redesign-v1';

@@ -1,5 +1,5 @@
 import { Auth } from '../../core/compat/auth.js?v=20260824-settings-redesign-v1';
-import { Router } from '../../core/compat/router.js?v=20260824-settings-redesign-v1';
+import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
 import { Storage } from '../../core/compat/storage.js?v=20260824-settings-redesign-v1';
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
