@@ -1916,12 +1916,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                   `;
         }
 
-        export function buildPopularVerticalSectionHtml(items) {
-            if (!items || items.length === 0) return '';
-            // The homepage recommendation feed is the full Top 100 so users can
-            // browse a long catalog by scrolling, rather than stopping after ten cards.
-            const top = items;
-            const cardsHtml = top.map((a, idx) => {
+        export function buildPopularVerticalCardsHtml(items, indexOffset = 0) {
+            return items.map((a, idx) => {
+                const index = indexOffset + idx;
                 const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
                 const title = a.title || 'Без назви';
                 const synopsis = (a.synopsis || '').trim();
@@ -1929,7 +1926,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     ? synopsis.length > 130 ? `${synopsis.slice(0, 130)}…` : synopsis
                     : 'Опис відсутній.';
                 return `
-                    <div class="popular-card" data-url="${a.url}" data-idx="${idx}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
+                    <div class="popular-card" data-url="${a.url}" data-idx="${index}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
                       <div class="popular-card__poster-wrap">
                         <div class="popular-card__poster">
                           <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add(\'img--loaded\')" onerror="this.src=\'${ANIME_CARD_PLACEHOLDER}\'">
@@ -1941,6 +1938,11 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     </div>
                   `;
             }).join('');
+        }
+
+        export function buildPopularVerticalSectionHtml(items, hasMore = false) {
+            if (!items || items.length === 0) return '';
+            const cardsHtml = buildPopularVerticalCardsHtml(items);
             return `
                     <div class="genre-section" id="genre-popular">
                       <div class="genre-title genre-title--row">
@@ -1950,41 +1952,86 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                       <div class="popular-list popular-list--home">
                         ${cardsHtml}
                       </div>
+                      ${hasMore ? '<button class="home-recommendations-more" type="button">Показати ще аніме</button>' : ''}
                     </div>
                   `;
         }
 
+        export let homeRecommendationItems = [];
+        export let homeRecommendationPage = 1;
+        export let homeRecommendationHasMore = false;
+        export let homeRecommendationLoading = false;
+
+        export function bindHomeRecommendationCards(cards) {
+            cards.forEach(card => {
+                card.addEventListener('click', () => openPlayerPage(card.dataset.url));
+                card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPlayerPage(card.dataset.url); } });
+            });
+        }
+
         export async function loadHomeRecommendations() {
             const container = document.getElementById('homeRecommendationsContainer');
-            if (!container || container.dataset.loading === 'true') return;
+            if (!container || homeRecommendationLoading) return;
+            homeRecommendationLoading = true;
             container.dataset.loading = 'true';
             container.innerHTML = '<div class="loader home-recommendations-loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження рекомендацій...</div>';
             try {
-                const items = await fetchHikkaTop100();
+                const items = await hikkaCatalog('anime', 1, { sort: ['score:desc', 'scored_by:desc'], only_translated: true });
                 if (!items?.length) throw new Error('Порожній список рекомендацій');
-                container.innerHTML = buildPopularVerticalSectionHtml(items);
+                homeRecommendationItems = [...items];
+                homeRecommendationPage = 1;
+                homeRecommendationHasMore = items.hasNextPage !== false;
+                container.innerHTML = buildPopularVerticalSectionHtml(homeRecommendationItems, homeRecommendationHasMore);
                 container.style.display = 'block';
-                container.querySelectorAll('.popular-card').forEach(card => {
-                    card.addEventListener('click', () => openPlayerPage(card.dataset.url));
-                    card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPlayerPage(card.dataset.url); } });
-                });
+                bindHomeRecommendationCards([...container.querySelectorAll('.popular-card')]);
                 loadHomeRecommendationDetails(items);
+                container.querySelector('.home-recommendations-more')?.addEventListener('click', loadMoreHomeRecommendations);
                 container.querySelector('#homePopularShowAllBtn')?.addEventListener('click', () => { window.location.hash = 'catalog'; });
             } catch (error) {
                 console.warn('[home recommendations] failed:', error);
                 container.innerHTML = '<div class="home-recommendations-empty">Рекомендації тимчасово недоступні.</div>';
             } finally {
+                homeRecommendationLoading = false;
                 container.dataset.loading = 'false';
             }
         }
 
-        export async function loadHomeRecommendationDetails(list) {
+        export async function loadMoreHomeRecommendations() {
+            const container = document.getElementById('homeRecommendationsContainer');
+            const button = container?.querySelector('.home-recommendations-more');
+            if (!container || homeRecommendationLoading || !homeRecommendationHasMore) return;
+            homeRecommendationLoading = true;
+            if (button) { button.disabled = true; button.textContent = 'Завантаження…'; }
+            try {
+                const nextPage = homeRecommendationPage + 1;
+                const nextItems = await hikkaCatalog('anime', nextPage, { sort: ['score:desc', 'scored_by:desc'], only_translated: true });
+                const existing = new Set(homeRecommendationItems.map(item => item.url));
+                const uniqueItems = nextItems.filter(item => item?.url && !existing.has(item.url));
+                const offset = homeRecommendationItems.length;
+                homeRecommendationItems.push(...uniqueItems);
+                homeRecommendationPage = nextPage;
+                homeRecommendationHasMore = nextItems.hasNextPage !== false && uniqueItems.length > 0;
+                const list = container.querySelector('.popular-list--home');
+                if (list) list.insertAdjacentHTML('beforeend', buildPopularVerticalCardsHtml(uniqueItems, offset));
+                bindHomeRecommendationCards([...container.querySelectorAll(`.popular-card[data-idx]`)].slice(offset));
+                loadHomeRecommendationDetails(uniqueItems, offset);
+                if (!homeRecommendationHasMore) button?.remove();
+                else if (button) { button.disabled = false; button.textContent = 'Показати ще аніме'; }
+            } catch (error) {
+                if (button) { button.disabled = false; button.textContent = 'Спробувати ще раз'; }
+                console.warn('[home recommendations more] failed:', error);
+            } finally {
+                homeRecommendationLoading = false;
+            }
+        }
+
+        export async function loadHomeRecommendationDetails(list, indexOffset = 0) {
             const container = document.getElementById('homeRecommendationsContainer');
             let cursor = 0;
             async function worker() {
                 while (cursor < list.length) {
                     const index = cursor++;
-                    const card = container?.querySelector(`.popular-card[data-idx="${index}"]`);
+                    const card = container?.querySelector(`.popular-card[data-idx="${indexOffset + index}"]`);
                     if (!card) continue;
                     const episodes = card.querySelector('.popular-card__episodes');
                     try {
