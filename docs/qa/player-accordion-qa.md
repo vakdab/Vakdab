@@ -21,3 +21,11 @@ Selecting an episode updates `#playerEpisodeSummary`; selecting a dub or season 
 ## Browser verification
 
 The local app loaded the real anime data for “Проводжальниця Фрірен”. The visible player controls matched the intended stacked rounded-block layout: “Серія 1” followed by “Amanogawa”, while the episode panel exposed all 28 episodes and the dub panel exposed the available voice tracks. A DOM interaction test confirmed the episode panel changes from `aria-expanded="true"` / `hidden=false` to `aria-expanded="false"` / `hidden=true`, and opens again correctly.
+
+## Live Pages diagnosis
+
+The live Pages API reports `https://vakdab.github.io/Vakdab/` as the canonical project URL. The deployed `/app/index.html`, JavaScript, and CSS all contain the accordion implementation from commit `c38eb40`. The user-facing root without `/Vakdab/` is not the repository's configured Pages URL.
+
+## Final live observation
+
+After deployment `29a4fc0`, the live page loaded the updated HTML and the anime data. The live DOM showed 28 episode children and the episode accordion in the open state. The current browser viewport was scrolled into the information section, so the controls were above the visible viewport in that particular screenshot.

@@ -412,11 +412,32 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-re
             });
         }
 
+        function initCompactAccordions() {
+            document.querySelectorAll('#playerCompactControls .player-compact-accordion').forEach(block => {
+                const trigger = block.querySelector('.player-compact-trigger');
+                const panel = block.querySelector('.player-compact-options');
+                if (!trigger || !panel || trigger.dataset.bound === 'true') return;
+                trigger.dataset.bound = 'true';
+                trigger.addEventListener('click', () => {
+                    const isOpen = block.classList.toggle('is-open');
+                    trigger.setAttribute('aria-expanded', String(isOpen));
+                    panel.hidden = !isOpen;
+                });
+            });
+        }
+
         function renderCompactPlayerSelectors() {
             initPlayerAccordions();
-            setAccordionSummary('playerEpisodeSummary', playerPageCurrentEpisodeNum ? `Серія ${playerPageCurrentEpisodeNum}` : 'Серія');
-            setAccordionSummary('playerDubSummary', playerPageCurrentDub || 'Озвучка');
-            setAccordionSummary('playerSeasonSummary', `Сезон ${playerPageCurrentSeason || '1'}`);
+            initCompactAccordions();
+            const episodeSummary = playerPageCurrentEpisodeNum ? `Серія ${playerPageCurrentEpisodeNum}` : 'Серія';
+            const dubSummary = playerPageCurrentDub || 'Озвучка';
+            const seasonSummary = `Сезон ${playerPageCurrentSeason || '1'}`;
+            setAccordionSummary('playerEpisodeSummary', episodeSummary);
+            setAccordionSummary('playerCompactEpisodeSummary', episodeSummary);
+            setAccordionSummary('playerDubSummary', dubSummary);
+            setAccordionSummary('playerCompactDubSummary', dubSummary);
+            setAccordionSummary('playerSeasonSummary', seasonSummary);
+            setAccordionSummary('playerCompactSeasonSummary', seasonSummary);
             const episodeSelect = document.getElementById('playerEpisodeSelect');
             const dubSelect = document.getElementById('playerDubSelect');
             const seasonSelect = document.getElementById('playerSeasonSelect');
@@ -433,6 +454,28 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-re
             if (episodeLine) episodeLine.hidden = isMovie;
             if (episodeBlock) episodeBlock.hidden = isMovie;
             const dubs = Object.keys(playerPageAnime?.seasons?.[playerPageCurrentSeason] || {}).sort();
+            const episodeOptions = document.getElementById('playerCompactEpisodeOptions');
+            if (episodeOptions) {
+                episodeOptions.innerHTML = episodes.length ? episodes.map(ep => {
+                    const active = String(ep.episode) === String(playerPageCurrentEpisodeNum) ? ' active' : '';
+                    const progress = getEpisodeProgress(ep.episode);
+                    return `<button type="button" class="player-compact-option player-episode-option${active}" data-file="${escapeHtml(ep.file || '')}" data-episode="${escapeHtml(ep.episode || '')}"><span>Серія ${escapeHtml(String(ep.episode || '—'))}</span>${progress > 0 ? `<small>${Math.round(progress)}%</small>` : ''}</button>`;
+                }).join('') : '<span class="player-compact-empty">Серії ще не знайдені.</span>';
+                attachEpisodeClickHandlers(episodeOptions);
+            }
+            const dubOptions = document.getElementById('playerCompactDubOptions');
+            if (dubOptions) {
+                dubOptions.innerHTML = dubs.length ? dubs.map(d => {
+                    const active = d === playerPageCurrentDub ? ' active' : '';
+                    return `<button type="button" class="player-compact-option player-dub-option${active}" data-dub="${escapeHtml(String(d))}">${renderDubLogo(d)}<span>${escapeHtml(String(d))}</span></button>`;
+                }).join('') : '<span class="player-compact-empty">Озвучки ще не знайдені.</span>';
+                dubOptions.querySelectorAll('[data-dub]').forEach(button => button.addEventListener('click', () => selectDubFromSheet(button.dataset.dub)));
+            }
+            const seasonOptions = document.getElementById('playerCompactSeasonOptions');
+            if (seasonOptions) {
+                seasonOptions.innerHTML = seasons.length ? seasons.map(s => `<button type="button" class="player-compact-option player-season-option${s === playerPageCurrentSeason ? ' active' : ''}" data-season="${escapeHtml(String(s))}">Сезон ${escapeHtml(String(s))}</button>`).join('') : '<span class="player-compact-empty">Сезони ще не знайдені.</span>';
+                seasonOptions.querySelectorAll('[data-season]').forEach(button => button.addEventListener('click', () => selectSeasonFromSheet(button.dataset.season)));
+            }
             if (episodeSelect) {
                 episodeSelect.innerHTML = episodes.map(ep => `<option value="${escapeHtml(String(ep.episode))}">Серія ${escapeHtml(String(ep.episode))}</option>`).join('');
                 episodeSelect.value = String(playerPageCurrentEpisodeNum || episodes[0]?.episode || '1');
@@ -1101,6 +1144,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-re
                     if (!file) return;
                     playerPageCurrentEpisodeNum = epNum;
                     setAccordionSummary('playerEpisodeSummary', `Серія ${epNum}`);
+                    setAccordionSummary('playerCompactEpisodeSummary', `Серія ${epNum}`);
                     playEpisode(file, epNum);
                 });
             });
@@ -1168,6 +1212,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-re
             const playbackRequest = ++playerPagePlaybackRequest;
             playerPageCurrentEpisodeNum = epNum || '1';
             setAccordionSummary('playerEpisodeSummary', `Серія ${playerPageCurrentEpisodeNum}`);
+            setAccordionSummary('playerCompactEpisodeSummary', `Серія ${playerPageCurrentEpisodeNum}`);
             renderAllEpisodeViews(getCurrentEpisodes(), null, null);
             const videoContainer = document.getElementById('playerVideoContainer');
             const videoDiv = document.getElementById('playerPageVideo');
@@ -1649,6 +1694,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-re
         });
         document.getElementById('playerDubSelect')?.addEventListener('change', event => selectDubFromSheet(event.target.value));
         initPlayerAccordions();
+        initCompactAccordions();
         document.getElementById('playerSeasonSelect')?.addEventListener('change', event => selectSeasonFromSheet(event.target.value));
         document.getElementById('playerPrevEpisode')?.addEventListener('click', () => {
             const episodes = getCurrentEpisodes();

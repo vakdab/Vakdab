@@ -161,24 +161,30 @@
             <!-- VIDEO PLAYER + CONTROLS -->
             <section class="player-section" aria-label="Плеєр">
                 <div class="player-compact-controls" id="playerCompactControls">
-                    <label class="player-select-wrap player-season-select-wrap" aria-label="Вибір сезону">
-                        <span class="sr-only">Сезон</span>
-                        <select id="playerSeasonSelect" aria-label="Вибір сезону"></select>
-                        <span class="player-select-chevron" aria-hidden="true">⌄</span>
-                    </label>
                     <div class="player-select-line player-episode-select-line">
-                        <label class="player-select-wrap player-episode-select-wrap">
-                            <span class="sr-only">Серія</span>
-                            <select id="playerEpisodeSelect" aria-label="Вибір серії"></select>
-                            <span class="player-select-chevron" aria-hidden="true">⌄</span>
-                        </label>
+                        <div class="player-select-wrap player-compact-accordion player-episode-select-wrap is-open" data-compact-accordion="episode">
+                            <button type="button" class="player-compact-trigger" aria-expanded="true" aria-controls="playerCompactEpisodeOptions">
+                                <span class="sr-only">Вибір серії</span><strong id="playerCompactEpisodeSummary">Серія 1</strong><span class="player-select-chevron" aria-hidden="true">⌄</span>
+                            </button>
+                            <div class="player-compact-options" id="playerCompactEpisodeOptions" role="region" aria-label="Усі серії"></div>
+                            <select id="playerEpisodeSelect" class="player-compact-native-select" aria-label="Вибір серії" tabindex="-1"></select>
+                        </div>
                     </div>
-                    <label class="player-select-wrap player-dub-select-wrap">
+                    <div class="player-select-wrap player-compact-accordion player-dub-select-wrap is-open" data-compact-accordion="dub">
                         <span class="player-select-leading" id="playerCompactDubLogo" aria-hidden="true"></span>
-                        <span class="sr-only">Озвучка</span>
-                        <select id="playerDubSelect" aria-label="Вибір озвучки"></select>
-                        <span class="player-select-chevron" aria-hidden="true">⌄</span>
-                    </label>
+                        <button type="button" class="player-compact-trigger" aria-expanded="true" aria-controls="playerCompactDubOptions">
+                            <span class="sr-only">Вибір озвучки</span><strong id="playerCompactDubSummary">Озвучка</strong><span class="player-select-chevron" aria-hidden="true">⌄</span>
+                        </button>
+                        <div class="player-compact-options" id="playerCompactDubOptions" role="region" aria-label="Усі озвучки"></div>
+                        <select id="playerDubSelect" class="player-compact-native-select" aria-label="Вибір озвучки" tabindex="-1"></select>
+                    </div>
+                    <div class="player-select-wrap player-compact-accordion player-season-select-wrap is-open" data-compact-accordion="season">
+                        <button type="button" class="player-compact-trigger" aria-expanded="true" aria-controls="playerCompactSeasonOptions">
+                            <span class="sr-only">Вибір сезону</span><strong id="playerCompactSeasonSummary">Сезон 1</strong><span class="player-select-chevron" aria-hidden="true">⌄</span>
+                        </button>
+                        <div class="player-compact-options" id="playerCompactSeasonOptions" role="region" aria-label="Усі сезони"></div>
+                        <select id="playerSeasonSelect" class="player-compact-native-select" aria-label="Вибір сезону" tabindex="-1"></select>
+                    </div>
                 </div>
                 <div class="player-video-container" id="playerVideoContainer">
                     <div class="video-overlay-topbar">
