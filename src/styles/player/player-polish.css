@@ -794,3 +794,68 @@ body.player-page-open > .bottom-sheet-overlay {
     #playerPageModal .player-compact-accordion .player-select-chevron,
     #playerPageModal .player-compact-option { transition: none; }
 }
+
+/* Always-open player controls: clean layout without accordion affordances. */
+#playerPageModal .player-compact-trigger,
+#playerPageModal .player-accordion-trigger {
+    cursor: default;
+    pointer-events: none;
+}
+
+#playerPageModal .player-compact-trigger {
+    min-height: 52px;
+    padding: 0 16px;
+}
+#playerPageModal .player-dub-select-wrap .player-compact-trigger {
+    padding-left: 58px;
+}
+#playerPageModal .player-compact-options {
+    max-height: none;
+    overflow: visible;
+    padding: 12px 16px 16px;
+    border-top: 1px solid color-mix(in srgb, var(--text) 9%, transparent);
+}
+#playerPageModal .player-episode-select-wrap .player-compact-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+#playerPageModal .player-dub-select-wrap .player-compact-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+#playerPageModal .player-season-select-wrap .player-compact-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+}
+#playerPageModal .player-compact-option {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+#playerPageModal .player-dub-option {
+    justify-content: flex-start;
+    overflow: hidden;
+}
+#playerPageModal .player-dub-option > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#playerPageModal .player-controls {
+    gap: 16px;
+    padding-top: 12px;
+}
+#playerPageModal .player-accordion-trigger {
+    min-height: 54px;
+    padding: 10px 20px;
+}
+#playerPageModal .player-accordion-panel {
+    padding: 0 20px 18px;
+}
+
+@media (max-width: 380px) {
+    #playerPageModal .player-compact-options { gap: 6px; padding-right: 12px; padding-left: 12px; }
+    #playerPageModal .player-compact-option { padding-right: 8px; padding-left: 8px; font-size: 12px; }
+    #playerPageModal .player-dub-select-wrap .player-compact-trigger { padding-left: 54px; }
+}
