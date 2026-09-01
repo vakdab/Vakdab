@@ -119,7 +119,19 @@ import {
                 : { genres: [categorySlug], only_translated: true };
             return hikkaCatalog('anime', page, body);
         }
-        export async function fetchHikkaTop100() { return hikkaCatalog('anime', 1, {sort:['score:desc','scored_by:desc'], only_translated:true}); }
+        export async function fetchHikkaTop100() {
+            const pages = await Promise.all(
+                [1, 2, 3, 4].map(page => hikkaCatalog('anime', page, {
+                    sort: ['score:desc', 'scored_by:desc'],
+                    only_translated: true
+                }))
+            );
+            const unique = new Map();
+            pages.flat().forEach(item => {
+                if (item?.url && !unique.has(item.url)) unique.set(item.url, item);
+            });
+            return [...unique.values()].slice(0, 100);
+        }
         export async function fetchHikkaByGenre(genreSlug, page) { return fetchHikkaByCategory(genreSlug, page); }
 
         // Hikka є єдиним джерелом каталогу та інформації. Mikai використовується
