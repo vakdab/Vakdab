@@ -2,22 +2,23 @@
         /* ===== Популярні — круглий постер + картка (в стилі сайту) ===== */
         .popular-list {
             display: flex;
-            flex-direction: column;
-            gap: 4rem;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            gap: 1.15rem;
             margin-top: 3.5rem;
-            padding: 0 0.2rem;
+            padding: 0.15rem 0.35rem 1rem;
+            overflow-x: auto;
+            overflow-y: visible;
+            scroll-snap-type: x proximity;
+            scroll-padding-left: 0.35rem;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
         }
-        @media (min-width:600px) {
-            .popular-list {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 4rem 1.4rem;
-            }
-        }
-        @media (min-width:1024px) {
-            .popular-list { grid-template-columns: repeat(4, 1fr); gap: 4rem 1.8rem; }
-        }
+        .popular-list::-webkit-scrollbar { height: 5px; }
+        .popular-list::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 999px; }
         .popular-card {
+            flex: 0 0 min(78vw, 220px);
+            scroll-snap-align: start;
             position: relative;
             background: var(--surface);
             border: 1px solid var(--border);

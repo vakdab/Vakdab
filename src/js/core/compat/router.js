@@ -157,15 +157,18 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
             },
 
             showMain() {
-                // The homepage intentionally contains only the hero banner.
-                // Keep the catalog available on its dedicated route, but never
-                // reveal or load it while the main route is active.
+                // The homepage includes the catalog directly below the hero.
+                // Keep it visible on the main route and load it on first paint.
                 const catalogPage = document.getElementById('catalogPageContainer');
                 if (catalogPage) {
-                    catalogPage.classList.remove('active');
-                    catalogPage.style.display = 'none';
+                    catalogPage.classList.add('active');
+                    catalogPage.style.display = 'block';
                 }
-                document.getElementById('genreSectionsContainer').style.display = 'none';
+                const catalog = document.getElementById('genreSectionsContainer');
+                if (catalog) {
+                    catalog.style.display = 'flex';
+                    if (!catalog.hasChildNodes() || catalog.querySelector('.loader')) loadAndDisplayGenreSections();
+                }
                 document.getElementById('animeContainer').style.display = 'none';
                 document.getElementById('paginationRow').innerHTML = '';
                 setCurrentTab('main');
@@ -177,7 +180,6 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                 if (si) si.value = '';
                 const cb = document.getElementById('searchPageClearBtn');
                 if (cb) cb.classList.remove('visible');
-                document.getElementById('animeContainer').style.display = 'none';
                 document.getElementById('paginationRow').innerHTML = '';
                 syncLeftdockActive();
             },
