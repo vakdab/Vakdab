@@ -72,13 +72,10 @@
             <div class="hero-progress-bar"><div class="hero-progress-fill" id="heroProgressFill"></div></div>
         </div>
 
-        <div class="actions-row" id="actionsRow">
-            <button class="action-pill" id="top100Btn" title="Популярні аніме"><i class="fas fa-crown"></i> Популярні</button>
-            <button class="action-pill" id="randomBtn" title="Випадкове аніме (R)"><i class="fas fa-dice-d6"></i> Випадкове</button>
-        </div>
-
         <div id="livePageContainer" aria-live="polite" style="display:none"></div>
-        <div id="genreSectionsContainer"></div>
+        <div id="catalogPageContainer" style="display:none">
+            <div id="genreSectionsContainer"></div>
+        </div>
         <div id="animeContainer" class="anime-grid" style="display:none;">
             <div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження аніме...</div>
         </div>
@@ -343,6 +340,13 @@
             <div class="bn-pill">
                 <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z"/><polyline points="9 21 9 12 15 12 15 21"/></svg>
                 <span class="bn-label">Головна</span>
+            </div>
+        </button>
+        <!-- Каталог -->
+        <button class="bn-item" id="bnCatalog" data-route="catalog" title="Каталог" aria-label="Каталог">
+            <div class="bn-pill">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                <span class="bn-label">Каталог</span>
             </div>
         </button>
         <!-- Рейтинг -->

@@ -1215,3 +1215,16 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
 @media (prefers-reduced-motion: reduce) {
     .home-catalog-card[aria-busy="true"] .home-catalog-card__poster::after { animation-duration: 1.5s; }
 }
+
+
+/* Catalog quick actions */
+.catalog-feature-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:0 0 22px; }
+.catalog-feature-btn { min-height:76px; border:1px solid var(--border-color, rgba(255,255,255,.12)); border-radius:18px; padding:13px 14px; display:grid; grid-template-columns:auto 1fr; column-gap:10px; align-items:center; text-align:left; cursor:pointer; color:var(--text); background:var(--surface, rgba(255,255,255,.06)); transition:transform .2s ease, border-color .2s ease, background .2s ease; }
+.catalog-feature-btn:hover { transform:translateY(-2px); border-color:var(--text); background:rgba(255,255,255,.1); }
+.catalog-feature-btn:active { transform:scale(.98); }
+.catalog-feature-btn i { grid-row:span 2; font-size:22px; }
+.catalog-feature-btn span { font-size:15px; font-weight:700; }
+.catalog-feature-btn small { color:var(--text-muted); font-size:11px; margin-top:2px; }
+.catalog-feature-btn--popular i { color:#e7bd62; }
+.catalog-feature-btn--random i { color:#8ab4ff; }
+@media (max-width:480px) { .catalog-feature-btn { padding:12px 10px; } .catalog-feature-btn span { font-size:13px; } }

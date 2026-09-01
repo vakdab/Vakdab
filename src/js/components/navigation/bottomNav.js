@@ -20,6 +20,9 @@ export function initBottomNav() {
             document.getElementById('bnHome').addEventListener('click', () => {
                 Router.goTo('main');
             });
+            document.getElementById('bnCatalog').addEventListener('click', () => {
+                Router.goTo('catalog');
+            });
             document.getElementById('bnTop').addEventListener('click', () => {
                 Router.goTo('rating');
             });

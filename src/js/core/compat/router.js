@@ -37,6 +37,8 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                     playerModal.setAttribute('aria-hidden', 'true');
                 }
                 document.getElementById('genreSectionsContainer').style.display = 'none';
+                const catalogPage = document.getElementById('catalogPageContainer');
+                if (catalogPage) { catalogPage.classList.remove('active'); catalogPage.style.display = 'none'; }
                 document.getElementById('animeContainer').style.display = 'none';
                 document.getElementById('paginationRow').innerHTML = '';
                 document.getElementById('profilePageContainer').classList.remove('active');
@@ -69,19 +71,16 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                 }
 
                 const hero = document.getElementById('heroWrapper');
-                const actions = document.getElementById('actionsRow');
                 const logo = document.querySelector('.logo');
                 const searchBtn = document.querySelector('.search-circle-btn');
 
                 if (route === 'main') {
                     hero.style.display = 'block';
-                    actions.style.removeProperty('display');
-                    if (liveWidget) liveWidget.style.removeProperty('display');
+                    if (liveWidget) liveWidget.style.display = 'none';
                     if (logo) logo.style.display = 'flex';
                     if (searchBtn) searchBtn.style.display = 'flex';
                 } else {
                     hero.style.display = 'none';
-                    actions.style.display = 'none';
                     if (logo) logo.style.display = 'none';
                     if (searchBtn) searchBtn.style.display = 'none';
                 }
@@ -93,6 +92,9 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                     document.querySelector('.agnative-leftdock__item.selector[data-action="main"]')?.classList.add(
                         'is-active');
                     this.showMain();
+                } else if (route === 'catalog') {
+                    document.querySelector('.agnative-leftdock__item.selector[data-action="main"]')?.classList.add('is-active');
+                    this.showCatalog();
                 } else if (route === 'profile') {
                     document.querySelector('.agnative-leftdock__item.selector[data-action="profile"]')?.classList.add(
                         'is-active');
@@ -173,6 +175,18 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                 if (cb) cb.classList.remove('visible');
                 document.getElementById('animeContainer').style.display = 'none';
                 document.getElementById('paginationRow').innerHTML = '';
+                syncLeftdockActive();
+            },
+
+            showCatalog() {
+                const container = document.getElementById('catalogPageContainer');
+                if (!container) return;
+                container.style.display = 'block';
+                container.classList.add('active');
+                const catalog = document.getElementById('genreSectionsContainer');
+                catalog.style.display = 'flex';
+                if (!catalog.hasChildNodes() || catalog.querySelector('.loader')) loadAndDisplayGenreSections();
+                setCurrentTab('main');
                 syncLeftdockActive();
             },
 
