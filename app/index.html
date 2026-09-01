@@ -163,25 +163,25 @@
                 <div class="player-compact-controls" id="playerCompactControls">
                     <div class="player-select-line player-episode-select-line">
                         <div class="player-select-wrap player-compact-accordion player-episode-select-wrap is-open" data-compact-accordion="episode">
-                            <button type="button" class="player-compact-trigger" aria-expanded="true" aria-controls="playerCompactEpisodeOptions">
-                                <span class="sr-only">Вибір серії</span><strong id="playerCompactEpisodeSummary">Серія 1</strong><span class="player-select-chevron" aria-hidden="true">⌄</span>
-                            </button>
+                            <div class="player-compact-trigger">
+                                <span class="sr-only">Вибір серії</span><strong id="playerCompactEpisodeSummary">Серія 1</strong>
+                            </div>
                             <div class="player-compact-options" id="playerCompactEpisodeOptions" role="region" aria-label="Усі серії"></div>
                             <select id="playerEpisodeSelect" class="player-compact-native-select" aria-label="Вибір серії" tabindex="-1"></select>
                         </div>
                     </div>
                     <div class="player-select-wrap player-compact-accordion player-dub-select-wrap is-open" data-compact-accordion="dub">
                         <span class="player-select-leading" id="playerCompactDubLogo" aria-hidden="true"></span>
-                        <button type="button" class="player-compact-trigger" aria-expanded="true" aria-controls="playerCompactDubOptions">
-                            <span class="sr-only">Вибір озвучки</span><strong id="playerCompactDubSummary">Озвучка</strong><span class="player-select-chevron" aria-hidden="true">⌄</span>
-                        </button>
+                        <div class="player-compact-trigger">
+                            <span class="sr-only">Вибір озвучки</span><strong id="playerCompactDubSummary">Озвучка</strong>
+                        </div>
                         <div class="player-compact-options" id="playerCompactDubOptions" role="region" aria-label="Усі озвучки"></div>
                         <select id="playerDubSelect" class="player-compact-native-select" aria-label="Вибір озвучки" tabindex="-1"></select>
                     </div>
                     <div class="player-select-wrap player-compact-accordion player-season-select-wrap is-open" data-compact-accordion="season">
-                        <button type="button" class="player-compact-trigger" aria-expanded="true" aria-controls="playerCompactSeasonOptions">
-                            <span class="sr-only">Вибір сезону</span><strong id="playerCompactSeasonSummary">Сезон 1</strong><span class="player-select-chevron" aria-hidden="true">⌄</span>
-                        </button>
+                        <div class="player-compact-trigger">
+                            <span class="sr-only">Вибір сезону</span><strong id="playerCompactSeasonSummary">Сезон 1</strong>
+                        </div>
                         <div class="player-compact-options" id="playerCompactSeasonOptions" role="region" aria-label="Усі сезони"></div>
                         <select id="playerSeasonSelect" class="player-compact-native-select" aria-label="Вибір сезону" tabindex="-1"></select>
                     </div>
@@ -203,22 +203,22 @@
                 </div>
                 <div class="player-controls" id="playerControls">
                     <div class="player-control-block player-accordion-block is-open" data-accordion="episode">
-                        <button type="button" class="player-accordion-trigger" aria-expanded="true" aria-controls="episodeViewGrid">
-                            <span class="player-control-label">Серія</span><strong id="playerEpisodeSummary">Серія 1</strong><span class="player-accordion-chevron" aria-hidden="true">⌄</span>
-                        </button>
+                        <div class="player-accordion-trigger">
+                            <span class="player-control-label">Серія</span><strong id="playerEpisodeSummary">Серія 1</strong>
+                        </div>
                         <div class="player-accordion-panel" id="episodeViewGrid" role="region"></div>
                     </div>
                     <div class="player-control-block player-accordion-block is-open" data-accordion="dub">
-                        <button type="button" class="player-accordion-trigger" aria-expanded="true" aria-controls="playerDubControls">
-                            <span class="player-control-label">Озвучка</span><strong id="playerDubSummary">Озвучка</strong><span class="player-accordion-chevron" aria-hidden="true">⌄</span>
-                        </button>
+                        <div class="player-accordion-trigger">
+                            <span class="player-control-label">Озвучка</span><strong id="playerDubSummary">Озвучка</strong>
+                        </div>
                         <div class="player-accordion-panel" id="playerDubControls" role="region"></div>
                     </div>
                     <div class="player-control-block player-accordion-block" data-accordion="season">
-                        <button type="button" class="player-accordion-trigger" aria-expanded="false" aria-controls="episodeSeasonRow">
-                            <span class="player-control-label">Сезон</span><strong id="playerSeasonSummary">Сезон 1</strong><span class="player-accordion-chevron" aria-hidden="true">⌄</span>
-                        </button>
-                        <div class="player-accordion-panel" id="episodeSeasonRow" role="region" hidden></div>
+                        <div class="player-accordion-trigger">
+                            <span class="player-control-label">Сезон</span><strong id="playerSeasonSummary">Сезон 1</strong>
+                        </div>
+                        <div class="player-accordion-panel" id="episodeSeasonRow" role="region"></div>
                     </div>
                 </div>
             </section>

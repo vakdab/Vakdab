@@ -399,30 +399,20 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-re
         }
 
         function initPlayerAccordions() {
+            // Episode and dub lists are intentionally always visible.
             document.querySelectorAll('#playerControls .player-accordion-block').forEach(block => {
-                const trigger = block.querySelector('.player-accordion-trigger');
                 const panel = block.querySelector('.player-accordion-panel');
-                if (!trigger || !panel || trigger.dataset.bound === 'true') return;
-                trigger.dataset.bound = 'true';
-                trigger.addEventListener('click', () => {
-                    const isOpen = block.classList.toggle('is-open');
-                    trigger.setAttribute('aria-expanded', String(isOpen));
-                    panel.hidden = !isOpen;
-                });
+                block.classList.add('is-open');
+                if (panel) panel.hidden = false;
             });
         }
 
         function initCompactAccordions() {
+            // Do not attach collapse/expand handlers: selectors stay open.
             document.querySelectorAll('#playerCompactControls .player-compact-accordion').forEach(block => {
-                const trigger = block.querySelector('.player-compact-trigger');
+                block.classList.add('is-open');
                 const panel = block.querySelector('.player-compact-options');
-                if (!trigger || !panel || trigger.dataset.bound === 'true') return;
-                trigger.dataset.bound = 'true';
-                trigger.addEventListener('click', () => {
-                    const isOpen = block.classList.toggle('is-open');
-                    trigger.setAttribute('aria-expanded', String(isOpen));
-                    panel.hidden = !isOpen;
-                });
+                if (panel) panel.hidden = false;
             });
         }
 
