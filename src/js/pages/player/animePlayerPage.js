@@ -1577,8 +1577,8 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-re
             }, 200);
         });
 
-        document.getElementById('top100Btn').addEventListener('click', showTop100);
-        document.getElementById('randomBtn').addEventListener('click', openRandomAnime);
+        document.getElementById('top100Btn')?.addEventListener('click', showTop100);
+        document.getElementById('randomBtn')?.addEventListener('click', openRandomAnime);
         document.getElementById('logoHome').addEventListener('click', () => Router.goTo('main'));
 
         const cpBtn = document.getElementById('closePlayerPageBtn');
