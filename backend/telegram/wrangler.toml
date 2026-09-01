@@ -7,7 +7,7 @@ directory = ".."
 binding = "ASSETS"
 
 [[kv_namespaces]]
-binding = "MAKIMA_MEMORY"
+binding = "TELEGRAM_KV"
 id = "e895b4efdc7941c5915ca6af83879f96"
 
 [[durable_objects.bindings]]

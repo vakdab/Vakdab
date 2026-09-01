@@ -13,14 +13,6 @@ import worker, {
   scheduleWebAppKeyboard,
   liveWebAppKeyboard,
   vakdabWatchUrl,
-  getAIProviderConfig,
-  callCompatibleChat,
-  getLunaDirectReply,
-  getLunaTemporaryReply,
-  isMemoryRequest,
-  isWarRequest,
-  formatLunaMemory,
-  buildRecentHistory,
   repairMojibake,
   aboutUsText,
   liveStageDefinitions
@@ -34,7 +26,6 @@ test('about us help explains VakDab usage and links back to the site', () => {
   assert.match(text, /Випадкове/);
   assert.match(text, /Пошук/);
   assert.match(text, /Чат-Рулетка/);
-  assert.match(text, /Запитати Луну/);
   assert.match(text, /<a href="https:\/\/[^\"]+">https:\/\/[^\"]+<\/a>/);
 });
 
@@ -43,206 +34,7 @@ test('main menu contains the about button and removed features stay absent', () 
   assert.match(source, /text: 'Про нас', callback_data: 'about'/);
   assert.doesNotMatch(source, /text: 'Shazam'/);
   assert.doesNotMatch(source, /text: 'Аніме Live'/);
-});
-
-test('Qwen configuration is used when configured', () => {
-  const config = getAIProviderConfig({
-    QWEN_API_KEY: 'test-qwen-key'
-  });
-  assert.equal(config.provider, 'Qwen');
-  assert.equal(config.baseUrl, 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1');
-  assert.equal(config.model, 'qwen3.8-max');
-  assert.equal(config.apiKey, 'test-qwen-key');
-});
-
-test('Luna persona is a concise all-topic companion rather than a service assistant', () => {
-  const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
-  assert.match(workerSource, /цифрова компанйонка VakDab/);
-  assert.match(workerSource, /Спочатку відповідай прямо на запитання/);
-  assert.match(workerSource, /просте питання — 1–3 речення/);
-  assert.match(workerSource, /Не погоджуйся автоматично/);
-  assert.match(workerSource, /Не розбирай фразу по словах/);
-  assert.match(workerSource, /не вигадуй «аніме-тропи»/s);
-  assert.match(workerSource, /не видаєш себе за справжню людину/);
-  assert.match(workerSource, /\/memory/);
-  assert.match(workerSource, /Відповідай на запитання не лише про аніме/);
-  assert.match(workerSource, /Не закінчуй кожну відповідь штучним/);
-  assert.match(workerSource, /Це продовження вже наявного чату/);
-  assert.match(workerSource, /Не вітайся повторно/);
-  assert.match(workerSource, /не службова помічниця/);
-  assert.doesNotMatch(workerSource, /Кожен користувач повинен відчувати.*подругою-помічницею/s);
-});
-
-test('Luna direct replies handle casual companion greetings without assistant boilerplate', () => {
-  assert.equal(getLunaDirectReply('Тобою 😊🌸'), 'Та просто зі мною 😊 Можемо побалакати про що завгодно. Як твій вечір?');
-  assert.equal(getLunaDirectReply('Чим зможеш допомогти'), 'Та багато чим, але без офіціозу 🙂 Кажи, що в тебе на думці.');
-  assert.equal(getLunaDirectReply('Хто ти'), 'Я Луна — AI-співрозмовниця VakDab. Можу поговорити нормально, без офіціозу, і не лише про аніме 🙂');
-  assert.equal(getLunaDirectReply('А я страшний?'), 'Та ні 🙂 Не вигадуй. Ти просто питаєш напряму.');
-  assert.equal(getLunaDirectReply('Тююююююююю'), 'Тююю 😄');
-  assert.equal(getLunaDirectReply('Що таке аніме?'), '');
-});
-
-test('Luna accepts broad adult topics while deterministically declining war topics', () => {
-  const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
-  assert.match(workerSource, /стосунки, кохання, флірт, секс, тіло/);
-  assert.match(workerSource, /Не моралізуй і не відштовхуй користувача/);
-  assert.equal(isWarRequest('Розкажи про війну'), true);
-  assert.equal(isWarRequest('Що подивитись сьогодні?'), false);
-  assert.equal(getLunaDirectReply('Розкажи про війну'), 'Про війну я не говорю. Давай краще про будь-що інше.');
-});
-
-test('Luna commands clear visible chat without using the memory wipe commands', () => {
-  const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
-  assert.match(workerSource, /if \(\/\^\\\/clear/);
-  assert.match(workerSource, /clearVisibleConversation\(chatId, memoryKey, env\)/);
-  assert.match(workerSource, /await clearVisibleConversation\(chatId, memoryKey, env\)/);
-  assert.match(workerSource, /Один KV-ключ на повідомлення/);
-  assert.doesNotMatch(workerSource, /Видимі повідомлення прибрані/);
-  assert.doesNotMatch(workerSource, /Пам’ять про тебе залишилася/);
-  assert.match(workerSource, /if \(\/\^\\\/luna/);
-  assert.match(workerSource, /Луна активна/);
-  assert.match(workerSource, /\{ command: 'start'/);
-  assert.match(workerSource, /\{ command: 'next'/);
-  assert.match(workerSource, /\{ command: 'report'/);
-  assert.match(workerSource, /await sendTrackedMessage\(chatId, memoryKey, escapeHtml\(responseText\), \{\}, env\)/);
-  assert.doesNotMatch(workerSource, /sendTrackedMessage\(chatId, memoryKey, escapeHtml\(responseText\), \{ reply_markup:/);
-});
-
-test('Luna mode takes priority over live draft text routing', () => {
-  const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
-  const lunaPriority = workerSource.indexOf("if (state.screen === 'luna') {");
-  const liveOwnerRouting = workerSource.indexOf('if (await handleLiveOwnerText(message, env)) return;');
-  assert.ok(lunaPriority >= 0);
-  assert.ok(liveOwnerRouting > lunaPriority);
-});
-
-test('Luna exposes transparent memory controls without an AI round trip', () => {
-  assert.equal(isMemoryRequest('Що ти про мене пам’ятаєш?'), true);
-  assert.equal(isMemoryRequest('покажи мою пам’ять'), true);
-  assert.equal(isMemoryRequest('Що ти пам’ятаєш про аніме?'), false);
-  assert.match(formatLunaMemory({ name: 'Олег', hobbies: ['музика'] }), /Олег/);
-  assert.match(formatLunaMemory({}), /нічого важливого/);
-});
-
-test('Luna context keeps recent valid messages and clips oversized entries', () => {
-  const history = [
-    { role: 'system', content: 'must not be forwarded' },
-    { role: 'user', content: 'a'.repeat(5000) },
-    { role: 'assistant', content: 'Коротка відповідь' }
-  ];
-  const recent = buildRecentHistory(history);
-  assert.deepEqual(recent.map(message => message.role), ['user', 'assistant']);
-  assert.ok(recent[0].content.length <= 3200);
-});
-
-test('missing Qwen credentials fails clearly', () => {
-  assert.throws(() => getAIProviderConfig({}), /QWEN_API_KEY is not configured/);
-});
-
-test('repairMojibake restores Ukrainian UTF-8 text and preserves valid text', () => {
-  const original = 'Тест: українською';
-  const mojibake = String.fromCharCode(...new TextEncoder().encode(original));
-  assert.equal(repairMojibake(mojibake), original);
-  assert.equal(repairMojibake('Привіт, Луна!'), 'Привіт, Луна!');
-  assert.equal(repairMojibake('Hello, world!'), 'Hello, world!');
-});
-
-test('Luna gives a conversational temporary reply when the provider is unavailable', () => {
-  assert.match(getLunaTemporaryReply('Привіт'), /підвисла/);
-  assert.match(getLunaTemporaryReply('Ахахах'), /настрій зрозуміла/);
-  assert.equal(getLunaTemporaryReply('Розкажи про війну'), 'Про війну я не говорю. Давай краще про будь-що інше.');
-});
-
-test('Qwen chat retries transient provider failures before succeeding', async () => {
-  const originalFetch = globalThis.fetch;
-  let calls = 0;
-  globalThis.fetch = async () => {
-    calls += 1;
-    if (calls < 2) return new Response('busy', { status: 503 });
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'Повернулась 🙂' } }] }), { status: 200 });
-  };
-
-  try {
-    const result = await callCompatibleChat([{ role: 'user', content: 'Продовжимо' }], { QWEN_API_KEY: 'test-key' }, { maxTokens: 64 });
-    assert.equal(result, 'Повернулась 🙂');
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-  assert.equal(calls, 2);
-});
-
-test('Qwen requests use the OpenAI-compatible payload and configured model', async () => {
-  const originalFetch = globalThis.fetch;
-  let requestUrl;
-  let requestPayload;
-  globalThis.fetch = async (url, init) => {
-    requestUrl = url;
-    requestPayload = JSON.parse(init.body);
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'Привіт, я Луна!' } }] }), { status: 200 });
-  };
-
-  try {
-    const result = await callCompatibleChat([{ role: 'user', content: 'Привіт' }], {
-      QWEN_API_KEY: 'test-qwen-key',
-      QWEN_MODEL: 'qwen-plus'
-    }, { maxTokens: 256 });
-    assert.equal(result, 'Привіт, я Луна!');
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-
-  assert.equal(requestUrl, 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions');
-  assert.equal(requestPayload.model, 'qwen-plus');
-  assert.deepEqual(requestPayload.messages, [{ role: 'user', content: 'Привіт' }]);
-  assert.equal(requestPayload.max_tokens, 256);
-  assert.equal(Object.hasOwn(requestPayload, 'max_completion_tokens'), false);
-});
-
-test('Qwen requests keep standard completion tokens', async () => {
-  const originalFetch = globalThis.fetch;
-  let requestPayload;
-  globalThis.fetch = async (_url, init) => {
-    requestPayload = JSON.parse(init.body);
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'Привіт, я Луна!' } }] }), { status: 200 });
-  };
-
-  try {
-    const result = await callCompatibleChat([{ role: 'user', content: 'Привіт' }], { QWEN_API_KEY: 'test-key' }, { maxTokens: 256 });
-    assert.equal(result, 'Привіт, я Луна!');
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-
-  assert.equal(requestPayload.model, 'qwen3.8-max');
-  assert.equal(requestPayload.max_tokens, 256);
-  assert.equal(Object.hasOwn(requestPayload, 'max_completion_tokens'), false);
-});
-
-test('Qwen retries with the configured model after a transient failure', async () => {
-  const originalFetch = globalThis.fetch;
-  const requests = [];
-  globalThis.fetch = async (_url, init) => {
-    const payload = JSON.parse(init.body);
-    requests.push(payload);
-    if (requests.length === 1) {
-      return new Response(JSON.stringify({ error: { message: 'temporarily unavailable' } }), { status: 503 });
-    }
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'Привіт, я Луна!' } }] }), { status: 200 });
-  };
-
-  try {
-    const result = await callCompatibleChat([{ role: 'user', content: 'Привіт' }], {
-      QWEN_API_KEY: 'test-key',
-      QWEN_MODEL: 'qwen-plus'
-    });
-    assert.equal(result, 'Привіт, я Луна!');
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-
-  assert.equal(requests.length, 2);
-  assert.equal(requests[0].model, 'qwen-plus');
-  assert.equal(requests[1].model, 'qwen-plus');
+  assert.doesNotMatch(source, /QWEN|LUNA|Луна|макіма|waiting_for_luna|luna:/);
 });
 
 test('content type descriptor supports anime, manga and novel with anime fallback', () => {
@@ -326,12 +118,6 @@ test('private statistics report presents users, reports and bans without user ID
   assert.match(report, /Спам або реклама/);
   assert.doesNotMatch(report, /123456789/);
   assert.match(report, /ID 987654321/);
-});
-
-test('production Worker declares the persistent Luna memory binding', () => {
-  const wranglerSource = readFileSync(new URL('../../backend/telegram/wrangler.toml', import.meta.url), 'utf8');
-  assert.match(wranglerSource, /binding = "MAKIMA_MEMORY"/);
-  assert.match(wranglerSource, /id = "e895b4efdc7941c5915ca6af83879f96"/);
 });
 
 test('schedule fallback keyboard opens the dedicated Mini App page', () => {
@@ -494,16 +280,6 @@ test('manga and novel details use VakDab reader routes and a concise bot button'
   assert.doesNotMatch(contentPage, /href="\$\{escape\(externalReadUrl\)\}"/);
 });
 
-
-test('Luna routes Telegram photos through a multimodal vision request', () => {
-  const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
-  assert.match(workerSource, /if \(message\.photo\?\.length\)/);
-  assert.match(workerSource, /handleLunaPhotoMessage\(chatId, memoryKey, message, env\)/);
-  assert.match(workerSource, /telegram\('getFile'/);
-  assert.match(workerSource, /type: 'image_url'/);
-  assert.match(workerSource, /data:image\/jpeg;base64/);
-  assert.match(workerSource, /const caption = String\(message\.caption \|\| ''\)/);
-});
 
 test('start flow gates the main menu behind @vakluna subscription', () => {
   const workerSource = readFileSync(new URL('../../backend/telegram/worker.js', import.meta.url), 'utf8');
