@@ -1940,7 +1940,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             }).join('');
         }
 
-        export function buildPopularVerticalSectionHtml(items, hasMore = false) {
+        export function buildPopularVerticalSectionHtml(items) {
             if (!items || items.length === 0) return '';
             const cardsHtml = buildPopularVerticalCardsHtml(items);
             return `
@@ -1952,7 +1952,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                       <div class="popular-list popular-list--home">
                         ${cardsHtml}
                       </div>
-                      ${hasMore ? '<button class="home-recommendations-more" type="button">Показати ще аніме</button>' : ''}
                     </div>
                   `;
         }
@@ -1988,11 +1987,10 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 homeRecommendationItems = [...items];
                 homeRecommendationPage = 1;
                 homeRecommendationHasMore = items.hasNextPage !== false;
-                container.innerHTML = buildPopularVerticalSectionHtml(homeRecommendationItems, homeRecommendationHasMore);
+                container.innerHTML = buildPopularVerticalSectionHtml(homeRecommendationItems);
                 container.style.display = 'block';
                 bindHomeRecommendationCards([...container.querySelectorAll('.popular-card')]);
                 loadHomeRecommendationDetails(items);
-                container.querySelector('.home-recommendations-more')?.addEventListener('click', loadMoreHomeRecommendations);
                 container.querySelector('#homePopularShowAllBtn')?.addEventListener('click', () => { window.location.hash = 'catalog'; });
                 if (!homeRecommendationScrollBound) {
                     window.addEventListener('scroll', handleHomeRecommendationScroll, { passive: true });
@@ -2009,10 +2007,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
         export async function loadMoreHomeRecommendations() {
             const container = document.getElementById('homeRecommendationsContainer');
-            const button = container?.querySelector('.home-recommendations-more');
             if (!container || homeRecommendationLoading || !homeRecommendationHasMore) return;
             homeRecommendationLoading = true;
-            if (button) { button.disabled = true; button.textContent = 'Завантаження…'; }
             try {
                 const nextPage = homeRecommendationPage + 1;
                 const nextItems = await hikkaCatalog('anime', nextPage, { sort: ['score:desc', 'scored_by:desc'], only_translated: true });
@@ -2026,11 +2022,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 if (list) list.insertAdjacentHTML('beforeend', buildPopularVerticalCardsHtml(uniqueItems, offset));
                 bindHomeRecommendationCards([...container.querySelectorAll(`.popular-card[data-idx]`)].slice(offset));
                 loadHomeRecommendationDetails(uniqueItems, offset);
-                if (!homeRecommendationHasMore) button?.remove();
-                else if (button) { button.disabled = false; button.textContent = 'Показати ще аніме'; }
                 requestAnimationFrame(handleHomeRecommendationScroll);
             } catch (error) {
-                if (button) { button.disabled = false; button.textContent = 'Спробувати ще раз'; }
                 console.warn('[home recommendations more] failed:', error);
             } finally {
                 homeRecommendationLoading = false;
