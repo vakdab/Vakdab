@@ -1346,3 +1346,22 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
         padding-top: 1.1rem;
     }
 }
+
+/* Jut-style browsing: the page itself scrolls vertically; cards form a grid on wider screens. */
+@media (min-width: 600px) {
+    .home-recommendations .popular-list--home {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+        gap: 4rem 1.25rem;
+    }
+    .home-recommendations .popular-list--home .popular-card {
+        max-width: none;
+    }
+}
+@media (min-width: 1024px) {
+    .home-recommendations .popular-list--home {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4rem 1.5rem;
+    }
+}
