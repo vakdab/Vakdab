@@ -599,3 +599,91 @@ body.player-page-open > .bottom-sheet-overlay {
 #playerPageModal #page-info > .ratings-row {
     display: none !important;
 }
+
+
+/* ============== Accordion episode / dub / season selectors ============== */
+#playerPageModal .player-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 0 6px;
+}
+#playerPageModal .player-accordion-block {
+    overflow: hidden;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--text) 18%, var(--border));
+    border-radius: 22px;
+    background: var(--surface);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--text) 5%, transparent);
+}
+#playerPageModal .player-accordion-block[hidden] { display: none; }
+#playerPageModal .player-accordion-trigger {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    min-height: 74px;
+    width: 100%;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 22px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: background-color .18s ease;
+}
+#playerPageModal .player-accordion-trigger:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
+#playerPageModal .player-accordion-trigger:active { transform: scale(.995); }
+#playerPageModal .player-accordion-trigger .player-control-label {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: none;
+}
+#playerPageModal .player-accordion-trigger strong {
+    overflow: hidden;
+    font-size: 18px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#playerPageModal .player-accordion-chevron {
+    color: var(--text-secondary);
+    font-size: 28px;
+    line-height: 1;
+    transform: translateY(-2px);
+    transition: transform .2s ease;
+}
+#playerPageModal .player-accordion-block.is-open .player-accordion-chevron { transform: rotate(180deg) translateY(2px); }
+#playerPageModal .player-accordion-panel {
+    padding: 0 22px 18px;
+    border-top: 1px solid color-mix(in srgb, var(--text) 9%, transparent);
+}
+#playerPageModal .player-accordion-panel[hidden] { display: none; }
+#playerPageModal .player-accordion-panel .player-episode-picker {
+    max-height: 220px;
+    padding-top: 16px;
+}
+#playerPageModal .player-accordion-panel .player-dub-controls,
+#playerPageModal .player-accordion-panel .player-season-select {
+    padding-top: 16px;
+}
+#playerPageModal .player-accordion-panel .player-episode-btn,
+#playerPageModal .player-accordion-panel .format-pill,
+#playerPageModal .player-accordion-panel .season-num {
+    min-height: 44px;
+    border-radius: 12px;
+}
+#playerPageModal .player-accordion-panel .player-episode-btn { min-width: 66px; }
+#playerPageModal .player-control-block:last-child { grid-column: auto; }
+@media (max-width: 560px) {
+    #playerPageModal .player-accordion-trigger { min-height: 70px; padding: 10px 18px; gap: 10px; }
+    #playerPageModal .player-accordion-trigger strong { font-size: 17px; }
+    #playerPageModal .player-accordion-panel { padding-right: 18px; padding-left: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #playerPageModal .player-accordion-chevron,
+    #playerPageModal .player-accordion-trigger { transition: none; }
+}

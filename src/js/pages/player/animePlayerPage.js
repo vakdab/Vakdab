@@ -393,7 +393,30 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-re
             return `<span class="dub-logo" aria-hidden="true"><img src="${escapeHtml(logoUrl)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'"><span class="dub-logo-fallback" style="display:none">${fallback}</span></span>`;
         }
 
+        function setAccordionSummary(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        }
+
+        function initPlayerAccordions() {
+            document.querySelectorAll('#playerControls .player-accordion-block').forEach(block => {
+                const trigger = block.querySelector('.player-accordion-trigger');
+                const panel = block.querySelector('.player-accordion-panel');
+                if (!trigger || !panel || trigger.dataset.bound === 'true') return;
+                trigger.dataset.bound = 'true';
+                trigger.addEventListener('click', () => {
+                    const isOpen = block.classList.toggle('is-open');
+                    trigger.setAttribute('aria-expanded', String(isOpen));
+                    panel.hidden = !isOpen;
+                });
+            });
+        }
+
         function renderCompactPlayerSelectors() {
+            initPlayerAccordions();
+            setAccordionSummary('playerEpisodeSummary', playerPageCurrentEpisodeNum ? `Серія ${playerPageCurrentEpisodeNum}` : 'Серія');
+            setAccordionSummary('playerDubSummary', playerPageCurrentDub || 'Озвучка');
+            setAccordionSummary('playerSeasonSummary', `Сезон ${playerPageCurrentSeason || '1'}`);
             const episodeSelect = document.getElementById('playerEpisodeSelect');
             const dubSelect = document.getElementById('playerDubSelect');
             const seasonSelect = document.getElementById('playerSeasonSelect');
@@ -1077,6 +1100,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-re
                     const epNum = card.dataset.episode;
                     if (!file) return;
                     playerPageCurrentEpisodeNum = epNum;
+                    setAccordionSummary('playerEpisodeSummary', `Серія ${epNum}`);
                     playEpisode(file, epNum);
                 });
             });
@@ -1143,6 +1167,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-re
             if (!playerPageIsOpen) return;
             const playbackRequest = ++playerPagePlaybackRequest;
             playerPageCurrentEpisodeNum = epNum || '1';
+            setAccordionSummary('playerEpisodeSummary', `Серія ${playerPageCurrentEpisodeNum}`);
             renderAllEpisodeViews(getCurrentEpisodes(), null, null);
             const videoContainer = document.getElementById('playerVideoContainer');
             const videoDiv = document.getElementById('playerPageVideo');
@@ -1623,6 +1648,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-re
             if (episode) playEpisode(episode.file, episode.episode);
         });
         document.getElementById('playerDubSelect')?.addEventListener('change', event => selectDubFromSheet(event.target.value));
+        initPlayerAccordions();
         document.getElementById('playerSeasonSelect')?.addEventListener('change', event => selectSeasonFromSheet(event.target.value));
         document.getElementById('playerPrevEpisode')?.addEventListener('click', () => {
             const episodes = getCurrentEpisodes();
