@@ -1276,3 +1276,58 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     .home-recommendations .popular-list--home { gap: 1.5rem; }
     .home-recommendations .popular-list--home .popular-card { flex-basis: 245px; }
 }
+
+/* Reference homepage design: full-width vertical cards with a large circular poster. */
+.home-recommendations .popular-list--home {
+    flex-direction: column;
+    gap: 4rem;
+    overflow: visible;
+    padding: 4.5rem .35rem 1rem;
+    scrollbar-width: none;
+}
+.home-recommendations .popular-list--home::-webkit-scrollbar { display: none; }
+.home-recommendations .popular-list--home .popular-card {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 680px;
+    min-height: 0;
+    flex: 0 0 auto;
+    margin-inline: auto;
+    padding: 13rem 1rem 1.1rem;
+    overflow: visible;
+}
+.home-recommendations .popular-list--home .popular-card__poster-wrap {
+    top: 1.25rem;
+    width: min(62vw, 14rem);
+    height: min(62vw, 14rem);
+}
+.home-recommendations .popular-list--home .popular-card__poster {
+    border-radius: 50%;
+}
+.home-recommendations .popular-list--home .popular-card__rank {
+    top: -.3rem;
+    right: -.3rem;
+    width: 3rem;
+    height: 3rem;
+    font-size: 1rem;
+}
+.home-recommendations .popular-list--home .popular-card__title {
+    margin-top: 0;
+    font-size: clamp(1.05rem, 3vw, 1.35rem);
+    line-height: 1.25;
+}
+.home-recommendations .popular-list--home .popular-card__desc {
+    margin-top: .55rem;
+    font-size: clamp(.86rem, 2.2vw, 1rem);
+    line-height: 1.4;
+    -webkit-line-clamp: 3;
+}
+@media (max-width: 599px) {
+    .home-recommendations .popular-list--home {
+        gap: 5rem;
+        margin-top: 0;
+    }
+    .home-recommendations .popular-list--home .popular-card {
+        padding-top: min(58vw, 13rem);
+    }
+}

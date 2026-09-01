@@ -1922,8 +1922,12 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const cardsHtml = top.map((a, idx) => {
                 const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
                 const title = a.title || 'Без назви';
+                const synopsis = (a.synopsis || '').trim();
+                const description = synopsis
+                    ? synopsis.length > 130 ? `${synopsis.slice(0, 130)}…` : synopsis
+                    : 'Опис відсутній.';
                 return `
-                    <div class="popular-card popular-card--compact" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
+                    <div class="popular-card" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
                       <div class="popular-card__poster-wrap">
                         <div class="popular-card__poster">
                           <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add(\'img--loaded\')" onerror="this.src=\'${ANIME_CARD_PLACEHOLDER}\'">
@@ -1931,6 +1935,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                         <div class="popular-card__rank">${idx + 1}</div>
                       </div>
                       <div class="popular-card__title">${title}</div>
+                      <div class="popular-card__desc">${description}</div>
                     </div>
                   `;
             }).join('');
