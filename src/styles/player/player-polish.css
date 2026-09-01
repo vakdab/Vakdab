@@ -859,3 +859,61 @@ body.player-page-open > .bottom-sheet-overlay {
     #playerPageModal .player-compact-option { padding-right: 8px; padding-left: 8px; font-size: 12px; }
     #playerPageModal .player-dub-select-wrap .player-compact-trigger { padding-left: 54px; }
 }
+
+/* Final responsive alignment for episode and dub controls. */
+#playerPageModal .player-episode-picker {
+    display: grid;
+    width: 100%;
+    max-width: none;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    box-sizing: border-box;
+    max-height: none;
+    overflow: visible;
+}
+#playerPageModal .player-episode-picker .player-episode-btn {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+#playerPageModal .player-dub-controls {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    box-sizing: border-box;
+}
+#playerPageModal .player-dub-controls .format-pill {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    justify-content: flex-start;
+    overflow: hidden;
+}
+#playerPageModal .player-dub-controls .dub-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#playerPageModal .player-select-leading {
+    top: 10px;
+    transform: none;
+}
+
+@media (max-width: 560px) {
+    #playerPageModal .player-episode-picker,
+    #playerPageModal .player-compact-options {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+    #playerPageModal .player-dub-controls,
+    #playerPageModal .player-dub-select-wrap .player-compact-options {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+    #playerPageModal .player-episode-picker .player-episode-btn,
+    #playerPageModal .player-compact-option {
+        min-width: 0;
+        padding-right: 6px;
+        padding-left: 6px;
+    }
+}
