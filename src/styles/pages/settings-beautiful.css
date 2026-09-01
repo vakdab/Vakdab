@@ -1,0 +1,666 @@
+/* ════════════════════════════════════════════════════════════════════
+   VakDab Settings — Beautiful Redesign
+   Loaded LAST for settings. Scoped to #settingsPageContainer.
+   Reuses palette tokens: --bg, --surface, --border, --accent, --text,
+   --text-secondary, --text-muted, --danger.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Page container ── */
+#settingsPageContainer {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 16px 80px;
+}
+
+/* ── Header: editorial, clean ── */
+#settingsPageContainer .settings-page-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    padding: 1.2rem 0 .8rem;
+    margin-bottom: .4rem;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    backdrop-filter: blur(16px) saturate(1.4);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+}
+#settingsPageContainer .settings-page-header h2 {
+    margin: 0;
+    font-size: clamp(1.6rem, 4vw, 2.1rem);
+    font-weight: 850;
+    letter-spacing: -.04em;
+    line-height: 1.1;
+    color: var(--text);
+}
+#settingsPageContainer .settings-page-subtitle {
+    margin: .25rem 0 0;
+    color: var(--text-muted);
+    font-size: .82rem;
+    line-height: 1.4;
+}
+
+/* ── Tabs: pill segmented control ── */
+#settingsPageContainer .settings-tabs {
+    position: sticky;
+    top: 4.5rem;
+    z-index: 39;
+    display: flex;
+    gap: 4px;
+    margin-bottom: 1.4rem;
+    padding: 5px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--bg) 80%, transparent);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    backdrop-filter: blur(16px) saturate(1.4);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: 0 2px 12px color-mix(in srgb, var(--text) 4%, transparent);
+}
+#settingsPageContainer .settings-tabs::-webkit-scrollbar { display: none; }
+#settingsPageContainer .settings-tab {
+    flex: 1 0 auto;
+    min-width: 88px;
+    min-height: 44px;
+    padding: .5rem .7rem;
+    border: 0;
+    border-radius: 12px;
+    background: none;
+    color: var(--text-secondary);
+    font-size: .78rem;
+    font-weight: 700;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all .18s ease;
+}
+#settingsPageContainer .settings-tab i { font-size: .85rem; }
+#settingsPageContainer .settings-tab:hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+#settingsPageContainer .settings-tab:active { transform: scale(.96); }
+#settingsPageContainer .settings-tab.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,.12), inset 0 0 0 1px var(--border);
+    font-weight: 800;
+}
+
+/* ── Section titles: clean labels with subtle divider ── */
+#settingsPageContainer .settings-section-title {
+    margin: 1.8rem 0 .7rem;
+    font-size: .7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+#settingsPageContainer .settings-section-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+}
+#settingsPageContainer .settings-section-title:first-child { margin-top: .2rem; }
+
+/* ── Hint text ── */
+#settingsPageContainer .settings-hint-text {
+    font-size: .76rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: -.2rem 0 .8rem;
+}
+
+/* ── Cards: tactile, layered, grouped ── */
+#settingsPageContainer .settings-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 4%, transparent);
+    padding: 1rem 1.15rem;
+    margin-bottom: .65rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .85rem;
+    transition: border-color .2s ease, box-shadow .25s ease, transform .18s ease;
+}
+#settingsPageContainer .settings-card:not(.settings-card--danger):hover {
+    border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--text) 6%, transparent);
+    transform: translateY(-1px);
+}
+#settingsPageContainer .settings-card--nested {
+    background: color-mix(in srgb, var(--surface) 55%, var(--bg));
+    border-color: color-mix(in srgb, var(--border) 60%, transparent);
+    border-radius: 14px;
+    padding: .85rem 1rem;
+    margin-bottom: .5rem;
+}
+#settingsPageContainer .settings-card--disabled {
+    opacity: .6;
+    filter: saturate(.5);
+}
+#settingsPageContainer .settings-card--danger {
+    border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+    background: color-mix(in srgb, var(--danger) 4%, var(--surface));
+}
+#settingsPageContainer .settings-card--danger:hover {
+    border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+/* ── Card left side: icon + label/desc ── */
+#settingsPageContainer .settings-card-left {
+    display: flex;
+    align-items: center;
+    gap: .85rem;
+    min-width: 0;
+    flex: 1;
+}
+#settingsPageContainer .settings-card-left > i:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--text) 6%, var(--surface));
+    color: var(--text-secondary);
+    font-size: 1rem;
+    transition: background .2s ease, color .2s ease;
+}
+#settingsPageContainer .settings-card:hover .settings-card-left > i:first-child {
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+    color: var(--accent);
+}
+#settingsPageContainer .settings-card--danger .settings-card-left > i:first-child {
+    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+    color: var(--danger);
+}
+#settingsPageContainer .settings-card-left .label {
+    font-size: .88rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#settingsPageContainer .settings-card-left .desc {
+    font-size: .74rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Toggle button: refined pill ── */
+#settingsPageContainer .settings-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .55rem .9rem;
+    min-height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: .76rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all .18s ease;
+}
+#settingsPageContainer .settings-toggle-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+    transform: translateY(-1px);
+}
+#settingsPageContainer .settings-toggle-btn:active { transform: scale(.97); }
+#settingsPageContainer .settings-toggle-btn i { font-size: .8rem; }
+#settingsPageContainer .settings-toggle-btn--danger {
+    border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+    color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 5%, var(--surface));
+}
+#settingsPageContainer .settings-toggle-btn--danger:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+}
+
+/* ── Switch toggle: iOS-style ── */
+#settingsPageContainer .settings-switch {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    width: 50px;
+    height: 30px;
+}
+#settingsPageContainer .settings-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+#settingsPageContainer .settings-switch-slider {
+    position: absolute;
+    inset: 0;
+    border-radius: 15px;
+    background: color-mix(in srgb, var(--text) 12%, transparent);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all .25s ease;
+}
+#settingsPageContainer .settings-switch-slider::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--surface);
+    box-shadow: 0 1px 4px rgba(0,0,0,.2);
+    transition: all .25s ease;
+}
+#settingsPageContainer .settings-switch input:checked + .settings-switch-slider {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+#settingsPageContainer .settings-switch input:checked + .settings-switch-slider::before {
+    transform: translateX(20px);
+    background: #fff;
+}
+
+/* ── Input fields ── */
+#settingsPageContainer .settings-field {
+    margin-bottom: 1rem;
+}
+#settingsPageContainer .settings-field-label {
+    display: block;
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: .4rem;
+}
+#settingsPageContainer .settings-field input[type="text"],
+#settingsPageContainer .settings-field input[type="date"] {
+    width: 100%;
+    min-height: 48px;
+    padding: .65rem .9rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: .9rem;
+    font-family: inherit;
+    font-weight: 500;
+    transition: border-color .2s ease, box-shadow .2s ease;
+    box-sizing: border-box;
+}
+#settingsPageContainer .settings-field input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+#settingsPageContainer .settings-field-hint {
+    display: block;
+    font-size: .7rem;
+    color: var(--text-muted);
+    margin-top: .3rem;
+}
+
+/* ── Option grid: effect / atmosphere / decoration chips ── */
+#settingsPageContainer .settings-option-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+    margin-bottom: .5rem;
+}
+#settingsPageContainer .settings-option-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    padding: .8rem .5rem;
+    min-height: 70px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: .72rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: center;
+    transition: all .18s ease;
+}
+#settingsPageContainer .settings-option-item i { font-size: 1.1rem; }
+#settingsPageContainer .settings-option-item:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--text) 6%, transparent);
+}
+#settingsPageContainer .settings-option-item:active { transform: scale(.97); }
+#settingsPageContainer .settings-option-item.active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+    color: var(--accent);
+    font-weight: 800;
+    box-shadow: 0 0 0 1px var(--accent), 0 4px 14px -6px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+#settingsPageContainer .settings-option-item.active i { color: var(--accent); }
+
+/* ── Meta note (info badge) ── */
+#settingsPageContainer .settings-meta-note {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--text) 6%, var(--surface));
+    color: var(--text-muted);
+    font-size: .85rem;
+}
+
+/* ── Appearance section cards ── */
+#settingsPageContainer .appearance-section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.2rem 1.15rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 3%, transparent);
+}
+#settingsPageContainer .appearance-media-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+@media (max-width: 480px) {
+    #settingsPageContainer .appearance-media-grid {
+        grid-template-columns: 1fr;
+    }
+}
+#settingsPageContainer .appearance-media-block {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+/* ── Media card: preview + actions ── */
+#settingsPageContainer .settings-media-card {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--bg) 50%, var(--surface));
+    overflow: hidden;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--text) 4%, transparent);
+}
+#settingsPageContainer .settings-media-preview--banner {
+    min-height: 90px;
+    max-height: 120px;
+    background: color-mix(in srgb, var(--text) 5%, var(--bg));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+#settingsPageContainer .settings-media-preview--avatar {
+    min-height: 90px;
+    max-height: 120px;
+    background: color-mix(in srgb, var(--text) 5%, var(--bg));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+#settingsPageContainer .settings-media-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: .65rem .7rem;
+    border-top: 1px solid var(--border);
+}
+#settingsPageContainer .settings-media-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .4rem .65rem;
+    min-height: 34px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: .72rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+#settingsPageContainer .settings-media-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+#settingsPageContainer .settings-media-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--danger) 5%, var(--surface));
+    color: var(--danger);
+    cursor: pointer;
+    transition: all .15s ease;
+}
+#settingsPageContainer .settings-media-delete:hover {
+    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+}
+
+/* ── Preview panel ── */
+#settingsPageContainer .appearance-preview-card {
+    position: relative;
+}
+#settingsPageContainer .settings-preview-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .5rem .8rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: .76rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    margin-bottom: .8rem;
+    transition: all .18s ease;
+}
+#settingsPageContainer .settings-preview-toggle-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* ── Banner filter strip ── */
+#settingsPageContainer .banner-filter-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: .5rem;
+}
+#settingsPageContainer .banner-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .4rem .65rem;
+    min-height: 34px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: .72rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+#settingsPageContainer .banner-filter-chip:hover {
+    border-color: var(--accent);
+    color: var(--text);
+}
+#settingsPageContainer .banner-filter-chip.active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+    color: var(--accent);
+}
+
+/* ── Date picker ── */
+#settingsPageContainer .settings-date-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+#settingsPageContainer .settings-date-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    flex: 1;
+    min-height: 48px;
+    padding: .6rem .8rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: .88rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color .2s ease;
+}
+#settingsPageContainer .settings-date-trigger:hover {
+    border-color: var(--accent);
+}
+#settingsPageContainer .settings-date-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all .15s ease;
+}
+#settingsPageContainer .settings-date-clear:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+/* ── Bio field ── */
+#settingsPageContainer .settings-bio-bold-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .4rem .7rem;
+    min-height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: .74rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+#settingsPageContainer .settings-bio-bold-btn.active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+    color: var(--accent);
+}
+
+/* ── Responsive ── */
+@media (max-width: 560px) {
+    #settingsPageContainer { padding: 0 12px 80px; }
+    #settingsPageContainer .settings-card {
+        padding: .85rem 1rem;
+        border-radius: 16px;
+    }
+    #settingsPageContainer .settings-card-left > i:first-child {
+        width: 38px;
+        height: 38px;
+        flex: 0 0 38px;
+        font-size: .9rem;
+    }
+    #settingsPageContainer .settings-card-left .label { font-size: .82rem; }
+    #settingsPageContainer .settings-card-left .desc { font-size: .7rem; }
+    #settingsPageContainer .settings-toggle-btn {
+        padding: .45rem .7rem;
+        font-size: .72rem;
+    }
+    #settingsPageContainer .settings-tab { font-size: .74rem; min-width: 76px; }
+    #settingsPageContainer .settings-section-title { font-size: .66rem; }
+    #settingsPageContainer .settings-option-grid {
+        grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    }
+}
+@media (max-width: 380px) {
+    #settingsPageContainer .settings-card { padding: .75rem .85rem; gap: .6rem; }
+    #settingsPageContainer .settings-card-left { gap: .6rem; }
+    #settingsPageContainer .settings-toggle-btn { padding: .4rem .6rem; font-size: .68rem; }
+    #settingsPageContainer .settings-tab { min-width: 68px; font-size: .7rem; gap: .3rem; }
+    #settingsPageContainer .settings-option-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+    #settingsPageContainer .settings-option-item { padding: .6rem .3rem; min-height: 60px; font-size: .68rem; }
+}
+
+/* ── Smooth entrance ── */
+#settingsPageContainer .settings-card,
+#settingsPageContainer .settings-option-item,
+#settingsPageContainer .appearance-section-card {
+    animation: settingsFadeIn .3s ease backwards;
+}
+#settingsPageContainer .settings-card:nth-child(2) { animation-delay: .03s; }
+#settingsPageContainer .settings-card:nth-child(3) { animation-delay: .06s; }
+#settingsPageContainer .settings-card:nth-child(4) { animation-delay: .09s; }
+#settingsPageContainer .settings-card:nth-child(5) { animation-delay: .12s; }
+#settingsPageContainer .settings-card:nth-child(6) { animation-delay: .15s; }
+@keyframes settingsFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    #settingsPageContainer .settings-card,
+    #settingsPageContainer .settings-option-item,
+    #settingsPageContainer .appearance-section-card { animation: none; }
+}
