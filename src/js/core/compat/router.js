@@ -157,20 +157,17 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
             },
 
             showMain() {
-                // The catalog was moved inside a wrapper for the dedicated Catalog tab.
-                // Main must reveal the wrapper too, otherwise the loaded catalog stays invisible.
+                // The homepage intentionally contains only the hero banner.
+                // Keep the catalog available on its dedicated route, but never
+                // reveal or load it while the main route is active.
                 const catalogPage = document.getElementById('catalogPageContainer');
                 if (catalogPage) {
-                    catalogPage.style.display = 'block';
-                    catalogPage.classList.add('active');
+                    catalogPage.classList.remove('active');
+                    catalogPage.style.display = 'none';
                 }
-                document.getElementById('genreSectionsContainer').style.display = 'flex';
+                document.getElementById('genreSectionsContainer').style.display = 'none';
                 document.getElementById('animeContainer').style.display = 'none';
                 document.getElementById('paginationRow').innerHTML = '';
-                if (!document.getElementById('genreSectionsContainer').hasChildNodes() ||
-                    document.getElementById('genreSectionsContainer').querySelector('.loader')) {
-                    loadAndDisplayGenreSections();
-                }
                 setCurrentTab('main');
                 setCurrentSearchQuery('');
                 setCurrentCategory('');

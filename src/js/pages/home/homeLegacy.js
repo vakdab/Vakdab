@@ -1309,10 +1309,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const visibleItems = getHomeCatalogVisibleItems();
             const catalogTitle = homeCatalogAdult ? '18+ манґа' : `Каталог ${activeMode.label.toLowerCase()}`;
             return `<section class="home-catalog-section" id="homeCatalogSection">
-                <div class="catalog-feature-actions" role="group" aria-label="Швидкі дії">
-                    <button type="button" class="catalog-feature-btn catalog-feature-btn--popular" id="catalogPopularBtn"><i class="fas fa-crown"></i><span>Популярне</span><small>Топ аніме</small></button>
-                    <button type="button" class="catalog-feature-btn catalog-feature-btn--random" id="catalogRandomBtn"><i class="fas fa-dice"></i><span>Випадкове</span><small>Обрати навмання</small></button>
-                </div>
                 <div class="home-catalog-heading">
                     <div><h2>${escapeHtml(catalogTitle)}</h2></div>
                     <span class="home-catalog-count" id="homeCatalogCount">${homeCatalogCountText(visibleItems.length)}</span>

@@ -540,12 +540,6 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
             updateBackToTop();
 
             setTimeout(() => {
-                if (Router.currentRoute === 'main') {
-                    loadAndDisplayGenreSections();
-                }
-            }, 50);
-
-            setTimeout(() => {
                 buildHeroBanner();
             }, 100);
 
