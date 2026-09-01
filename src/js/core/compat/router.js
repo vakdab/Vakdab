@@ -157,6 +157,13 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
             },
 
             showMain() {
+                // The catalog was moved inside a wrapper for the dedicated Catalog tab.
+                // Main must reveal the wrapper too, otherwise the loaded catalog stays invisible.
+                const catalogPage = document.getElementById('catalogPageContainer');
+                if (catalogPage) {
+                    catalogPage.style.display = 'block';
+                    catalogPage.classList.add('active');
+                }
                 document.getElementById('genreSectionsContainer').style.display = 'flex';
                 document.getElementById('animeContainer').style.display = 'none';
                 document.getElementById('paginationRow').innerHTML = '';
