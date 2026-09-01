@@ -1927,15 +1927,15 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     ? synopsis.length > 130 ? `${synopsis.slice(0, 130)}…` : synopsis
                     : 'Опис відсутній.';
                 return `
-                    <div class="popular-card" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
+                    <div class="popular-card" data-url="${a.url}" data-idx="${idx}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
                       <div class="popular-card__poster-wrap">
                         <div class="popular-card__poster">
                           <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add(\'img--loaded\')" onerror="this.src=\'${ANIME_CARD_PLACEHOLDER}\'">
                         </div>
-                        <div class="popular-card__rank">${idx + 1}</div>
                       </div>
                       <div class="popular-card__title">${title}</div>
                       <div class="popular-card__desc">${description}</div>
+                      <div class="popular-card__episodes" aria-label="Кількість серій">Серій: …</div>
                     </div>
                   `;
             }).join('');
@@ -1966,6 +1966,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     card.addEventListener('click', () => openPlayerPage(card.dataset.url));
                     card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPlayerPage(card.dataset.url); } });
                 });
+                loadHomeRecommendationDetails(items);
                 container.querySelector('#homePopularShowAllBtn')?.addEventListener('click', () => { window.location.hash = 'catalog'; });
             } catch (error) {
                 console.warn('[home recommendations] failed:', error);
@@ -1973,6 +1974,26 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             } finally {
                 container.dataset.loading = 'false';
             }
+        }
+
+        export async function loadHomeRecommendationDetails(list) {
+            const container = document.getElementById('homeRecommendationsContainer');
+            let cursor = 0;
+            async function worker() {
+                while (cursor < list.length) {
+                    const index = cursor++;
+                    const card = container?.querySelector(`.popular-card[data-idx="${index}"]`);
+                    if (!card) continue;
+                    const episodes = card.querySelector('.popular-card__episodes');
+                    try {
+                        const detail = await fetchAnimeLite(list[index].url);
+                        if (episodes) episodes.textContent = detail?.episodes != null ? `Серій: ${detail.episodes}` : 'Серій: –';
+                    } catch (error) {
+                        if (episodes) episodes.textContent = 'Серій: –';
+                    }
+                }
+            }
+            await Promise.all(Array.from({ length: Math.min(4, list.length) }, worker));
         }
 
         export function buildHistoryCarouselSectionHtml() {

@@ -1326,6 +1326,17 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     line-height: 1.4;
     -webkit-line-clamp: 3;
 }
+.home-recommendations .popular-list--home .popular-card__rank {
+    display: none;
+}
+.home-recommendations .popular-list--home .popular-card__episodes {
+    margin-top: .35rem;
+    color: var(--text-secondary);
+    font-size: .72rem;
+    font-weight: 800;
+    line-height: 1.2;
+    text-align: right;
+}
 @media (max-width: 599px) {
     .home-recommendations .popular-list--home {
         gap: 5rem;
