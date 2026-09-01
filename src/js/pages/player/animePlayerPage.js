@@ -16,7 +16,7 @@ import {
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260824-settings-redesign-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260829-vertical-catalog-28-v1';
+} from '../../legacy/app-legacy.js?v=20260901-startup-fix-2';
 import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-redesign-v1';
 
         // ====================================================================

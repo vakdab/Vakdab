@@ -4,7 +4,7 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260829-vertical-catalog-28-v1';
+} from '../../legacy/app-legacy.js?v=20260901-startup-fix-2';
 import { Storage } from '../../core/compat/storage.js?v=20260824-settings-redesign-v1';
 import { renderStickerFaceByKey } from './stickersLegacy.js?v=20260824-settings-redesign-v1';
 import { getProfile, saveProfile, getProfileStats, getAchievements, getProfileDisplayName, getProfileHandle } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
