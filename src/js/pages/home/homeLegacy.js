@@ -1918,7 +1918,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
         export function buildPopularVerticalSectionHtml(items) {
             if (!items || items.length === 0) return '';
-            const top = items.slice(0, 10);
+            // The homepage recommendation feed is the full Top 100 so users can
+            // browse a long catalog by scrolling, rather than stopping after ten cards.
+            const top = items;
             const cardsHtml = top.map((a, idx) => {
                 const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
                 const title = a.title || 'Без назви';
