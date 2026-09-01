@@ -57,40 +57,11 @@ export function initBottomNav() {
                 return _origClosePlayer();
             };
 
-            // Ховати nav при заході в Суспільне, показувати на Рейтингу
+            // Оновлення стану меню при зміні маршруту.
             function handleNavVisibility(route) {
-                // community — під-вкладка рейтингу: ховаємо nav
-                // перевіряємо активну вкладку на сторінці rating
-                const isCommunityActive = () => {
-                    const panel = document.getElementById('rgPanelCommunity');
-                    return panel && panel.classList.contains('active');
-                };
-
-                if (route === 'rating' && isCommunityActive()) {
-                    nav.classList.add('hidden-nav');
-                } else {
-                    nav.classList.remove('hidden-nav');
-                }
+                nav.classList.remove('hidden-nav');
                 updateBottomNav(route);
             }
-
-            // Слухаємо кліки по вкладках рейтингу (Рейтинг ↔ Суспільне)
-            document.addEventListener('click', e => {
-                const tab = e.target.closest('.rg-main-tab');
-                if (!tab) return;
-                const hash = window.location.hash.slice(1) || 'main';
-                const route = hash.split('?')[0];
-                if (route !== 'rating') return;
-                setTimeout(() => {
-                    if (tab.dataset.panel === 'community') {
-                        loadFeature('community').catch(error => console.warn('[VakDab] community feature preload:', error));
-                        loadFeature('chat').catch(error => console.warn('[VakDab] chat feature preload:', error));
-                        nav.classList.add('hidden-nav');
-                    } else {
-                        nav.classList.remove('hidden-nav');
-                    }
-                }, 50);
-            });
 
             // Також ховати/показувати при hashchange
             window.addEventListener('hashchange', () => {

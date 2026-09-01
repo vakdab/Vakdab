@@ -373,17 +373,6 @@ function isGifUrl(url) {
             wrap.dataset.init = '1';
 
             wrap.innerHTML = `
-                <div class="rg-main-tabs" id="rgMainTabs">
-                    <button class="rg-main-tab active" data-panel="rating">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                        Рейтинг
-                    </button>
-                    <button class="rg-main-tab" data-panel="community">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        Спільнота
-                    </button>
-                </div>
-
                 <div class="rg-tab-panel active" id="rgPanelRating">
                     <div id="rgMyStats"></div>
                     <div id="rgDailyTasks"></div>
@@ -400,46 +389,7 @@ function isGifUrl(url) {
                     </div>
                 </div>
 
-                <div class="rg-tab-panel" id="rgPanelCommunity"></div>
             `;
-
-            wrap.querySelectorAll('.rg-main-tab').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    wrap.querySelectorAll('.rg-main-tab').forEach(b => b.classList.remove('active'));
-                    wrap.querySelectorAll('.rg-tab-panel').forEach(p => p.classList.remove('active'));
-                    btn.classList.add('active');
-                    const id = 'rgPanel' + btn.dataset.panel.charAt(0).toUpperCase() + btn.dataset.panel.slice(1);
-                    const panel = document.getElementById(id);
-                    if (panel) panel.classList.add('active');
-
-                    if (btn.dataset.panel === 'community') {
-                        document.body.classList.add('community-active');
-                        const nav = document.getElementById('bottomNav');
-                        if (nav) nav.classList.add('hidden-nav');
-                        import('../../pages/community/legacyCommunity.js?v=20260824-settings-redesign-v1')
-                            .then(({ initCommunity }) => {
-                                initCommunity();
-                                setTimeout(() => {
-                                    const msgs = document.getElementById('comMessages');
-                                    if (msgs) msgs.scrollTop = msgs.scrollHeight;
-                                }, 500);
-                            })
-                            .catch(error => {
-                                console.warn('Community initialization failed:', error);
-                                const panel = document.getElementById('rgPanelCommunity');
-                                if (panel) panel.innerHTML = '<div class="modern-community-empty"><div class="modern-community-empty-icon">✦</div><h3>Спільнота тимчасово недоступна</h3><p>Спробуйте оновити сторінку ще раз.</p></div>';
-                            });
-                    }
-                    if (btn.dataset.panel === 'rating') {
-                        document.body.classList.remove('community-active');
-                        const nav = document.getElementById('bottomNav');
-                        if (nav) nav.classList.remove('hidden-nav');
-                        loadMyStats();
-                        _renderDailyTasks();
-                        loadLeaderboard();
-                    }
-                });
-            });
 
             wrap.querySelectorAll('.rg-sort-tab').forEach(btn => {
                 btn.addEventListener('click', () => {

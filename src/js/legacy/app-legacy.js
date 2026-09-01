@@ -23,7 +23,6 @@ import { Auth } from '../core/compat/auth.js?v=20260824-settings-redesign-v1';
 import { Storage } from '../core/compat/storage.js?v=20260824-settings-redesign-v1';
 import { Router } from '../core/compat/router.js?v=20260824-settings-redesign-v1';
 import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260824-settings-redesign-v1';
-import { initCommunity } from '../pages/community/legacyCommunity.js?v=20260824-settings-redesign-v1';
 import { initBottomNav } from '../components/navigation/bottomNav.js';
 import { renderSchedulePage } from '../pages/schedule/schedule.js';
 import { renderFilterPage, applyFilters } from '../pages/catalog/filterPage.js';
