@@ -1961,6 +1961,13 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         export let homeRecommendationPage = 1;
         export let homeRecommendationHasMore = false;
         export let homeRecommendationLoading = false;
+        export let homeRecommendationScrollBound = false;
+
+        export function handleHomeRecommendationScroll() {
+            if (!homeRecommendationHasMore || homeRecommendationLoading) return;
+            const remaining = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+            if (remaining < Math.max(700, window.innerHeight * 1.25)) loadMoreHomeRecommendations();
+        }
 
         export function bindHomeRecommendationCards(cards) {
             cards.forEach(card => {
@@ -1987,6 +1994,10 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 loadHomeRecommendationDetails(items);
                 container.querySelector('.home-recommendations-more')?.addEventListener('click', loadMoreHomeRecommendations);
                 container.querySelector('#homePopularShowAllBtn')?.addEventListener('click', () => { window.location.hash = 'catalog'; });
+                if (!homeRecommendationScrollBound) {
+                    window.addEventListener('scroll', handleHomeRecommendationScroll, { passive: true });
+                    homeRecommendationScrollBound = true;
+                }
             } catch (error) {
                 console.warn('[home recommendations] failed:', error);
                 container.innerHTML = '<div class="home-recommendations-empty">Рекомендації тимчасово недоступні.</div>';
@@ -2017,6 +2028,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 loadHomeRecommendationDetails(uniqueItems, offset);
                 if (!homeRecommendationHasMore) button?.remove();
                 else if (button) { button.disabled = false; button.textContent = 'Показати ще аніме'; }
+                requestAnimationFrame(handleHomeRecommendationScroll);
             } catch (error) {
                 if (button) { button.disabled = false; button.textContent = 'Спробувати ще раз'; }
                 console.warn('[home recommendations more] failed:', error);
