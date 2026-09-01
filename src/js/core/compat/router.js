@@ -2,7 +2,7 @@ import { HIKKA_API } from '../../config/constants.js?v=20260824-settings-redesig
 import { loadFeature } from '../feature-loader.js?v=20260824-settings-redesign-v1';
 import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
-    initRatingPage, loadAndDisplayGenreSections, loadMangaReader,
+    initRatingPage, loadAndDisplayGenreSections, loadHomeRecommendations, loadMangaReader,
     openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
     renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
@@ -40,6 +40,8 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                 const catalogPage = document.getElementById('catalogPageContainer');
                 if (catalogPage) { catalogPage.classList.remove('active'); catalogPage.style.display = 'none'; }
                 document.getElementById('animeContainer').style.display = 'none';
+                const homeRecommendations = document.getElementById('homeRecommendationsContainer');
+                if (homeRecommendations) homeRecommendations.style.display = 'none';
                 document.getElementById('paginationRow').innerHTML = '';
                 document.getElementById('profilePageContainer').classList.remove('active');
                 document.getElementById('profilePageContainer').style.display = 'none';
@@ -157,17 +159,19 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
             },
 
             showMain() {
-                // The homepage includes the catalog directly below the hero.
-                // Keep it visible on the main route and load it on first paint.
+                // The homepage shows recommendations below the hero.
+                // The full anime/manga/novel catalog stays on its own route.
                 const catalogPage = document.getElementById('catalogPageContainer');
                 if (catalogPage) {
-                    catalogPage.classList.add('active');
-                    catalogPage.style.display = 'block';
+                    catalogPage.classList.remove('active');
+                    catalogPage.style.display = 'none';
                 }
                 const catalog = document.getElementById('genreSectionsContainer');
-                if (catalog) {
-                    catalog.style.display = 'flex';
-                    if (!catalog.hasChildNodes() || catalog.querySelector('.loader')) loadAndDisplayGenreSections();
+                if (catalog) catalog.style.display = 'none';
+                const homeRecommendations = document.getElementById('homeRecommendationsContainer');
+                if (homeRecommendations) {
+                    homeRecommendations.style.display = 'block';
+                    if (!homeRecommendations.hasChildNodes() || homeRecommendations.querySelector('.loader')) loadHomeRecommendations();
                 }
                 document.getElementById('animeContainer').style.display = 'none';
                 document.getElementById('paginationRow').innerHTML = '';

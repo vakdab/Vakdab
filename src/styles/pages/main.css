@@ -1229,3 +1229,46 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
 .catalog-feature-btn--popular i { color:#e7bd62; }
 .catalog-feature-btn--random i { color:#8ab4ff; }
 @media (max-width:480px) { .catalog-feature-btn { padding:12px 10px; } .catalog-feature-btn span { font-size:13px; } }
+
+/* Main-page recommendations: separate from the full catalog route. */
+.home-recommendations {
+    width: 100%;
+    margin: 1.5rem auto 2.5rem;
+}
+.home-recommendations .genre-section {
+    margin-bottom: 0;
+}
+.home-recommendations-loader,
+.home-recommendations-empty {
+    min-height: 8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+}
+.home-recommendations .popular-list--home {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 1.15rem;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding: 4.5rem .35rem 1rem;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+.home-recommendations .popular-list--home::-webkit-scrollbar { height: 5px; }
+.home-recommendations .popular-list--home::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 999px; }
+.home-recommendations .popular-list--home .popular-card {
+    flex: 0 0 min(78vw, 220px);
+    scroll-snap-align: start;
+}
+@media (min-width: 600px) {
+    .home-recommendations .popular-list--home { gap: 1.35rem; }
+    .home-recommendations .popular-list--home .popular-card { flex-basis: 230px; }
+}
+@media (min-width: 1024px) {
+    .home-recommendations .popular-list--home { gap: 1.5rem; }
+    .home-recommendations .popular-list--home .popular-card { flex-basis: 245px; }
+}

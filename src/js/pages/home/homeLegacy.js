@@ -1947,6 +1947,29 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                   `;
         }
 
+        export async function loadHomeRecommendations() {
+            const container = document.getElementById('homeRecommendationsContainer');
+            if (!container || container.dataset.loading === 'true') return;
+            container.dataset.loading = 'true';
+            container.innerHTML = '<div class="loader home-recommendations-loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження рекомендацій...</div>';
+            try {
+                const items = await fetchHikkaTop100();
+                if (!items?.length) throw new Error('Порожній список рекомендацій');
+                container.innerHTML = buildPopularVerticalSectionHtml(items);
+                container.style.display = 'block';
+                container.querySelectorAll('.popular-card').forEach(card => {
+                    card.addEventListener('click', () => openPlayerPage(card.dataset.url));
+                    card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPlayerPage(card.dataset.url); } });
+                });
+                container.querySelector('#homePopularShowAllBtn')?.addEventListener('click', () => { window.location.hash = 'catalog'; });
+            } catch (error) {
+                console.warn('[home recommendations] failed:', error);
+                container.innerHTML = '<div class="home-recommendations-empty">Рекомендації тимчасово недоступні.</div>';
+            } finally {
+                container.dataset.loading = 'false';
+            }
+        }
+
         export function buildHistoryCarouselSectionHtml() {
             const history = Storage.getHistory() || [];
             if (!history.length) return '';
