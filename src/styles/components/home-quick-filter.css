@@ -271,3 +271,25 @@
         margin-bottom: -2.8rem;
     }
 }
+
+/* Expanded categories must overlay the recommendation posters instead of
+   increasing the page flow and pushing the cards down. */
+.home-quick-filter.is-open {
+    padding-bottom: 0;
+}
+.home-quick-filter.is-open .hqf-panel.open {
+    position: absolute;
+    top: 70px;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    max-height: min(72vh, 900px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+@media (max-width: 600px) {
+    .home-quick-filter.is-open .hqf-panel.open {
+        top: 70px;
+        max-height: 68vh;
+    }
+}
