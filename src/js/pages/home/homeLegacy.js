@@ -2304,16 +2304,19 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
         export async function loadHomeRecommendationDetails(list, indexOffset = 0, requestId = homeRecommendationRequestId) {
             const container = document.getElementById('homeRecommendationsContainer');
+            // Episode counts are secondary metadata. Hydrate only the first viewport-ish
+            // batch so opening the homepage does not create one API request per card.
+            const detailItems = list.slice(0, 8);
             let cursor = 0;
             async function worker() {
-                while (cursor < list.length) {
+                while (cursor < detailItems.length) {
                     if (requestId !== homeRecommendationRequestId || Router.currentRoute !== 'main') return;
                     const index = cursor++;
                     const card = container?.querySelector(`.popular-card[data-idx="${indexOffset + index}"]`);
                     if (!card) continue;
                     const episodes = card.querySelector('.popular-card__episodes');
                     try {
-                        const detail = await fetchAnimeLite(list[index].url);
+                        const detail = await fetchAnimeLite(detailItems[index].url);
                         if (requestId !== homeRecommendationRequestId || Router.currentRoute !== 'main') return;
                         if (episodes) episodes.textContent = detail?.episodes != null ? `Серій: ${detail.episodes}` : 'Серій: –';
                     } catch (error) {
@@ -2322,7 +2325,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     }
                 }
             }
-            await Promise.all(Array.from({ length: Math.min(4, list.length) }, worker));
+            await Promise.all(Array.from({ length: Math.min(2, detailItems.length) }, worker));
         }
 
         export function buildHistoryCarouselSectionHtml() {
