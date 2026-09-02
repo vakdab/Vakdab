@@ -293,3 +293,36 @@
         max-height: 68vh;
     }
 }
+
+/* Compact collapsed trigger: directly below the hero, without covering it. */
+.home-quick-filter {
+    width: min(calc(100% - 32px), 540px);
+    margin: .8rem auto 0;
+}
+.home-quick-filter .hqf-categories-toggle {
+    min-height: 50px;
+    padding: 0 18px;
+    border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+    border-radius: 17px;
+    font-size: .9rem;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .1);
+}
+/* The open panel still floats above the recommendation cards. */
+.home-quick-filter.is-open .hqf-panel.open {
+    top: 50px;
+}
+@media (max-width: 600px) {
+    .home-quick-filter {
+        width: min(calc(100% - 48px), 420px);
+        margin-top: .65rem;
+    }
+    .home-quick-filter .hqf-categories-toggle {
+        min-height: 48px;
+        padding-inline: 15px;
+        border-radius: 16px;
+        font-size: .86rem;
+    }
+    .home-quick-filter.is-open .hqf-panel.open {
+        top: 48px;
+    }
+}
