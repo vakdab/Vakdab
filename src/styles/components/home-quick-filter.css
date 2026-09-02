@@ -220,8 +220,8 @@
 .hqf-ok-btn:active { transform: scale(.97); }
 
 @media (max-width: 480px) {
-    .home-quick-filter { padding-inline: .9rem; }
-    .hqf-categories-toggle { width: 52px; height: 52px; min-height: 52px; margin-top: -26px; }
+    .home-quick-filter { width: calc(100% - 40px); }
+    .hqf-categories-toggle { min-height: 70px; }
     .hqf-headline { font-size: .92rem; }
 }
 
