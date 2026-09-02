@@ -96,7 +96,6 @@ function buildHomeQuickFilterHtml() {
           </div>
         </div>
         <div class="hqf-panel-footer">
-          <button class="hqf-clear-btn" id="hqfClearBtn" type="button">Скинути</button>
           <button class="hqf-ok-btn" id="hqfOkBtn" type="button">OK</button>
         </div>
       </div>
@@ -125,6 +124,8 @@ function applyQuickFilter() {
     const recommendations = document.getElementById('homeRecommendationsContainer');
     if (recommendations) recommendations.style.display = 'block';
 
+    quickFilterState.open = false;
+    renderHomeQuickFilterBar();
     loadHomeRecommendations({ reload: true });
     recommendations?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -182,24 +183,6 @@ function wireHomeQuickFilterEvents(container) {
 
     container.querySelectorAll('[data-sort]').forEach(radio => {
         radio.addEventListener('change', () => { if (radio.checked) quickFilterState.sort = radio.dataset.sort; });
-    });
-
-    document.getElementById('hqfClearBtn')?.addEventListener('click', () => {
-        quickFilterState = { genres: new Set(), type: '', year: '', sort: 'rating', open: true };
-        setQuickFilterParams(null);
-        setHomeRecommendationFilter(null);
-        setCurrentTab('main');
-        setCurrentPage(1);
-        setCurrentSearchQuery('');
-        setCurrentCategory('');
-        document.getElementById('genreSectionsContainer').style.display = 'none';
-        document.getElementById('animeContainer').style.display = 'none';
-        const recs = document.getElementById('homeRecommendationsContainer');
-        if (recs) {
-            recs.style.display = 'block';
-            loadHomeRecommendations({ reload: true });
-        }
-        renderHomeQuickFilterBar();
     });
 
     document.getElementById('hqfOkBtn')?.addEventListener('click', () => {
