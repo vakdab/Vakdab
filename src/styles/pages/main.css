@@ -1365,3 +1365,203 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
         gap: 4rem 1.5rem;
     }
 }
+
+/* ═══ GENRE RAIL (jut.su-style genre menu) ═══ */
+/* ═══════════════════════════════════════════════════════════════════
+   Жанрове меню — горизонтальний rail (в стилі jut.su, але наші кольори)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.genre-rail-host {
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+    margin-bottom: 0.5rem;
+}
+
+.genre-rail {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.25rem 0.1rem 0.6rem;
+    scroll-padding-left: 0.1rem;
+}
+
+.genre-rail::-webkit-scrollbar {
+    display: none;
+}
+
+.genre-rail__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 0 0 auto;
+    min-width: auto;
+    white-space: nowrap;
+    padding: 0.5rem 0.95rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    scroll-snap-align: start;
+    transition: transform 220ms cubic-bezier(.2,.9,.2,1),
+                background 220ms cubic-bezier(.2,.9,.2,1),
+                color 220ms cubic-bezier(.2,.9,.2,1),
+                border-color 220ms cubic-bezier(.2,.9,.2,1),
+                box-shadow 220ms cubic-bezier(.2,.9,.2,1);
+    animation: genrePillIn 0.35s cubic-bezier(.2,.9,.2,1) both;
+}
+
+.genre-rail__pill:nth-child(1) { animation-delay: 0ms; }
+.genre-rail__pill:nth-child(2) { animation-delay: 25ms; }
+.genre-rail__pill:nth-child(3) { animation-delay: 50ms; }
+.genre-rail__pill:nth-child(4) { animation-delay: 75ms; }
+.genre-rail__pill:nth-child(5) { animation-delay: 100ms; }
+.genre-rail__pill:nth-child(6) { animation-delay: 125ms; }
+.genre-rail__pill:nth-child(7) { animation-delay: 150ms; }
+.genre-rail__pill:nth-child(8) { animation-delay: 175ms; }
+.genre-rail__pill:nth-child(9) { animation-delay: 200ms; }
+.genre-rail__pill:nth-child(10) { animation-delay: 225ms; }
+.genre-rail__pill:nth-child(11) { animation-delay: 250ms; }
+.genre-rail__pill:nth-child(12) { animation-delay: 275ms; }
+.genre-rail__pill:nth-child(13) { animation-delay: 300ms; }
+.genre-rail__pill:nth-child(14) { animation-delay: 325ms; }
+.genre-rail__pill:nth-child(15) { animation-delay: 350ms; }
+.genre-rail__pill:nth-child(16) { animation-delay: 375ms; }
+.genre-rail__pill:nth-child(17) { animation-delay: 400ms; }
+.genre-rail__pill:nth-child(18) { animation-delay: 425ms; }
+.genre-rail__pill:nth-child(19) { animation-delay: 450ms; }
+.genre-rail__pill:nth-child(20) { animation-delay: 475ms; }
+
+@keyframes genrePillIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.genre-rail__pill:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-sm);
+    color: var(--text);
+}
+
+.genre-rail__pill:active {
+    transform: translateY(0) scale(0.96);
+}
+
+.genre-rail__pill.active {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+    font-weight: 700;
+}
+
+.genre-rail__pill.active:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.genre-rail__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+}
+
+.genre-rail__icon i {
+    line-height: 1;
+}
+
+/* ── Mobile adjustments ─────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+    .genre-rail {
+        gap: 0.38rem;
+        padding: 0.2rem 0.1rem 0.5rem;
+    }
+    .genre-rail__pill {
+        padding: 0.42rem 0.78rem;
+        font-size: 0.74rem;
+        gap: 0.32rem;
+    }
+    .genre-rail__icon {
+        font-size: 0.62rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .genre-rail__pill {
+        padding: 0.4rem 0.65rem;
+        font-size: 0.68rem;
+    }
+}
+
+/* ── Dark mode tweaks ───────────────────────────────────────────────── */
+
+.dark-mode .genre-rail__pill {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+.dark-mode .genre-rail__pill:hover {
+    border-color: var(--border-hover);
+}
+
+.dark-mode .genre-rail__pill.active {
+    background: var(--accent);
+    color: var(--accent-text);
+}
+
+/* ── Popular cards: enhanced animation on genre change ──────────────── */
+
+.popular-card {
+    animation: fadeInUp 0.4s cubic-bezier(.2,.9,.2,1) both;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Smooth image load transition */
+.popular-card__poster img {
+    transition: opacity 350ms cubic-bezier(.2,.9,.2,1), transform 180ms cubic-bezier(.2,.9,.2,1);
+    opacity: 0;
+}
+
+.popular-card__poster img.img--loaded {
+    opacity: 1;
+}
+
+/* ── Genre rail host container spacing ──────────────────────────────── */
+
+.home-quick-filter {
+    padding-top: 0 !important;
+}
+
+.genre-rail-host + .hqf-headline {
+    margin-top: 0.3rem;
+}
