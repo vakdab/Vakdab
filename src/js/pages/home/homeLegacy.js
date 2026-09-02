@@ -394,6 +394,11 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         export let homeCatalogPage = 1;
         export let homeCatalogItems = [];
         export let homeCatalogLoading = false;
+        // Нескінченна лєнта головного каталогу: догрузка сторінок при скролі.
+        export const HOME_CATALOG_FEED_MAX_ITEMS = 960; // захист DOM від необмеженого росту
+        let homeCatalogFeedObserver = null;
+        let homeCatalogFeedBusy = false;
+        let homeCatalogFeedCooldownUntil = 0;
         // Total reported by Honey Manga, independent from loaded card count.
         export let homeCatalogTotal = 0;
         export let homeCatalogAvailableTotal = 0;
@@ -1337,6 +1342,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 ${homeCatalogModeFilterHtml()}
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ' is-swipe'}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
+                <div class="home-catalog-feed-sentinel" id="homeCatalogFeedSentinel" aria-hidden="true" hidden><div class="loader home-catalog-loader" id="homeCatalogFeedLoader" hidden><i class="fas fa-spinner fa-pulse"></i> Завантажуємо ще...</div></div>
                 <div class="home-catalog-pagination" id="homeCatalogPagination" hidden aria-label="Навігація сторінками каталогу">
                     <button type="button" class="home-catalog-page-btn" data-catalog-page="prev"><i class="fas fa-chevron-left"></i><span>Назад</span></button>
                     <span class="home-catalog-page-label" data-catalog-page-label>Сторінка 1</span>
@@ -1397,6 +1403,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (label) label.textContent = homeCatalogCountText(visibleItems.length);
             if (number) number.textContent = formatHomeCatalogNumber(homeCatalogTotal || visibleItems.length);
             syncHomeCatalogPagination();
+            ensureHomeCatalogFeedObserver();
         }
 
         export function openHomeCatalogFilters(root = document) {
@@ -1683,6 +1690,125 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             } finally {
                 homeCatalogLoading = false;
                 syncHomeCatalogPagination();
+            }
+        }
+
+        function homeCatalogHasActiveFilters() {
+            if (homeCatalogQuery) return true;
+            if (homeCatalogGenre !== 'all' || homeCatalogAge !== 'all' || homeCatalogStatus !== 'all' || homeCatalogAvailability !== 'all') return true;
+            if (homeCatalogMode === 'anime' && (homeCatalogType !== 'all' || homeCatalogYearMin || homeCatalogYearMax || homeCatalogScoreMin)) return true;
+            if (homeCatalogMode === 'novel' && (homeCatalogOrigin !== 'all' || homeCatalogGenres.size)) return true;
+            // Сортування «за назвою» потребує повного перерендеру — сторінки приходять з сервера впорядковані за оцінкою/датою.
+            if (homeCatalogSort === 'title') return true;
+            return false;
+        }
+
+        // Ядро догрузки наступної порції каталогу (без залежності від кнопки «Продовжити»).
+        async function loadHomeCatalogNextPage() {
+            if (homeCatalogLoading) return 0;
+            homeCatalogLoading = true;
+            const before = homeCatalogItems.length;
+            try {
+                if (homeCatalogMode === 'manga' && homeCatalogAge !== 'all' && !homeCatalogFilterResultItems) {
+                    const fullCatalog = await loadHoneyMangaFullCatalog();
+                    homeCatalogFilterResultItems = filterMangaCatalogItems(fullCatalog);
+                    homeCatalogFilterIndexReady = true;
+                    homeCatalogFilterResultOffset = Math.min(homeCatalogItems.length || homeCatalogPageSize(), homeCatalogFilterResultItems.length);
+                    homeCatalogItems = homeCatalogFilterResultItems.slice(0, homeCatalogFilterResultOffset);
+                    homeCatalogTotal = homeCatalogFilterResultItems.length;
+                    homeCatalogAvailableTotal = homeCatalogItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
+                    homeCatalogHasMore = homeCatalogFilterResultOffset < homeCatalogFilterResultItems.length;
+                    renderHomeCatalogGrid();
+                    return homeCatalogItems.length - before;
+                }
+                if (homeCatalogFilterResultItems) {
+                    homeCatalogFilterResultOffset = Math.min(homeCatalogFilterResultOffset + 24, homeCatalogFilterResultItems.length);
+                    homeCatalogItems = homeCatalogFilterResultItems.slice(0, homeCatalogFilterResultOffset);
+                    homeCatalogAvailableTotal = homeCatalogItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
+                    homeCatalogHasMore = homeCatalogFilterResultOffset < homeCatalogFilterResultItems.length;
+                    renderHomeCatalogGrid();
+                    return homeCatalogItems.length - before;
+                }
+                const nextPage = homeCatalogPage + 1;
+                const nextItems = await fetchHomeCatalogPage(nextPage);
+                const existing = new Set(homeCatalogItems.map(item => item.url));
+                const additions = nextItems.filter(item => item?.url && !existing.has(item.url));
+                homeCatalogItems.push(...additions);
+                homeCatalogPage = nextPage;
+                if (homeCatalogMode === 'novel') homeCatalogTotal = Math.max(homeCatalogTotal, homeCatalogItems.length + (nextItems.hasNextPage !== false ? 60 : 0));
+                if (homeCatalogMode === 'manga') homeCatalogAvailableTotal = homeCatalogItems.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
+                homeCatalogHasMore = nextItems.hasNextPage !== undefined
+                    ? Boolean(nextItems.hasNextPage)
+                    : homeCatalogMode === 'manga'
+                        ? homeCatalogHasMore
+                        : Boolean(nextItems.length) && (!homeCatalogTotal || homeCatalogItems.length < homeCatalogTotal);
+                if (homeCatalogHasActiveFilters()) {
+                    renderHomeCatalogGrid();
+                } else {
+                    appendHomeCatalogFeedCards(additions);
+                }
+                return additions.length;
+            } finally {
+                homeCatalogLoading = false;
+            }
+        }
+
+        // Додаємо тільки нові картки замість перерендеру всієї сітки — так лєнта не лагає.
+        function appendHomeCatalogFeedCards(newItems) {
+            const grid = document.getElementById('homeCatalogGrid');
+            if (!grid || !newItems.length) { syncHomeCatalogFeedUi(); return; }
+            grid.insertAdjacentHTML('beforeend', newItems.map(homeCatalogCardHtml).join(''));
+            bindHomeCatalogCards(grid);
+            syncHomeCatalogFeedUi();
+        }
+
+        function syncHomeCatalogFeedUi() {
+            const visibleCount = homeCatalogMode === 'manga'
+                ? (homeCatalogFilterResultItems ? homeCatalogItems.length : filterMangaCatalogItems(homeCatalogItems).length)
+                : getHomeCatalogVisibleItems().length;
+            const text = homeCatalogCountText(visibleCount);
+            document.getElementById('homeCatalogCount')?.replaceChildren(document.createTextNode(text));
+            document.getElementById('homeCatalogResultsLabel')?.replaceChildren(document.createTextNode(text));
+            const number = document.getElementById('homeCatalogResultNumber');
+            if (number) number.textContent = formatHomeCatalogNumber(homeCatalogTotal || visibleCount);
+            syncHomeCatalogPagination();
+        }
+
+        export function ensureHomeCatalogFeedObserver() {
+            const sentinel = document.getElementById('homeCatalogFeedSentinel');
+            if (!sentinel) return;
+            if (homeCatalogFeedObserver) { homeCatalogFeedObserver.disconnect(); homeCatalogFeedObserver = null; }
+            const reachedCap = homeCatalogItems.length >= HOME_CATALOG_FEED_MAX_ITEMS;
+            sentinel.hidden = !homeCatalogHasMore || reachedCap;
+            if (!homeCatalogHasMore || reachedCap || Date.now() < homeCatalogFeedCooldownUntil) return;
+            if (typeof IntersectionObserver === 'undefined') return;
+            homeCatalogFeedObserver = new IntersectionObserver(entries => {
+                if (entries.some(entry => entry.isIntersecting)) void loadHomeCatalogFeedBatch();
+            }, { rootMargin: '900px 0px 0px 0px', threshold: 0 });
+            homeCatalogFeedObserver.observe(sentinel);
+        }
+
+        export async function loadHomeCatalogFeedBatch() {
+            if (homeCatalogFeedBusy || homeCatalogLoading || !homeCatalogHasMore) return;
+            if (Router.currentRoute !== 'main') return;
+            if (homeCatalogItems.length >= HOME_CATALOG_FEED_MAX_ITEMS) return;
+            homeCatalogFeedBusy = true;
+            const loader = document.getElementById('homeCatalogFeedLoader');
+            if (loader) loader.hidden = false;
+            try {
+                await loadHomeCatalogNextPage();
+                homeCatalogFeedCooldownUntil = 0;
+            } catch (error) {
+                // Пауза перед автоповтором, щоб сезонна помилка мережі не зациклилась.
+                homeCatalogFeedCooldownUntil = Date.now() + 4000;
+                showToast('Не вдалося завантажити ще аніме');
+            } finally {
+                homeCatalogFeedBusy = false;
+                if (loader) loader.hidden = true;
+                ensureHomeCatalogFeedObserver();
+                if (homeCatalogFeedCooldownUntil && Date.now() < homeCatalogFeedCooldownUntil) {
+                    setTimeout(ensureHomeCatalogFeedObserver, 4200);
+                }
             }
         }
 

@@ -487,6 +487,14 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: clamp(.55rem, 1.6vw, 1rem);
 }
+/* Нескінченна лєнта: браузер рендерить лише видимі картки — великий список не лагає. */
+.home-catalog-grid .home-catalog-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 320px;
+}
+.home-catalog-feed-sentinel { display: flex; justify-content: center; padding: 14px 0 4px; min-height: 52px; }
+.home-catalog-feed-sentinel[hidden] { display: none; }
+.home-catalog-feed-sentinel .home-catalog-loader { font-size: .85rem; color: var(--text-muted, inherit); }
 .home-catalog-card {
     min-width: 0;
     cursor: pointer;
