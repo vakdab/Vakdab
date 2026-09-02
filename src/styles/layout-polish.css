@@ -6,7 +6,7 @@ footer {
 
 @media (max-width: 899px) {
     .app-container {
-        padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important;
+        padding-bottom: calc(3.25rem + env(safe-area-inset-bottom)) !important;
     }
 }
 
