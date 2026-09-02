@@ -1592,3 +1592,16 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
         gap: 1.5rem 1.25rem;
     }
 }
+
+/* Compact spacing between vertical recommendation cards. */
+.home-recommendations .popular-list--home {
+    row-gap: 1rem !important;
+}
+.home-recommendations .popular-list--home .popular-card {
+    margin-bottom: 0 !important;
+}
+@media (max-width: 599px) {
+    .home-recommendations .popular-list--home {
+        row-gap: 1rem !important;
+    }
+}
