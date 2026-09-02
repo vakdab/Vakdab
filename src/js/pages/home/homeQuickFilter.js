@@ -1,9 +1,9 @@
 // Компактне меню категорій під хіро-банером на головній сторінці.
 // Вибираєш жанри/тип/рік/сортування → натискаєш OK → картки з'являються
 // в #animeContainer у тому ж стилі що й головна сторінка.
-import { GENRE_MAP } from '../../config/constants.js?v=20260902-genre-rail-v3';
+import { GENRE_MAP } from '../../config/constants.js?v=20260902-genre-rail-v4';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { searchPageState, loadContent, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams, setHomeRecommendationFilter, loadHomeRecommendations } from './homeLegacy.js?v=20260902-genre-rail-v3';
+import { searchPageState, loadContent, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams, setHomeRecommendationFilter, loadHomeRecommendations } from './homeLegacy.js?v=20260902-genre-rail-v4';
 
 const YEAR_OPTIONS = [
     { key: '', label: 'Будь-який' },
@@ -67,6 +67,7 @@ function buildGenreRailHtml() {
 }
 
 function applyGenreRailFilter(slug) {
+    console.log('[genre-rail] applyGenreRailFilter called with slug:', slug);
     activeGenreRail = slug || null;
 
     if (!slug) {
@@ -87,6 +88,7 @@ function applyGenreRailFilter(slug) {
     } else {
         // Жанр — фільтруємо рекомендації
         const params = { genres: [slug], sort: 'rating' };
+        console.log('[genre-rail] setting filter params:', JSON.stringify(params));
         setHomeRecommendationFilter(params);
         setQuickFilterParams(null);
         setCurrentTab('main');
@@ -97,6 +99,7 @@ function applyGenreRailFilter(slug) {
         const recs = document.getElementById('homeRecommendationsContainer');
         if (recs) {
             recs.style.display = 'block';
+            console.log('[genre-rail] calling loadHomeRecommendations with reload');
             loadHomeRecommendations({ reload: true });
         }
         document.getElementById('animeContainer').style.display = 'none';
@@ -107,7 +110,9 @@ function applyGenreRailFilter(slug) {
 }
 
 function wireGenreRailEvents() {
-    document.querySelectorAll('[data-genre-rail]').forEach(btn => {
+    const pills = document.querySelectorAll('[data-genre-rail]');
+    console.log('[genre-rail] wiring events for', pills.length, 'pills');
+    pills.forEach(btn => {
         btn.addEventListener('click', () => {
             const slug = btn.dataset.genreRail;
             applyGenreRailFilter(slug);
