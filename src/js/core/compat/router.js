@@ -73,16 +73,19 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                 }
 
                 const hero = document.getElementById('heroWrapper');
+                const quickFilterBar = document.getElementById('homeQuickFilterBar');
                 const logo = document.querySelector('.logo');
                 const searchBtn = document.querySelector('.search-circle-btn');
 
                 if (route === 'main') {
                     hero.style.display = 'block';
+                    if (quickFilterBar) quickFilterBar.style.display = 'block';
                     if (liveWidget) liveWidget.style.display = 'none';
                     if (logo) logo.style.display = 'flex';
                     if (searchBtn) searchBtn.style.display = 'flex';
                 } else {
                     hero.style.display = 'none';
+                    if (quickFilterBar) quickFilterBar.style.display = 'none';
                     if (logo) logo.style.display = 'none';
                     if (searchBtn) searchBtn.style.display = 'none';
                 }

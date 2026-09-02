@@ -22,6 +22,14 @@ import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CAR
             { key: 'fall', label: 'Осінь' }
         ];
         const FILTER_AGE_OPTIONS = ['G', 'PG', 'PG-13', 'R', 'NC-17'];
+        const FILTER_SORT_OPTIONS = [
+            { key: 'rating', label: 'За рейтингом' },
+            { key: 'alpha', label: 'За алфавітом' },
+            { key: 'episodes', label: 'За кіл-тю серій' },
+            { key: 'year', label: 'За роком виходу' },
+            { key: 'added', label: 'За датою додавання' }
+        ];
+
         // Реальний список команд озвучення/перекладу з hikka.io / mikai.me (для відображення;
         // застосування цього фільтра до результатів поки в розробці — джерело не віддає
         // переклад на рівні каталогу, лише всередині картки конкретного аніме)
@@ -36,8 +44,29 @@ import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CAR
 
         function resetFilterState() {
             filterState = {
-                genres: new Set(), status: 'all', types: new Set(), season: 'all', yearMin: 1970, yearMax: 2026, ratingMin: 0, ratingMax: 10, translation: '', age: new Set(), genrePanelOpen: false
+                genres: new Set(), status: 'all', types: new Set(), season: 'all', yearMin: 1970, yearMax: 2026, ratingMin: 0, ratingMax: 10, translation: '', age: new Set(), genrePanelOpen: false, sort: 'rating'
             };
+        }
+
+        const QUICK_FILTER_YEAR_RANGES = {
+            '2026': [2026, 2026], '2025': [2025, 2025], '2024': [2024, 2024],
+            '2015-2023': [2015, 2023], '2008-2014': [2008, 2014], '2000-2007': [2000, 2007],
+            before2000: [1970, 1999]
+        };
+
+        // Пресети, що приходять з компактного меню під хіро-банером на головній (#filter?genres=...&year=...&sort=...).
+        function applyQuickFilterParams(params) {
+            if (!params) return;
+            const genresParam = String(params.genres || '').trim();
+            if (genresParam) genresParam.split(',').map(s => s.trim()).filter(Boolean).forEach(slug => filterState.genres.add(slug));
+            const yearParam = String(params.year || '').trim();
+            if (yearParam === 'ongoing') filterState.status = 'ongoing';
+            else if (QUICK_FILTER_YEAR_RANGES[yearParam]) {
+                [filterState.yearMin, filterState.yearMax] = QUICK_FILTER_YEAR_RANGES[yearParam];
+            }
+            const sortParam = String(params.sort || '').trim();
+            if (sortParam) filterState.sort = sortParam;
+            filterState.genrePanelOpen = filterState.genres.size > 0;
         }
 
         function buildDualRangeHtml(id, min, max, valMin, valMax, step) {
@@ -88,15 +117,15 @@ import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CAR
               </div>
 
               <div class="filter-page__section">
-                <button class="filter-page__genre-toggle" id="filterGenreToggle">
+                <button class="filter-page__genre-toggle${filterState.genrePanelOpen ? ' open' : ''}" id="filterGenreToggle">
                   <span class="filter-page__section-title">Жанри</span>
-                  <span class="filter-page__genre-toggle-value" id="filterGenreValue">Всі <i class="fas fa-chevron-right"></i></span>
+                  <span class="filter-page__genre-toggle-value" id="filterGenreValue">${filterState.genres.size === 0 ? 'Всі' : filterState.genres.size + ' обрано'} <i class="fas fa-chevron-right"></i></span>
                 </button>
-                <div class="filter-page__genre-panel" id="filterGenrePanel">
+                <div class="filter-page__genre-panel${filterState.genrePanelOpen ? ' open' : ''}" id="filterGenrePanel">
                   <div class="filter-page__checkbox-grid">
                     ${genreEntries.map(g => `
                       <label class="filter-page__checkbox">
-                        <input type="checkbox" data-genre="${g.slug}">
+                        <input type="checkbox" data-genre="${g.slug}" ${filterState.genres.has(g.slug) ? 'checked' : ''}>
                         <span>${g.name}</span>
                       </label>`).join('')}
                   </div>
@@ -107,8 +136,8 @@ import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CAR
                 <div class="filter-page__section-title">Статус</div>
                 <div class="filter-page__section-sub">Стан виходу аніме</div>
                 <div class="filter-chip-row" id="filterStatusRow" style="margin-top:0.8rem;">
-                  <button class="filter-chip active" data-status="all">Всі</button>
-                  ${FILTER_STATUS_OPTIONS.map(s => `<button class="filter-chip" data-status="${s.key}">${s.label}</button>`).join('')}
+                  <button class="filter-chip${filterState.status === 'all' ? ' active' : ''}" data-status="all">Всі</button>
+                  ${FILTER_STATUS_OPTIONS.map(s => `<button class="filter-chip${filterState.status === s.key ? ' active' : ''}" data-status="${s.key}">${s.label}</button>`).join('')}
                 </div>
               </div>
 
@@ -123,7 +152,19 @@ import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CAR
               <div class="filter-page__section">
                 <div class="filter-page__section-title">Рік виходу</div>
                 <div class="filter-page__section-sub">1970-2026</div>
-                ${buildDualRangeHtml('filterYear', 1970, 2026, 1970, 2026, 1)}
+                ${buildDualRangeHtml('filterYear', 1970, 2026, filterState.yearMin, filterState.yearMax, 1)}
+              </div>
+
+              <div class="filter-page__section">
+                <div class="filter-page__section-title">Сортування</div>
+                <div class="filter-page__section-sub">Порядок карток у результатах</div>
+                <div class="filter-page__checkbox-grid" style="margin-top:0.8rem;">
+                  ${FILTER_SORT_OPTIONS.map(o => `
+                    <label class="filter-page__checkbox">
+                      <input type="radio" name="filterSort" data-sort="${o.key}" ${filterState.sort === o.key ? 'checked' : ''}>
+                      <span>${o.label}</span>
+                    </label>`).join('')}
+                </div>
               </div>
 
               <div class="filter-page__section">
@@ -235,6 +276,11 @@ import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CAR
                 chip.classList.toggle('active'); filterState.season = chip.classList.contains('active') ? chip.dataset.season : 'all'; applyFilters(true);
             }));
             container.querySelectorAll('[data-age]').forEach(cb => cb.addEventListener('change', () => { if (cb.checked) filterState.age.add(cb.dataset.age); else filterState.age.delete(cb.dataset.age); applyFilters(true); }));
+            container.querySelectorAll('[data-sort]').forEach(radio => radio.addEventListener('change', () => {
+                if (!radio.checked) return;
+                filterState.sort = radio.dataset.sort;
+                applyFilters(true);
+            }));
             const translation = document.getElementById('filterTranslation');
             translation?.addEventListener('change', () => { filterState.translation = translation.value; applyFilters(true); });
             ['filterYear','filterRating'].forEach(id => ['Min','Max'].forEach(side => document.getElementById(id + side + 'Slider')?.addEventListener('input', e => {
@@ -254,6 +300,7 @@ import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CAR
             const container = document.getElementById('genrePageContainer');
             if (!container) return;
             resetFilterState();
+            applyQuickFilterParams(Router.params);
             filterResultsState = { items: [], loadingMore: false, page: 0, genrePages: {}, exhausted: false };
             container.innerHTML = buildFilterPageHtml();
             wireFilterPageEvents(container);
@@ -279,6 +326,10 @@ import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CAR
                     if (filterState.status !== 'all' && a.status !== filterState.status) return false;
                     if (filterState.types.size && !filterState.types.has(a.type || 'tv')) return false;
                     if (filterState.genres.size && ![...(a.genres || [])].some(g => filterState.genres.has(GENRE_MAP[g] || g))) return false;
+                    if (filterState.yearMin > 1970 || filterState.yearMax < 2026) {
+                        const y = Number(a.year) || 0;
+                        if (y && (y < filterState.yearMin || y > filterState.yearMax)) return false;
+                    }
                     return true;
                 };
                 const appendMatches = pageItems => pageItems.filter(matches).forEach(item => {
@@ -304,6 +355,15 @@ import { loadGenres, loadGenrePageContent, openPlayerPage, escapeHtml, ANIME_CAR
                     filterResultsState.hasMore = Object.values(filterResultsState.genreHasMore).some(Boolean);
                 }
                 filterResultsState.exhausted = !filterResultsState.hasMore;
+
+                const FILTER_SORT_FNS = {
+                    rating: (a, b) => (Number(b.score) || 0) - (Number(a.score) || 0),
+                    alpha: (a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'uk'),
+                    episodes: (a, b) => (Number(b.episodes_total || b.episodes_released || b.episodes || 0)) - (Number(a.episodes_total || a.episodes_released || a.episodes || 0)),
+                    year: (a, b) => (Number(b.year) || 0) - (Number(a.year) || 0),
+                    added: (a, b) => (Number(b.updated_at ? new Date(b.updated_at).getTime() : 0)) - (Number(a.updated_at ? new Date(a.updated_at).getTime() : 0))
+                };
+                filterResultsState.items.sort(FILTER_SORT_FNS[filterState.sort] || FILTER_SORT_FNS.rating);
 
                 if (!filterResultsState.items.length) {
                     content.innerHTML = '<div class="loader" style="grid-column:1/-1;">Нічого не знайдено за цими фільтрами</div>';

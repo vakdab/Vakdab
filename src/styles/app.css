@@ -12,6 +12,7 @@
 @import url('./utils/utilities.css');
 @import url('./components/header.css');
 @import url('./components/hero.css');
+@import url('./components/home-quick-filter.css?v=20260902-home-quick-filter-v1');
 @import url('./components/bottom-nav.css');
 @import url('./components/left-menu.css');
 @import url('./components/toast.css');
