@@ -1,9 +1,9 @@
 // Компактне меню категорій під хіро-банером на головній сторінці.
 // Вибираєш жанри/тип/рік/сортування → натискаєш OK → картки з'являються
 // в #animeContainer у тому ж стилі що й головна сторінка.
-import { GENRE_MAP } from '../../config/constants.js?v=20260902-home-quick-filter-v2';
+import { GENRE_MAP } from '../../config/constants.js?v=20260902-genre-rail-v1';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { searchPageState, loadContent, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams } from './homeLegacy.js?v=20260901-home-recs-v8';
+import { searchPageState, loadContent, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams, setHomeRecommendationFilter, loadHomeRecommendations } from './homeLegacy.js?v=20260902-genre-rail-v1';
 
 const YEAR_OPTIONS = [
     { key: '', label: 'Будь-який' },
@@ -42,12 +42,97 @@ const YEAR_RANGES = {
 
 let quickFilterState = { genres: new Set(), type: '', year: '', sort: 'rating', open: false };
 
+// ── Жанрове меню (horizontal rail, як на jut.su) ──────────────────────
+let activeGenreRail = null; // slug активного жанру або null = "Усі"
+
 function genreEntries() {
     return Object.entries(GENRE_MAP).map(([name, slug]) => ({ name, slug }));
 }
 
+function buildGenreRailHtml() {
+    const genres = genreEntries();
+    const allActive = activeGenreRail === null;
+    return `
+      <div class="genre-rail" id="genreRail">
+        <button class="genre-rail__pill${allActive ? ' active' : ''}" data-genre-rail="" type="button">
+          <span class="genre-rail__icon"><i class="fas fa-fire"></i></span>
+          <span>Усі</span>
+        </button>
+        ${genres.map(g => `
+        <button class="genre-rail__pill${activeGenreRail === g.slug ? ' active' : ''}" data-genre-rail="${g.slug}" type="button">
+          <span>${g.name}</span>
+        </button>`).join('')}
+      </div>
+    `;
+}
+
+function applyGenreRailFilter(slug) {
+    activeGenreRail = slug || null;
+
+    if (!slug) {
+        // "Усі" — показуємо рекомендації без фільтру
+        setHomeRecommendationFilter(null);
+        setQuickFilterParams(null);
+        setCurrentTab('main');
+        setCurrentPage(1);
+        setCurrentSearchQuery('');
+        setCurrentCategory('');
+        document.getElementById('genreSectionsContainer').style.display = 'none';
+        const recs = document.getElementById('homeRecommendationsContainer');
+        if (recs) {
+            recs.style.display = 'block';
+            import('./homeLegacy.js?v=20260902-genre-rail-v1').then(m => m.loadHomeRecommendations({ reload: true }));
+        }
+        document.getElementById('animeContainer').style.display = 'none';
+    } else {
+        // Жанр — фільтруємо рекомендації
+        const params = { genres: [slug], sort: 'rating' };
+        setHomeRecommendationFilter(params);
+        setQuickFilterParams(null);
+        setCurrentTab('main');
+        setCurrentPage(1);
+        setCurrentSearchQuery('');
+        setCurrentCategory('');
+        document.getElementById('genreSectionsContainer').style.display = 'none';
+        const recs = document.getElementById('homeRecommendationsContainer');
+        if (recs) {
+            recs.style.display = 'block';
+            import('./homeLegacy.js?v=20260902-genre-rail-v1').then(m => m.loadHomeRecommendations({ reload: true }));
+        }
+        document.getElementById('animeContainer').style.display = 'none';
+    }
+
+    // Оновлюємо UI жанрового меню
+    renderGenreRail();
+}
+
+function wireGenreRailEvents() {
+    document.querySelectorAll('[data-genre-rail]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const slug = btn.dataset.genreRail;
+            applyGenreRailFilter(slug);
+            // Прокручуємо до рекомендацій
+            const recs = document.getElementById('homeRecommendationsContainer');
+            if (recs) recs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+}
+
+function renderGenreRail() {
+    const host = document.getElementById('genreRailHost');
+    if (!host) return;
+    host.innerHTML = buildGenreRailHtml();
+    wireGenreRailEvents();
+}
+
+// ── Кінець жанрового меню ─────────────────────────────────────────────
+
 function buildHomeQuickFilterHtml() {
     return `
+      <div class="genre-rail-host" id="genreRailHost">
+        ${buildGenreRailHtml()}
+      </div>
+
       <button class="hqf-headline" id="hqfHeadlineBtn" type="button">
         <span>Дивитись найкраще аніме</span>
         <i class="fas fa-arrow-right"></i>
@@ -123,6 +208,9 @@ function applyQuickFilter() {
         [params.yearMin, params.yearMax] = YEAR_RANGES[quickFilterState.year];
     }
 
+    // Скидаємо жанрове меню
+    activeGenreRail = null;
+
     // Скидаємо всі інші джерела контенту, ставимо наш фільтр
     setCurrentTab('main');
     setCurrentPage(1);
@@ -145,7 +233,9 @@ function applyQuickFilter() {
 function showRecommendations() {
     // Скинути фільтри і показати топ за рейтингом (рекомендації)
     quickFilterState = { genres: new Set(), type: '', year: '', sort: 'rating', open: false };
+    activeGenreRail = null;
     setQuickFilterParams(null);
+    setHomeRecommendationFilter(null);
     setCurrentTab('main');
     setCurrentPage(1);
     setCurrentSearchQuery('');
@@ -155,7 +245,7 @@ function showRecommendations() {
     if (recs) {
         recs.style.display = 'block';
         if (!recs.hasChildNodes() || recs.querySelector('.loader')) {
-            import('./homeLegacy.js?v=20260901-home-recs-v8').then(m => m.loadHomeRecommendations());
+            import('./homeLegacy.js?v=20260902-genre-rail-v1').then(m => m.loadHomeRecommendations());
         }
     }
     document.getElementById('animeContainer').style.display = 'none';
@@ -197,7 +287,9 @@ function wireHomeQuickFilterEvents(container) {
 
     document.getElementById('hqfClearBtn')?.addEventListener('click', () => {
         quickFilterState = { genres: new Set(), type: '', year: '', sort: 'rating', open: true };
+        activeGenreRail = null;
         setQuickFilterParams(null);
+        setHomeRecommendationFilter(null);
         setCurrentTab('main');
         setCurrentPage(1);
         setCurrentSearchQuery('');
@@ -207,7 +299,7 @@ function wireHomeQuickFilterEvents(container) {
         if (recs) {
             recs.style.display = 'block';
             if (!recs.hasChildNodes() || recs.querySelector('.loader')) {
-                import('./homeLegacy.js?v=20260901-home-recs-v8').then(m => m.loadHomeRecommendations());
+                import('./homeLegacy.js?v=20260902-genre-rail-v1').then(m => m.loadHomeRecommendations());
             }
         }
         document.getElementById('animeContainer').style.display = 'none';
