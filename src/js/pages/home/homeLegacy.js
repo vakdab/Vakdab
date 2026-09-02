@@ -47,16 +47,22 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         export let currentTab = 'main',
             currentPage = 1,
             currentSearchQuery = '',
-            currentCategory = '';
+            currentCategory = '',
+            quickFilterParams = null;
 
         export const setCurrentTab = value => { currentTab = value; };
         export const setCurrentPage = value => { currentPage = value; };
         export const setCurrentSearchQuery = value => { currentSearchQuery = value; };
         export const setCurrentCategory = value => { currentCategory = value; };
+        export const setQuickFilterParams = value => { quickFilterParams = value; };
 
         export async function fetchContent() {
             if (currentTab === 'top100') { return await fetchHikkaTop100(); }
             if (currentSearchQuery) { return await searchHikka(currentSearchQuery, currentPage); }
+            if (quickFilterParams) {
+                const { fetchHikkaQuickFilter } = await import('../../services/catalog/catalog.js?v=20260902-home-quick-filter-v1');
+                return await fetchHikkaQuickFilter(currentPage, quickFilterParams);
+            }
             if (currentCategory) { return await fetchHikkaByCategory(currentCategory, currentPage); }
             return await fetchHikkaMain(currentPage);
         }

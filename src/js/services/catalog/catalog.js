@@ -134,6 +134,24 @@ import {
         }
         export async function fetchHikkaByGenre(genreSlug, page) { return fetchHikkaByCategory(genreSlug, page); }
 
+        export async function fetchHikkaQuickFilter(page, opts = {}) {
+            const body = { only_translated: true };
+            if (opts.genres && opts.genres.length) body.genres = opts.genres;
+            if (opts.status === 'ongoing') body.status = 'ongoing';
+            if (opts.yearMin && opts.yearMax) {
+                body.year = `${opts.yearMin}-${opts.yearMax}`;
+            }
+            const sortMap = {
+                rating: ['score:desc', 'scored_by:desc'],
+                alpha: ['title:asc'],
+                episodes: ['episodes:desc'],
+                year: ['year:desc'],
+                added: ['id:desc']
+            };
+            body.sort = sortMap[opts.sort] || sortMap.rating;
+            return hikkaCatalog('anime', page, body);
+        }
+
         // Hikka є єдиним джерелом каталогу та інформації. Mikai використовується
         // як proxy-джерело озвучок, сезонів і ASHDI no-ad embed-посилань.
         export async function fetchAnimeLite(animeUrl) {
