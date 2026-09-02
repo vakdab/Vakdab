@@ -139,3 +139,4 @@ img,video,iframe{max-width:100%}
 
 /* The home catalog is continuation-free for anime, manga and novels. */
 .home-catalog-more { display: none !important; }
+@import url('./layout-polish.css?v=20260902-layout-polish-v1');

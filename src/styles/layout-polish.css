@@ -1,0 +1,17 @@
+/* Global mobile layout cleanup: the fixed bottom navigation is the only
+   persistent footer affordance. */
+footer {
+    display: none !important;
+}
+
+@media (max-width: 899px) {
+    .app-container {
+        padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important;
+    }
+}
+
+@media (min-width: 900px) {
+    .app-container {
+        padding-bottom: 2rem !important;
+    }
+}
