@@ -50,6 +50,16 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             currentCategory = '',
             quickFilterParams = null;
 
+        // Infinite scroll for the actually visible legacy animeContainer.
+        const HOME_FEED_MAX_ITEMS = 960;
+        let homeFeedItems = [];
+        let homeFeedPage = 1;
+        let homeFeedHasMore = true;
+        let homeFeedLoading = false;
+        let homeFeedRequestId = 0;
+        let homeFeedObserver = null;
+        let homeFeedRetryAt = 0;
+
         export const setCurrentTab = value => { currentTab = value; };
         export const setCurrentPage = value => { currentPage = value; };
         export const setCurrentSearchQuery = value => { currentSearchQuery = value; };
@@ -112,6 +122,16 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             document.getElementById('searchPageContainer').style.display = 'none';
             document.getElementById('settingsPageContainer').classList.remove('active');
             document.getElementById('settingsPageContainer').style.display = 'none';
+            if (currentTab === 'main' && !currentSearchQuery && !currentCategory && !quickFilterParams) {
+                homeFeedItems = [];
+                homeFeedPage = 1;
+                homeFeedHasMore = true;
+                homeFeedRetryAt = 0;
+                ++homeFeedRequestId;
+                homeFeedObserver?.disconnect();
+                homeFeedObserver = null;
+                document.getElementById('homeAnimeFeedSentinel')?.remove();
+            }
             showSkeleton();
             try {
                 const list = await fetchContent();
@@ -286,6 +306,79 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             container.querySelectorAll('.anime-card, .wide-card').forEach(card => observer.observe(card));
         }
 
+        function animeFeedCardHtml(a, idx) {
+            const poster = escapeHtml(a.images?.jpg?.large_image_url || '');
+            const title = escapeHtml(a.title || 'Без назви');
+            const type = escapeHtml(a.typeLabel || animeTypeLabel(a.type));
+            return `<div class="anime-card" data-url="${escapeHtml(a.url || '')}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${(idx || 0) * 0.03}s">
+              <div class="anime-poster"><img src="${poster}" alt="${title}" loading="lazy" decoding="async" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.onerror=null;this.src='${ANIME_CARD_PLACEHOLDER}'"><span class="anime-card-type" data-role="type">${type}</span></div>
+              <div class="anime-title-under">${title}</div>
+            </div>`;
+        }
+
+        function bindAnimeFeedCards(root) {
+            root?.querySelectorAll('.anime-card:not([data-feed-bound])').forEach(card => {
+                card.dataset.feedBound = '1';
+                card.addEventListener('click', () => openPlayerPage(card.dataset.url));
+                card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPlayerPage(card.dataset.url); } });
+            });
+        }
+
+        function ensureAnimeFeedObserver() {
+            const container = document.getElementById('animeContainer');
+            if (!container || currentTab !== 'main' || currentSearchQuery || currentCategory || quickFilterParams) return;
+            let sentinel = document.getElementById('homeAnimeFeedSentinel');
+            if (!sentinel) {
+                sentinel = document.createElement('div');
+                sentinel.id = 'homeAnimeFeedSentinel';
+                sentinel.className = 'home-anime-feed-sentinel';
+                sentinel.innerHTML = '<span class="home-anime-feed-loader" hidden><i class="fas fa-spinner fa-pulse"></i> Завантажуємо ще...</span>';
+                container.after(sentinel);
+            }
+            sentinel.hidden = !homeFeedHasMore || homeFeedItems.length >= HOME_FEED_MAX_ITEMS;
+            if (homeFeedObserver) homeFeedObserver.disconnect();
+            if (sentinel.hidden || typeof IntersectionObserver === 'undefined') return;
+            homeFeedObserver = new IntersectionObserver(entries => {
+                if (entries.some(entry => entry.isIntersecting)) void loadMoreHomeAnime();
+            }, { rootMargin: '900px 0px', threshold: 0 });
+            homeFeedObserver.observe(sentinel);
+        }
+
+        async function loadMoreHomeAnime() {
+            if (homeFeedLoading || !homeFeedHasMore || Date.now() < homeFeedRetryAt || homeFeedItems.length >= HOME_FEED_MAX_ITEMS) return;
+            if (Router.currentRoute !== 'main' || currentTab !== 'main' || currentSearchQuery || currentCategory || quickFilterParams) return;
+            const requestId = homeFeedRequestId;
+            const container = document.getElementById('animeContainer');
+            const sentinel = document.getElementById('homeAnimeFeedSentinel');
+            const loader = sentinel?.querySelector('.home-anime-feed-loader');
+            homeFeedLoading = true;
+            if (loader) loader.hidden = false;
+            try {
+                const nextPage = homeFeedPage + 1;
+                const nextItems = await withHomeCatalogTimeout(fetchHikkaMain(nextPage), HOME_CATALOG_ANIME_TIMEOUT_MS);
+                if (requestId !== homeFeedRequestId || Router.currentRoute !== 'main') return;
+                const existing = new Set(homeFeedItems.map(item => item.url));
+                const additions = nextItems.filter(item => item?.url && !existing.has(item.url));
+                if (!additions.length) homeFeedHasMore = false;
+                homeFeedItems.push(...additions);
+                homeFeedPage = nextPage;
+                homeFeedHasMore = homeFeedHasMore && nextItems.hasNextPage !== false && nextItems.length > 0;
+                registerAnimeCardData(additions);
+                if (container && additions.length) {
+                    container.insertAdjacentHTML('beforeend', additions.map((item, index) => animeFeedCardHtml(item, homeFeedItems.length - additions.length + index)).join(''));
+                    bindAnimeFeedCards(container);
+                    observeAnimeCardsForTmdb(container);
+                }
+            } catch (error) {
+                homeFeedRetryAt = Date.now() + 5000;
+                console.warn('Homepage infinite scroll failed:', error);
+            } finally {
+                homeFeedLoading = false;
+                if (loader) loader.hidden = true;
+                ensureAnimeFeedObserver();
+            }
+        }
+
         export function renderCards(list) {
             const container = document.getElementById('animeContainer');
             if (!container) return;
@@ -310,23 +403,16 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             container.classList.add('anime-grid');
             container.style.display = 'grid';
             registerAnimeCardData(list);
-            container.innerHTML = list.map((a, idx) => {
-                const poster = a.images?.jpg?.large_image_url || '';
-                const title = a.title || 'Без назви';
-                return `
-            <div class="anime-card" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
-              <div class="anime-poster">
-                <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.src='${ANIME_CARD_PLACEHOLDER}'">
-                <span class="anime-card-type" data-role="type">${escapeHtml(a.typeLabel || animeTypeLabel(a.type))}</span>
-              </div>
-              <div class="anime-title-under">${title}</div>
-            </div>`;
-            }).join('');
-            container.querySelectorAll('.anime-card').forEach(card => {
-                card.addEventListener('click', () => openPlayerPage(card.dataset.url));
-                card.addEventListener('keydown', e => { if (e.key === 'Enter') openPlayerPage(card.dataset.url); });
-            });
+            container.innerHTML = list.map(animeFeedCardHtml).join('');
+            bindAnimeFeedCards(container);
             renderPagination();
+            if (currentTab === 'main' && !currentSearchQuery && !currentCategory && !quickFilterParams) {
+                homeFeedItems = [...list];
+                homeFeedPage = currentPage;
+                homeFeedHasMore = list.hasNextPage !== false && list.length > 0;
+                document.getElementById('paginationRow')?.replaceChildren();
+                ensureAnimeFeedObserver();
+            }
             observeAnimeCardsForTmdb(container);
         }
 

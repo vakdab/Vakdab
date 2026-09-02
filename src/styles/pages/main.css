@@ -228,7 +228,13 @@
 }
 .genre-carousel::-webkit-scrollbar { display: none; }
 
-.genre-carousel .anime-card {
+.genre-carousel /* Legacy homepage feed: keep long lists cheap to layout and paint. */
+.home-anime-feed-sentinel { display:flex; justify-content:center; min-height:52px; padding:14px 0; color:var(--text-muted, inherit); }
+.home-anime-feed-sentinel[hidden] { display:none; }
+.home-anime-feed-loader[hidden] { display:none; }
+#animeContainer .anime-card { content-visibility:auto; contain-intrinsic-size:auto 320px; }
+
+.anime-card {
     flex-basis: clamp(118px, 28vw, 160px);
     min-height: 0;
     border-radius: 14px;
