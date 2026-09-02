@@ -169,6 +169,7 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                 }
                 const catalog = document.getElementById('genreSectionsContainer');
                 if (catalog) catalog.style.display = 'none';
+                // Круглі картки аніме залишаються на головній під hero.
                 const homeRecommendations = document.getElementById('homeRecommendationsContainer');
                 if (homeRecommendations) {
                     homeRecommendations.style.display = 'block';

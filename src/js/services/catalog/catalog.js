@@ -138,19 +138,29 @@ import {
             const body = { only_translated: true };
             if (opts.genres && opts.genres.length) body.genres = opts.genres;
             if (opts.type) body.media_type = [opts.type];
-            if (opts.status === 'ongoing') body.status = 'ongoing';
+            if (opts.status === 'ongoing') body.status = ['ongoing'];
             if (opts.yearMin && opts.yearMax) {
-                body.year = `${opts.yearMin}-${opts.yearMax}`;
+                body.years = [Number(opts.yearMin), Number(opts.yearMax)];
             }
-            const sortMap = {
+            // Only these sort fields are supported by the Hikka API.
+            // For alphabetical / episode-count sorting (not supported server-side),
+            // we fetch by score and re-sort the page client-side.
+            const apiSortMap = {
                 rating: ['score:desc', 'scored_by:desc'],
-                alpha: ['title:asc'],
-                episodes: ['episodes:desc'],
-                year: ['year:desc'],
-                added: ['id:desc']
+                year: ['start_date:desc'],
+                added: ['created:desc'],
+                alpha: ['score:desc', 'scored_by:desc'],
+                episodes: ['score:desc', 'scored_by:desc']
             };
-            body.sort = sortMap[opts.sort] || sortMap.rating;
-            return hikkaCatalog('anime', page, body);
+            body.sort = apiSortMap[opts.sort] || apiSortMap.rating;
+            const items = await hikkaCatalog('anime', page, body);
+            // Client-side re-sort for options the API can't sort by.
+            if (opts.sort === 'alpha') {
+                items.sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'uk'));
+            } else if (opts.sort === 'episodes') {
+                items.sort((a, b) => Number(b.episodes_total || b.episodes_released || 0) - Number(a.episodes_total || a.episodes_released || 0));
+            }
+            return items;
         }
 
         // Hikka є єдиним джерелом каталогу та інформації. Mikai використовується

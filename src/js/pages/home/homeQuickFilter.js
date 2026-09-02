@@ -1,9 +1,9 @@
 // Компактне меню категорій під хіро-банером на головній сторінці.
-// Вибираєш жанри/рік/сортування → натискаєш OK → фільтр перерисовує
+// Вибираєш жанри/тип/рік/сортування → натискаєш OK → фільтр перерисовує
 // основний блок круглих карток на головній сторінці.
-import { GENRE_MAP } from '../../config/constants.js?v=20260902-home-quick-filter-v1';
-import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { searchPageState, loadHomeRecommendations, setHomeRecommendationFilter, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams } from './homeLegacy.js?v=20260901-home-recs-v8';
+import { GENRE_MAP } from '../../config/constants.js?v=20260902-home-quick-filter-v2';
+import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v4';
+import { searchPageState, loadHomeRecommendations, setHomeRecommendationFilter, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams } from './homeLegacy.js?v=20260903-home-filter-v1';
 
 const YEAR_OPTIONS = [
     { key: '', label: 'Будь-який' },
@@ -15,6 +15,15 @@ const YEAR_OPTIONS = [
     { key: '2008-2014', label: '2008-2014' },
     { key: '2000-2007', label: '2000-2007' },
     { key: 'before2000', label: 'до 2000' }
+];
+
+const TYPE_OPTIONS = [
+    { key: '', label: 'Будь-який' },
+    { key: 'tv', label: 'Серіал' },
+    { key: 'movie', label: 'Фільм' },
+    { key: 'ova', label: 'OVA' },
+    { key: 'ona', label: 'ONA' },
+    { key: 'special', label: 'Спешл' }
 ];
 
 const SORT_OPTIONS = [
@@ -31,7 +40,7 @@ const YEAR_RANGES = {
     before2000: [1970, 1999]
 };
 
-let quickFilterState = { genres: new Set(), year: '', sort: 'rating', open: false };
+let quickFilterState = { genres: new Set(), type: '', year: '', sort: 'rating', open: false };
 
 function genreEntries() {
     return Object.entries(GENRE_MAP).map(([name, slug]) => ({ name, slug }));
@@ -39,20 +48,9 @@ function genreEntries() {
 
 function buildHomeQuickFilterHtml() {
     return `
-      <button class="hqf-headline" id="hqfHeadlineBtn" type="button">
-        <span>Дивитись найкраще аніме</span>
-        <i class="fas fa-arrow-right"></i>
+      <button class="hqf-categories-toggle${quickFilterState.open ? ' open' : ''}" id="hqfCategoriesToggle" type="button" aria-expanded="${quickFilterState.open ? 'true' : 'false'}">
+        <i class="fas fa-sliders"></i> <span>Обрати категорії</span> <i class="fas fa-chevron-down hqf-chevron"></i>
       </button>
-
-      <div class="hqf-controls">
-        <button class="hqf-categories-toggle${quickFilterState.open ? ' open' : ''}" id="hqfCategoriesToggle" type="button" aria-expanded="${quickFilterState.open ? 'true' : 'false'}">
-          <i class="fas fa-sliders"></i> Обрати категорії <i class="fas fa-chevron-down hqf-chevron"></i>
-        </button>
-        <div class="hqf-search-box">
-          <i class="fas fa-magnifying-glass"></i>
-          <input type="text" id="hqfSearchInput" placeholder="Пошук..." autocomplete="off">
-        </div>
-      </div>
 
       <div class="hqf-panel${quickFilterState.open ? ' open' : ''}" id="hqfPanel">
         <div class="hqf-panel-inner">
@@ -68,7 +66,16 @@ function buildHomeQuickFilterHtml() {
             </div>
           </div>
           <div class="hqf-col">
-            <div class="hqf-col-title">Рік виходу</div>
+            <div class="hqf-col-title">Тип</div>
+            <div class="hqf-option-list">
+              ${TYPE_OPTIONS.map(o => `
+                <label class="hqf-option">
+                  <input type="radio" name="hqfType" data-type="${o.key}" ${quickFilterState.type === o.key ? 'checked' : ''}>
+                  <span class="hqf-option-bullet hqf-option-bullet--radio"></span>
+                  <span>${o.label}</span>
+                </label>`).join('')}
+            </div>
+            <div class="hqf-col-title hqf-col-title--spaced">Рік виходу</div>
             <div class="hqf-option-list">
               ${YEAR_OPTIONS.map(o => `
                 <label class="hqf-option">
@@ -99,6 +106,7 @@ function buildHomeQuickFilterHtml() {
 function applyQuickFilter() {
     const params = { sort: quickFilterState.sort };
     if (quickFilterState.genres.size) params.genres = [...quickFilterState.genres];
+    if (quickFilterState.type) params.type = quickFilterState.type;
     if (quickFilterState.year === 'ongoing') params.status = 'ongoing';
     else if (YEAR_RANGES[quickFilterState.year]) {
         [params.yearMin, params.yearMax] = YEAR_RANGES[quickFilterState.year];
@@ -118,9 +126,28 @@ function applyQuickFilter() {
     if (recommendations) recommendations.style.display = 'block';
 
     loadHomeRecommendations({ reload: true });
-
-    // Прокручуємо до того самого блоку з круглими картками.
     recommendations?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showRecommendations() {
+        // Скинути фільтри і показати топ за рейтингом у круглому блоці.
+        quickFilterState = { genres: new Set(), type: '', year: '', sort: 'rating', open: false };
+        setQuickFilterParams(null);
+        setHomeRecommendationFilter(null);
+    setCurrentTab('main');
+    setCurrentPage(1);
+    setCurrentSearchQuery('');
+    setCurrentCategory('');
+    document.getElementById('genreSectionsContainer').style.display = 'none';
+    const recs = document.getElementById('homeRecommendationsContainer');
+    if (recs) {
+        recs.style.display = 'block';
+        if (!recs.hasChildNodes() || recs.querySelector('.loader')) {
+            loadHomeRecommendations({ reload: true });
+        }
+    }
+    document.getElementById('animeContainer').style.display = 'none';
+    renderHomeQuickFilterBar();
 }
 
 function wireHomeQuickFilterEvents(container) {
@@ -134,20 +161,7 @@ function wireHomeQuickFilterEvents(container) {
     });
 
     document.getElementById('hqfHeadlineBtn')?.addEventListener('click', () => {
-        // Скинути фільтри і показати топ за рейтингом
-        quickFilterState = { genres: new Set(), year: '', sort: 'rating', open: false };
-        setQuickFilterParams({ sort: 'rating' });
-        setCurrentTab('main');
-        setCurrentPage(1);
-        setCurrentSearchQuery('');
-        setCurrentCategory('');
-        document.getElementById('genreSectionsContainer').style.display = 'none';
-        document.getElementById('animeContainer').style.display = 'none';
-        setHomeRecommendationFilter(null);
-        const recommendations = document.getElementById('homeRecommendationsContainer');
-        if (recommendations) recommendations.style.display = 'block';
-        loadHomeRecommendations({ reload: true });
-        renderHomeQuickFilterBar();
+        showRecommendations();
     });
 
     container.querySelectorAll('[data-genre]').forEach(cb => {
@@ -155,6 +169,10 @@ function wireHomeQuickFilterEvents(container) {
             if (cb.checked) quickFilterState.genres.add(cb.dataset.genre);
             else quickFilterState.genres.delete(cb.dataset.genre);
         });
+    });
+
+    container.querySelectorAll('[data-type]').forEach(radio => {
+        radio.addEventListener('change', () => { if (radio.checked) quickFilterState.type = radio.dataset.type; });
     });
 
     container.querySelectorAll('[data-year]').forEach(radio => {
@@ -166,8 +184,7 @@ function wireHomeQuickFilterEvents(container) {
     });
 
     document.getElementById('hqfClearBtn')?.addEventListener('click', () => {
-        quickFilterState = { genres: new Set(), year: '', sort: 'rating', open: true };
-        // Повертаємо початкові рекомендації в тому самому блоці круглих карток.
+        quickFilterState = { genres: new Set(), type: '', year: '', sort: 'rating', open: true };
         setQuickFilterParams(null);
         setHomeRecommendationFilter(null);
         setCurrentTab('main');
@@ -176,9 +193,11 @@ function wireHomeQuickFilterEvents(container) {
         setCurrentCategory('');
         document.getElementById('genreSectionsContainer').style.display = 'none';
         document.getElementById('animeContainer').style.display = 'none';
-        const recommendations = document.getElementById('homeRecommendationsContainer');
-        if (recommendations) recommendations.style.display = 'block';
-        loadHomeRecommendations({ reload: true });
+        const recs = document.getElementById('homeRecommendationsContainer');
+        if (recs) {
+            recs.style.display = 'block';
+            loadHomeRecommendations({ reload: true });
+        }
         renderHomeQuickFilterBar();
     });
 
