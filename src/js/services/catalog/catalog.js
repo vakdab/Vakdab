@@ -137,6 +137,7 @@ import {
         export async function fetchHikkaQuickFilter(page, opts = {}) {
             const body = { only_translated: true };
             if (opts.genres && opts.genres.length) body.genres = opts.genres;
+            if (opts.type) body.media_type = [opts.type];
             if (opts.status === 'ongoing') body.status = 'ongoing';
             if (opts.yearMin && opts.yearMax) {
                 body.year = `${opts.yearMin}-${opts.yearMax}`;
