@@ -1604,8 +1604,6 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-re
                 closeMenuPopover();
                 if (action === 'settings') {
                     Router.goTo('settings');
-                } else if (action === 'filters') {
-                    Router.goTo('filter');
                 } else if (action === 'stickers') {
                     Router.goTo('stickers');
                 } else if (action === 'schedule') {
