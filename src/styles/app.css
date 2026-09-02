@@ -17,7 +17,7 @@
 @import url('./components/left-menu.css');
 @import url('./components/toast.css');
 @import url('./components/back-to-top.css');
-@import url('./components/anime-card.css?v=20260901-popular-card-restyle-v2');
+@import url('./components/anime-card.css?v=20260902-genre-rail-v1');
 @import url('./components/genre-section.css');
 @import url('./components/pagination.css');
 @import url('./components/loader.css');
@@ -36,7 +36,7 @@
 @import url('./community/chat.css?v=20260824-settings-redesign-v1');
 @import url('./community/group.css');
 @import url('./community/modern.css?v=20260824-settings-redesign-v1');
-@import url('./pages/main.css?v=20260901-popular-card-restyle-v8');
+@import url('./pages/main.css?v=20260902-genre-rail-v1');
 @import url('./player/player-polish.css?v=20260824-settings-redesign-v1');
 @import url('./player/video-overlay.css?v=20260824-settings-redesign-v1');
 @import url('./pages/design-polish.css?v=20260824-settings-redesign-v1');
