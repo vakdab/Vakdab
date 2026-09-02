@@ -60,7 +60,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (currentTab === 'top100') { return await fetchHikkaTop100(); }
             if (currentSearchQuery) { return await searchHikka(currentSearchQuery, currentPage); }
             if (quickFilterParams) {
-                const { fetchHikkaQuickFilter } = await import('../../services/catalog/catalog.js?v=20260902-home-quick-filter-v1');
+                const { fetchHikkaQuickFilter } = await import('../../services/catalog/catalog.js?v=20260902-home-quick-filter-v2');
                 return await fetchHikkaQuickFilter(currentPage, quickFilterParams);
             }
             if (currentCategory) { return await fetchHikkaByCategory(currentCategory, currentPage); }
