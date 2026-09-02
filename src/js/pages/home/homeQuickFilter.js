@@ -81,7 +81,7 @@ function applyGenreRailFilter(slug) {
         const recs = document.getElementById('homeRecommendationsContainer');
         if (recs) {
             recs.style.display = 'block';
-            import('./homeLegacy.js?v=20260902-genre-rail-v1').then(m => m.loadHomeRecommendations({ reload: true }));
+            loadHomeRecommendations({ reload: true });
         }
         document.getElementById('animeContainer').style.display = 'none';
     } else {
@@ -97,7 +97,7 @@ function applyGenreRailFilter(slug) {
         const recs = document.getElementById('homeRecommendationsContainer');
         if (recs) {
             recs.style.display = 'block';
-            import('./homeLegacy.js?v=20260902-genre-rail-v1').then(m => m.loadHomeRecommendations({ reload: true }));
+            loadHomeRecommendations({ reload: true });
         }
         document.getElementById('animeContainer').style.display = 'none';
     }
@@ -245,7 +245,7 @@ function showRecommendations() {
     if (recs) {
         recs.style.display = 'block';
         if (!recs.hasChildNodes() || recs.querySelector('.loader')) {
-            import('./homeLegacy.js?v=20260902-genre-rail-v1').then(m => m.loadHomeRecommendations());
+            loadHomeRecommendations();
         }
     }
     document.getElementById('animeContainer').style.display = 'none';
@@ -299,7 +299,7 @@ function wireHomeQuickFilterEvents(container) {
         if (recs) {
             recs.style.display = 'block';
             if (!recs.hasChildNodes() || recs.querySelector('.loader')) {
-                import('./homeLegacy.js?v=20260902-genre-rail-v1').then(m => m.loadHomeRecommendations());
+                loadHomeRecommendations();
             }
         }
         document.getElementById('animeContainer').style.display = 'none';
