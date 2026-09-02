@@ -3,7 +3,7 @@ import { loadFeature } from '../feature-loader.js?v=20260824-settings-redesign-v
 import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
     initRatingPage, loadAndDisplayGenreSections, loadHomeRecommendations, loadMangaReader,
-    openPlayerPage, renderAuthPage, renderFilterPage, renderGenrePage,
+    openPlayerPage, renderAuthPage, renderGenrePage,
     renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
 } from '../../legacy/app-legacy.js?v=20260901-home-recs-v3';
@@ -154,8 +154,6 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                             showToast('Аніме не знайдено');
                         }, 0);
                     }
-                } else if (route === 'filter') {
-                    this.showFilter();
                 } else {
                     window.location.hash = 'main';
                 }
@@ -316,13 +314,6 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                     console.error('[VakDab] novel feature failed to load:', error);
                     container.innerHTML = '<div class="loader">Не вдалося завантажити модуль ранобе. Спробуйте ще раз.</div>';
                 });
-            },
-
-            showFilter() {
-                const container = document.getElementById('genrePageContainer');
-                container.style.display = 'block';
-                container.classList.add('active');
-                renderFilterPage();
             },
 
             showSearch() {

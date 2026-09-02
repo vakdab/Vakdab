@@ -25,7 +25,6 @@ import { Router } from '../core/compat/router.js?v=20260901-home-recs-v3';
 import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260824-settings-redesign-v1';
 import { initBottomNav } from '../components/navigation/bottomNav.js';
 import { renderSchedulePage } from '../pages/schedule/schedule.js';
-import { renderFilterPage, applyFilters } from '../pages/catalog/filterPage.js';
 import { buildHeroBanner } from '../components/home/heroBanner.js';
 import { renderHomeQuickFilterBar } from '../pages/home/homeQuickFilter.js?v=20260902-home-quick-filter-v1';
 import { renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage } from '../pages/profile/profileLegacy.js?v=20260824-settings-redesign-v1';
@@ -46,7 +45,6 @@ import {
 } from '../services/catalog/catalog.js?v=20260829-catalog-28-v2';
 
 export { Auth, Router, Storage, renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage, renderSettingsPage };
-export { renderFilterPage, applyFilters };
 export { buildHeroBanner };
 export { calcTotalXP, getLevel, DailyStats, ACHIEVEMENTS, getUserRankInfo, initRatingPage, loadRatingPage, loadRatingList };
 export {

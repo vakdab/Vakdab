@@ -1,9 +1,12 @@
 // Компактне меню категорій під хіро-банером на головній сторінці.
 // Один рядок: "Обрати категорії" + пошук. Розкривна панель: жанри (чекбокси),
-// рік виходу і сортування (радіо), кнопка "OK" застосовує все на сторінці фільтра.
+// рік виходу і сортування (радіо), кнопка "OK" одразу показує картки під меню
+// (без переходу на окрему сторінку фільтра — вона видалена, все відбувається тут).
 import { GENRE_MAP } from '../../config/constants.js?v=20260902-home-quick-filter-v1';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
 import { searchPageState } from './homeLegacy.js?v=20260901-home-recs-v8';
+import { fetchHikkaByGenre, fetchHikkaMain } from '../../services/catalog/catalog.js?v=20260902-home-quick-filter-v1';
+import { openPlayerPage } from '../player/animePlayerPage.js?v=20260901-startup-fix-2';
 
 const YEAR_OPTIONS = [
     { key: 'ongoing', label: 'Онгоінг' },
@@ -24,7 +27,22 @@ const SORT_OPTIONS = [
     { key: 'added', label: 'За датою додавання' }
 ];
 
+const YEAR_RANGES = {
+    '2026': [2026, 2026], '2025': [2025, 2025], '2024': [2024, 2024],
+    '2015-2023': [2015, 2023], '2008-2014': [2008, 2014], '2000-2007': [2000, 2007],
+    before2000: [1970, 1999]
+};
+
+const SORT_FNS = {
+    rating: (a, b) => (Number(b.score) || 0) - (Number(a.score) || 0),
+    alpha: (a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'uk'),
+    episodes: (a, b) => (Number(b.episodes_total || b.episodes_released || b.episodes || 0)) - (Number(a.episodes_total || a.episodes_released || a.episodes || 0)),
+    year: (a, b) => (Number(b.year) || 0) - (Number(a.year) || 0),
+    added: (a, b) => (Number(b.updated_at ? new Date(b.updated_at).getTime() : 0)) - (Number(a.updated_at ? new Date(a.updated_at).getTime() : 0))
+};
+
 let quickFilterState = { genres: new Set(), year: '', sort: 'rating', open: false };
+let resultsState = { items: [], page: 0, genrePages: {}, genreHasMore: {}, hasMore: true, loading: false };
 
 function genreEntries() {
     return Object.entries(GENRE_MAP).map(([name, slug]) => ({ name, slug }));
@@ -86,14 +104,104 @@ function buildHomeQuickFilterHtml() {
           <button class="hqf-ok-btn" id="hqfOkBtn" type="button">OK</button>
         </div>
       </div>
+
+      <div class="hqf-results" id="hqfResults" style="display:none;">
+        <div class="hqf-results-meta" id="hqfResultsMeta"></div>
+        <div class="hqf-results-grid" id="hqfResultsGrid"></div>
+        <div class="hqf-results-more" id="hqfResultsMore"></div>
+      </div>
     `;
 }
 
-function applyQuickFilter() {
-    const params = { sort: quickFilterState.sort };
-    if (quickFilterState.genres.size) params.genres = [...quickFilterState.genres].join(',');
-    if (quickFilterState.year) params.year = quickFilterState.year;
-    Router.goTo('filter', params);
+function cardHtml(a, idx) {
+    const poster = a.images?.jpg?.large_image_url || '';
+    const title = a.title || 'Без назви';
+    return `
+      <div class="anime-card" data-url="${a.url}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${(idx % 24) * 0.03}s">
+        <div class="anime-poster">
+          <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add('img--loaded')">
+        </div>
+        <div class="anime-title-under">${title}</div>
+      </div>
+    `;
+}
+
+function matchesQuickFilter(a) {
+    if (quickFilterState.year === 'ongoing' && a.status !== 'ongoing') return false;
+    const range = YEAR_RANGES[quickFilterState.year];
+    if (range) {
+        const y = Number(a.year) || 0;
+        if (y && (y < range[0] || y > range[1])) return false;
+    }
+    return true;
+}
+
+async function loadQuickFilterResults(reset) {
+    const grid = document.getElementById('hqfResultsGrid');
+    const more = document.getElementById('hqfResultsMore');
+    const meta = document.getElementById('hqfResultsMeta');
+    const resultsBox = document.getElementById('hqfResults');
+    if (!grid || resultsState.loading) return;
+
+    resultsBox.style.display = 'block';
+    if (reset) {
+        resultsState = { items: [], page: 0, genrePages: {}, genreHasMore: {}, hasMore: true, loading: false };
+        grid.innerHTML = '<div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження...</div>';
+        if (more) more.innerHTML = '';
+        if (meta) meta.textContent = '';
+    }
+    resultsState.loading = true;
+
+    try {
+        const seen = new Set(resultsState.items.map(i => i.url));
+        const appendMatches = pageItems => pageItems.filter(matchesQuickFilter).forEach(item => {
+            if (!seen.has(item.url)) { resultsState.items.push(item); seen.add(item.url); }
+        });
+        const hasNext = pageItems => pageItems.hasNextPage !== undefined ? Boolean(pageItems.hasNextPage) : pageItems.length >= 24;
+
+        if (!quickFilterState.genres.size) {
+            const nextPage = resultsState.page + 1;
+            const pageItems = await fetchHikkaMain(nextPage);
+            resultsState.page = nextPage;
+            appendMatches(pageItems);
+            resultsState.hasMore = hasNext(pageItems);
+        } else {
+            for (const slug of quickFilterState.genres) {
+                if (resultsState.genreHasMore[slug] === false) continue;
+                const nextPage = (resultsState.genrePages[slug] || 0) + 1;
+                const pageItems = await fetchHikkaByGenre(slug, nextPage);
+                resultsState.genrePages[slug] = nextPage;
+                resultsState.genreHasMore[slug] = hasNext(pageItems);
+                appendMatches(pageItems);
+            }
+            resultsState.hasMore = Object.values(resultsState.genreHasMore).some(Boolean);
+        }
+
+        resultsState.items.sort(SORT_FNS[quickFilterState.sort] || SORT_FNS.rating);
+
+        if (!resultsState.items.length) {
+            grid.innerHTML = '<div class="loader">Нічого не знайдено за цими критеріями</div>';
+            if (more) more.innerHTML = '';
+            return;
+        }
+
+        if (meta) meta.textContent = `Знайдено: ${resultsState.items.length}`;
+        grid.innerHTML = resultsState.items.map((a, idx) => cardHtml(a, idx)).join('');
+        grid.querySelectorAll('.anime-card').forEach(card => {
+            card.addEventListener('click', () => openPlayerPage(card.dataset.url));
+            card.addEventListener('keydown', e => { if (e.key === 'Enter') openPlayerPage(card.dataset.url); });
+        });
+        if (more) {
+            more.innerHTML = resultsState.hasMore ?
+                '<button class="btn-outline" id="hqfLoadMoreBtn">Показати ще <i class="fas fa-chevron-down"></i></button>' : '';
+            document.getElementById('hqfLoadMoreBtn')?.addEventListener('click', () => loadQuickFilterResults(false));
+        }
+        resultsBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (err) {
+        grid.innerHTML = `<div class="loader"><i class="fas fa-exclamation-triangle"></i> Помилка: ${err.message}</div>`;
+    } finally {
+        resultsState.loading = false;
+    }
 }
 
 function wireHomeQuickFilterEvents(container) {
@@ -107,7 +215,11 @@ function wireHomeQuickFilterEvents(container) {
     });
 
     document.getElementById('hqfHeadlineBtn')?.addEventListener('click', () => {
-        Router.goTo('filter', { sort: 'rating' });
+        quickFilterState.genres.clear();
+        quickFilterState.year = '';
+        quickFilterState.sort = 'rating';
+        renderHomeQuickFilterBar();
+        loadQuickFilterResults(true);
     });
 
     container.querySelectorAll('[data-genre]').forEach(cb => {
@@ -131,7 +243,7 @@ function wireHomeQuickFilterEvents(container) {
     });
 
     document.getElementById('hqfOkBtn')?.addEventListener('click', () => {
-        applyQuickFilter();
+        loadQuickFilterResults(true);
     });
 
     const searchInput = document.getElementById('hqfSearchInput');
