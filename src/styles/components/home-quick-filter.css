@@ -3,22 +3,15 @@
     position: relative;
     z-index: 30;
     display: block;
-    width: 100%;
-    max-width: 1400px;
-    height: 0;
-    margin: 0 auto;
-    padding: 0 1.1rem;
+    width: min(calc(100% - 40px), 860px);
+    height: auto;
+    margin: -1px auto 0;
+    padding: 0;
     pointer-events: none;
 }
 
-.home-quick-filter > * {
-    pointer-events: auto;
-}
-
-.home-quick-filter.is-open {
-    height: auto;
-    padding-bottom: 1rem;
-}
+.home-quick-filter > * { pointer-events: auto; }
+.home-quick-filter.is-open { padding-bottom: 1rem; }
 
 .hqf-headline {
     display: flex;
@@ -46,25 +39,24 @@
 }
 .hqf-categories-toggle {
     position: relative;
-    display: inline-grid;
-    place-items: center;
-    width: 56px;
-    height: 56px;
-    min-height: 56px;
-    margin-top: -28px;
-    margin-left: 0;
-    margin-right: auto;
-    padding: 0;
-    border: 1px solid rgba(255,255,255,.7);
-    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 70px;
+    margin: 0;
+    padding: 0 23px;
+    border: 1px solid var(--text);
+    border-top: 0;
+    border-radius: 0 0 31px 31px;
     background: var(--surface);
     color: var(--text);
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: 700;
     font-family: inherit;
     cursor: pointer;
-    box-shadow: 0 8px 24px rgba(0,0,0,.16);
-    transition: transform .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
+    box-shadow: 0 12px 28px rgba(0,0,0,.08);
+    transition: background .18s ease, color .18s ease, transform .18s ease;
 }
 .hqf-categories-toggle:hover,
 .hqf-categories-toggle:focus-visible {
@@ -74,8 +66,9 @@
     transform: translateY(-1px);
 }
 .hqf-categories-toggle:active { transform: scale(.95); }
-.hqf-categories-toggle .hqf-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.hqf-categories-toggle .hqf-chevron { position: absolute; right: 7px; bottom: 7px; margin: 0; font-size: .58rem; transition: transform .2s ease; }
+.hqf-categories-toggle .hqf-label { display: inline; margin-left: .45rem; }
+.hqf-categories-toggle > i:first-child { font-size: .95rem; }
+.hqf-categories-toggle .hqf-chevron { margin-left: auto; font-size: .9rem; transition: transform .2s ease; }
 .hqf-categories-toggle.open { border-color: var(--accent); color: var(--accent); }
 .hqf-categories-toggle.open .hqf-chevron { transform: rotate(180deg); }
 
