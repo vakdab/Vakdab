@@ -48,8 +48,8 @@ function genreEntries() {
 
 function buildHomeQuickFilterHtml() {
     return `
-      <button class="hqf-categories-toggle${quickFilterState.open ? ' open' : ''}" id="hqfCategoriesToggle" type="button" aria-expanded="${quickFilterState.open ? 'true' : 'false'}">
-        <i class="fas fa-sliders"></i> <span>Обрати категорії</span> <i class="fas fa-chevron-down hqf-chevron"></i>
+      <button class="hqf-categories-toggle${quickFilterState.open ? ' open' : ''}" id="hqfCategoriesToggle" type="button" aria-label="Обрати категорії" aria-expanded="${quickFilterState.open ? 'true' : 'false'}">
+        <i class="fas fa-sliders" aria-hidden="true"></i> <span class="hqf-label">Обрати категорії</span> <i class="fas fa-chevron-down hqf-chevron" aria-hidden="true"></i>
       </button>
 
       <div class="hqf-panel${quickFilterState.open ? ' open' : ''}" id="hqfPanel">
@@ -158,6 +158,7 @@ function wireHomeQuickFilterEvents(container) {
         toggle.classList.toggle('open', quickFilterState.open);
         toggle.setAttribute('aria-expanded', quickFilterState.open ? 'true' : 'false');
         panel?.classList.toggle('open', quickFilterState.open);
+        container.classList.toggle('is-open', quickFilterState.open);
     });
 
     document.getElementById('hqfHeadlineBtn')?.addEventListener('click', () => {
@@ -222,5 +223,6 @@ export function renderHomeQuickFilterBar() {
     const container = document.getElementById('homeQuickFilterBar');
     if (!container) return;
     container.innerHTML = buildHomeQuickFilterHtml();
+    container.classList.toggle('is-open', quickFilterState.open);
     wireHomeQuickFilterEvents(container);
 }

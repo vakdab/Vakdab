@@ -1951,10 +1951,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const cardsHtml = buildPopularVerticalCardsHtml(items);
             return `
                     <div class="genre-section" id="genre-popular">
-                      <div class="genre-title genre-title--row">
-                        <span class="genre-name">${escapeHtml(homeRecommendationTitle())}</span>
-                        <button class="genre-title-link" id="homePopularShowAllBtn" type="button">${homeRecommendationFilterParams ? 'Увесь каталог' : 'Показати всі'}</button>
-                      </div>
                       <div class="popular-list popular-list--home">
                         ${cardsHtml}
                       </div>

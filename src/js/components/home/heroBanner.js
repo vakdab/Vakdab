@@ -192,7 +192,6 @@ import { DailyStats, Router, Storage, openPlayerPage, showToast } from '../../le
                 <div class="hero-slide-bg" id="heroBg_${Date.now()}" style="${bgStyle}"></div>
                 <div class="hero-slide-overlay"></div>
                 <div class="hero-slide-content">
-                    <span class="hero-slide-kicker">Обрано для тебе</span>
                     <div class="hero-slide-title">${escapeHeroText(title)}</div>
                     <div class="hero-slide-tags">
                         ${genres.slice(0, 3).map(g => `<span class="hero-tag genre-tag">${escapeHeroText(g)}</span>`).join('')}
