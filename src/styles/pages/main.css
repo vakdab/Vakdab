@@ -1256,6 +1256,10 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
 .home-recommendations .genre-section {
     margin-bottom: 0;
 }
+.home-recommendation-feed-sentinel { display:flex; justify-content:center; min-height:52px; padding:14px 0; color:var(--text-muted, inherit); }
+.home-recommendation-feed-sentinel[hidden] { display:none; }
+.home-recommendation-feed-loader[hidden] { display:none; }
+
 .home-recommendations-loader,
 .home-recommendations-empty {
     min-height: 8rem;

@@ -2177,6 +2177,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         export let homeRecommendationScrollBound = false;
         export let homeRecommendationRequestId = 0;
         export let homeRecommendationFilterParams = null;
+        let homeRecommendationObserver = null;
 
         export function setHomeRecommendationFilter(params = null) {
             homeRecommendationFilterParams = params
@@ -2199,7 +2200,27 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         export function handleHomeRecommendationScroll() {
             if (!homeRecommendationHasMore || homeRecommendationLoading) return;
             const remaining = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
-            if (remaining < Math.max(700, window.innerHeight * 1.25)) loadMoreHomeRecommendations();
+            if (remaining < Math.max(700, window.innerHeight * 1.25)) void loadMoreHomeRecommendations();
+        }
+
+        function ensureHomeRecommendationObserver() {
+            const container = document.getElementById('homeRecommendationsContainer');
+            if (!container) return;
+            let sentinel = container.querySelector('#homeRecommendationFeedSentinel');
+            if (!sentinel) {
+                sentinel = document.createElement('div');
+                sentinel.id = 'homeRecommendationFeedSentinel';
+                sentinel.className = 'home-recommendation-feed-sentinel';
+                sentinel.innerHTML = '<span class="home-recommendation-feed-loader" hidden><i class="fas fa-spinner fa-pulse"></i> Завантажуємо ще...</span>';
+                container.append(sentinel);
+            }
+            sentinel.hidden = !homeRecommendationHasMore;
+            homeRecommendationObserver?.disconnect();
+            if (sentinel.hidden || typeof IntersectionObserver === 'undefined') return;
+            homeRecommendationObserver = new IntersectionObserver(entries => {
+                if (entries.some(entry => entry.isIntersecting)) void loadMoreHomeRecommendations();
+            }, { rootMargin: '1000px 0px 0px 0px', threshold: 0 });
+            homeRecommendationObserver.observe(sentinel);
         }
 
         export function bindHomeRecommendationCards(cards) {
@@ -2225,10 +2246,11 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 if (!items?.length) throw new Error('Порожній список рекомендацій');
                 homeRecommendationItems = [...items];
                 homeRecommendationPage = 1;
-                homeRecommendationHasMore = items.hasNextPage !== false;
+                homeRecommendationHasMore = items.hasNextPage !== false && items.length > 0;
                 container.innerHTML = buildPopularVerticalSectionHtml(homeRecommendationItems);
                 container.style.display = 'block';
                 bindHomeRecommendationCards([...container.querySelectorAll('.popular-card')]);
+                ensureHomeRecommendationObserver();
                 loadHomeRecommendationDetails(items, 0, requestId);
                 container.querySelector('#homePopularShowAllBtn')?.addEventListener('click', () => { window.location.hash = 'catalog'; });
                 if (!homeRecommendationScrollBound) {
@@ -2252,6 +2274,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const container = document.getElementById('homeRecommendationsContainer');
             if (!container || homeRecommendationLoading || !homeRecommendationHasMore) return;
             homeRecommendationLoading = true;
+            const sentinel = container.querySelector('#homeRecommendationFeedSentinel');
+            const loader = sentinel?.querySelector('.home-recommendation-feed-loader');
+            if (loader) loader.hidden = false;
             try {
                 const nextPage = homeRecommendationPage + 1;
                 const nextItems = homeRecommendationFilterParams
@@ -2272,6 +2297,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 console.warn('[home recommendations more] failed:', error);
             } finally {
                 homeRecommendationLoading = false;
+                if (loader) loader.hidden = true;
+                ensureHomeRecommendationObserver();
             }
         }
 
