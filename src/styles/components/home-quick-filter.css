@@ -247,3 +247,27 @@
     justify-content: center;
     margin-top: 1rem;
 }
+
+/* The categories control belongs to the recommendation posters, not to a
+   separate row between the hero and the cards. It floats over their top edge. */
+.home-quick-filter {
+    margin: -2.6rem auto -3.2rem;
+    z-index: 40;
+}
+.home-quick-filter .hqf-categories-toggle,
+.home-quick-filter .hqf-panel.open {
+    background: color-mix(in srgb, var(--surface) 58%, transparent) !important;
+    border-color: color-mix(in srgb, var(--border) 76%, transparent) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(145%);
+    backdrop-filter: blur(18px) saturate(145%);
+}
+.home-quick-filter .hqf-panel.open {
+    box-shadow: 0 18px 42px rgba(0, 0, 0, .18), inset 0 1px 0 color-mix(in srgb, #fff 12%, transparent);
+}
+@media (max-width: 600px) {
+    .home-quick-filter {
+        width: min(calc(100% - 24px), 860px);
+        margin-top: -2.2rem;
+        margin-bottom: -2.8rem;
+    }
+}
