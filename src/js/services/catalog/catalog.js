@@ -81,34 +81,50 @@ import {
         }
 
         export const HIKKA_CATALOG_PAGE_SIZE = DEFAULT_CATALOG_PAGE_SIZE;
+        // Deduplicate simultaneous requests made by the hero, recommendations,
+        // and catalog. The map only holds promises while a request is pending;
+        // it does not change freshness of later navigation or pagination calls.
+        const hikkaCatalogInFlight = new Map();
 
         export async function hikkaCatalog(type='anime', page=1, body={}) {
             const endpoint=type==='manga'?'manga':type==='novel'?'novel':'anime';
             const currentPage = Math.max(1, Number(page) || 1);
-            const apiUrl = `${HIKKA_API}/${endpoint}?page=${currentPage}&size=${HIKKA_CATALOG_PAGE_SIZE}`;
-            let res;
-            let lastError;
-            for (let attempt = 1; attempt <= 3; attempt += 1) {
-                try {
-                    res = await hikkaRequest(apiUrl, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-                    if (res.ok) break;
-                    const retryable = res.status === 429 || res.status >= 500;
-                    if (!retryable || attempt === 3) throw new Error(`Hikka API: HTTP ${res.status}`);
-                    await new Promise(resolve => setTimeout(resolve, 350 * (2 ** (attempt - 1))));
-                } catch (error) {
-                    lastError = error;
-                    if (/Hikka API: HTTP 4\d\d/.test(String(error?.message || '')) || attempt === 3) throw error;
-                    await new Promise(resolve => setTimeout(resolve, 350 * (2 ** (attempt - 1))));
+            const normalizedBody = body && typeof body === 'object' ? body : {};
+            const requestKey = `${endpoint}:${currentPage}:${JSON.stringify(normalizedBody)}`;
+            if (hikkaCatalogInFlight.has(requestKey)) return hikkaCatalogInFlight.get(requestKey);
+
+            const request = (async () => {
+                const apiUrl = `${HIKKA_API}/${endpoint}?page=${currentPage}&size=${HIKKA_CATALOG_PAGE_SIZE}`;
+                let res;
+                let lastError;
+                for (let attempt = 1; attempt <= 3; attempt += 1) {
+                    try {
+                        res = await hikkaRequest(apiUrl, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(normalizedBody)});
+                        if (res.ok) break;
+                        const retryable = res.status === 429 || res.status >= 500;
+                        if (!retryable || attempt === 3) throw new Error(`Hikka API: HTTP ${res.status}`);
+                        await new Promise(resolve => setTimeout(resolve, 350 * (2 ** (attempt - 1))));
+                    } catch (error) {
+                        lastError = error;
+                        if (/Hikka API: HTTP 4\d\d/.test(String(error?.message || '')) || attempt === 3) throw error;
+                        await new Promise(resolve => setTimeout(resolve, 350 * (2 ** (attempt - 1))));
+                    }
                 }
+                if (!res?.ok) throw lastError || new Error('Hikka API: порожня відповідь');
+                let data;
+                try { data = await res.json(); } catch { throw new Error('Hikka API: неправильний JSON'); }
+                const rawItems = Array.isArray(data?.list) ? data.list : Array.isArray(data?.data) ? data.data : [];
+                const items = rawItems.map(item => hikkaItem(item, endpoint));
+                const meta = readCatalogMeta(data, currentPage, HIKKA_CATALOG_PAGE_SIZE, items.length);
+                debugLog('catalog', 'page', { endpoint, requestedPage: currentPage, requestedLimit: HIKKA_CATALOG_PAGE_SIZE, receivedItems: rawItems.length, uniqueItems: new Set(items.map(item => item.url)).size, total: meta.total, hasNextPage: meta.hasNextPage });
+                return attachCatalogMeta(items, meta);
+            })();
+            hikkaCatalogInFlight.set(requestKey, request);
+            try {
+                return await request;
+            } finally {
+                if (hikkaCatalogInFlight.get(requestKey) === request) hikkaCatalogInFlight.delete(requestKey);
             }
-            if (!res?.ok) throw lastError || new Error('Hikka API: порожня відповідь');
-            let data;
-            try { data = await res.json(); } catch { throw new Error('Hikka API: неправильний JSON'); }
-            const rawItems = Array.isArray(data?.list) ? data.list : Array.isArray(data?.data) ? data.data : [];
-            const items = rawItems.map(item => hikkaItem(item, endpoint));
-            const meta = readCatalogMeta(data, currentPage, HIKKA_CATALOG_PAGE_SIZE, items.length);
-            debugLog('catalog', 'page', { endpoint, requestedPage: currentPage, requestedLimit: HIKKA_CATALOG_PAGE_SIZE, receivedItems: rawItems.length, uniqueItems: new Set(items.map(item => item.url)).size, total: meta.total, hasNextPage: meta.hasNextPage });
-            return attachCatalogMeta(items, meta);
         }
         export async function fetchHikkaMain(page) { return hikkaCatalog('anime', page, {only_translated:true, sort:['score:desc','scored_by:desc']}); }
         export async function searchHikka(query, page) { return hikkaCatalog('anime', page, {query:String(query||'').trim(), only_translated:true}); }

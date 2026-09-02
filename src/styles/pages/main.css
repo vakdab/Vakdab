@@ -1623,3 +1623,13 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
         row-gap: 1rem !important;
     }
 }
+
+/* Keep off-screen home and catalog cards cheap to layout and paint. */
+.home-catalog-grid .home-catalog-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 360px;
+}
+.popular-list--home .popular-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 280px;
+}

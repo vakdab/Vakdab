@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:css": "node scripts/build_css_bundle.mjs",
     "test": "node tests/catalog/catalog-pagination.test.mjs && node tests/manga/manga-loading.test.mjs && node tests/novel/novel-source.test.mjs && node tests/profile/profile-stickers.test.mjs && node tests/telegram/telegram-worker.test.mjs"
   }
 }

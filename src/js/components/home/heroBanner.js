@@ -8,9 +8,29 @@ import { DailyStats, Router, Storage, openPlayerPage, showToast } from '../../le
             heroRotationTimer = null,
             heroJustSwiped = false;
 
+        function scheduleHeroItemDetails(idx) {
+            const load = () => {
+                if (Router.currentRoute !== 'main') return;
+                loadHeroItemDetails(idx).then(() => {
+                    if (Router.currentRoute === 'main' && heroCurrentIndex === idx) renderHeroSlide(heroItems[idx]);
+                }).catch(() => {});
+            };
+            if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(load, { timeout: 1400 });
+            } else {
+                setTimeout(load, 700);
+            }
+        }
+
         export async function buildHeroBanner() {
             const wrapper = document.getElementById('heroWrapper');
             if (!wrapper) return;
+            // Hero is only part of the main route. Avoid starting five catalog
+            // requests when a user opens the dedicated catalog or another page.
+            if (Router.currentRoute !== 'main') {
+                wrapper.style.display = 'none';
+                return;
+            }
 
             // Паралельно завантажуємо обидва джерела — не чекаємо одне на одне
             const [topResult, mainResult] = await Promise.allSettled([
@@ -46,15 +66,10 @@ import { DailyStats, Router, Storage, openPlayerPage, showToast } from '../../le
             buildHeroIndicators();
             startHeroRotation();
 
-            // Деталі завантажуємо у фоні — оновимо слайд коли прийдуть
-            loadHeroItemDetails(0).then(() => {
-                if (heroCurrentIndex === 0) renderHeroSlide(heroItems[0]);
-            }).catch(() => {});
-
-            // Preload деталі наступного слайду у фоні
-            if (heroItems.length > 1) {
-                loadHeroItemDetails(1).catch(() => {});
-            }
+            // Details are secondary metadata. Schedule them after the first
+            // paint so the hero and recommendation cards can appear first.
+            scheduleHeroItemDetails(0);
+            if (heroItems.length > 1) scheduleHeroItemDetails(1);
         }
 
         function takeHeroBatch() {
