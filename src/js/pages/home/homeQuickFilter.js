@@ -1,9 +1,9 @@
 // Компактне меню категорій під хіро-банером на головній сторінці.
-// Вибираєш жанри/рік/сортування → натискаєш OK → картки з'являються
-// в #animeContainer у тому ж стилі що й головна сторінка.
+// Вибираєш жанри/рік/сортування → натискаєш OK → фільтр перерисовує
+// основний блок круглих карток на головній сторінці.
 import { GENRE_MAP } from '../../config/constants.js?v=20260902-home-quick-filter-v1';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { searchPageState, loadContent, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams } from './homeLegacy.js?v=20260901-home-recs-v8';
+import { searchPageState, loadHomeRecommendations, setHomeRecommendationFilter, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams } from './homeLegacy.js?v=20260901-home-recs-v8';
 
 const YEAR_OPTIONS = [
     { key: '', label: 'Будь-який' },
@@ -104,21 +104,23 @@ function applyQuickFilter() {
         [params.yearMin, params.yearMax] = YEAR_RANGES[quickFilterState.year];
     }
 
-    // Скидаємо всі інші джерела контенту, ставимо наш фільтр
+    // На головній фільтр змінює саме блок круглих карток, як у jut.su/anime/.
     setCurrentTab('main');
     setCurrentPage(1);
     setCurrentSearchQuery('');
     setCurrentCategory('');
     setQuickFilterParams(params);
+    setHomeRecommendationFilter(params);
 
-    // Ховаємо секції жанрів, показуємо grid
     document.getElementById('genreSectionsContainer').style.display = 'none';
-    document.getElementById('animeContainer').style.display = 'grid';
+    document.getElementById('animeContainer').style.display = 'none';
+    const recommendations = document.getElementById('homeRecommendationsContainer');
+    if (recommendations) recommendations.style.display = 'block';
 
-    loadContent();
+    loadHomeRecommendations({ reload: true });
 
-    // Прокручуємо до контенту
-    document.getElementById('animeContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Прокручуємо до того самого блоку з круглими картками.
+    recommendations?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function wireHomeQuickFilterEvents(container) {
@@ -140,8 +142,11 @@ function wireHomeQuickFilterEvents(container) {
         setCurrentSearchQuery('');
         setCurrentCategory('');
         document.getElementById('genreSectionsContainer').style.display = 'none';
-        document.getElementById('animeContainer').style.display = 'grid';
-        loadContent();
+        document.getElementById('animeContainer').style.display = 'none';
+        setHomeRecommendationFilter(null);
+        const recommendations = document.getElementById('homeRecommendationsContainer');
+        if (recommendations) recommendations.style.display = 'block';
+        loadHomeRecommendations({ reload: true });
         renderHomeQuickFilterBar();
     });
 
@@ -162,13 +167,18 @@ function wireHomeQuickFilterEvents(container) {
 
     document.getElementById('hqfClearBtn')?.addEventListener('click', () => {
         quickFilterState = { genres: new Set(), year: '', sort: 'rating', open: true };
-        // Також скидаємо фільтр контенту
+        // Повертаємо початкові рекомендації в тому самому блоці круглих карток.
         setQuickFilterParams(null);
+        setHomeRecommendationFilter(null);
         setCurrentTab('main');
         setCurrentPage(1);
         setCurrentSearchQuery('');
         setCurrentCategory('');
-        loadContent();
+        document.getElementById('genreSectionsContainer').style.display = 'none';
+        document.getElementById('animeContainer').style.display = 'none';
+        const recommendations = document.getElementById('homeRecommendationsContainer');
+        if (recommendations) recommendations.style.display = 'block';
+        loadHomeRecommendations({ reload: true });
         renderHomeQuickFilterBar();
     });
 

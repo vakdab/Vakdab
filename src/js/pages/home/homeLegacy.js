@@ -7,7 +7,7 @@ import {
 import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
 import { debugLog } from '../../utils/debug.js';
 import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260824-settings-redesign-v1';
-import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog/catalog.js?v=20260829-catalog-28-v2';
+import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaQuickFilter, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog/catalog.js?v=20260829-catalog-28-v2';
 import { getProxyUrl } from '../../utils/image.js';
 import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260824-settings-redesign-v1';
 import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } from '../../services/api/novel.js?v=20260824-settings-redesign-v1';
@@ -1952,8 +1952,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             return `
                     <div class="genre-section" id="genre-popular">
                       <div class="genre-title genre-title--row">
-                        <span class="genre-name">Популярні</span>
-                        <button class="genre-title-link" id="homePopularShowAllBtn" type="button">Показати всі</button>
+                        <span class="genre-name">${escapeHtml(homeRecommendationTitle())}</span>
+                        <button class="genre-title-link" id="homePopularShowAllBtn" type="button">${homeRecommendationFilterParams ? 'Увесь каталог' : 'Показати всі'}</button>
                       </div>
                       <div class="popular-list popular-list--home">
                         ${cardsHtml}
@@ -1967,6 +1967,26 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         export let homeRecommendationHasMore = false;
         export let homeRecommendationLoading = false;
         export let homeRecommendationScrollBound = false;
+        export let homeRecommendationRequestId = 0;
+        export let homeRecommendationFilterParams = null;
+
+        export function setHomeRecommendationFilter(params = null) {
+            homeRecommendationFilterParams = params
+                ? { ...params, genres: Array.isArray(params.genres) ? [...params.genres] : [] }
+                : null;
+        }
+
+        function homeRecommendationTitle() {
+            const params = homeRecommendationFilterParams;
+            if (!params) return 'Обрано для тебе';
+            const genreNames = (params.genres || [])
+                .map(slug => Object.entries(GENRE_MAP).find(([, value]) => value === slug)?.[0])
+                .filter(Boolean);
+            if (genreNames.length) return `Аніме · ${genreNames.join(', ')}`;
+            if (params.status === 'ongoing') return 'Онґоїнг · аніме';
+            if (params.yearMin && params.yearMax) return `Аніме · ${params.yearMin}–${params.yearMax}`;
+            return 'Аніме за фільтрами';
+        }
 
         export function handleHomeRecommendationScroll() {
             if (!homeRecommendationHasMore || homeRecommendationLoading) return;
@@ -1981,14 +2001,19 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             });
         }
 
-        export async function loadHomeRecommendations() {
+        export async function loadHomeRecommendations(options = {}) {
             const container = document.getElementById('homeRecommendationsContainer');
-            if (!container || homeRecommendationLoading) return;
+            const forceReload = options?.reload === true;
+            if (!container || (homeRecommendationLoading && !forceReload)) return;
+            const requestId = ++homeRecommendationRequestId;
             homeRecommendationLoading = true;
             container.dataset.loading = 'true';
             container.innerHTML = '<div class="loader home-recommendations-loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження рекомендацій...</div>';
             try {
-                const items = await hikkaCatalog('anime', 1, { sort: ['score:desc', 'scored_by:desc'], only_translated: true });
+                const items = homeRecommendationFilterParams
+                    ? await fetchHikkaQuickFilter(1, homeRecommendationFilterParams)
+                    : await hikkaCatalog('anime', 1, { sort: ['score:desc', 'scored_by:desc'], only_translated: true });
+                if (requestId !== homeRecommendationRequestId || Router.currentRoute !== 'main') return;
                 if (!items?.length) throw new Error('Порожній список рекомендацій');
                 homeRecommendationItems = [...items];
                 homeRecommendationPage = 1;
@@ -1996,16 +2021,20 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 container.innerHTML = buildPopularVerticalSectionHtml(homeRecommendationItems);
                 container.style.display = 'block';
                 bindHomeRecommendationCards([...container.querySelectorAll('.popular-card')]);
-                loadHomeRecommendationDetails(items);
+                loadHomeRecommendationDetails(items, 0, requestId);
                 container.querySelector('#homePopularShowAllBtn')?.addEventListener('click', () => { window.location.hash = 'catalog'; });
                 if (!homeRecommendationScrollBound) {
                     window.addEventListener('scroll', handleHomeRecommendationScroll, { passive: true });
                     homeRecommendationScrollBound = true;
                 }
             } catch (error) {
+                if (requestId !== homeRecommendationRequestId || Router.currentRoute !== 'main') return;
                 console.warn('[home recommendations] failed:', error);
-                container.innerHTML = '<div class="home-recommendations-empty">Рекомендації тимчасово недоступні.</div>';
+                container.innerHTML = homeRecommendationFilterParams
+                    ? '<div class="home-recommendations-empty">За цим фільтром нічого не знайдено.</div>'
+                    : '<div class="home-recommendations-empty">Рекомендації тимчасово недоступні.</div>';
             } finally {
+                if (requestId !== homeRecommendationRequestId) return;
                 homeRecommendationLoading = false;
                 container.dataset.loading = 'false';
             }
@@ -2017,7 +2046,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             homeRecommendationLoading = true;
             try {
                 const nextPage = homeRecommendationPage + 1;
-                const nextItems = await hikkaCatalog('anime', nextPage, { sort: ['score:desc', 'scored_by:desc'], only_translated: true });
+                const nextItems = homeRecommendationFilterParams
+                    ? await fetchHikkaQuickFilter(nextPage, homeRecommendationFilterParams)
+                    : await hikkaCatalog('anime', nextPage, { sort: ['score:desc', 'scored_by:desc'], only_translated: true });
                 const existing = new Set(homeRecommendationItems.map(item => item.url));
                 const uniqueItems = nextItems.filter(item => item?.url && !existing.has(item.url));
                 const offset = homeRecommendationItems.length;
@@ -2027,7 +2058,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 const list = container.querySelector('.popular-list--home');
                 if (list) list.insertAdjacentHTML('beforeend', buildPopularVerticalCardsHtml(uniqueItems, offset));
                 bindHomeRecommendationCards([...container.querySelectorAll(`.popular-card[data-idx]`)].slice(offset));
-                loadHomeRecommendationDetails(uniqueItems, offset);
+                loadHomeRecommendationDetails(uniqueItems, offset, homeRecommendationRequestId);
                 requestAnimationFrame(handleHomeRecommendationScroll);
             } catch (error) {
                 console.warn('[home recommendations more] failed:', error);
@@ -2036,19 +2067,22 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             }
         }
 
-        export async function loadHomeRecommendationDetails(list, indexOffset = 0) {
+        export async function loadHomeRecommendationDetails(list, indexOffset = 0, requestId = homeRecommendationRequestId) {
             const container = document.getElementById('homeRecommendationsContainer');
             let cursor = 0;
             async function worker() {
                 while (cursor < list.length) {
+                    if (requestId !== homeRecommendationRequestId || Router.currentRoute !== 'main') return;
                     const index = cursor++;
                     const card = container?.querySelector(`.popular-card[data-idx="${indexOffset + index}"]`);
                     if (!card) continue;
                     const episodes = card.querySelector('.popular-card__episodes');
                     try {
                         const detail = await fetchAnimeLite(list[index].url);
+                        if (requestId !== homeRecommendationRequestId || Router.currentRoute !== 'main') return;
                         if (episodes) episodes.textContent = detail?.episodes != null ? `Серій: ${detail.episodes}` : 'Серій: –';
                     } catch (error) {
+                        if (requestId !== homeRecommendationRequestId || Router.currentRoute !== 'main') return;
                         if (episodes) episodes.textContent = 'Серій: –';
                     }
                 }
