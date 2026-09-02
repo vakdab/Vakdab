@@ -1,9 +1,9 @@
 // Компактне меню категорій під хіро-банером на головній сторінці.
 // Вибираєш жанри/тип/рік/сортування → натискаєш OK → картки з'являються
 // в #animeContainer у тому ж стилі що й головна сторінка.
-import { GENRE_MAP } from '../../config/constants.js?v=20260902-genre-rail-v4';
+import { GENRE_MAP } from '../../config/constants.js?v=20260902-genre-rail-v5';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { searchPageState, loadContent, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams, setHomeRecommendationFilter, loadHomeRecommendations } from './homeLegacy.js?v=20260902-genre-rail-v4';
+import { searchPageState, loadContent, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams, setHomeRecommendationFilter, loadHomeRecommendations } from './homeLegacy.js?v=20260902-genre-rail-v5';
 
 const YEAR_OPTIONS = [
     { key: '', label: 'Будь-який' },
@@ -66,9 +66,7 @@ function buildGenreRailHtml() {
     `;
 }
 
-function applyGenreRailFilter(slug) {
-    console.log('[genre-rail] applyGenreRailFilter called with slug:', slug);
-    activeGenreRail = slug || null;
+function applyGenreRailFilter(slug) {    activeGenreRail = slug || null;
 
     if (!slug) {
         // "Усі" — показуємо рекомендації без фільтру
@@ -87,9 +85,7 @@ function applyGenreRailFilter(slug) {
         document.getElementById('animeContainer').style.display = 'none';
     } else {
         // Жанр — фільтруємо рекомендації
-        const params = { genres: [slug], sort: 'rating' };
-        console.log('[genre-rail] setting filter params:', JSON.stringify(params));
-        setHomeRecommendationFilter(params);
+        const params = { genres: [slug], sort: 'rating' };        setHomeRecommendationFilter(params);
         setQuickFilterParams(null);
         setCurrentTab('main');
         setCurrentPage(1);
@@ -98,9 +94,7 @@ function applyGenreRailFilter(slug) {
         document.getElementById('genreSectionsContainer').style.display = 'none';
         const recs = document.getElementById('homeRecommendationsContainer');
         if (recs) {
-            recs.style.display = 'block';
-            console.log('[genre-rail] calling loadHomeRecommendations with reload');
-            loadHomeRecommendations({ reload: true });
+            recs.style.display = 'block';            loadHomeRecommendations({ reload: true });
         }
         document.getElementById('animeContainer').style.display = 'none';
     }
@@ -110,9 +104,7 @@ function applyGenreRailFilter(slug) {
 }
 
 function wireGenreRailEvents() {
-    const pills = document.querySelectorAll('[data-genre-rail]');
-    console.log('[genre-rail] wiring events for', pills.length, 'pills');
-    pills.forEach(btn => {
+    const pills = document.querySelectorAll('[data-genre-rail]');    pills.forEach(btn => {
         btn.addEventListener('click', () => {
             const slug = btn.dataset.genreRail;
             applyGenreRailFilter(slug);
