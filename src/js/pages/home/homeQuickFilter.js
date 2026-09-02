@@ -1,9 +1,9 @@
 // Компактне меню категорій під хіро-банером на головній сторінці.
 // Вибираєш жанри/тип/рік/сортування → натискаєш OK → картки з'являються
 // в #animeContainer у тому ж стилі що й головна сторінка.
-import { GENRE_MAP } from '../../config/constants.js?v=20260902-genre-rail-v1';
+import { GENRE_MAP } from '../../config/constants.js?v=20260902-genre-rail-v2';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { searchPageState, loadContent, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams, setHomeRecommendationFilter, loadHomeRecommendations } from './homeLegacy.js?v=20260902-genre-rail-v1';
+import { searchPageState, loadContent, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams, setHomeRecommendationFilter, loadHomeRecommendations } from './homeLegacy.js?v=20260902-genre-rail-v2';
 
 const YEAR_OPTIONS = [
     { key: '', label: 'Будь-який' },
