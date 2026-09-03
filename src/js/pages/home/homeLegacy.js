@@ -131,6 +131,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 homeFeedObserver?.disconnect();
                 homeFeedObserver = null;
                 document.getElementById('homeAnimeFeedSentinel')?.remove();
+                resetAnimeGridWindow();
             }
             showSkeleton();
             try {
@@ -307,13 +308,103 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         }
 
         function animeFeedCardHtml(a, idx) {
-            const poster = escapeHtml(a.images?.jpg?.large_image_url || '');
+            const poster = escapeHtml(cardPoster(a, ''));
             const title = escapeHtml(a.title || 'Без назви');
             const type = escapeHtml(a.typeLabel || animeTypeLabel(a.type));
-            return `<div class="anime-card" data-url="${escapeHtml(a.url || '')}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${(idx || 0) * 0.03}s">
+            return `<div class="anime-card" data-url="${escapeHtml(a.url || '')}" data-idx="${idx || 0}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${(idx || 0) * 0.03}s">
               <div class="anime-poster"><img src="${poster}" alt="${title}" loading="lazy" decoding="async" class="img--blur" onload="this.classList.add('img--loaded')" onerror="this.onerror=null;this.src='${ANIME_CARD_PLACEHOLDER}'"><span class="anime-card-type" data-role="type">${type}</span></div>
               <div class="anime-title-under">${title}</div>
             </div>`;
+        }
+
+        // ====================================================================
+        //  ВІРТУАЛІЗАЦІЯ ГОЛОВНОГО КАТАЛОГУ (#animeContainer, infinite scroll)
+        //  Це реальне джерело крашу на 15-20+ сторінках: без обмежень DOM
+        //  накопичував сотні великих постерів → Safari вбивав вкладку (OOM),
+        //  через що постери "зникали", а потім сторінка ставала білою.
+        //  Тримаємо в DOM лише ~120 карток; старі рядки вивантажуються під
+        //  spacer, і повертаються назад, якщо користувач гортає вгору.
+        // ====================================================================
+        const ANIME_GRID_MAX_RENDERED = 120;
+        const ANIME_GRID_RESTORE_ROWS = 6;
+        let animeGridSpacerObserver = null;
+
+        function animeGridColumns(container) {
+            const cols = window.getComputedStyle(container).gridTemplateColumns.split(' ').filter(Boolean).length;
+            return Math.max(1, cols || 2);
+        }
+
+        function ensureAnimeGridSpacer(container) {
+            let spacer = container.querySelector(':scope > .anime-grid-spacer');
+            if (!spacer) {
+                spacer = document.createElement('div');
+                spacer.className = 'anime-grid-spacer';
+                spacer.style.gridColumn = '1 / -1';
+                spacer.style.height = '0px';
+                container.prepend(spacer);
+            }
+            return spacer;
+        }
+
+        function observeAnimeGridSpacer(container, spacer) {
+            if (typeof IntersectionObserver === 'undefined') return;
+            animeGridSpacerObserver?.disconnect();
+            animeGridSpacerObserver = new IntersectionObserver(entries => {
+                if (entries.some(entry => entry.isIntersecting)) restoreAnimeGridAbove(container);
+            }, { rootMargin: '600px 0px 0px 0px', threshold: 0 });
+            animeGridSpacerObserver.observe(spacer);
+        }
+
+        export function resetAnimeGridWindow() {
+            animeGridSpacerObserver?.disconnect();
+            animeGridSpacerObserver = null;
+        }
+
+        export function trimAnimeGridAbove(container) {
+            if (!container || !container.classList.contains('anime-grid')) return;
+            const cols = animeGridColumns(container);
+            const cards = [...container.querySelectorAll(':scope > .anime-card[data-idx]')];
+            if (cards.length <= ANIME_GRID_MAX_RENDERED) return;
+            const overflow = cards.length - ANIME_GRID_MAX_RENDERED;
+            const trimRows = Math.floor(overflow / cols);
+            if (trimRows <= 0) return;
+            const trimCount = trimRows * cols;
+            const firstTrimCard = cards[0];
+            const firstKeptCard = cards[trimCount];
+            if (!firstKeptCard) return;
+            const removedH = Math.max(0, firstKeptCard.getBoundingClientRect().top - firstTrimCard.getBoundingClientRect().top);
+            const spacer = ensureAnimeGridSpacer(container);
+            const spacerH = parseFloat(spacer.style.height) || 0;
+            for (let i = 0; i < trimCount; i++) cards[i].remove();
+            spacer.style.height = `${spacerH + removedH}px`;
+            observeAnimeGridSpacer(container, spacer);
+        }
+
+        function restoreAnimeGridAbove(container) {
+            const spacer = container.querySelector(':scope > .anime-grid-spacer');
+            if (!spacer) return;
+            const spacerH = parseFloat(spacer.style.height) || 0;
+            if (spacerH <= 0) return;
+            const cols = animeGridColumns(container);
+            const cards = [...container.querySelectorAll(':scope > .anime-card[data-idx]')];
+            const renderedFirst = cards.length ? Number(cards[0].dataset.idx) : homeFeedItems.length;
+            const restoreCount = Math.min(renderedFirst, ANIME_GRID_RESTORE_ROWS * cols);
+            if (restoreCount <= 0) return;
+            const restoreFromIdx = renderedFirst - restoreCount;
+            const insertItems = homeFeedItems.slice(restoreFromIdx, renderedFirst);
+            if (!insertItems.length) return;
+            const beforeTop = spacer.getBoundingClientRect().top;
+            const html = insertItems.map((item, i) => animeFeedCardHtml(item, restoreFromIdx + i)).join('');
+            spacer.insertAdjacentHTML('afterend', html);
+            requestAnimationFrame(() => {
+                const nextKeptCard = container.querySelector(`.anime-card[data-idx="${renderedFirst}"]`);
+                const insertedH = nextKeptCard ? Math.max(0, nextKeptCard.getBoundingClientRect().top - beforeTop) : 0;
+                spacer.style.height = `${Math.max(0, spacerH - insertedH)}px`;
+                if (insertedH > 0) window.scrollBy(0, insertedH);
+                bindAnimeFeedCards(container);
+                observeAnimeCardsForTmdb(container);
+                observeAnimeGridSpacer(container, spacer);
+            });
         }
 
         function bindAnimeFeedCards(root) {
@@ -368,6 +459,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     container.insertAdjacentHTML('beforeend', additions.map((item, index) => animeFeedCardHtml(item, homeFeedItems.length - additions.length + index)).join(''));
                     bindAnimeFeedCards(container);
                     observeAnimeCardsForTmdb(container);
+                    trimAnimeGridAbove(container);
                 }
             } catch (error) {
                 homeFeedRetryAt = Date.now() + 5000;
