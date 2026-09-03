@@ -476,7 +476,7 @@ function isGifUrl(url) {
         let _lbSortKey = 'xp';
         let _lbUsersCache = [];
 
-        const TOP_BADGES = Object.freeze({ p1: 'assets/rating/top-1.png', p2: 'assets/rating/top-2.png', p3: 'assets/rating/top-3.png' });
+        const TOP_BADGES = Object.freeze({ p1: './app/assets/rating/top-1.png', p2: './app/assets/rating/top-2.png', p3: './app/assets/rating/top-3.png' });
         const LB_SORT_CONFIG = {
             xp:        { unit: 'XP',    getVal: u => u.xp },
             episodes:  { unit: 'сер.',  getVal: u => u.episodes },
@@ -614,7 +614,7 @@ function isGifUrl(url) {
                     const av = ratingProfileMediaMarkup(u, 'rg-podium-avatar-media');
                     const podiumProfileAttrs = u.uid ? ` data-profile-uid="${escapeRatingHtml(u.uid)}" role="link" tabindex="0" title="Відкрити профіль"` : '';
                     html += `<div class="rg-podium-item ${cls[i]}"${podiumProfileAttrs} style="animation-delay:${i*0.08}s">
-                        <img class="rg-podium-badge" src="${TOP_BADGES[cls[i]]}" alt="Топ ${cls[i] === 'p1' ? '1' : cls[i] === 'p2' ? '2' : '3'}" loading="lazy">
+                        <img class="rg-podium-badge" src="${TOP_BADGES[cls[i]]}" alt="" aria-hidden="true" loading="lazy">
                         <div class="rg-podium-avatar">${av}</div>
                         <div class="rg-podium-name">${ratingNameMarkup(u)}</div>
                         <div class="rg-podium-score">${cfg.getVal(u)} ${cfg.unit}</div>
