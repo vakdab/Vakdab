@@ -1,5 +1,5 @@
 import { Auth } from '../../core/compat/auth.js?v=20260824-settings-redesign-v1';
-import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
+import { Router } from '../../core/compat/router.js?v=20260903-rating-names-v1';
 import { Storage } from '../../core/compat/storage.js?v=20260824-settings-redesign-v1';
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
@@ -22,12 +22,18 @@ function ratingProfileMediaMarkup(profile, className) {
 }
 
 function ratingNameMarkup(profile, suffix = '') {
-    return `<span class="rg-profile-name-row"><span>${escapeRatingHtml(profile.nickname || 'Гість')}</span>${suffix}</span>`;
+    // У рейтингу показуємо ім'я, а не @нікнейм. Нік — лише запасний варіант
+    // для старих профілів, у яких ім'я ще не збережене.
+    const displayName = profile.realName || profile.name || profile.fullName || profile.nickname || 'Гість';
+    return `<span class="rg-profile-name-row"><span>${escapeRatingHtml(displayName).replace(/^@+/, '')}</span>${suffix}</span>`;
 }
 
 function getProfile() {
     const profile = Storage.getProfile() || {};
     return {
+        realName: typeof profile.realName === 'string' && profile.realName.trim() ? profile.realName.trim() : '',
+        name: typeof profile.name === 'string' && profile.name.trim() ? profile.name.trim() : '',
+        fullName: typeof profile.fullName === 'string' && profile.fullName.trim() ? profile.fullName.trim() : '',
         nickname: typeof profile.nickname === 'string' && profile.nickname.trim() ? profile.nickname.trim() : 'Гість',
         avatar: typeof profile.avatar === 'string' ? profile.avatar : '',
         avatarVideo: typeof profile.avatarVideo === 'string' ? profile.avatarVideo : '',
@@ -551,7 +557,10 @@ function isGifUrl(url) {
                         const data = d.data();
                         arr.push({
                             uid: d.id,
-                            nickname: data.profile?.nickname || data.profile?.name || 'Аніматор',
+                            realName: data.profile?.realName || '',
+                            name: data.profile?.name || data.profile?.fullName || data.displayName || data.name || '',
+                            fullName: data.profile?.fullName || '',
+                            nickname: data.profile?.nickname || 'Аніматор',
                             avatar: data.profile?.avatar || '',
                             avatarVideo: data.profile?.avatarVideo || '',
                             avatarVideoSettings: data.profile?.avatarVideoSettings || {},
