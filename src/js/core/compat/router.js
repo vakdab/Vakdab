@@ -1,6 +1,5 @@
 import { HIKKA_API } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 import { loadFeature } from '../feature-loader.js?v=20260824-settings-redesign-v1';
-import { ensureTailwind } from '../external-resources.js';
 import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
     initRatingPage, loadAndDisplayGenreSections, loadHomeRecommendations, loadMangaReader,
@@ -279,8 +278,8 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                     container.style.display = 'block';
                     container.classList.add('active');
                 }
-                Promise.all([ensureTailwind(), loadFeature('stickers')])
-                    .then(([, { renderStickersPage }]) => {
+                loadFeature('stickers')
+                    .then(({ renderStickersPage }) => {
                         if (this.currentRoute === 'stickers') renderStickersPage(container);
                     })
                     .catch(error => {

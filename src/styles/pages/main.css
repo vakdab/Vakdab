@@ -1283,6 +1283,10 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
 .home-recommendations .popular-list--home::-webkit-scrollbar { height: 5px; }
 .home-recommendations .popular-list--home::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 999px; }
 .home-recommendations .popular-list--home .popular-card {
+    content-visibility: auto;
+    contain: layout paint style;
+    contain-intrinsic-size: 0 320px;
+
     flex: 0 0 min(78vw, 220px);
     scroll-snap-align: start;
 }
@@ -1622,14 +1626,4 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
     .home-recommendations .popular-list--home {
         row-gap: 1rem !important;
     }
-}
-
-/* Keep off-screen home and catalog cards cheap to layout and paint. */
-.home-catalog-grid .home-catalog-card {
-    content-visibility: auto;
-    contain-intrinsic-size: auto 360px;
-}
-.popular-list--home .popular-card {
-    content-visibility: auto;
-    contain-intrinsic-size: auto 280px;
 }

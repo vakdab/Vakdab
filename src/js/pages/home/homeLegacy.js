@@ -2253,7 +2253,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 ensureHomeRecommendationObserver();
                 loadHomeRecommendationDetails(items, 0, requestId);
                 container.querySelector('#homePopularShowAllBtn')?.addEventListener('click', () => { window.location.hash = 'catalog'; });
-                if (!homeRecommendationScrollBound) {
+                // IntersectionObserver covers modern browsers without a per-scroll
+                // layout read. Keep the legacy scroll fallback only where needed.
+                if (!homeRecommendationScrollBound && typeof IntersectionObserver === 'undefined') {
                     window.addEventListener('scroll', handleHomeRecommendationScroll, { passive: true });
                     homeRecommendationScrollBound = true;
                 }
