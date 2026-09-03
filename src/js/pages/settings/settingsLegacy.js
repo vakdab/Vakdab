@@ -338,26 +338,28 @@ import {
             const avatarSrc = profile.avatar || '';
             const avatarVideoSrc = profile.avatarVideo || '';
             return `
+            <div class="appearance-layout">
             <div class="appearance-intro">
               <div class="appearance-intro-icon"><i class="fas fa-palette"></i></div>
               <div><h3>Налаштуйте свій профіль</h3><p>Змініть банер, аватар та ефекти. Усі зміни зберігаються автоматично.</p></div>
             </div>
+            <div class="appearance-col appearance-col--main">
             <div class="appearance-section-card">
             <div class="settings-section-title">Опис профілю</div>
             <div class="settings-field">
-              <textarea id="settingsBioInput" maxlength="160" rows="3">${escapeHtml(profile.bio || '')}</textarea>
+              <textarea id="settingsBioInput" maxlength="160" rows="3" placeholder="Розкажіть про себе…">${escapeHtml(profile.bio || '')}</textarea>
                 <div class="settings-bio-tools">
                   <button type="button" class="settings-bio-bold-btn${profile.bioBold ? ' active' : ''}" id="settingsBioBoldBtn" aria-pressed="${profile.bioBold ? 'true' : 'false'}"><i class="fas fa-bold"></i> Жирний текст</button>
                   <span class="settings-bio-tool-hint">Перемикає жирний опис у профілі та прев’ю.</span>
                 </div>
-                <span class="settings-field-hint">До 160 символів. Зміни зберігаються автоматично.</span>
+                <span class="settings-field-hint"><span id="settingsBioCount">${(profile.bio || '').length}</span>/160 символів · зміни зберігаються автоматично</span>
               </div>
 
             <div class="appearance-media-grid">
             <div class="appearance-media-block">
             <div class="settings-section-title">Банер</div>
             <div class="settings-media-card settings-media-card--banner">
-              <div class="settings-media-preview--banner" id="settingsBannerPreview">
+              <div class="settings-media-preview--banner${(!bannerSrc && !bannerVideoSrc) ? ' is-empty' : ''}" id="settingsBannerPreview">
                 ${bannerVideoSrc ? profileMediaMarkup(bannerVideoSrc, '', 'video banner', profile.bannerVideoSettings) : (bannerSrc ? profileMediaMarkup(bannerSrc, '', 'banner') : '')}
               </div>
               <div class="settings-media-actions" aria-label="Керування банером">
@@ -371,7 +373,7 @@ import {
             <div class="appearance-media-block">
             <div class="settings-section-title">Аватар</div>
             <div class="settings-media-card settings-media-card--avatar">
-              <div class="settings-media-preview--avatar" id="settingsAvatarPreview">${avatarVideoSrc ? profileMediaMarkup(avatarVideoSrc, '', 'video avatar', profile.avatarVideoSettings) : (avatarSrc ? profileMediaMarkup(avatarSrc, '', 'avatar') : '<i class="fas fa-user"></i>')}</div>
+              <div class="settings-media-preview--avatar${(!avatarSrc && !avatarVideoSrc) ? ' is-empty' : ''}" id="settingsAvatarPreview">${avatarVideoSrc ? profileMediaMarkup(avatarVideoSrc, '', 'video avatar', profile.avatarVideoSettings) : (avatarSrc ? profileMediaMarkup(avatarSrc, '', 'avatar') : '<i class="fas fa-user"></i>')}</div>
               <div class="settings-media-actions">
                 <button class="settings-media-btn" id="settingsAvatarUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
                 ${avatarVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsAvatarEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : (avatarSrc ? (isGifUrl(avatarSrc) ? `<button class="settings-media-btn settings-media-edit-video" id="settingsAvatarEditGifBtn"><i class="fas fa-sliders"></i> Редагувати GIF</button>` : `<button class="settings-media-btn settings-media-edit-image" id="settingsAvatarEditImageBtn"><i class="fas fa-crop-simple"></i> Редагувати аватарку</button>`) : '')}
@@ -382,14 +384,18 @@ import {
             </div>
             </div>
             </div>
+            </div>
 
+            <div class="appearance-col appearance-col--side">
             <div class="appearance-section-card appearance-preview-card">
             <button class="settings-preview-toggle-btn" id="settingsPreviewToggleBtn">
               <i class="fas fa-eye${settingsState.previewOpen ? '-slash' : ''}"></i> ${settingsState.previewOpen ? "Сховати прев'ю" : "Прев'ю"}
             </button>
             <div class="settings-preview-panel" id="settingsPreviewPanel" style="display:${settingsState.previewOpen ? 'block' : 'none'};"></div>
             </div>
+            </div>
 
+            <div class="appearance-col appearance-col--main">
             <div class="appearance-section-card">
             <div class="settings-section-title">Фільтр банера</div>
             <div class="settings-hint-text" style="margin-top:-0.5rem;">Свій колір, чорно-біле чи будь-який інший стиль — оберіть, як показувати ваш банер.</div>
@@ -404,6 +410,8 @@ import {
             <div class="settings-section-title">Декорація аватара</div>
             ${buildOptionGridHtml('avatarDecoration', AVATAR_DECORATIONS, profile.avatarDecoration)}
 
+            </div>
+            </div>
             </div>
           `;
         }
@@ -634,6 +642,10 @@ import {
 
         function wireAppearanceTab(profile) {
             const bioInput = document.getElementById('settingsBioInput');
+            const bioCount = document.getElementById('settingsBioCount');
+            if (bioInput && bioCount) bioInput.addEventListener('input', () => {
+                bioCount.textContent = String(bioInput.value.length);
+            });
             if (bioInput) bioInput.addEventListener('change', () => {
                 const p = getProfile();
                 p.bio = bioInput.value.trim() || p.bio;
@@ -739,7 +751,7 @@ import {
         const SETTINGS_TABS = [
             { id: 'profile', label: 'Профіль', icon: 'fa-user' },
             { id: 'appearance', label: 'Вигляд', icon: 'fa-palette' },
-            { id: 'security', label: 'Безпека', icon: 'fa-shield-halved' },
+            { id: 'security', label: 'Безпека', icon: 'fa-shield-alt' },
             { id: 'site', label: 'Сайт', icon: 'fa-sliders' }
         ];
 
