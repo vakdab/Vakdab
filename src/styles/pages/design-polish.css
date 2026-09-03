@@ -242,8 +242,8 @@ header.header,
 .mobile-bottom-nav {
     border: 1px solid var(--vp-line-strong);
     box-shadow: 0 -8px 30px color-mix(in srgb, var(--text) 10%, transparent);
-    backdrop-filter: blur(18px) saturate(130%);
-    -webkit-backdrop-filter: blur(18px) saturate(130%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 /* Mobile-first spacing and touch targets. */

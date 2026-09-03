@@ -149,12 +149,11 @@
         }
 
         .img--blur {
-            filter: blur(10px) scale(1.02);
-            transform-origin: center;
-            transition: filter 600ms ease, transform 600ms ease;
+            opacity: 0;
+            transition: opacity 300ms ease;
         }
         .img--loaded {
-            filter: blur(0) scale(1);
+            opacity: 1;
         }
 
         .glass {

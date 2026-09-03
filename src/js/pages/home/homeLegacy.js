@@ -151,7 +151,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             container.style.display = '';
             const gen = ++popularRenderGen;
             container.innerHTML = list.map((a, idx) => {
-                const poster = a.images?.jpg?.large_image_url || '';
+                const poster = cardPoster(a, '');
                 const title = a.title || 'Без назви';
                 const shortSynopsis = (a.synopsis || '').trim();
                 const descHtml = shortSynopsis
@@ -1255,7 +1255,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         }
 
         export function homeCatalogCardHtml(a) {
-            const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
+            const poster = cardPoster(a);
             const title = a.title || 'Без назви';
             const type = a.typeLabel || animeTypeLabel(a.type);
             const status = homeCatalogMode === 'manga' ? (a.ageRating || (homeCatalogAdult ? '18+' : '')) : statusLabelUa(a.status);
@@ -2084,7 +2084,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (!items || items.length === 0) return '';
             const isWide = variant === 'wide';
             const cardsHtml = items.map(a => {
-                const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
+                const poster = cardPoster(a);
                 const title = a.title || 'Без назви';
                 if (!isWide) {
                     const type = '';
@@ -2137,14 +2137,15 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         export function buildPopularVerticalCardsHtml(items, indexOffset = 0) {
             return items.map((a, idx) => {
                 const index = indexOffset + idx;
-                const poster = a.images?.jpg?.large_image_url || ANIME_CARD_PLACEHOLDER;
+                const poster = cardPoster(a);
+                const delay = indexOffset > 0 ? 0 : idx * 0.03;
                 const title = a.title || 'Без назви';
                 const synopsis = (a.synopsis || '').trim();
                 const description = synopsis
                     ? synopsis.length > 130 ? `${synopsis.slice(0, 130)}…` : synopsis
                     : 'Опис відсутній.';
                 return `
-                    <div class="popular-card" data-url="${a.url}" data-idx="${index}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${idx*0.03}s">
+                    <div class="popular-card" data-url="${a.url}" data-idx="${index}" tabindex="0" role="button" aria-label="${title}" style="animation-delay:${delay}s">
                       <div class="popular-card__poster-wrap">
                         <div class="popular-card__poster">
                           <img src="${poster}" alt="${title}" loading="lazy" class="img--blur" onload="this.classList.add(\'img--loaded\')" onerror="this.src=\'${ANIME_CARD_PLACEHOLDER}\'">
@@ -2156,6 +2157,11 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     </div>
                   `;
             }).join('');
+        }
+
+        // Легкі постери для карток: medium достатньо для розмірів картки і в ~5 разів легший за large.
+        function cardPoster(a, fallback = ANIME_CARD_PLACEHOLDER) {
+            return a?.images?.jpg?.medium_image_url || a?.images?.jpg?.large_image_url || fallback;
         }
 
         export function buildPopularVerticalSectionHtml(items) {
