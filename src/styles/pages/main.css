@@ -1282,6 +1282,16 @@ body:has(#animeContainer.popular-list) #animeContainer.popular-list .popular-car
 }
 .home-recommendations .popular-list--home::-webkit-scrollbar { height: 5px; }
 .home-recommendations .popular-list--home::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 999px; }
+/* Віртуалізація: spacer тримає висоту вивантажених карток, щоб скрол не стрибав. */
+.home-recycler-spacer { width: 100%; min-height: 0; }
+
+/* Легші постери на головній: без сірого фону і важких тіней. */
+.home-recommendations .popular-list--home .popular-card__poster,
+.dark-mode .home-recommendations .popular-list--home .popular-card__poster {
+    background: transparent;
+    box-shadow: none;
+}
+
 .home-recommendations .popular-list--home .popular-card {
     content-visibility: auto;
     contain: layout paint style;

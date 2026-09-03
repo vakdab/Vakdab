@@ -2153,7 +2153,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                       </div>
                       <div class="popular-card__title">${title}</div>
                       <div class="popular-card__desc">${description}</div>
-                      <div class="popular-card__episodes" aria-label="Кількість серій">Серій: …</div>
+                      <div class="popular-card__episodes" aria-label="Кількість серій">${homeRecommendationEpisodesMap.get(a.url) || 'Серій: …'}</div>
                     </div>
                   `;
             }).join('');
@@ -2231,9 +2231,146 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
         export function bindHomeRecommendationCards(cards) {
             cards.forEach(card => {
+                if (card.dataset.bound === '1') return;
+                card.dataset.bound = '1';
                 card.addEventListener('click', () => openPlayerPage(card.dataset.url));
                 card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPlayerPage(card.dataset.url); } });
             });
+        }
+
+        // ====================================================================
+        //  ВІРТУАЛІЗАЦІЯ ЛЄНТИ РЕКОМЕНДАЦІЙ (мобільна вертикальна лєнта)
+        //  У DOM лишаються лише картки біля viewport: прогорнуті вище
+        //  вивантажуються з точним spacer-компенсатором, при гортанні вгору
+        //  повертаються без стрибка скролу.
+        // ====================================================================
+        const RECYCLER_MAX_CARDS = 48;   // максимум карток в DOM одночасно
+        const RECYCLER_KEEP_ABOVE = 12; // буфер над viewport
+        const RECYCLER_KEEP_BELOW = 12; // буфер під viewport
+        let recyclerHeights = new Map();
+        let recyclerAvgHeight = 210;
+        let recyclerRafPending = false;
+        let recyclerScrollBound = false;
+        const homeRecommendationEpisodesMap = new Map();
+
+        function homeFeedList() {
+            return document.querySelector('#homeRecommendationsContainer .popular-list--home');
+        }
+
+        function homeFeedIsVertical() {
+            const list = homeFeedList();
+            return Boolean(list) && window.getComputedStyle(list).flexDirection === 'column';
+        }
+
+        function ensureHomeFeedSpacer(list) {
+            if (!list) return null;
+            let spacer = list.querySelector(':scope > .home-recycler-spacer');
+            if (!spacer) {
+                spacer = document.createElement('div');
+                spacer.className = 'home-recycler-spacer';
+                spacer.style.height = '0px';
+                list.prepend(spacer);
+            }
+            return spacer;
+        }
+
+        function measureHomeFeedCards(list) {
+            list.querySelectorAll(':scope > .popular-card').forEach(card => {
+                const idx = Number(card.dataset.idx);
+                if (Number.isFinite(idx) && !recyclerHeights.has(idx)) {
+                    const h = card.offsetHeight;
+                    if (h > 40) recyclerHeights.set(idx, h);
+                }
+            });
+            if (recyclerHeights.size) {
+                let sum = 0;
+                recyclerHeights.forEach(h => { sum += h; });
+                recyclerAvgHeight = Math.max(80, sum / recyclerHeights.size);
+            }
+        }
+
+        function homeFeedRangeHeight(from, to, gap) {
+            if (to <= from) return 0;
+            let total = 0;
+            for (let i = from; i < to; i++) total += (recyclerHeights.get(i) || recyclerAvgHeight) + gap;
+            return Math.max(0, total - gap);
+        }
+
+        export function resetHomeFeedRecycler() {
+            recyclerHeights = new Map();
+            recyclerAvgHeight = 210;
+        }
+
+        export function syncHomeFeedWindow() {
+            if (Router.currentRoute !== 'main') return;
+            const list = homeFeedList();
+            if (!list || !homeFeedIsVertical()) return;
+            const spacer = ensureHomeFeedSpacer(list);
+            measureHomeFeedCards(list);
+            const cards = [...list.querySelectorAll(':scope > .popular-card')];
+            if (!cards.length) return;
+            const renderedFirst = Number(cards[0].dataset.idx);
+            const renderedLast = Number(cards[cards.length - 1].dataset.idx) + 1;
+            const total = homeRecommendationItems.length;
+            const rect = list.getBoundingClientRect();
+            const spacerH = parseFloat(spacer.style.height) || 0;
+            const contentStartDoc = rect.top + window.scrollY + spacerH;
+            const gap = parseFloat(window.getComputedStyle(list).rowGap) || 0;
+            const rowStep = recyclerAvgHeight + gap;
+            const viewTop = window.scrollY;
+            const viewBottom = viewTop + window.innerHeight;
+
+            let firstVisible;
+            if (viewBottom < contentStartDoc) {
+                firstVisible = Math.max(0, renderedFirst - Math.ceil((contentStartDoc - viewBottom) / rowStep) - RECYCLER_KEEP_ABOVE);
+            } else {
+                const offset = Math.max(0, viewTop - contentStartDoc);
+                firstVisible = Math.max(0, renderedFirst + Math.floor(offset / rowStep) - RECYCLER_KEEP_ABOVE);
+            }
+            let newFirst = firstVisible;
+            let newLast = Math.min(total, Math.max(renderedLast, firstVisible + RECYCLER_KEEP_ABOVE + Math.ceil((window.innerHeight * 2) / rowStep)));
+            if (newLast - newFirst > RECYCLER_MAX_CARDS) newFirst = Math.max(0, newLast - RECYCLER_MAX_CARDS);
+            if (newFirst >= newLast) return;
+
+            // 1) Вивантажити картки, які прогорнули вгору (замінити spacer-ом такої ж висоти).
+            if (newFirst > renderedFirst) {
+                const removedH = homeFeedRangeHeight(renderedFirst, Math.min(newFirst, renderedLast), gap);
+                cards.forEach(card => { const idx = Number(card.dataset.idx); if (idx < newFirst) card.remove(); });
+                spacer.style.height = `${spacerH + removedH}px`;
+            }
+            // 2) Повернути картки при гортанні назад вгору (без стрибка скролу).
+            if (newFirst < renderedFirst) {
+                const insertItems = homeRecommendationItems.slice(newFirst, renderedFirst);
+                if (insertItems.length) {
+                    spacer.insertAdjacentHTML('afterend', buildPopularVerticalCardsHtml(insertItems, newFirst));
+                    const insertedH = homeFeedRangeHeight(newFirst, renderedFirst, gap);
+                    spacer.style.height = `${Math.max(0, spacerH - insertedH)}px`;
+                    window.scrollBy(0, insertedH);
+                }
+            }
+            // 3) Догенерувати картки вниз, якщо viewport наблизився до кінця вікна.
+            if (newLast > renderedLast) {
+                const appendItems = homeRecommendationItems.slice(renderedLast, newLast);
+                if (appendItems.length) list.insertAdjacentHTML('beforeend', buildPopularVerticalCardsHtml(appendItems, renderedLast));
+            }
+            // 4) Підчистити картки далеко під viewport.
+            if (newLast < renderedLast) {
+                cards.forEach(card => { const idx = Number(card.dataset.idx); if (idx >= newLast) card.remove(); });
+            }
+            bindHomeRecommendationCards([...list.querySelectorAll(':scope > .popular-card:not([data-bound])')]);
+        }
+
+        function scheduleHomeFeedSync() {
+            if (recyclerRafPending) return;
+            recyclerRafPending = true;
+            requestAnimationFrame(() => { recyclerRafPending = false; syncHomeFeedWindow(); });
+        }
+
+        export function bindHomeFeedRecycler() {
+            if (recyclerScrollBound) return;
+            recyclerScrollBound = true;
+            window.addEventListener('scroll', scheduleHomeFeedSync, { passive: true });
+            window.addEventListener('resize', scheduleHomeFeedSync, { passive: true });
         }
 
         export async function loadHomeRecommendations(options = {}) {
@@ -2256,6 +2393,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 container.innerHTML = buildPopularVerticalSectionHtml(homeRecommendationItems);
                 container.style.display = 'block';
                 bindHomeRecommendationCards([...container.querySelectorAll('.popular-card')]);
+                resetHomeFeedRecycler();
+                syncHomeFeedWindow();
+                bindHomeFeedRecycler();
                 ensureHomeRecommendationObserver();
                 loadHomeRecommendationDetails(items, 0, requestId);
                 container.querySelector('#homePopularShowAllBtn')?.addEventListener('click', () => { window.location.hash = 'catalog'; });
@@ -2298,9 +2438,9 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 homeRecommendationHasMore = nextItems.hasNextPage !== false && uniqueItems.length > 0;
                 const list = container.querySelector('.popular-list--home');
                 if (list) list.insertAdjacentHTML('beforeend', buildPopularVerticalCardsHtml(uniqueItems, offset));
-                bindHomeRecommendationCards([...container.querySelectorAll(`.popular-card[data-idx]`)].slice(offset));
+                bindHomeRecommendationCards([...container.querySelectorAll('.popular-card')]);
                 loadHomeRecommendationDetails(uniqueItems, offset, homeRecommendationRequestId);
-                requestAnimationFrame(handleHomeRecommendationScroll);
+                requestAnimationFrame(() => { scheduleHomeFeedSync(); handleHomeRecommendationScroll(); });
             } catch (error) {
                 console.warn('[home recommendations more] failed:', error);
             } finally {
@@ -2326,9 +2466,12 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     try {
                         const detail = await fetchAnimeLite(detailItems[index].url);
                         if (requestId !== homeRecommendationRequestId || Router.currentRoute !== 'main') return;
-                        if (episodes) episodes.textContent = detail?.episodes != null ? `Серій: ${detail.episodes}` : 'Серій: –';
+                        const epText = detail?.episodes != null ? `Серій: ${detail.episodes}` : 'Серій: –';
+                        homeRecommendationEpisodesMap.set(detailItems[index].url, epText);
+                        if (episodes) episodes.textContent = epText;
                     } catch (error) {
                         if (requestId !== homeRecommendationRequestId || Router.currentRoute !== 'main') return;
+                        homeRecommendationEpisodesMap.set(detailItems[index].url, 'Серій: –');
                         if (episodes) episodes.textContent = 'Серій: –';
                     }
                 }
