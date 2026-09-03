@@ -65,9 +65,24 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         }
         function scrollPageBy(dy) {
             if (!dy) return;
-            window.scrollBy(0, dy);
-            document.documentElement.scrollTop += dy;
-            document.body.scrollTop += dy;
+            // ОДИН запис у реальний скрол-контейнер, примусово миттєвий.
+            // Раніше тут було window.scrollBy + documentElement.scrollTop —
+            // це один і той самий документ-скрол, viewport з'їжджав на 2×dy,
+            // а CSS scroll-behavior:smooth на html ще й анімував кожен
+            // стрибок — через це при гортанні вгору користувач «пролітав»
+            // повз відновлені картки (порожній екран) і все підгальмовувало.
+            const doc = document.scrollingElement || document.documentElement;
+            const prevBehavior = doc.style.scrollBehavior;
+            doc.style.scrollBehavior = 'auto';
+            try {
+                doc.scrollTop = (doc.scrollTop || 0) + dy;
+                // Фолбек для webview, де скрол-контейнером лишається сам body.
+                if (doc === document.documentElement && document.body && document.body.scrollHeight > document.body.clientHeight + 1) {
+                    document.body.scrollTop = (document.body.scrollTop || 0) + dy;
+                }
+            } finally {
+                doc.style.scrollBehavior = prevBehavior;
+            }
         }
 
         // Infinite scroll for the actually visible legacy animeContainer.
@@ -2413,10 +2428,57 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             recyclerAvgHeight = 210;
         }
 
+        const homeEpisodesInFlight = new Set();
+        let homeEpisodesLastRun = 0;
+
+        // Підгружаємо кількість серій лише для карток, які реально у/біля
+        // viewport (раніше вантажились тільки перші 8, решта назавжди
+        // лишались «Серій: …»). Кеш у homeRecommendationEpisodesMap, тому
+        // повторна поява картки після ресайклінгу показує серії одразу.
+        function hydrateHomeFeedEpisodes(list) {
+            if (!list) return;
+            const viewTop = getPageScrollY();
+            const viewBottom = viewTop + window.innerHeight;
+            let queued = 0;
+            for (const card of list.querySelectorAll(':scope > .popular-card')) {
+                const epEl = card.querySelector('.popular-card__episodes');
+                if (!epEl) continue;
+                const url = card.dataset.url;
+                const cached = url && homeRecommendationEpisodesMap.get(url);
+                if (cached) {
+                    if (epEl.textContent !== cached) epEl.textContent = cached;
+                    continue;
+                }
+                if (!url || homeEpisodesInFlight.has(url)) continue;
+                if (epEl.textContent && !epEl.textContent.includes('…')) continue;
+                const rect = card.getBoundingClientRect();
+                const cardTopDoc = rect.top + viewTop;
+                if (cardTopDoc > viewBottom + 400 || cardTopDoc + rect.height < viewTop - 200) continue;
+                homeEpisodesInFlight.add(url);
+                queued++;
+                fetchAnimeLite(url)
+                    .then(detail => {
+                        homeRecommendationEpisodesMap.set(url, detail?.episodes != null ? `Серій: ${detail.episodes}` : 'Серій: –');
+                    })
+                    .catch(() => { homeRecommendationEpisodesMap.set(url, 'Серій: –'); })
+                    .finally(() => {
+                        homeEpisodesInFlight.delete(url);
+                        const text = homeRecommendationEpisodesMap.get(url) || 'Серій: –';
+                        list.querySelectorAll(`.popular-card[data-url="${CSS.escape(url)}"] .popular-card__episodes`).forEach(el => { el.textContent = text; });
+                    });
+                if (queued >= 6) break;
+            }
+        }
+
         export function syncHomeFeedWindow() {
             if (Router.currentRoute !== 'main') return;
             const list = homeFeedList();
             if (!list || !homeFeedIsVertical()) return;
+            const now = Date.now();
+            if (now - homeEpisodesLastRun > 300) {
+                homeEpisodesLastRun = now;
+                hydrateHomeFeedEpisodes(list);
+            }
             const spacer = ensureHomeFeedSpacer(list);
             measureHomeFeedCards(list);
             const cards = [...list.querySelectorAll(':scope > .popular-card')];
