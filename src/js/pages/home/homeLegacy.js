@@ -50,6 +50,26 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             currentCategory = '',
             quickFilterParams = null;
 
+        // Захист від того, що якийсь webview/CSS знову зробить body власним
+        // скрол-контейнером замість документа (саме через це recycler колись
+        // рахував window.scrollY===0 і spacer роздувався до сотень тисяч px).
+        // Читаємо максимум з усіх можливих джерел позиції скролу і при
+        // компенсації скролу штовхаємо всі можливі скрол-контейнери одразу —
+        // той, що не є реальним скрол-контейнером, просто ігнорує запис.
+        function getPageScrollY() {
+            return Math.max(
+                window.scrollY || 0,
+                document.documentElement.scrollTop || 0,
+                document.body.scrollTop || 0
+            );
+        }
+        function scrollPageBy(dy) {
+            if (!dy) return;
+            window.scrollBy(0, dy);
+            document.documentElement.scrollTop += dy;
+            document.body.scrollTop += dy;
+        }
+
         // Infinite scroll for the actually visible legacy animeContainer.
         const HOME_FEED_MAX_ITEMS = 960;
         let homeFeedItems = [];
@@ -400,7 +420,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 const nextKeptCard = container.querySelector(`.anime-card[data-idx="${renderedFirst}"]`);
                 const insertedH = nextKeptCard ? Math.max(0, nextKeptCard.getBoundingClientRect().top - beforeTop) : 0;
                 spacer.style.height = `${Math.max(0, spacerH - insertedH)}px`;
-                if (insertedH > 0) window.scrollBy(0, insertedH);
+                if (insertedH > 0) scrollPageBy(insertedH);
                 bindAnimeFeedCards(container);
                 observeAnimeCardsForTmdb(container);
                 observeAnimeGridSpacer(container, spacer);
@@ -2297,7 +2317,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
 
         export function handleHomeRecommendationScroll() {
             if (!homeRecommendationHasMore || homeRecommendationLoading) return;
-            const remaining = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+            const remaining = document.documentElement.scrollHeight - (getPageScrollY() + window.innerHeight);
             if (remaining < Math.max(700, window.innerHeight * 1.25)) void loadMoreHomeRecommendations();
         }
 
@@ -2406,10 +2426,10 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const total = homeRecommendationItems.length;
             const rect = list.getBoundingClientRect();
             const spacerH = parseFloat(spacer.style.height) || 0;
-            const contentStartDoc = rect.top + window.scrollY + spacerH;
+            const contentStartDoc = rect.top + getPageScrollY() + spacerH;
             const gap = parseFloat(window.getComputedStyle(list).rowGap) || 0;
             const rowStep = recyclerAvgHeight + gap;
-            const viewTop = window.scrollY;
+            const viewTop = getPageScrollY();
             const viewBottom = viewTop + window.innerHeight;
 
             let firstVisible;
@@ -2437,7 +2457,7 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                     spacer.insertAdjacentHTML('afterend', buildPopularVerticalCardsHtml(insertItems, newFirst));
                     const insertedH = homeFeedRangeHeight(newFirst, renderedFirst, gap);
                     spacer.style.height = `${Math.max(0, spacerH - insertedH)}px`;
-                    window.scrollBy(0, insertedH);
+                    scrollPageBy(insertedH);
                 }
             }
             // 3) Догенерувати картки вниз, якщо viewport наблизився до кінця вікна.

@@ -28,7 +28,11 @@ img, video { max-width: 100%; }
         }
         html,
         body {
-            height: 100%;
+            /* НЕ height:100%: разом з overflow-x:hidden на body це змушувало
+               body самому ставати внутрішнім скрол-контейнером (CSS-специфікація:
+               якщо overflow-x != overflow-y, "visible" вважається "auto") —
+               window.scrollY завжди лишався 0, а recycler головної стрічки
+               рахував позицію хибно й spacer роздувався до сотень тисяч px. */
             scroll-behavior: smooth;
             -webkit-text-size-adjust: 100%;
         }
