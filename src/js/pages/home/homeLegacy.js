@@ -2473,12 +2473,15 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
         export function syncHomeFeedWindow() {
             if (Router.currentRoute !== 'main') return;
             const list = homeFeedList();
-            if (!list || !homeFeedIsVertical()) return;
+            if (!list) return;
+            // Гідратуємо серії в будь-якому режимі лєнти (і вертикальному,
+            // і сітці), обмежено і з троттling — плюс видимість карток.
             const now = Date.now();
             if (now - homeEpisodesLastRun > 300) {
                 homeEpisodesLastRun = now;
                 hydrateHomeFeedEpisodes(list);
             }
+            if (!homeFeedIsVertical()) return;
             const spacer = ensureHomeFeedSpacer(list);
             measureHomeFeedCards(list);
             const cards = [...list.querySelectorAll(':scope > .popular-card')];
