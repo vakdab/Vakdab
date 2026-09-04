@@ -4,12 +4,12 @@ import {
     profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260901-home-recs-v3';
-import { Storage } from '../../core/compat/storage.js?v=20260824-settings-redesign-v1';
-import { renderStickerFaceByKey } from './stickersLegacy.js?v=20260824-settings-redesign-v1';
+} from '../../legacy/app-legacy.js?v=20260905-stickers-sync-v1';
+import { Storage } from '../../core/compat/storage.js?v=20260905-stickers-sync-v1';
+import { renderStickerFaceByKey } from './stickersLegacy.js?v=20260905-stickers-sync-v1';
 import { getProfile, saveProfile, getProfileStats, getAchievements, getProfileDisplayName, getProfileHandle } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
 import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260824-settings-redesign-v1';
-import { renderTasksInto } from '../../components/rating/ratingSystem.js?v=20260905-nickbadge-v1';
+import { renderTasksInto } from '../../components/rating/ratingSystem.js?v=20260905-stickers-sync-v2';
 
 function thoughtSizeClass(text) {
     const length = String(text || '').trim().length;
@@ -164,6 +164,13 @@ function primeProfileMediaPlayback(container) {
         document.addEventListener('pointerdown', resume, { passive: true, once: true });
         window.__vakdabProfileMediaPlaybackBound = true;
     }
+}
+
+if (!window.__vakdabProfileStickerRefreshBound) {
+    window.__vakdabProfileStickerRefreshBound = true;
+    window.addEventListener('vakdab:stickers-changed', () => {
+        if (Router.currentRoute === 'profile' && document.getElementById('profilePageContainer')) renderProfilePage();
+    });
 }
 
 export function renderProfilePage() {

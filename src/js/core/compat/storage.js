@@ -1,5 +1,5 @@
 import { Auth } from './auth.js';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260901-home-recs-v3';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260905-stickers-sync-v1';
         export const Storage = {
             _syncTimer: null,
             _pendingSyncScope: null,
@@ -165,18 +165,25 @@ import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-lega
                 } catch { this._stickersRaw = null; this._stickersCache = getDefaultStickers(); return this._stickersCache; }
             },
             _setStickers(s) {
-                const serialized = JSON.stringify(s);
+                // Не тримаємо зовнішній об'єкт у кеші: UI часто змінює його перед наступним render().
+                const safe = s && typeof s === 'object' ? JSON.parse(JSON.stringify(s)) : getDefaultStickers();
+                const serialized = JSON.stringify(safe);
                 localStorage.setItem('vakdab_stickers', serialized);
                 this._stickersRaw = serialized;
-                this._stickersCache = s;
+                this._stickersCache = safe;
             },
             getStickersTS() { try { return Number(localStorage.getItem('vakdab_stickers_ts')) || 0; } catch { return 0; } },
             setStickers(s) {
                 this._setStickers(s);
-                try { localStorage.setItem('vakdab_stickers_ts', String(Date.now())); } catch {}
-                // Наліпки — свідома дія користувача, але синк іде окремим scoped debounce,
-                // щоб не блокувати мобільний UI великим sticker pack у момент кліку.
-                this._debounceSync('stickers');
+                let changedAt = Date.now();
+                try {
+                    // Монотонний timestamp не дає швидким послідовним змінам програти старому snapshot.
+                    changedAt = Math.max(changedAt, this.getStickersTS() + 1);
+                    localStorage.setItem('vakdab_stickers_ts', String(changedAt));
+                } catch {}
+                try { window.dispatchEvent(new CustomEvent('vakdab:stickers-changed', { detail: { updatedAt: changedAt } })); } catch {}
+                // Зміна наліпки — важлива дія: не залишаємо її лише в debounce-черзі.
+                this._flushSync('stickers');
             },
 
             clear() {

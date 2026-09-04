@@ -1,9 +1,9 @@
 import { Auth } from '../../core/compat/auth.js?v=20260824-settings-redesign-v1';
 import { Router } from '../../core/compat/router.js?v=20260903-rating-names-v1';
-import { Storage } from '../../core/compat/storage.js?v=20260824-settings-redesign-v1';
+import { Storage } from '../../core/compat/storage.js?v=20260905-stickers-sync-v1';
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
-import { renderStickerFaceByKey } from '../../pages/profile/stickersLegacy.js?v=20260824-settings-redesign-v1';
+import { renderStickerFaceByKey } from '../../pages/profile/stickersLegacy.js?v=20260905-stickers-sync-v1';
 
 function escapeRatingHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -329,6 +329,15 @@ function isGifUrl(url) {
 
             loadMyStats();
             loadLeaderboard();
+            if (!window.__vakdabRatingStickerRefreshBound) {
+                window.__vakdabRatingStickerRefreshBound = true;
+                window.addEventListener('vakdab:stickers-changed', () => {
+                    if (Router.currentRoute !== 'rating') return;
+                    loadMyStats();
+                    const lb = document.getElementById('rgLeaderboard');
+                    if (lb && _lbUsersCache.length) renderLeaderboard(lb, _lbUsersCache, _lbSortKey);
+                });
+            }
         }
 
         function loadMyStats() {
@@ -469,6 +478,7 @@ function isGifUrl(url) {
                 const tp = new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 10000));
                 const snap = await Promise.race([getDocs(q), tp]);
 
+                const thisUid = Auth.isAuthenticated() ? Auth._user?.uid : null;
                 const mapUsers = (snapshot) => {
                     let arr = [];
                     snapshot.forEach(d => {
@@ -482,7 +492,8 @@ function isGifUrl(url) {
                             avatar: data.profile?.avatar || '',
                             avatarVideo: data.profile?.avatarVideo || '',
                             avatarVideoSettings: data.profile?.avatarVideoSettings || {},
-                            stickers: data.stickers || {},
+                            // Поки Firebase snapshot доганяє локальний запис, не показуємо власну стару наліпку.
+                            stickers: (thisUid && d.id === thisUid) ? Storage.getStickers() : (data.stickers || {}),
                             episodes: Array.isArray(data.history) ? data.history.length : 0,
                             minutes: Math.floor((data.watchTime || 0) / 60),
                             bookmarks: Array.isArray(data.bookmarks) ? data.bookmarks.length : 0,
