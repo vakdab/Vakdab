@@ -3,7 +3,7 @@ import { auth, db, initialized as firebaseInitialized } from '../services/fireba
 import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_PROXY_URL, MIKAI_BASE, GENRE_MAP } from '../config/constants.js?v=20260824-settings-redesign-v1';
 import { safeQuery, safeQueryAll } from '../utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from '../utils/image.js';
-import { loadFeature } from '../core/feature-loader.js?v=20260824-settings-redesign-v1';
+import { loadFeature } from '../core/feature-loader.js?v=20260905-deadcode-v1';
 import '../utils/string.js';
 
 export const loadMangaReader = () => loadFeature('manga');

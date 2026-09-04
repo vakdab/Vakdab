@@ -17,7 +17,7 @@ import { renderProfilePage } from '../profile/profileLegacy.js?v=20260904-profil
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
 } from '../../legacy/app-legacy.js?v=20260901-home-recs-v3';
-import { loadFeature } from '../../core/feature-loader.js?v=20260824-settings-redesign-v1';
+import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 
         // ====================================================================
         //  ПЛЕЄР

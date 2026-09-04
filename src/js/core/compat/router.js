@@ -1,5 +1,5 @@
 import { HIKKA_API } from '../../config/constants.js?v=20260824-settings-redesign-v1';
-import { loadFeature } from '../feature-loader.js?v=20260824-settings-redesign-v1';
+import { loadFeature } from '../feature-loader.js?v=20260905-deadcode-v1';
 import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
     initRatingPage, loadAndDisplayGenreSections, loadHomeRecommendations, loadMangaReader,
