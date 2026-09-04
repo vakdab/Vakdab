@@ -1690,3 +1690,7 @@
     font-weight: 800;
     color: var(--text);
 }
+
+/* Завдання дня всередині вкладки Досягнення профілю */
+#profileTasksInline .rg-daily-wrap { margin: 0 0 18px; }
+#profileTasksInline:empty { display: none; }
