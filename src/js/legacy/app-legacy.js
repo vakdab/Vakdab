@@ -24,7 +24,7 @@ import { Storage } from '../core/compat/storage.js?v=20260824-settings-redesign-
 import { Router } from '../core/compat/router.js?v=20260901-home-recs-v3';
 import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260824-settings-redesign-v1';
 import { initBottomNav } from '../components/navigation/bottomNav.js';
-import { renderSchedulePage } from '../pages/schedule/schedule.js';
+import { renderSchedulePage } from '../pages/schedule/schedule.js?v=20260904-schedule-fix-v1';
 import { buildHeroBanner } from '../components/home/heroBanner.js';
 import { renderHomeQuickFilterBar } from '../pages/home/homeQuickFilter.js?v=20260903-home-filter-v2';
 import { renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage } from '../pages/profile/profileLegacy.js?v=20260904-profile-tasks-v2';

@@ -31,16 +31,25 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
         async function fetchScheduleByOffset(offset) {
             if (scheduleState.cache[offset]) return scheduleState.cache[offset];
             if (!scheduleState.sourcePromise) {
-                scheduleState.sourcePromise = fetch(`${MIKAI_API_BASE}/schedule`, {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 12000);
+                scheduleState.sourcePromise = fetch(`${MIKAI_API_BASE}/schedule?ts=${Date.now()}`, {
                     mode: 'cors',
                     credentials: 'omit',
-                    cache: 'no-cache'
+                    cache: 'no-store',
+                    headers: { Accept: 'application/json' },
+                    signal: controller.signal
                 }).then(async resp => {
                     if (!resp.ok) throw new Error('HTTP ' + resp.status);
                     const payload = await resp.json();
                     if (payload?.ok === false) throw new Error(payload.error?.message || 'Mikai API error');
-                    return payload?.result || payload;
+                    const schedule = payload?.result || payload;
+                    if (!schedule || typeof schedule !== 'object') throw new Error('Невірний формат відповіді');
+                    return schedule;
                 }).catch(error => {
+                    if (error?.name === 'AbortError') throw new Error('Сервер розкладу не відповів за 12 секунд');
+                    throw error;
+                }).finally(() => clearTimeout(timeout)).catch(error => {
                     scheduleState.sourcePromise = null;
                     throw error;
                 });
@@ -92,6 +101,8 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
             content.innerHTML = '<div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження розкладу…</div>';
             try {
                 const results = await Promise.allSettled(Array.from({ length: 7 }, (_, i) => fetchScheduleByOffset(i)));
+                const successfulDays = results.filter(result => result.status === 'fulfilled');
+                if (!successfulDays.length) throw new Error('Сервіс розкладу тимчасово недоступний');
                 const sections = results.map((result, offset) => {
                     const list = result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : [];
                     const d = scheduleDateForOffset(offset);
@@ -99,6 +110,10 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
                     return `<section class="schedule-week-day${offset === 0 ? ' is-today' : ''}" data-schedule-day-offset="${offset}" id="schedule-day-${offset}"><div class="schedule-week-day__title"><strong>${day}</strong><span>${offset === 0 ? 'Сьогодні' : formatScheduleDisplayDate(d)}</span></div><div class="schedule-week-list">${list.length ? list.map(item => scheduleCard(item, offset)).join('') : '<div class="schedule-day-empty">На цей день розкладу немає</div>'}</div></section>`;
                 }).join('');
                 content.innerHTML = sections || '<div class="loader">На найближчі дні розкладу немає</div>';
+                if (!sections) {
+                    content.innerHTML += '<button class="btn-outline schedule-retry" type="button">Оновити розклад</button>';
+                    content.querySelector('.schedule-retry')?.addEventListener('click', () => { scheduleState.cache = {}; loadScheduleWeek(); });
+                }
                 setScheduleDay(scheduleState.selectedOffset);
                 content.querySelectorAll('.schedule-week-item').forEach(el => {
                     const open = () => openScheduleItemInPlayer(el.dataset.title, el);
@@ -156,7 +171,7 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
                         <p class="schedule-page-hint">Зверніть увагу, що це дата виходу на телебаченні в Японії, українські адаптації потребують певного часу.</p>
                     </div>
                     <div class="schedule-page-hero__character" aria-hidden="true">
-                        <img src="assets/schedule/schedule-american-flag-girl.png" alt="" loading="eager" decoding="async">
+                        <img src="./app/assets/schedule/schedule-american-flag-girl.png" alt="" loading="eager" decoding="async">
                     </div>
                 </section>
                 ${renderScheduleDaySelector()}
