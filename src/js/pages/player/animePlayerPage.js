@@ -4,7 +4,7 @@ import { GENRE_MAP } from '../../config/constants.js?v=20260824-settings-redesig
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
 import { Storage } from '../../core/compat/storage.js?v=20260824-settings-redesign-v1';
 import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260824-settings-redesign-v1';
-import { DailyStats } from '../../components/rating/ratingSystem.js?v=20260824-settings-redesign-v1';
+import { DailyStats } from '../../components/rating/ratingSystem.js?v=20260904-profile-tasks-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -13,7 +13,7 @@ import {
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
 } from '../home/homeLegacy.js?v=20260829-vertical-catalog-28-v1';
-import { renderProfilePage } from '../profile/profileLegacy.js?v=20260824-settings-redesign-v1';
+import { renderProfilePage } from '../profile/profileLegacy.js?v=20260904-profile-tasks-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
 } from '../../legacy/app-legacy.js?v=20260901-home-recs-v3';
