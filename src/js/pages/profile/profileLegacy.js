@@ -9,6 +9,7 @@ import { Storage } from '../../core/compat/storage.js?v=20260824-settings-redesi
 import { renderStickerFaceByKey } from './stickersLegacy.js?v=20260824-settings-redesign-v1';
 import { getProfile, saveProfile, getProfileStats, getAchievements, getProfileDisplayName, getProfileHandle } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
 import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260824-settings-redesign-v1';
+import { renderTasksInto } from '../../components/rating/ratingSystem.js?v=20260904-profile-tasks-v1';
 
 function thoughtSizeClass(text) {
     const length = String(text || '').trim().length;
@@ -288,6 +289,10 @@ export function renderProfilePage() {
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.04 2.6a1 1 0 0 1 1.92 0l1.7 5.18a1 1 0 0 0 .95.69h5.47a1 1 0 0 1 .59 1.8l-4.43 3.22a1 1 0 0 0-.36 1.12l1.7 5.18a1 1 0 0 1-1.54 1.12l-4.42-3.22a1 1 0 0 0-1.18 0l-4.42 3.22a1 1 0 0 1-1.54-1.12l1.7-5.18a1 1 0 0 0-.36-1.12L3.3 10.27a1 1 0 0 1 .59-1.8h5.47a1 1 0 0 0 .95-.69l1.7-5.18z"/></svg>
                 Досягнення
               </button>
+              <button class="profile-tab" data-tab="tasks">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                Завдання
+              </button>
             </div>
             <div id="profilePanels">
               <div class="profile-panel active" id="profilePanel-history">
@@ -299,8 +304,10 @@ export function renderProfilePage() {
               <div class="profile-panel" id="profilePanel-achievements">
                 ${renderAchievementsPanel(stats.achievementsList, stats.totalWatchTime, stats.historyCount)}
               </div>
+              <div class="profile-panel" id="profilePanel-tasks"></div>
             </div>
           `;
+            renderTasksInto(container.querySelector('#profilePanel-tasks'));
             primeProfileMediaPlayback(container);
             bindProfileThought(container);
             container.querySelector('#profileFriendsStat')?.addEventListener('click', () => Router.goTo('friends'));
