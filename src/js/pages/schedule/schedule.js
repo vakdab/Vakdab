@@ -32,8 +32,8 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
             if (scheduleState.cache[offset]) return scheduleState.cache[offset];
             if (!scheduleState.sourcePromise) {
                 const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 12000);
-                scheduleState.sourcePromise = fetch(`${MIKAI_API_BASE}/schedule?ts=${Date.now()}`, {
+                const timeout = setTimeout(() => controller.abort(), 8000);
+                scheduleState.sourcePromise = fetch(`${MIKAI_API_BASE}/schedule`, {
                     mode: 'cors',
                     credentials: 'omit',
                     cache: 'no-store',
@@ -47,7 +47,7 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
                     if (!schedule || typeof schedule !== 'object') throw new Error('Невірний формат відповіді');
                     return schedule;
                 }).catch(error => {
-                    if (error?.name === 'AbortError') throw new Error('Сервер розкладу не відповів за 12 секунд');
+                    if (error?.name === 'AbortError') throw new Error('Сервер розкладу не відповів за 8 секунд');
                     throw error;
                 }).finally(() => clearTimeout(timeout)).catch(error => {
                     scheduleState.sourcePromise = null;
@@ -56,7 +56,8 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
             }
             const schedule = await scheduleState.sourcePromise;
             const key = MIKAI_SCHEDULE_DAY_KEYS[scheduleDateForOffset(offset).getDay()];
-            const data = Array.isArray(schedule?.[key]) ? schedule[key] : [];
+            const dayData = schedule?.[key] ?? schedule?.data?.[key] ?? schedule?.result?.[key];
+            const data = Array.isArray(dayData) ? dayData : [];
             scheduleState.cache[offset] = data;
             return data;
         }
@@ -102,7 +103,12 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
             try {
                 const results = await Promise.allSettled(Array.from({ length: 7 }, (_, i) => fetchScheduleByOffset(i)));
                 const successfulDays = results.filter(result => result.status === 'fulfilled');
-                if (!successfulDays.length) throw new Error('Сервіс розкладу тимчасово недоступний');
+                if (!successfulDays.length) {
+                    const reason = results.find(result => result.status === 'rejected')?.reason?.message || 'Сервіс розкладу тимчасово недоступний';
+                    content.innerHTML = `<div class="schedule-load-error"><i class="fas fa-triangle-exclamation"></i><span>${escapeHtml(reason)}</span><button class="btn-outline schedule-retry" type="button">Оновити розклад</button></div>`;
+                    content.querySelector('.schedule-retry')?.addEventListener('click', () => { scheduleState.cache = {}; loadScheduleWeek(); });
+                    return;
+                }
                 const sections = results.map((result, offset) => {
                     const list = result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : [];
                     const d = scheduleDateForOffset(offset);
