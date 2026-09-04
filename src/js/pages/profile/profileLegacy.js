@@ -9,7 +9,7 @@ import { Storage } from '../../core/compat/storage.js?v=20260824-settings-redesi
 import { renderStickerFaceByKey } from './stickersLegacy.js?v=20260824-settings-redesign-v1';
 import { getProfile, saveProfile, getProfileStats, getAchievements, getProfileDisplayName, getProfileHandle } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
 import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260824-settings-redesign-v1';
-import { renderTasksInto } from '../../components/rating/ratingSystem.js?v=20260904-profile-tasks-v2';
+import { renderTasksInto } from '../../components/rating/ratingSystem.js?v=20260905-nickbadge-v1';
 
 function thoughtSizeClass(text) {
     const length = String(text || '').trim().length;

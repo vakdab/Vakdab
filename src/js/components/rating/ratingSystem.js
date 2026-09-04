@@ -3,6 +3,7 @@ import { Router } from '../../core/compat/router.js?v=20260903-rating-names-v1';
 import { Storage } from '../../core/compat/storage.js?v=20260824-settings-redesign-v1';
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
+import { renderStickerFaceByKey } from '../../pages/profile/stickersLegacy.js?v=20260824-settings-redesign-v1';
 
 function escapeRatingHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -21,11 +22,21 @@ function ratingProfileMediaMarkup(profile, className) {
     return `<img class="${className}${gifClass}" src="${safeUrl}" alt="" loading="lazy">`;
 }
 
+function ratingNickBadgeMarkup(profile) {
+    // Наліпка профілю (nickBadge) біля імені — видима всім у рейтингу.
+    const stickers = profile?.stickers;
+    if (!stickers || !stickers.nickBadge) return '';
+    try {
+        const visual = renderStickerFaceByKey(stickers, stickers.nickBadge);
+        return visual ? `<span class="rg-nick-badge" title="Наліпка профілю" aria-label="Наліпка профілю">${visual}</span>` : '';
+    } catch (e) { return ''; }
+}
+
 function ratingNameMarkup(profile, suffix = '') {
     // У рейтингу показуємо ім'я, а не @нікнейм. Нік — лише запасний варіант
     // для старих профілів, у яких ім'я ще не збережене.
     const displayName = profile.realName || profile.name || profile.fullName || profile.nickname || 'Гість';
-    return `<span class="rg-profile-name-row"><span>${escapeRatingHtml(displayName).replace(/^@+/, '')}</span>${suffix}</span>`;
+    return `<span class="rg-profile-name-row"><span>${escapeRatingHtml(displayName).replace(/^@+/, '')}</span>${ratingNickBadgeMarkup(profile)}${suffix}</span>`;
 }
 
 function getProfile() {
@@ -35,6 +46,7 @@ function getProfile() {
         name: typeof profile.name === 'string' && profile.name.trim() ? profile.name.trim() : '',
         fullName: typeof profile.fullName === 'string' && profile.fullName.trim() ? profile.fullName.trim() : '',
         nickname: typeof profile.nickname === 'string' && profile.nickname.trim() ? profile.nickname.trim() : 'Гість',
+        stickers: Storage.getStickers() || {},
         avatar: typeof profile.avatar === 'string' ? profile.avatar : '',
         avatarVideo: typeof profile.avatarVideo === 'string' ? profile.avatarVideo : '',
         avatarVideoSettings: profile.avatarVideoSettings || {}
