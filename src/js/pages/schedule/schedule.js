@@ -102,6 +102,10 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
             content.innerHTML = '<div class="loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження розкладу…</div>';
             try {
                 const results = await Promise.allSettled(Array.from({ length: 7 }, (_, i) => fetchScheduleByOffset(i)));
+                // The router can render the same SPA page more than once while the
+                // first request is still pending. Do not paint into a detached DOM
+                // node in that case, otherwise the visible page stays empty.
+                if (document.getElementById('scheduleWeekContent') !== content) return;
                 const successfulDays = results.filter(result => result.status === 'fulfilled');
                 if (!successfulDays.length) {
                     const reason = results.find(result => result.status === 'rejected')?.reason?.message || 'Сервіс розкладу тимчасово недоступний';
@@ -168,6 +172,12 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
         export function renderSchedulePage() {
             const container = document.getElementById('schedulePageContainer');
             if (!container) return;
+            // Keep an in-flight schedule request attached to the visible page.
+            // A duplicate route event must not replace its target container.
+            if (container.querySelector('#scheduleWeekContent')) {
+                setScheduleDay(scheduleState.selectedOffset);
+                return;
+            }
             container.innerHTML = `
                 <section class="schedule-page-hero" aria-labelledby="schedulePageTitle">
                     <div class="schedule-page-hero__ambient" aria-hidden="true"></div>
