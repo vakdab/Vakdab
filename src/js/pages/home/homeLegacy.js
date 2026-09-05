@@ -3410,19 +3410,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             container.innerHTML = `
             <div class="auth-card">
               <div class="mark"></div>
-              <h1 id="authTitle">З поверненням</h1>
-              <p class="sub" id="authSub">Увійдіть, щоб продовжити роботу з акаунтом.</p>
-
-              <div class="switcher" id="authSwitcher">
-                <div class="switcher-thumb"></div>
-                <button type="button" class="active" data-mode="login">Вхід</button>
-                <button type="button" data-mode="register">Реєстрація</button>
-              </div>
-
-              <button class="telegram-btn" type="button" id="authTelegramBtn">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.4 3.4-3.1 16.2c-.2 1.1-.8 1.4-1.7.9l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.4-.1-.6-.6-.2L6.2 13.9l-4.6-1.4c-1-.3-1-1 .2-1.5L19.7 3c.8-.3 1.9.2 1.7.4Z"/></svg>
-                <span class="auth-telegram-label">Увійти через Telegram</span>
-              </button>
+              <h1 id="authTitle">Вхід до акаунта</h1>
+              <p class="sub" id="authSub">Увійдіть за допомогою Google або вашої пошти.</p>
 
               <button class="google-btn" type="button" id="authGoogleBtn">
                 <svg viewBox="0 0 48 48">
@@ -3455,25 +3444,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 </form>
               </div>
 
-              <div class="panel" id="authPanel-register">
-                <form id="authRegisterForm" onsubmit="return false;">
-                  <div class="field">
-                    <label for="regName">Ім'я</label>
-                    <input id="regName" type="text" placeholder="Ваше ім'я" required autocomplete="name">
-                  </div>
-                  <div class="field">
-                    <label for="regEmail">Email</label>
-                    <input id="regEmail" type="email" placeholder="you@example.com" required autocomplete="email">
-                  </div>
-                  <div class="field">
-                    <label for="regPass">Пароль</label>
-                    <input id="regPass" type="password" placeholder="Мінімум 6 символів" required autocomplete="new-password" minlength="6">
-                  </div>
-                  <div class="auth-error" id="authErrorReg"></div>
-                  <button class="submit-btn" type="submit" id="authRegisterSubmit">Створити акаунт</button>
-                </form>
-              </div>
-
               <button class="guest-btn" type="button" id="authGuestBtn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M20 21a8 8 0 0 0-16 0"/>
@@ -3481,55 +3451,8 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 </svg>
                 Продовжити як гість
               </button>
-
-              <p class="foot-note" id="authFootNote">
-                Ще немає акаунта? <button type="button" id="authFootToggle">Зареєструватися</button>
-              </p>
             </div>
           `;
-
-            const switcher = document.getElementById('authSwitcher');
-            const btnLogin = switcher.querySelector('[data-mode="login"]');
-            const btnRegister = switcher.querySelector('[data-mode="register"]');
-            const panelLogin = document.getElementById('authPanel-login');
-            const panelRegister = document.getElementById('authPanel-register');
-            const title = document.getElementById('authTitle');
-            const sub = document.getElementById('authSub');
-            const footNote = document.getElementById('authFootNote');
-            const footToggle = document.getElementById('authFootToggle');
-            const telegramBtn = document.getElementById('authTelegramBtn');
-            const telegramLabel = telegramBtn?.querySelector('.auth-telegram-label');
-
-            function setAuthMode(mode) {
-                btnLogin.classList.toggle('active', mode === 'login');
-                btnRegister.classList.toggle('active', mode === 'register');
-                switcher.classList.toggle('mode-register', mode === 'register');
-                panelLogin.classList.toggle('active', mode === 'login');
-                panelRegister.classList.toggle('active', mode === 'register');
-                if (telegramLabel) telegramLabel.textContent = mode === 'login' ? 'Увійти через Telegram' : 'Зареєструватися через Telegram';
-                if (mode === 'login') {
-                    title.textContent = 'З поверненням';
-                    sub.textContent = 'Увійдіть, щоб продовжити роботу з акаунтом.';
-                    footNote.innerHTML =
-                        'Ще немає акаунта? <button type="button" id="authFootToggle">Зареєструватися</button>';
-                } else {
-                    title.textContent = 'Створити акаунт';
-                    sub.textContent = 'Зареєструйтеся, щоб почати користуватися сервісом.';
-                    footNote.innerHTML = 'Вже маєте акаунт? <button type="button" id="authFootToggle">Увійти</button>';
-                }
-                document.getElementById('authFootToggle')?.addEventListener('click', () => {
-                    setAuthMode(mode === 'login' ? 'register' : 'login');
-                });
-                document.getElementById('authError').textContent = '';
-                document.getElementById('authErrorReg').textContent = '';
-            }
-
-            btnLogin.addEventListener('click', () => setAuthMode('login'));
-            btnRegister.addEventListener('click', () => setAuthMode('register'));
-            footToggle.addEventListener('click', () => setAuthMode('register'));
-            if (document.getElementById('authFootToggle')) {
-                document.getElementById('authFootToggle').addEventListener('click', () => setAuthMode('register'));
-            }
 
             document.getElementById('authLoginForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
@@ -3549,45 +3472,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                 } else {
                     renderProfilePage();
                 }
-            });
-
-            document.getElementById('authRegisterForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const name = document.getElementById('regName').value.trim();
-                const email = document.getElementById('regEmail').value.trim();
-                const pass = document.getElementById('regPass').value;
-                const errorEl = document.getElementById('authErrorReg');
-                const submitBtn = document.getElementById('authRegisterSubmit');
-                errorEl.textContent = '';
-                if (!name || !email || !pass) { errorEl.textContent = 'Будь ласка, заповніть усі поля.'; return; }
-                if (pass.length < 6) { errorEl.textContent = 'Пароль має містити щонайменше 6 символів.'; return; }
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Створення...';
-                const result = await Auth.register(email, pass, name);
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Створити акаунт';
-                if (!result.success) {
-                    errorEl.textContent = result.error || 'Помилка реєстрації';
-                } else {
-                    renderProfilePage();
-                }
-            });
-
-            document.getElementById('authTelegramBtn').addEventListener('click', async function() {
-                const telegram = globalThis.Telegram?.WebApp;
-                const errorEl = document.getElementById('authError');
-                if (!telegram?.initData) {
-                    errorEl.textContent = 'Відкрийте VakDab через кнопку Telegram Mini App у VakDabBot.';
-                    return;
-                }
-                telegram.ready?.();
-                this.disabled = true;
-                this.textContent = 'Перевірка Telegram...';
-                const result = await Auth.signInWithTelegram(telegram.initData);
-                this.disabled = false;
-                this.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.4 3.4-3.1 16.2c-.2 1.1-.8 1.4-1.7.9l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.7-7.9c.4-.4-.1-.6-.6-.2L6.2 13.9l-4.6-1.4c-1-.3-1 0 .2-1.5L19.7 3c.8-.3 1.9.2 1.7.4Z"/></svg><span class="auth-telegram-label">${document.querySelector('#authSwitcher [data-mode="register"].active') ? 'Зареєструватися через Telegram' : 'Увійти через Telegram'}</span>`;
-                if (!result.success) errorEl.textContent = result.error || 'Помилка входу через Telegram';
-                else renderProfilePage();
             });
 
             document.getElementById('authGoogleBtn').addEventListener('click', async function() {

@@ -1,6 +1,7 @@
 import { installGlobalErrorBoundary } from './errors.js';
 import { startGlobalEvents } from './events.js';
 import { parseRoute, getRouter } from './router.js';
+import { initAndroidTv } from './androidTv.js';
 
 let bootstrapPromise = null;
 
@@ -16,6 +17,7 @@ export function bootstrap() {
         }
     });
     startGlobalEvents();
+    initAndroidTv();
     bootstrapPromise = import('../legacy/app-legacy.js?v=20260905-runtime-fix-v2')
         .then(module => {
             window.VakDabLegacy = module;

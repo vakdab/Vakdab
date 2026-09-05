@@ -252,6 +252,7 @@ import {
             const nextLabel = isDark ? 'Світла тема' : 'Темна тема';
             const history = Storage.getHistory();
             const bookmarks = Storage.getBookmarks();
+            const isTv = document.documentElement.classList.contains('android-tv-mode') || window.VakDabTv?.isTvMode?.() || localStorage.getItem('vakdab_tv_mode') === 'true';
             return `
             <div class="settings-card">
               <div class="settings-card-left">
@@ -264,6 +265,20 @@ import {
               <button class="settings-toggle-btn" id="settingsThemeBtn">
                 <i class="fas ${nextIcon}"></i> ${nextLabel}
               </button>
+            </div>
+
+            <div class="settings-card">
+              <div class="settings-card-left">
+                <i class="fas fa-tv"></i>
+                <div>
+                  <div class="label">Режим Android TV / Пульт</div>
+                  <div class="desc">Оптимізація інтерфейсу для Android TV, великих екранів та пультів дистанційного керування (D-pad)</div>
+                </div>
+              </div>
+              <label class="settings-switch">
+                <input type="checkbox" id="settingsTvModeToggle" ${isTv ? 'checked' : ''}>
+                <span class="settings-switch-slider"></span>
+              </label>
             </div>
 
             <div class="settings-section-title">Дані</div>
@@ -601,6 +616,13 @@ import {
         function wireSiteTab() {
             const themeBtn = document.getElementById('settingsThemeBtn');
             if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+
+            const tvToggle = document.getElementById('settingsTvModeToggle');
+            if (tvToggle) {
+                tvToggle.addEventListener('change', (e) => {
+                    window.VakDabTv?.setTvMode(e.target.checked, true);
+                });
+            }
 
             document.getElementById('settingsExportDataBtn')?.addEventListener('click', () => {
                 const data = {

@@ -1,0 +1,6 @@
+{
+  "name": "ВакДаб",
+  "description": "Український аніме каталог VakDab для перегляду аніме, читання манґи та спільноти",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

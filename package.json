@@ -3,6 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "node server.js",
+    "build": "echo 'No build step required'",
+    "lint": "node --check server.js && node --check src/js/core/androidTv.js && node --check src/js/core/bootstrap.js",
+    "start": "node server.js",
     "test": "node tests/catalog/catalog-pagination.test.mjs && node tests/manga/manga-loading.test.mjs && node tests/novel/novel-source.test.mjs && node tests/profile/profile-stickers.test.mjs && node tests/telegram/telegram-worker.test.mjs"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
   }
 }

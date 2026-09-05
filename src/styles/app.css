@@ -18,6 +18,7 @@
 @import url('./components/genre-section.css');
 @import url('./components/pagination.css');
 @import url('./components/loader.css');
+@import url('./components/android-tv.css?v=20260905-tv-v1');
 @import url('./pages/search.css');
 @import url('./pages/profile.css?v=20260905-profile-avatar-fix-v1');
 @import url('./pages/settings.css?v=20260905-settings-redesign-v2');
