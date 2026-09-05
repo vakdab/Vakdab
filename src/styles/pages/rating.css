@@ -268,6 +268,48 @@
         }
 
         .rg-xp-rules { margin: 0.7rem 1rem 0; padding: 9px 12px; border-radius: 10px; background: rgba(var(--accent-rgb), .07); color: var(--text-muted); font-size: 10px; line-height: 1.45; text-align: center; }
+        .rg-xp-rules-title {
+            margin: 0.9rem 1rem 0.5rem;
+            font-size: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1px;
+            color: var(--text-muted);
+        }
+        .rg-xp-rules-list {
+            display: flex; flex-direction: column; gap: 6px;
+            margin: 0 1rem 0.9rem;
+        }
+        .rg-xp-rule-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            background: rgba(var(--accent-rgb), 0.04);
+            border: 1px solid var(--border);
+            transition: background 160ms var(--ui-ease), border-color 160ms var(--ui-ease), transform 160ms var(--ui-ease);
+        }
+        .rg-xp-rule-item:hover {
+            background: rgba(var(--accent-rgb), 0.08);
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+        }
+        .rg-xp-rule-icon {
+            flex: 0 0 30px;
+            width: 30px; height: 30px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+            background: var(--accent);
+            color: var(--accent-text);
+        }
+        .rg-xp-rule-icon svg { width: 15px; height: 15px; }
+        .rg-xp-rule-text {
+            flex: 1;
+            font-size: 12.5px; font-weight: 600;
+            color: var(--text);
+        }
+        .rg-xp-rule-value {
+            font-size: 12.5px; font-weight: 800;
+            color: var(--accent);
+            letter-spacing: -0.2px;
+        }
 
         /* Leaderboard list */
         .rg-lb-list { padding: 0.4rem 1rem 0.5rem; display: flex; flex-direction: column; gap: 7px; }

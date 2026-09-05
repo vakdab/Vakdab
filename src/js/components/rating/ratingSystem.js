@@ -75,7 +75,7 @@ function isGifUrl(url) {
             const safeEpisodes = Math.max(0, Math.floor(Number(episodes) || 0));
             const watchMinutes = Math.max(0, Math.floor((Number(watchSeconds) || 0) / 60));
             const safeBookmarks = Math.max(0, Math.floor(Number(bookmarks) || 0));
-            return safeEpisodes * 25 + watchMinutes + safeBookmarks * 15;
+            return safeEpisodes * 250 + watchMinutes * 100 + safeBookmarks * 50;
         }
         export function calcTotalXP() {
             const history = Storage.getHistory() || [];
@@ -181,7 +181,24 @@ function isGifUrl(url) {
                         <div class="rg-stat-cell"><div class="rg-stat-val">${episodes}</div><div class="rg-stat-label">Серій</div></div>
                         <div class="rg-stat-cell"><div class="rg-stat-val">${watchMinutes}</div><div class="rg-stat-label">Хвилин</div></div>
                                             </div>
-                    <div class="rg-xp-rules">XP: 25 за серію · 1 за хвилину · 15 за закладку</div>
+                    <div class="rg-xp-rules-title">За що можна отримати XP</div>
+                    <div class="rg-xp-rules-list">
+                        <div class="rg-xp-rule-item">
+                            <div class="rg-xp-rule-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg></div>
+                            <div class="rg-xp-rule-text">1 хвилина перегляду</div>
+                            <div class="rg-xp-rule-value">+100 XP</div>
+                        </div>
+                        <div class="rg-xp-rule-item">
+                            <div class="rg-xp-rule-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21 12 16 5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+                            <div class="rg-xp-rule-text">Закладка</div>
+                            <div class="rg-xp-rule-value">+50 XP</div>
+                        </div>
+                        <div class="rg-xp-rule-item">
+                            <div class="rg-xp-rule-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7 16 12l7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+                            <div class="rg-xp-rule-text">Перегляд серії</div>
+                            <div class="rg-xp-rule-value">+250 XP</div>
+                        </div>
+                    </div>
                 </div>`;
 
         }
