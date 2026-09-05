@@ -34,7 +34,7 @@ import {
     setPlayerPageAnimeuaSeasons, setPlayerPageAnime, setPlayerPageCurrentSeason, setPlayerPageCurrentDub, setPlayerPageCurrentSource,
     openPlayerPage, closePlayerPage, buildSeasonRow, updateFilterChip, updateSourceChip, buildEpisodeViews,
     buildBottomSheetData, openBottomSheet, closeBottomSheet, closeMenuPopover, toggleLike, toggleDislike, showViewMode
-} from '../pages/player/animePlayerPage.js?v=20260901-startup-fix-2';
+} from '../pages/player/animePlayerPage.js?v=20260905-history-episode-fix-v1';
 
 import { getProfile, renderSettingsPage } from '../pages/settings/settingsLegacy.js?v=20260903-settings-v2';
 import {

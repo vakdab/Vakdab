@@ -333,16 +333,27 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             }
         }
 
+        function normalizeEpisodeValue(value, fallback = '') {
+            if (value === null || value === undefined || value === '') return fallback;
+            const text = String(value).trim();
+            const numeric = Number(text);
+            return Number.isFinite(numeric) ? String(numeric) : text;
+        }
+
+        function sameEpisodeValue(left, right) {
+            return normalizeEpisodeValue(left) === normalizeEpisodeValue(right);
+        }
+
         function findContinueWatching(anime) {
             if (!anime || !anime.seasons) return null;
             const history = Storage.getHistory();
             const entry = history.find(h => h.url === anime.url);
             if (!entry) return null;
-            const season = entry.season || '1';
+            const season = normalizeEpisodeValue(entry.season, '1');
             const dubs = Object.keys(anime.seasons[season] || {});
             for (const dub of dubs) {
                 const eps = anime.seasons[season][dub] || [];
-                const ep = eps.find(e => e.episode === entry.episode);
+                const ep = eps.find(e => sameEpisodeValue(e.episode, entry.episode));
                 if (ep) return { season, dub, ep, progress: entry.progress || 0 };
             }
             return null;
@@ -600,7 +611,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
         function getEpisodeProgress(episode) {
             const history = Storage.getHistory();
             const animeUrl = playerPageCurrentAnimeUrl;
-            const found = history.find(h => h.url === animeUrl && h.episode === episode);
+            const found = history.find(h => h.url === animeUrl && sameEpisodeValue(h.episode, episode) && normalizeEpisodeValue(h.season, '1') === normalizeEpisodeValue(playerPageCurrentSeason, '1'));
             return found ? Math.min(found.progress || 0, 100) : 0;
         }
 
@@ -1283,11 +1294,12 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                     if (!duration || duration === Infinity) return;
                     const progress = (video.currentTime / duration) * 100;
                     const watchSecondsSoFar = Math.floor(playerPageAccumulatedWatchSeconds);
-                    // Зберігаємо в історію через 2 хвилини перегляду
-                    if (watchSecondsSoFar >= 120) {
+                    // Фіксуємо серію після короткого фактичного перегляду.
+                    // Це дозволяє відновити серію навіть якщо користувач вийшов раніше 2 хвилин.
+                    if (watchSecondsSoFar >= 15) {
                         playerPageHistoryUpdated = true;
-                        const ep = epNum || playerPageCurrentEpisodeNum || '1';
-                        const season = playerPageCurrentSeason || '1';
+                        const ep = normalizeEpisodeValue(epNum || playerPageCurrentEpisodeNum, '1');
+                        const season = normalizeEpisodeValue(playerPageCurrentSeason, '1');
                         const history = Storage.getHistory();
                         const idx = history.findIndex(h => h.url === playerPageAnime.url);
                         // watchTime вже обчислено вище
@@ -1298,8 +1310,8 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                             history[idx].episode = ep;
                             history[idx].season = season;
                             history[idx].timestamp = Date.now();
-                            history[idx].progress = Math.min(progress, 100);
-                            history[idx].duration = Math.floor(video.currentTime);
+                            history[idx].progress = Number.isFinite(progress) ? Math.min(progress, 100) : 0;
+                            history[idx].duration = Math.max(0, Math.floor(Number(video.currentTime) || 0));
                             Storage.setHistory(history);
                         } else {
                             const entry = {
@@ -1310,8 +1322,8 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                                 episode: ep,
                                 season: season,
                                 timestamp: Date.now(),
-                                progress: Math.min(progress, 100),
-                                duration: Math.floor(video.currentTime)
+                                progress: Number.isFinite(progress) ? Math.min(progress, 100) : 0,
+                                duration: Math.max(0, Math.floor(Number(video.currentTime) || 0))
                             };
                             history.unshift(entry);
                             if (history.length > 200) history.length = 200;
