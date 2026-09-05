@@ -43,6 +43,8 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
         let playerPageSources = ['Основне'];
         let playerPageCurrentEpisodeNum = '1';
         let playerPageHistoryUpdated = false;
+        let playerPageWatchTimeSynced = 0;
+        let playerPageLastProgressSave = 0;
         let playerPageWatchStartTime = 0;
         let playerPageAccumulatedWatchSeconds = 0;
         let playerPageLastVideoTime = null;
@@ -129,6 +131,8 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             playerPageHistoryUpdated = false;
             playerPageWatchStartTime = 0;
             playerPageAccumulatedWatchSeconds = 0;
+            playerPageWatchTimeSynced = 0;
+            playerPageLastProgressSave = 0;
             playerPageLastVideoTime = null;
             playerPageIsPlaying = false;
             document.getElementById('playerVideoContainer').classList.add('active');
@@ -1253,6 +1257,33 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             playerPageIsPlaying = false;
             const video = playerPagePlayer.videoRef;
             if (video) {
+                // Відновлення позиції: якщо цю серію вже частково дивилися — продовжуємо з місця зупинки.
+                try {
+                    const savedProgress = (() => {
+                        const history = Storage.getHistory();
+                        const ep = normalizeEpisodeValue(epNum || '1', '1');
+                        const season = normalizeEpisodeValue(playerPageCurrentSeason, '1');
+                        const found = history.find(h => h.url === playerPageAnime?.url
+                            && sameEpisodeValue(h.episode, ep)
+                            && normalizeEpisodeValue(h.season, '1') === season);
+                        if (!found) return null;
+                        const pct = Number(found.progress);
+                        return Number.isFinite(pct) && pct >= 5 && pct < 95 ? pct : null;
+                    })();
+                    if (savedProgress != null) {
+                        const seekOnce = () => {
+                            video.removeEventListener('loadedmetadata', seekOnce);
+                            try {
+                                const dur = Number(video.duration);
+                                if (Number.isFinite(dur) && dur > 0) {
+                                    video.currentTime = Math.min(dur - 1, (savedProgress / 100) * dur);
+                                    showToast(`Продовжуємо з ${Math.round(savedProgress)}%`);
+                                }
+                            } catch (e) { /* ignore seek errors */ }
+                        };
+                        video.addEventListener('loadedmetadata', seekOnce);
+                    }
+                } catch (e) { /* resume is best-effort */ }
                 const hideFrame = () => {
                     hidePlayerFramePoster();
                     document.getElementById('playerPreviewPlay')?.classList.add('is-hidden');
@@ -1286,55 +1317,67 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 video.addEventListener('waiting', onPause);
                 video.addEventListener('seeking', onSeeking);
                 video.addEventListener('seeked', onSeeked);
-                const onTimeUpdate = () => {
-                    syncPlaybackClock();
-                    if (playerPageHistoryUpdated) return;
-                    if (!playerPageAnime) return;
-                    const duration = video.duration;
-                    if (!duration || duration === Infinity) return;
-                    const progress = (video.currentTime / duration) * 100;
+                const persistEpisodeProgress = (force = false, endedProgress = null) => {
+                    if (!playerPageAnime || !video) return;
+                    const duration = Number(video.duration);
+                    if (!Number.isFinite(duration) || duration <= 0) return;
+                    const progress = endedProgress != null
+                        ? endedProgress
+                        : Math.min(100, Math.max(0, (Number(video.currentTime) / duration) * 100));
                     const watchSecondsSoFar = Math.floor(playerPageAccumulatedWatchSeconds);
-                    // Фіксуємо серію після короткого фактичного перегляду.
-                    // Це дозволяє відновити серію навіть якщо користувач вийшов раніше 2 хвилин.
-                    if (watchSecondsSoFar >= 15) {
-                        playerPageHistoryUpdated = true;
-                        const ep = normalizeEpisodeValue(epNum || playerPageCurrentEpisodeNum, '1');
-                        const season = normalizeEpisodeValue(playerPageCurrentSeason, '1');
-                        const history = Storage.getHistory();
-                        const idx = history.findIndex(h => h.url === playerPageAnime.url);
-                        // watchTime вже обчислено вище
-                        if (watchSecondsSoFar > 0) {
-                            Storage.addWatchTime(watchSecondsSoFar);
-                        }
-                        if (idx >= 0) {
-                            history[idx].episode = ep;
-                            history[idx].season = season;
-                            history[idx].timestamp = Date.now();
-                            history[idx].progress = Number.isFinite(progress) ? Math.min(progress, 100) : 0;
-                            history[idx].duration = Math.max(0, Math.floor(Number(video.currentTime) || 0));
-                            Storage.setHistory(history);
-                        } else {
-                            const entry = {
-                                animeId: playerPageAnime.mal_id || playerPageAnime.url.hashCode(),
-                                title: playerPageAnime.title,
-                                poster: playerPageAnime.images?.jpg?.large_image_url || '',
-                                url: playerPageAnime.url,
-                                episode: ep,
-                                season: season,
-                                timestamp: Date.now(),
-                                progress: Number.isFinite(progress) ? Math.min(progress, 100) : 0,
-                                duration: Math.max(0, Math.floor(Number(video.currentTime) || 0))
-                            };
-                            history.unshift(entry);
-                            if (history.length > 200) history.length = 200;
-                            Storage.setHistory(history);
-                        }
-                        showToast(`Серія ${ep} збережена в історію`);
-                        video.removeEventListener('timeupdate', onTimeUpdate);
+                    if (!force && watchSecondsSoFar < 15) return;
+                    const firstSave = !playerPageHistoryUpdated;
+                    playerPageHistoryUpdated = true;
+                    const ep = normalizeEpisodeValue(epNum || playerPageCurrentEpisodeNum, '1');
+                    const season = normalizeEpisodeValue(playerPageCurrentSeason, '1');
+                    const deltaWatch = watchSecondsSoFar - playerPageWatchTimeSynced;
+                    if (deltaWatch > 0) {
+                        Storage.addWatchTime(deltaWatch);
+                        playerPageWatchTimeSynced = watchSecondsSoFar;
+                    }
+                    const due = force || firstSave || (watchSecondsSoFar - playerPageLastProgressSave >= 5);
+                    if (!due) return;
+                    playerPageLastProgressSave = watchSecondsSoFar;
+                    const history = Storage.getHistory();
+                    const idx = history.findIndex(h => h.url === playerPageAnime.url
+                        && sameEpisodeValue(h.episode, ep)
+                        && normalizeEpisodeValue(h.season, '1') === season);
+                    if (idx >= 0) {
+                        const entry = history.splice(idx, 1)[0] || {};
+                        entry.episode = ep;
+                        entry.season = season;
+                        entry.timestamp = Date.now();
+                        entry.progress = Number.isFinite(progress) ? Math.min(progress, 100) : 0;
+                        entry.duration = Math.max(0, Math.floor(Number(video.currentTime) || 0));
+                        history.unshift(entry);
+                    } else {
+                        history.unshift({
+                            animeId: playerPageAnime.mal_id || playerPageAnime.url.hashCode(),
+                            title: playerPageAnime.title,
+                            poster: playerPageAnime.images?.jpg?.large_image_url || '',
+                            url: playerPageAnime.url,
+                            episode: ep,
+                            season: season,
+                            timestamp: Date.now(),
+                            progress: Number.isFinite(progress) ? Math.min(progress, 100) : 0,
+                            duration: Math.max(0, Math.floor(Number(video.currentTime) || 0))
+                        });
+                        if (history.length > 200) history.length = 200;
+                    }
+                    Storage.setHistory(history);
+                    if (firstSave) {
+                        showToast(`Серію ${ep} збережено в історію`);
                         buildEpisodeViews();
                     }
                 };
+                const onTimeUpdate = () => {
+                    syncPlaybackClock();
+                    persistEpisodeProgress();
+                };
                 video.addEventListener('timeupdate', onTimeUpdate);
+                // Фіксуємо прогрес і при паузі, і при завершенні серії.
+                video.addEventListener('pause', () => { syncPlaybackClock(); persistEpisodeProgress(); });
+                video.addEventListener('ended', () => { syncPlaybackClock(); persistEpisodeProgress(true, 100); });
                 if (playerPagePlayer._timeUpdateListener) {
                     video.removeEventListener('timeupdate', playerPagePlayer._timeUpdateListener);
                 }
