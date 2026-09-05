@@ -12,7 +12,7 @@ import {
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
 } from '../home/homeLegacy.js?v=20260829-vertical-catalog-28-v1';
-import { renderProfilePage } from '../profile/profileLegacy.js?v=20260904-profile-tasks-v2';
+import { renderProfilePage } from '../profile/profileLegacy.js?v=20260905-remove-profile-stats-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
 } from '../../legacy/app-legacy.js?v=20260901-home-recs-v3';
