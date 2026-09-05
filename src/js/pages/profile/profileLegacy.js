@@ -257,16 +257,6 @@ export function renderProfilePage() {
                 <div class="profile-bio-row">
                   <div class="profile-bio${profile.bioBold ? ' is-bold' : ''}" id="profileBioText">${profileBioText}</div>
                 </div>
-                <div class="profile-stats">
-                  <div class="profile-stat-pill">
-                    <div class="num">${stats.viewed}</div>
-                    <div class="label">Переглянуто</div>
-                  </div>
-                  <div class="profile-stat-pill">
-                    <div class="num">${stats.bookmarks}</div>
-                    <div class="label">Закладки</div>
-                  </div>
-                </div>
               </div>
             </div>
             <div class="profile-tabs" id="profileTabs">
