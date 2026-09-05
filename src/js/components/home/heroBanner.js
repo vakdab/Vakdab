@@ -1,5 +1,5 @@
 import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../services/catalog/catalog.js?v=20260829-catalog-28-v1';
-import { DailyStats, Router, Storage, openPlayerPage, showToast } from '../../legacy/app-legacy.js?v=20260901-home-recs-v3';
+import { Router, Storage, openPlayerPage, showToast } from '../../legacy/app-legacy.js?v=20260901-home-recs-v3';
 
         let heroItems = [],
             heroPool = [],
@@ -149,7 +149,6 @@ import { DailyStats, Router, Storage, openPlayerPage, showToast } from '../../le
                 addedAt: Date.now()
             });
             Storage.setBookmarks(bookmarks);
-            DailyStats.increment('bookmarksToday', 1);
             showToast('Додано до обраного');
             return true;
         }

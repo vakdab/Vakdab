@@ -62,38 +62,16 @@ function isGifUrl(url) {
         // ====================================================================
         //  XP / LEVEL SYSTEM
         // ====================================================================
-        function _getDailyXPBonus() {
-            try { return parseInt(localStorage.getItem('vakdab_daily_xp_total') || '0', 10) || 0; }
-            catch { return 0; }
-        }
-        function _addDailyXPBonus(amount) {
-            const cur = _getDailyXPBonus();
-            const next = cur + amount;
-            try { localStorage.setItem('vakdab_daily_xp_total', String(next)); } catch {}
-            return next;
-        }
-        const XP_RULES = Object.freeze({ episode: 25, minute: 1, bookmark: 15, achievement: 75 });
-        export function calculateBaseXP({ episodes = 0, watchSeconds = 0, bookmarks = 0, posts = 0, ratings = 0 } = {}) {
+        export function calculateBaseXP({ episodes = 0, watchSeconds = 0, bookmarks = 0 } = {}) {
             const safeEpisodes = Math.max(0, Math.floor(Number(episodes) || 0));
             const watchMinutes = Math.max(0, Math.floor((Number(watchSeconds) || 0) / 60));
             const safeBookmarks = Math.max(0, Math.floor(Number(bookmarks) || 0));
-            const safePosts = Math.max(0, Math.floor(Number(posts) || 0));
-            const safeRatings = Math.max(0, Math.floor(Number(ratings) || 0));
-            const baseXP = safeEpisodes * XP_RULES.episode + watchMinutes * XP_RULES.minute + safeBookmarks * XP_RULES.bookmark;
-            let totalXP = baseXP;
-            for (let pass = 0; pass < ACHIEVEMENTS.length + 2; pass++) {
-                const achStats = { episodes: safeEpisodes, watchMinutes, bookmarks: safeBookmarks, xp: totalXP, level: getLevel(totalXP), posts: safePosts, ratings: safeRatings };
-                const earnedCount = ACHIEVEMENTS.filter(a => achStats[a.field] >= a.need).length;
-                const nextXP = baseXP + earnedCount * XP_RULES.achievement;
-                if (nextXP === totalXP) break;
-                totalXP = nextXP;
-            }
-            return totalXP;
+            return safeEpisodes * 25 + watchMinutes + safeBookmarks * 15;
         }
         export function calcTotalXP() {
             const history = Storage.getHistory() || [];
             const bookmarks = Storage.getBookmarks() || [];
-            return calculateBaseXP({ episodes: history.length, watchSeconds: Storage.getWatchTime() || 0, bookmarks: bookmarks.length, posts: DailyStats.getTotalPosts(), ratings: DailyStats.getTotalRatings() }) + _getDailyXPBonus();
+            return calculateBaseXP({ episodes: history.length, watchSeconds: Storage.getWatchTime() || 0, bookmarks: bookmarks.length });
         }
         export function getLevel(xp) {
             return Math.floor(Math.sqrt(xp / 50)) + 1;
@@ -110,189 +88,6 @@ function isGifUrl(url) {
             return { level, pct: needed > 0 ? Math.min(100, Math.round(into / needed * 100)) : 100, into, needed };
         }
 
-        // ====================================================================
-        //  ЗАВДАННЯ ДНЯ (використовуються у профілі)
-        // Кожне завдання прив'язане до реальної дії на сайті,
-        // яку відстежує DailyStats (player / home / community).
-        // ====================================================================
-        const TASKS_VERSION = 2;
-        const TASK_POOL = [
-            { id: 't_ep1',   field: 'episodesToday',   target: 1,  xp: 30, desc: 'Подивитися 1 серію аніме' },
-            { id: 't_ep3',   field: 'episodesToday',   target: 3,  xp: 60, desc: 'Подивитися 3 серії за день' },
-            { id: 't_min30', field: 'minutesToday',    target: 30, xp: 40, desc: 'Провести 30 хвилин за переглядом' },
-            { id: 't_bm1',   field: 'bookmarksToday',   target: 1,  xp: 25, desc: 'Додати аніме у закладки' },
-            { id: 't_like1', field: 'likesToday',       target: 1,  xp: 20, desc: 'Оцінити аніме' },
-            { id: 't_uniq2', field: 'uniqueAnimeToday', target: 2, xp: 35, desc: 'Відкрити 2 нові тайтли' },
-            { id: 't_sr1',   field: 'searchesToday',    target: 1,  xp: 15, desc: 'Знайти аніме через пошук' },
-            { id: 't_post1', field: 'postsToday',      target: 1,  xp: 30, desc: 'Написати повідомлення в спільноті' }
-        ];
-
-        // ====================================================================
-        //  DAILY STATS / TASKS TRACKING
-        // ====================================================================
-        function _todayStr() {
-            const d = new Date();
-            return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate();
-        }
-        function _loadDailyState() {
-            let st;
-            try { st = JSON.parse(localStorage.getItem('vakdab_daily_state') || 'null'); } catch { st = null; }
-            const today = _todayStr();
-            if (!st || st.date !== today || st.version !== TASKS_VERSION) {
-                // Новий день або нова версія завдань — статистика дня обнуляється
-                st = {
-                    version: TASKS_VERSION,
-                    date: today,
-                    taskIds: TASK_POOL.map(t => t.id),
-                    stats: { episodesToday: 0, minutesToday: 0, bookmarksToday: 0, postsToday: 0, likesToday: 0, searchesToday: 0, uniqueAnime: [] },
-                    completed: []
-                };
-                localStorage.setItem('vakdab_daily_state', JSON.stringify(st));
-            }
-            return st;
-        }
-        function _saveDailyState(st) {
-            localStorage.setItem('vakdab_daily_state', JSON.stringify(st));
-        }
-        function _getTotalCounter(key) {
-            try { return parseInt(localStorage.getItem(key) || '0', 10) || 0; } catch { return 0; }
-        }
-        function _incTotalCounter(key, by = 1) {
-            const v = _getTotalCounter(key) + by;
-            try { localStorage.setItem(key, String(v)); } catch {}
-            return v;
-        }
-        export const DailyStats = {
-            increment(field, amount = 1) {
-                const st = _loadDailyState();
-                st.stats[field] = (st.stats[field] || 0) + amount;
-                _saveDailyState(st);
-                this._checkCompletion(st);
-            },
-            addUniqueAnime(animeUrl) {
-                if (!animeUrl) return;
-                const st = _loadDailyState();
-                if (!Array.isArray(st.stats.uniqueAnime)) st.stats.uniqueAnime = [];
-                if (!st.stats.uniqueAnime.includes(animeUrl)) st.stats.uniqueAnime.push(animeUrl);
-                st.stats.uniqueAnimeToday = st.stats.uniqueAnime.length;
-                _saveDailyState(st);
-                this._checkCompletion(st);
-            },
-            getTotalPosts() { return _getTotalCounter('vakdab_total_posts'); },
-            addTotalPost() { return _incTotalCounter('vakdab_total_posts'); },
-            getTotalRatings() { return _getTotalCounter('vakdab_total_ratings'); },
-            addTotalRating() { return _incTotalCounter('vakdab_total_ratings'); },
-            _checkCompletion(st) {
-                let earned = 0, xpGain = 0;
-                TASK_POOL.forEach(t => {
-                    if (!st.taskIds.includes(t.id)) return;
-                    if (st.completed.includes(t.id)) return;
-                    const val = st.stats[t.field] || 0;
-                    if (val >= t.target) {
-                        st.completed.push(t.id);
-                        xpGain += t.xp;
-                        earned++;
-                    }
-                });
-                if (earned > 0) {
-                    _saveDailyState(st);
-                    _addDailyXPBonus(xpGain);
-                    if (Auth.isAuthenticated()) Auth.syncUserData().catch(() => {});
-                    showToast(`Завдання виконано! +${xpGain} XP`);
-                    if (document.getElementById('profilePanel-tasks')) renderTasksInto(document.getElementById('profilePanel-tasks'));
-                    if (Router.currentRoute === 'rating') loadMyStats();
-                }
-            }
-        };
-
-        // Рендер списку завдань (використовується на сторінці профілю)
-        export function renderTasksInto(el) {
-            if (!el) return;
-            const st = _loadDailyState();
-            const rows = TASK_POOL.map(t => {
-                const val  = st.stats[t.field] || 0;
-                const done = st.completed.includes(t.id);
-                const pct  = Math.min(100, Math.round((val / t.target) * 100));
-                return `<div class="dt-item ${done ? 'done' : ''}">
-                    <div class="dt-check">${done ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}</div>
-                    <div class="dt-body">
-                        <div class="dt-desc">${t.desc}</div>
-                        <div class="dt-bar-wrap"><div class="dt-bar" style="width:${pct}%"></div></div>
-                        <div class="dt-meta"><span>${Math.min(val, t.target)}/${t.target}</span><span class="dt-xp">+${t.xp} XP</span></div>
-                    </div>
-                </div>`;
-            }).join('');
-            const doneCount = TASK_POOL.filter(t => st.completed.includes(t.id)).length;
-            el.innerHTML = `
-                <div class="rg-daily-wrap">
-                    <div class="rg-daily-header">
-                        <span>Завдання дня</span>
-                        <span class="rg-daily-count">${doneCount}/${TASK_POOL.length}</span>
-                    </div>
-                    <div class="dt-list">${rows}</div>
-                </div>`;
-        }
-
-        export const ACHIEVEMENTS = [
-            { id: 'ep1', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name: 'Перший перегляд', req: '1 сер.', need: 1, field: 'episodes' },
-            { id: 'ep5', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name: 'Розігрів', req: '5 сер.', need: 5, field: 'episodes' },
-            { id: 'ep10', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name: '10 серій', req: '10 сер.', need: 10, field: 'episodes' },
-            { id: 'ep25', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name: 'Уже втягнувся', req: '25 сер.', need: 25, field: 'episodes' },
-            { id: 'ep50', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name: '50 серій', req: '50 сер.', need: 50, field: 'episodes' },
-            { id: 'ep100', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name: '100 серій', req: '100 сер.', need: 100, field: 'episodes' },
-            { id: 'ep250', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name: 'Справжній фанат', req: '250 сер.', need: 250, field: 'episodes' },
-            { id: 'ep500', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name: '500 серій', req: '500 сер.', need: 500, field: 'episodes' },
-            { id: 'ep1000', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name: 'Легенда серій', req: '1000 сер.', need: 1000, field: 'episodes' },
-            { id: 'ep2000', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name: 'Аніме-безсмертний', req: '2000 сер.', need: 2000, field: 'episodes' },
-            { id: 'h1', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: 'Перша хвилина', req: '1 хв', need: 1, field: 'watchMinutes' },
-            { id: 'h5', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '5 хвилин', req: '5 хв', need: 5, field: 'watchMinutes' },
-            { id: 'h10', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '10 хвилин', req: '10 хв', need: 10, field: 'watchMinutes' },
-            { id: 'h24', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '24 хвилини', req: '24 хв', need: 24, field: 'watchMinutes' },
-            { id: 'h50', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '50 хвилин', req: '50 хв', need: 50, field: 'watchMinutes' },
-            { id: 'h100', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '100 хвилин', req: '100 хв', need: 100, field: 'watchMinutes' },
-            { id: 'h200', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '200 хвилин', req: '200 хв', need: 200, field: 'watchMinutes' },
-            { id: 'h500', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '500 хвилин', req: '500 хв', need: 500, field: 'watchMinutes' },
-            { id: 'h1000', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: '1000 хвилин', req: '1000 хв', need: 1000, field: 'watchMinutes' },
-            { id: 'h2000', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', name: 'Володар часу', req: '2000 хв', need: 2000, field: 'watchMinutes' },
-            { id: 'bm1', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', name: 'Перша закладка', req: '1 зак.', need: 1, field: 'bookmarks' },
-            { id: 'bm5', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', name: '5 закладок', req: '5 зак.', need: 5, field: 'bookmarks' },
-            { id: 'bm10', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', name: '10 закладок', req: '10 зак.', need: 10, field: 'bookmarks' },
-            { id: 'bm20', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', name: '20 закладок', req: '20 зак.', need: 20, field: 'bookmarks' },
-            { id: 'bm50', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', name: '50 закладок', req: '50 зак.', need: 50, field: 'bookmarks' },
-            { id: 'bm100', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', name: 'Колекціонер', req: '100 зак.', need: 100, field: 'bookmarks' },
-            { id: 'bm200', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', name: 'Бібліотекар аніме', req: '200 зак.', need: 200, field: 'bookmarks' },
-            { id: 'xp100', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg>', name: 'Перші кроки', req: '100 XP', need: 100, field: 'xp' },
-            { id: 'xp500', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg>', name: 'Досвідчений', req: '500 XP', need: 500, field: 'xp' },
-            { id: 'xp1000', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg>', name: 'Про', req: '1000 XP', need: 1000, field: 'xp' },
-            { id: 'xp2500', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg>', name: 'Майстер XP', req: '2500 XP', need: 2500, field: 'xp' },
-            { id: 'xp5000', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg>', name: 'Елітний гравець', req: '5000 XP', need: 5000, field: 'xp' },
-            { id: 'xp10000', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg>', name: 'Легенда платформи', req: '10000 XP', need: 10000, field: 'xp' },
-            { id: 'lvl5', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 16h14"/></svg>', name: '5 рівень', req: 'Lv.5', need: 5, field: 'level' },
-            { id: 'lvl10', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 16h14"/></svg>', name: '10 рівень', req: 'Lv.10', need: 10, field: 'level' },
-            { id: 'lvl20', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 16h14"/></svg>', name: '20 рівень', req: 'Lv.20', need: 20, field: 'level' },
-            { id: 'lvl30', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 16h14"/></svg>', name: '30 рівень', req: 'Lv.30', need: 30, field: 'level' },
-            { id: 'lvl50', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 16h14"/></svg>', name: 'Максимальний рівень', req: 'Lv.50', need: 50, field: 'level' },
-            { id: 'post1', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', name: 'Перший пост', req: '1 пост.', need: 1, field: 'posts' },
-            { id: 'post10', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', name: 'Активний учасник', req: '10 пост.', need: 10, field: 'posts' },
-            { id: 'post25', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', name: 'Голос спільноти', req: '25 пост.', need: 25, field: 'posts' },
-            { id: 'post50', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', name: 'Душа компанії', req: '50 пост.', need: 50, field: 'posts' },
-            { id: 'post100', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', name: 'Легенда чату', req: '100 пост.', need: 100, field: 'posts' },
-            { id: 'like1', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', name: 'Перша оцінка', req: '1 оцін.', need: 1, field: 'ratings' },
-            { id: 'like10', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', name: 'Критик', req: '10 оцін.', need: 10, field: 'ratings' },
-            { id: 'like25', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', name: 'Знавець смаку', req: '25 оцін.', need: 25, field: 'ratings' },
-            { id: 'like50', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', name: 'Головний рецензент', req: '50 оцін.', need: 50, field: 'ratings' },
-            { id: 'like100', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', name: 'Оракул рейтингів', req: '100 оцін.', need: 100, field: 'ratings' },
-        ]
-
-        export function getUserRankInfo(episodes, watchMinutes) {
-            if (watchMinutes >= 2000) return { label: 'Легенда аніме',  color: 'var(--accent)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 16h14"/></svg>' };
-            if (watchMinutes >= 1000) return { label: 'Майстер',        color: 'var(--text)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>' };
-            if (watchMinutes >= 500)  return { label: 'Ветеран',        color: 'var(--text-secondary)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>' };
-            if (watchMinutes >= 200)  return { label: 'Досвідчений',    color: 'var(--text-secondary)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7L12 3 4 7m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 0v10M4 7v10l8 4"/></svg>' };
-            if (watchMinutes >= 60)   return { label: 'Початківець',    color: 'var(--text-muted)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' };
-            return                        { label: 'Новачок',        color: 'var(--text-muted)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' };
-        }
-
         export function initRatingPage() {
             const wrap = document.getElementById('ratingPageContainer');
             if (!wrap || wrap.dataset.init) return;
@@ -301,8 +96,7 @@ function isGifUrl(url) {
             wrap.innerHTML = `
                 <div class="rg-tab-panel active" id="rgPanelRating">
                     <div id="rgMyStats"></div>
-                    <div id="rgAchievements"></div>
-                    <div class="rg-lb-title">Глобальний рейтинг</div>
+                                        <div class="rg-lb-title">Глобальний рейтинг</div>
                     <div class="rg-sort-tabs" id="rgSortTabs">
                         <button class="rg-sort-tab active" data-sort="xp">За XP</button>
                         <button class="rg-sort-tab" data-sort="episodes">За серіями</button>
@@ -342,8 +136,7 @@ function isGifUrl(url) {
 
         function loadMyStats() {
             const statsEl = document.getElementById('rgMyStats');
-            const achEl   = document.getElementById('rgAchievements');
-            if (!statsEl || !achEl) return;
+            if (!statsEl) return;
 
             const profile    = getProfile();
             const history    = Storage.getHistory()   || [];
@@ -354,8 +147,6 @@ function isGifUrl(url) {
             const rankInfo   = getUserRankInfo(episodes, watchMinutes);
             const totalXP    = calcTotalXP();
             const xpLvl      = getLevel(totalXP);
-            const achStats   = { episodes, watchMinutes, bookmarks: bookmarks.length, xp: totalXP, level: xpLvl, posts: DailyStats.getTotalPosts(), ratings: DailyStats.getTotalRatings() };
-            const earnedIds  = new Set(ACHIEVEMENTS.filter(a => achStats[a.field] >= a.need).map(a => a.id));
             const xpProg     = getXPProgress(totalXP);
 
             const avHtml = ratingProfileMediaMarkup(profile, 'rg-stats-avatar-media');
@@ -380,24 +171,10 @@ function isGifUrl(url) {
                     <div class="rg-stats-grid">
                         <div class="rg-stat-cell"><div class="rg-stat-val">${episodes}</div><div class="rg-stat-label">Серій</div></div>
                         <div class="rg-stat-cell"><div class="rg-stat-val">${watchMinutes}</div><div class="rg-stat-label">Хвилин</div></div>
-                        <div class="rg-stat-cell"><div class="rg-stat-val">${earnedIds.size}</div><div class="rg-stat-label">Досягнень</div></div>
-                    </div>
-                    <div class="rg-xp-rules">XP: 25 за серію · 1 за хвилину · 15 за закладку · 75 за досягнення</div>
+                                            </div>
+                    <div class="rg-xp-rules">XP: 25 за серію · 1 за хвилину · 15 за закладку</div>
                 </div>`;
 
-            achEl.innerHTML = `
-                <div class="rg-achievements">
-                    <div class="rg-section-label">Досягнення</div>
-                    <div class="rg-ach-scroll">
-                        ${ACHIEVEMENTS.map(a => `
-                            <div class="rg-ach-item ${earnedIds.has(a.id) ? 'earned' : 'locked'}" title="${a.req}">
-                                <span class="rg-ach-icon">${a.icon}</span>
-                                <span class="rg-ach-name">${a.name}</span>
-                                <span class="rg-ach-req">${a.req}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>`;
         }
 
         let _lbSortKey = 'xp';

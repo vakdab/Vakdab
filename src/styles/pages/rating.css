@@ -173,53 +173,6 @@
             color: var(--text-muted); margin-top: 4px;
         }
 
-        /* Achievements */
-        .rg-achievements { margin: 1rem 1rem 0; }
-        .rg-section-label {
-            font-size: 11px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 1.5px;
-            color: var(--text-secondary);
-            padding: 0 2px 0.6rem;
-        }
-        .rg-ach-scroll {
-            display: flex; gap: 0.55rem;
-            overflow-x: auto;
-            padding-bottom: 0.4rem;
-            scrollbar-width: none;
-        }
-        .rg-ach-scroll::-webkit-scrollbar { display: none; }
-        .rg-ach-item {
-            flex-shrink: 0;
-            display: flex; flex-direction: column; align-items: center;
-            gap: 0.4rem;
-            padding: 0.75rem 0.8rem;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border);
-            background: var(--glass);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            min-width: 76px;
-            text-align: center;
-            transition: border-color 160ms var(--ui-ease), background 160ms var(--ui-ease), box-shadow 160ms var(--ui-ease), transform 160ms var(--ui-ease), opacity 160ms var(--ui-ease);
-        }
-        .rg-ach-item.earned {
-            border-color: rgba(var(--accent-rgb), 0.3);
-            background: rgba(var(--accent-rgb), 0.04);
-            box-shadow: 0 2px 12px rgba(var(--accent-rgb), 0.06);
-        }
-        .rg-ach-item.earned:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(var(--accent-rgb), 0.1);
-        }
-        .rg-ach-item.locked { opacity: 0.3; filter: grayscale(100%); }
-        .rg-ach-icon { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; }
-        .rg-ach-icon svg { width: 24px; height: 24px; }
-        .rg-ach-name {
-            font-size: 10px; font-weight: 700;
-            color: var(--text); line-height: 1.2;
-        }
-        .rg-ach-req { font-size: 9px; color: var(--text-muted); }
-
         /* Sort tabs */
         .rg-sort-tabs {
             display: flex; gap: 0.4rem;
@@ -379,21 +332,6 @@
             white-space: nowrap;
         }
         .rg-lb-score .unit { font-size: 10px; font-weight: 500; color: var(--text-muted); margin-left: 2px; }
-        .rg-daily-wrap { margin: 14px 0; }
-        .rg-daily-header { display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:700; color:var(--text); margin-bottom:8px; padding: 0 2px; }
-        .rg-daily-count { font-size:11px; font-weight:700; color:var(--accent); background:rgba(128,128,128,.12); padding:2px 8px; border-radius:10px; }
-        .dt-list { display:flex; flex-direction:column; gap:8px; }
-        .dt-item { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border-radius:12px; background:var(--card-bg, rgba(128,128,128,.06)); border:1px solid var(--border, rgba(128,128,128,.12)); transition: opacity .2s; }
-        .dt-item.done { opacity:.55; }
-        .dt-check { width:20px; height:20px; border-radius:50%; border:2px solid var(--border, rgba(128,128,128,.3)); flex-shrink:0; display:flex; align-items:center; justify-content:center; margin-top:2px; }
-        .dt-item.done .dt-check { background: var(--accent); border-color: var(--accent); color:#fff; }
-        .dt-check svg { width:12px; height:12px; }
-        .dt-body { flex:1; min-width:0; }
-        .dt-desc { font-size:12.5px; font-weight:600; color:var(--text); margin-bottom:5px; }
-        .dt-bar-wrap { height:5px; border-radius:3px; background:rgba(128,128,128,.15); overflow:hidden; margin-bottom:4px; }
-        .dt-bar { height:100%; background:var(--accent); border-radius:3px; transition:width .3s; }
-        .dt-meta { display:flex; justify-content:space-between; font-size:10.5px; color:var(--text-muted); }
-        .dt-xp { color:var(--accent); font-weight:700; }
         .rg-lb-loader {
             display: flex; align-items: center; justify-content: center;
             padding: 2rem;

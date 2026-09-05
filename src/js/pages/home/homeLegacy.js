@@ -1,6 +1,6 @@
 import { HIKKA_API, GENRE_MAP, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 import {
-    Auth, DailyStats, Router, Storage, escapeHtml,
+    Auth, Router, Storage, escapeHtml,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
 } from '../../legacy/app-legacy.js?v=20260901-home-recs-v3';
@@ -1376,7 +1376,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             }
             bookmarks.push({ url, title: title || 'Без назви', poster: poster || '', addedAt: Date.now() });
             Storage.setBookmarks(bookmarks);
-            DailyStats.increment('bookmarksToday', 1);
             showToast('Додано до обраного');
             return true;
         }
@@ -2726,7 +2725,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (!results) return;
             const query = searchPageState.query.trim();
             if (!query || query.length < 2) return;
-            DailyStats.increment('searchesToday', 1);
             searchPageState.loading = true;
             results.innerHTML = '<div class="loader" style="grid-column:1/-1;"><i class="fas fa-spinner fa-pulse"></i> Пошук...</div>';
             pagination.innerHTML = '';
@@ -3712,40 +3710,6 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
                   <div class="profile-bm-title">${escapeHtml(title)}</div>
                   <div class="profile-bm-sub">${escapeHtml(sub || 'Збережено')}</div>
                 </div>
-              </div>
-            `;
-            });
-            html += `</div>`;
-            return html;
-        }
-
-        export function renderAchievementsPanel(achievements, totalWatchTime, historyCount) {
-            const safeAchievements = Array.isArray(achievements) ? achievements : [];
-            const totalMinutes = Math.max(0, Math.floor(Number(totalWatchTime || 0) / 60));
-            let html = `
-            <div class="profile-watch-card">
-              <div class="profile-wt-label">Загальний час перегляду аніме</div>
-              <div class="profile-wt-value">${totalMinutes}<span class="profile-wt-unit">хв</span></div>
-              <div class="profile-wt-sub">${Number(historyCount) || 0} серій переглянуто</div>
-            </div>
-            <div class="profile-panel-header">
-              <span class="profile-panel-title">Досягнення</span>
-              <span class="profile-panel-count">${safeAchievements.filter(a=>a && a.unlocked).length} / ${safeAchievements.length}</span>
-            </div>
-            <div class="profile-achievement-list">
-          `;
-            safeAchievements.forEach(a => {
-                if (!a) return;
-                const unlocked = Boolean(a.unlocked);
-                const progress = Math.max(0, Math.min(Number(a.progress) || 0, 100));
-                html += `
-              <div class="profile-achievement ${unlocked?'':'locked'}">
-                <div class="profile-ach-icon">${a.icon}</div>
-                <div class="profile-ach-info">
-                  <div class="profile-ach-name">${a.name}</div>
-                  <div class="profile-ach-value">${a.description}</div>
-                </div>
-                <div class="profile-ach-badge">${unlocked ? 'Виконано' : (progress < 100 ? Math.round(progress)+'%' : 'Заблоковано')}</div>
               </div>
             `;
             });

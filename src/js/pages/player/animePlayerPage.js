@@ -4,7 +4,6 @@ import { GENRE_MAP } from '../../config/constants.js?v=20260824-settings-redesig
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
 import { Storage } from '../../core/compat/storage.js?v=20260824-settings-redesign-v1';
 import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260824-settings-redesign-v1';
-import { DailyStats } from '../../components/rating/ratingSystem.js?v=20260905-stickers-sync-v2';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -1294,7 +1293,6 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                         // watchTime вже обчислено вище
                         if (watchSecondsSoFar > 0) {
                             Storage.addWatchTime(watchSecondsSoFar);
-                            DailyStats.increment('minutesToday', Math.round(watchSecondsSoFar / 60));
                         }
                         if (idx >= 0) {
                             history[idx].episode = ep;
@@ -1316,8 +1314,6 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                                 duration: Math.floor(video.currentTime)
                             };
                             history.unshift(entry);
-                            DailyStats.increment('episodesToday', 1);
-                            DailyStats.addUniqueAnime(playerPageAnime.url);
                             if (history.length > 200) history.length = 200;
                             Storage.setHistory(history);
                         }
@@ -1401,7 +1397,6 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 addedAt: Date.now()
             });
             Storage.setBookmarks(bookmarks);
-            DailyStats.increment('bookmarksToday', 1);
             showToast('Додано до закладок');
             updateBookmarkButton(url);
             if (Router.currentRoute === 'profile') renderProfilePage();
@@ -1450,8 +1445,6 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             } else {
                 likes[url] = 'like';
                 Storage.setLikes(likes);
-                DailyStats.increment('likesToday', 1);
-                DailyStats.addTotalRating();
                 syncAnimeRating(url, 1);
                 showToast('Лайк');
             }

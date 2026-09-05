@@ -1,14 +1,13 @@
 import {
     Auth, PROFILE_STICKER_SLOTS, Router, buildEffectOverlayHtml,
     escapeHtml, isGifUrl, openPlayerPage,
-    profileMediaMarkup, renderAchievementsPanel, renderAuthPage,
+    profileMediaMarkup, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
 } from '../../legacy/app-legacy.js?v=20260905-stickers-sync-v1';
 import { Storage } from '../../core/compat/storage.js?v=20260905-stickers-sync-v1';
 import { renderStickerFaceByKey } from './stickersLegacy.js?v=20260905-stickers-sync-v1';
-import { getProfile, saveProfile, getProfileStats, getAchievements, getProfileDisplayName, getProfileHandle } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
-import { renderTasksInto } from '../../components/rating/ratingSystem.js?v=20260905-stickers-sync-v2';
+import { getProfile, saveProfile, getProfileStats, getProfileDisplayName, getProfileHandle } from '../settings/settingsLegacy.js?v=20260905-no-achievements-v1';
 
 function thoughtSizeClass(text) {
     const length = String(text || '').trim().length;
@@ -267,10 +266,6 @@ export function renderProfilePage() {
                     <div class="num">${stats.bookmarks}</div>
                     <div class="label">Закладки</div>
                   </div>
-                  <div class="profile-stat-pill">
-                    <div class="num">${stats.achievements}</div>
-                    <div class="label">Досягнень</div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -283,10 +278,7 @@ export function renderProfilePage() {
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16l-7-3.5L5 21V5z"/></svg>
                 Закладки
               </button>
-              <button class="profile-tab" data-tab="achievements">
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.04 2.6a1 1 0 0 1 1.92 0l1.7 5.18a1 1 0 0 0 .95.69h5.47a1 1 0 0 1 .59 1.8l-4.43 3.22a1 1 0 0 0-.36 1.12l1.7 5.18a1 1 0 0 1-1.54 1.12l-4.42-3.22a1 1 0 0 0-1.18 0l-4.42 3.22a1 1 0 0 1-1.54-1.12l1.7-5.18a1 1 0 0 0-.36-1.12L3.3 10.27a1 1 0 0 1 .59-1.8h5.47a1 1 0 0 0 .95-.69l1.7-5.18z"/></svg>
-                Досягнення
-              </button>
+
             </div>
             <div id="profilePanels">
               <div class="profile-panel active" id="profilePanel-history">
@@ -295,13 +287,8 @@ export function renderProfilePage() {
               <div class="profile-panel" id="profilePanel-bookmarks">
                 ${renderBookmarksPanel(stats.bookmarksList)}
               </div>
-              <div class="profile-panel" id="profilePanel-achievements">
-                <div id="profileTasksInline"></div>
-                ${renderAchievementsPanel(stats.achievementsList, stats.totalWatchTime, stats.historyCount)}
-              </div>
             </div>
           `;
-            renderTasksInto(container.querySelector('#profileTasksInline'));
             primeProfileMediaPlayback(container);
             bindProfileThought(container);
             document.querySelectorAll('#profilePageContainer .profile-avatar-media').forEach(media => {
@@ -477,7 +464,6 @@ export async function renderPublicProfilePage(uid) {
         const publicHistory = profile.hideHistory ? [] : profile.history;
         const publicBookmarks = profile.hideBookmarks ? [] : profile.bookmarks;
         const uniqueAnime = new Set(publicHistory.map(item => item?.animeId || item?.title).filter(Boolean));
-        const publicAchievements = getAchievements(publicHistory, publicBookmarks, uniqueAnime.size, publicHistory.length, profile.watchTime, { xp: profile.xp, posts: 0, ratings: 0 });
         const historyTab = profile.hideHistory ? '' : `<button class="profile-tab active" data-tab="history">
           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
           Історія
@@ -486,11 +472,7 @@ export async function renderPublicProfilePage(uid) {
           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16l-7-3.5L5 21V5z"/></svg>
           Закладки
         </button>`;
-        const achievementsTab = `<button class="profile-tab${profile.hideHistory && profile.hideBookmarks ? ' active' : ''}" data-tab="achievements">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.04 2.6a1 1 0 0 1 1.92 0l1.7 5.18a1 1 0 0 0 .95.69h5.47a1 1 0 0 1 .59 1.8l-4.43 3.22a1 1 0 0 0-.36 1.12l1.7 5.18a1 1 0 0 1-1.54 1.12l-4.42-3.22a1 1 0 0 0-1.18 0l-4.42 3.22a1 1 0 0 1-1.54-1.12l1.7-5.18a1 1 0 0 0-.36-1.12L3.3 10.27a1 1 0 0 1 .59-1.8h5.47a1 1 0 0 0 .95-.69l1.7-5.18z"/></svg>
-          Досягнення
-        </button>`;
-        const initialTab = profile.hideHistory ? (profile.hideBookmarks ? 'achievements' : 'bookmarks') : 'history';
+        const initialTab = profile.hideHistory ? 'bookmarks' : 'history';
         container.innerHTML = `
           <div class="profile-wrapper profile-public-wrapper">
             <div class="${bannerClass}">
@@ -514,12 +496,11 @@ export async function renderPublicProfilePage(uid) {
             </div>
           </div>
           <div class="profile-tabs" id="publicProfileTabs">
-            ${historyTab}${bookmarksTab}${achievementsTab}
+            ${historyTab}${bookmarksTab}
           </div>
           <div id="publicProfilePanels">
             ${profile.hideHistory ? '' : `<div class="profile-panel${initialTab === 'history' ? ' active' : ''}" id="publicProfilePanel-history">${renderHistoryPanel(publicHistory)}</div>`}
             ${profile.hideBookmarks ? '' : `<div class="profile-panel${initialTab === 'bookmarks' ? ' active' : ''}" id="publicProfilePanel-bookmarks">${renderBookmarksPanel(publicBookmarks)}</div>`}
-            <div class="profile-panel${initialTab === 'achievements' ? ' active' : ''}" id="publicProfilePanel-achievements">${renderAchievementsPanel(publicAchievements, profile.watchTime, publicHistory.length)}</div>
           </div>`;
         primeProfileMediaPlayback(container);
         if (hasPublicThought) {

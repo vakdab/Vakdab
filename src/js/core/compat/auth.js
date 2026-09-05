@@ -4,7 +4,7 @@ import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
 } from '../../legacy/app-legacy.js?v=20260905-stickers-sync-v1';
-import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../pages/settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
+import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../pages/settings/settingsLegacy.js?v=20260905-no-achievements-v1';
 import { Storage } from './storage.js?v=20260905-stickers-sync-v1';
 import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 

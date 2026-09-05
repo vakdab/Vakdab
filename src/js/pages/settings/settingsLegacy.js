@@ -1,7 +1,7 @@
 import {
-    ACHIEVEMENTS, Auth, DailyStats, Router, Storage,
+    Auth, Router, Storage,
     buildEffectOverlayHtml, calcTotalXP, detectDeviceInfo, editExistingProfileImage,
-    editExistingProfileVideo, escapeHtml, getLevel, isGifUrl, isVideoUrl,
+    editExistingProfileVideo, escapeHtml, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
 } from '../../legacy/app-legacy.js?v=20260901-home-recs-v3';
@@ -72,7 +72,7 @@ import {
                   <div class="settings-preview-handle">${escapeHtml(getProfileHandle(profile))}</div>
                   <div class="settings-preview-bio${profile.bioBold ? ' is-bold' : ''}">${escapeHtml(profile.bio || 'Опис профілю не додано')}</div>
                   <button type="button" class="settings-preview-bio-btn"><i class="fas fa-align-left"></i> Опис профілю</button>
-                  <div class="settings-preview-tabs profile-tabs"><span class="profile-tab active">Профіль</span><span class="profile-tab">Статистика</span><span class="profile-tab">Досягнення</span></div>
+                  <div class="settings-preview-tabs profile-tabs"><span class="profile-tab active">Профіль</span><span class="profile-tab">Статистика</span></div>
                 </div>
               </div>
             `;
@@ -888,16 +888,12 @@ import {
             const totalEpisodes = history.length;
             const totalWatchTime = Storage.getWatchTime() || history.reduce((sum, h) => sum + (h.duration || 0), 0);
             const minutes = Math.floor(totalWatchTime / 60);
-            const achievements = getAchievements(history, bookmarks, uniqueAnime.size, totalEpisodes, totalWatchTime);
             return {
                 viewed: totalEpisodes,
                 bookmarks: bookmarks.length,
-                achievements: achievements.filter(a => a.unlocked).length,
-                totalAchievements: achievements.length,
                 watchMinutes: minutes,
                 totalWatchTime: totalWatchTime,
                 uniqueAnime: uniqueAnime.size,
-                achievementsList: achievements,
                 history: history.slice(0, 50),
                 historyCount: history.length,
                 bookmarksList: bookmarks
@@ -912,32 +908,6 @@ import {
             if (lastOne >= 2 && lastOne <= 4) return 'медалі';
             return 'медалей';
         }
-
-        export function getAchievements(history, bookmarks, uniqueCount, totalEpisodes, totalWatchTime, overrides = {}) {
-            const xp = Number.isFinite(Number(overrides.xp)) ? Number(overrides.xp) : calcTotalXP();
-            const lvl = getLevel(xp);
-            const stats = {
-                episodes: totalEpisodes,
-                watchMinutes: Math.floor((Number(totalWatchTime) || 0) / 60),
-                bookmarks: bookmarks.length,
-                xp: xp,
-                level: lvl,
-                posts: Number.isFinite(Number(overrides.posts)) ? Number(overrides.posts) : DailyStats.getTotalPosts(),
-                ratings: Number.isFinite(Number(overrides.ratings)) ? Number(overrides.ratings) : DailyStats.getTotalRatings()
-            };
-            return ACHIEVEMENTS.map(a => {
-                const val = stats[a.field] || 0;
-                return {
-                    id: a.id,
-                    name: a.name,
-                    description: a.req,
-                    unlocked: val >= a.need,
-                    progress: Math.min(Math.floor(val / a.need * 100), 100),
-                    icon: a.icon
-                };
-            });
-        }
-
 
         // Стиснення зображення перед збереженням (щоб Firestore не падав)
         // Upload image to Cloudinary, return URL
