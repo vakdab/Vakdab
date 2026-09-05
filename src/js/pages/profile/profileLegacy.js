@@ -8,7 +8,6 @@ import {
 import { Storage } from '../../core/compat/storage.js?v=20260905-stickers-sync-v1';
 import { renderStickerFaceByKey } from './stickersLegacy.js?v=20260905-stickers-sync-v1';
 import { getProfile, saveProfile, getProfileStats, getAchievements, getProfileDisplayName, getProfileHandle } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
-import { getFriendsList, getFollowingList, getSocialState, setFollowing } from '../../services/firebase/socialProfile.js?v=20260824-settings-redesign-v1';
 import { renderTasksInto } from '../../components/rating/ratingSystem.js?v=20260905-stickers-sync-v2';
 
 function thoughtSizeClass(text) {
@@ -248,14 +247,6 @@ export function renderProfilePage() {
                       </div>
                     </div>
                   </div>
-                  <div class="profile-social-summary" aria-label="Соціальні показники">
-                    <button type="button" class="profile-social-link profile-social-stat" id="profileFriendsStat" aria-label="Відкрити список друзів">
-                      <span class="label">Друзі</span><strong class="num">—</strong>
-                    </button>
-                    <button type="button" class="profile-social-link profile-social-stat" id="profileFollowingStat" aria-label="Відкрити список підписок">
-                      <span class="label">Слідкую</span><strong class="num">—</strong>
-                    </button>
-                  </div>
                 </div>
                 <div class="profile-nick-row">
                   <span class="profile-nick" id="profileNickText">${profileNickname}</span>
@@ -313,21 +304,6 @@ export function renderProfilePage() {
             renderTasksInto(container.querySelector('#profileTasksInline'));
             primeProfileMediaPlayback(container);
             bindProfileThought(container);
-            container.querySelector('#profileFriendsStat')?.addEventListener('click', () => Router.goTo('friends'));
-            container.querySelector('#profileFollowingStat')?.addEventListener('click', () => Router.goTo('following'));
-            if (!isGuestMode && Auth._user?.uid) {
-                getSocialState(Auth._user.uid, Auth._user.uid).then(social => {
-                    const friends = container.querySelector('#profileFriendsStat .num');
-                    const following = container.querySelector('#profileFollowingStat .num');
-                    if (friends) friends.textContent = String(social.friends);
-                    if (following) following.textContent = String(social.following);
-                }).catch(error => {
-                    console.warn('[VakDab] own social stats failed:', error);
-                    container.querySelectorAll('.profile-social-stat .num').forEach(el => { el.textContent = '0'; });
-                });
-            } else {
-                container.querySelectorAll('.profile-social-stat .num').forEach(el => { el.textContent = '0'; });
-            }
             document.querySelectorAll('#profilePageContainer .profile-avatar-media').forEach(media => {
                 media.addEventListener('error', () => {
                     media.style.display = 'none';
@@ -459,153 +435,6 @@ export function renderProfilePage() {
             syncLeftdockActive();
         }
 
-function socialListProfileMarkup(profile) {
-    const media = profile.avatarVideo || profile.avatar || '';
-    const placeholder = escapeHtml((getProfileDisplayName(profile) || 'К').charAt(0).toUpperCase());
-    return `<div class="social-list-avatar">
-        ${media ? profileMediaMarkup(media, 'social-list-avatar-media', `${getProfileDisplayName(profile)} ${getProfileHandle(profile)} avatar`, profile.avatarVideo ? profile.avatarVideoSettings : null) : ''}
-        <span class="social-list-avatar-placeholder" style="display:${media ? 'none' : 'flex'};">${placeholder}</span>
-    </div>`;
-}
-
-function socialListCardMarkup(profile, { showUnfollow = false } = {}) {
-    const nickname = escapeHtml(getProfileDisplayName(profile));
-    const handle = escapeHtml(getProfileHandle(profile));
-    return `<article class="social-list-item" data-social-profile-uid="${escapeHtml(profile.uid)}" tabindex="0" role="link">
-        ${socialListProfileMarkup(profile)}
-        <div class="social-list-user">
-            <strong class="social-list-name">${nickname}</strong>
-            <span class="social-list-handle">${handle}</span>
-            ${profile.bio ? `<span class="social-list-bio">${escapeHtml(profile.bio)}</span>` : ''}
-        </div>
-        ${showUnfollow ? `<button type="button" class="social-unfollow-btn" data-unfollow-uid="${escapeHtml(profile.uid)}">Перестати слідкувати</button>` : ''}
-    </article>`;
-}
-
-function bindSocialListMedia(container) {
-    primeProfileMediaPlayback(container);
-    container.querySelectorAll('.social-list-avatar-media').forEach(media => {
-        media.addEventListener('error', () => {
-            media.style.display = 'none';
-            const placeholder = media.parentElement?.querySelector('.social-list-avatar-placeholder');
-            if (placeholder) placeholder.style.display = 'flex';
-        });
-    });
-}
-
-function socialListBackRoute(uid, viewerUid) {
-    return uid && uid !== viewerUid ? { route: 'profile', params: { uid } } : { route: 'profile', params: {} };
-}
-
-async function renderSocialListPage({ uid, title, emptyText, loader, showUnfollow = false }) {
-    const container = document.getElementById('profilePageContainer');
-    const viewerUid = Auth.isAuthenticated() && !Auth.isGuest() ? String(Auth._user?.uid || '') : '';
-    const targetUid = String(uid || viewerUid || '').trim();
-    if (!container || !targetUid) {
-        if (container) container.innerHTML = '<div class="profile-public-empty">Увійдіть в акаунт, щоб переглядати соціальні списки.</div>';
-        return;
-    }
-    container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
-    try {
-        let profiles = await loader(targetUid);
-        const canUnfollow = showUnfollow && targetUid === viewerUid;
-        const back = socialListBackRoute(targetUid, viewerUid);
-        const renderList = (query = '') => {
-            const normalizedQuery = String(query || '').trim().toLowerCase().replace(/^@+/, '');
-            const visibleProfiles = profiles.filter(profile => {
-                const nickname = String(profile.nickname || '').toLowerCase();
-                const realName = String(profile.realName || '').toLowerCase();
-                const bio = String(profile.bio || '').toLowerCase();
-                const uid = String(profile.uid || '').toLowerCase();
-                const handle = nickname.replace(/\s/g, '_');
-                const haystack = `${nickname} ${realName} ${bio} ${uid} ${handle}`;
-                return !normalizedQuery || haystack.includes(normalizedQuery);
-            });
-            const listHtml = visibleProfiles.length
-                ? visibleProfiles.map(profile => socialListCardMarkup(profile, { showUnfollow: canUnfollow })).join('')
-                : `<div class="social-list-empty">${normalizedQuery ? 'Нічого не знайдено за вашим запитом.' : emptyText}</div>`;
-            container.querySelector('#socialListItems').innerHTML = listHtml;
-            container.querySelector('#socialListCount').textContent = String(profiles.length);
-            bindSocialListMedia(container);
-            container.querySelectorAll('[data-social-profile-uid]').forEach(card => {
-                const openProfile = () => Router.goTo('profile', { uid: card.dataset.socialProfileUid });
-                card.addEventListener('click', event => {
-                    if (event.target.closest('.social-unfollow-btn')) return;
-                    openProfile();
-                });
-                card.addEventListener('keydown', event => {
-                    if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('.social-unfollow-btn')) {
-                        event.preventDefault();
-                        openProfile();
-                    }
-                });
-            });
-            container.querySelectorAll('[data-unfollow-uid]').forEach(button => {
-                button.addEventListener('click', async event => {
-                    event.stopPropagation();
-                    if (!viewerUid) {
-                        showToast('Увійдіть в акаунт, щоб змінювати підписки');
-                        return;
-                    }
-                    const target = String(button.dataset.unfollowUid || '');
-                    button.disabled = true;
-                    try {
-                        await setFollowing(viewerUid, target, false);
-                        profiles = profiles.filter(profile => profile.uid !== target);
-                        renderList(container.querySelector('#socialListSearch')?.value || '');
-                        showToast('Підписку скасовано');
-                    } catch (error) {
-                        console.error('[VakDab] social list unfollow failed:', error);
-                        button.disabled = false;
-                        showToast('Не вдалося скасувати підписку');
-                    }
-                });
-            });
-        };
-        container.innerHTML = `<section class="social-list-page" aria-labelledby="socialListTitle">
-            <div class="social-list-toolbar">
-                <button type="button" class="social-list-back" id="socialListBack" aria-label="Назад">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
-                </button>
-                <div class="social-list-heading">
-                    <h1 id="socialListTitle">${title}</h1>
-                    <span><strong id="socialListCount">${profiles.length}</strong> користувачів</span>
-                </div>
-            </div>
-            <label class="social-search-wrap" for="socialListSearch">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></svg>
-                <input id="socialListSearch" class="social-search-input" type="search" placeholder="Пошук користувача" autocomplete="off" />
-            </label>
-            <div class="social-list" id="socialListItems"></div>
-        </section>`;
-        container.querySelector('#socialListBack').addEventListener('click', () => Router.goTo(back.route, back.params));
-        container.querySelector('#socialListSearch').addEventListener('input', event => renderList(event.target.value));
-        renderList();
-    } catch (error) {
-        console.error('[VakDab] social list failed:', error);
-        container.innerHTML = '<div class="profile-public-empty">Не вдалося завантажити список. Спробуйте ще раз.</div>';
-    }
-}
-
-export function renderFriendsPage(uid = '') {
-    return renderSocialListPage({
-        uid,
-        title: 'Друзі',
-        emptyText: 'У вас ще немає взаємних підписок.',
-        loader: getFriendsList
-    });
-}
-
-export function renderFollowingPage(uid = '') {
-    return renderSocialListPage({
-        uid,
-        title: 'Слідкую',
-        emptyText: 'Ви ще ні за ким не слідкуєте.',
-        loader: getFollowingList,
-        showUnfollow: true
-    });
-}
-
 export async function renderPublicProfilePage(uid) {
     const container = document.getElementById('profilePageContainer');
     const targetUid = String(uid || '').trim();
@@ -615,7 +444,7 @@ export async function renderPublicProfilePage(uid) {
     }
     container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
     try {
-        const { getPublicProfile, getSocialState, setFollowing } = await import('../../services/firebase/socialProfile.js?v=20260824-settings-redesign-v1');
+        const { getPublicProfile } = await import('../../services/firebase/publicProfile.js?v=20260905-public-profile-v1');
         const isOwnPublicProfile = Boolean(Auth.isAuthenticated() && Auth._user?.uid && String(Auth._user.uid) === targetUid);
         let profile = null;
         try {
@@ -635,11 +464,6 @@ export async function renderPublicProfilePage(uid) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';
             return;
         }
-        const viewerUid = Auth.isAuthenticated() ? String(Auth._user?.uid || '') : '';
-        const social = await getSocialState(targetUid, viewerUid).catch(error => {
-            console.warn('[VakDab] public social state failed:', error);
-            return { friends: 0, following: 0, followers: 0, isFollowing: false };
-        });
         const banner = profile.bannerVideo || profile.banner || '';
         const avatar = profile.avatarVideo || profile.avatar || '';
         const publicThought = String(profile.thought || '').trim();
@@ -650,7 +474,6 @@ export async function renderPublicProfilePage(uid) {
         const avatarClass = `profile-avatar${isGifUrl(avatar) ? ' is-gif' : ''}`;
         const nickname = escapeHtml(getProfileDisplayName(profile));
         const handle = escapeHtml(getProfileHandle(profile));
-        const canFollow = Boolean(viewerUid && viewerUid !== targetUid && !Auth.isGuest());
         const publicHistory = profile.hideHistory ? [] : profile.history;
         const publicBookmarks = profile.hideBookmarks ? [] : profile.bookmarks;
         const uniqueAnime = new Set(publicHistory.map(item => item?.animeId || item?.title).filter(Boolean));
@@ -684,13 +507,6 @@ export async function renderPublicProfilePage(uid) {
                   </div>
                   ${hasPublicThought ? `<div class="profile-thought-note profile-thought-note--public is-visible${publicThoughtClass}" id="profileThoughtNote" role="status" aria-live="polite"><span class="profile-thought-note__dot" aria-hidden="true"></span><span id="profileThoughtNoteText">${escapeHtml(publicThought)}</span></div>` : ''}
                 </div>
-                <div class="profile-social-summary" aria-label="Соціальні показники">
-                  ${canFollow && !social.isFollowing ? `<button type="button" class="profile-follow-icon" id="publicFollowBtn" data-following="0" aria-label="Підписатися на користувача" title="Підписатися">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 20v-1.6a3.4 3.4 0 0 0-3.4-3.4H5.4A3.4 3.4 0 0 0 2 18.4V20M8.5 11.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2ZM19 8v6M16 11h6"/></svg>
-                  </button>` : ''}
-                  <span class="profile-social-link"><span class="label">Друзі</span><strong class="num" id="publicFriendsCount">${social.friends}</strong></span>
-                  <span class="profile-social-link"><span class="label">Слідкую</span><strong class="num" id="publicFollowingCount">${social.following}</strong></span>
-                </div>
               </div>
               <div class="profile-nick-row"><span class="profile-nick">${nickname}</span></div>
               <div class="profile-meta"><span>${handle}</span></div>
@@ -718,37 +534,7 @@ export async function renderPublicProfilePage(uid) {
             container.querySelectorAll('#publicProfileTabs .profile-tab').forEach(item => item.classList.toggle('active', item === tab));
             container.querySelectorAll('#publicProfilePanels .profile-panel').forEach(panel => panel.classList.toggle('active', panel.id === `publicProfilePanel-${target}`));
         }));
-        container.querySelector('#publicFollowBtn')?.addEventListener('click', async event => {
-            const button = event.currentTarget;
-            if (!Auth.isAuthenticated() || Auth.isGuest() || !Auth._user?.uid) {
-                showToast('Увійдіть в акаунт, щоб слідкувати за користувачами');
-                return;
-            }
-            const nextValue = button.dataset.following !== '1';
-            button.disabled = true;
-            try {
-                const nextSocial = await setFollowing(Auth._user.uid, targetUid, nextValue);
-                button.dataset.following = nextValue ? '1' : '0';
-                if (nextValue) {
-                    // Після успішної підписки іконка більше не показується у чужому профілі.
-                    button.remove();
-                } else {
-                    button.classList.remove('is-following');
-                    button.setAttribute('aria-label', 'Підписатися на користувача');
-                    button.setAttribute('title', 'Підписатися');
-                }
-                const friends = container.querySelector('#publicFriendsCount');
-                const following = container.querySelector('#publicFollowingCount');
-                if (friends) friends.textContent = String(nextSocial.friends);
-                if (following) following.textContent = String(nextSocial.following);
-                showToast(nextValue ? `Ви слідкуєте за ${getProfileDisplayName(profile) || getProfileHandle(profile)}` : 'Підписку скасовано');
-            } catch (error) {
-                console.error('[VakDab] follow update failed:', error);
-                showToast('Не вдалося оновити підписку');
-            } finally {
-                button.disabled = false;
-            }
-        });
+
     } catch (error) {
         console.error('[VakDab] public profile failed:', error);
         container.innerHTML = '<div class="profile-public-empty">Не вдалося завантажити профіль.</div>';

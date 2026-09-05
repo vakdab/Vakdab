@@ -27,7 +27,7 @@ import { initBottomNav } from '../components/navigation/bottomNav.js';
 import { renderSchedulePage } from '../pages/schedule/schedule.js?v=20260904-schedule-fix-v2';
 import { buildHeroBanner } from '../components/home/heroBanner.js';
 import { renderHomeQuickFilterBar } from '../pages/home/homeQuickFilter.js?v=20260903-home-filter-v2';
-import { renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage } from '../pages/profile/profileLegacy.js?v=20260904-profile-tasks-v2';
+import { renderProfilePage, renderPublicProfilePage } from '../pages/profile/profileLegacy.js?v=20260904-profile-tasks-v2';
 import { calcTotalXP, getLevel, DailyStats, ACHIEVEMENTS, getUserRankInfo, initRatingPage, calculateBaseXP, getXPForLevel, getXPProgress, loadRatingPage, loadRatingList } from '../components/rating/ratingSystem.js?v=20260905-stickers-sync-v2';
 import {
     playerPageAnime, playerPageAnimeuaSeasons, externalSourceCache, playerPageCurrentSeason, playerPageCurrentDub, playerPageCurrentSource, playerPageIsOpen,
@@ -45,7 +45,7 @@ import {
     CATALOG_POSTER_FALLBACK, normalizeAnimeUrl, normalizePosterUrl, normalizeGenreList, normalizeSynopsisText, hikkaType, animeTypeLabel, extractExternalAnimeIds, hikkaItem, hikkaRequest, hikkaCatalog, fetchHikkaMain, searchHikka, fetchHikkaByCategory, fetchHikkaTop100, fetchHikkaByGenre, fetchAnimeLite, getExternalWatchUrl, getMikaiUrl, getAnimeOnUrl, getAnimeOnId, fetchAnimeOnJson, loadAnimeOnSeasons, resolveMikaiNuxtPayload, addNoAdsQuery, fetchMikaiHtml, getMikaiTeamLogoUrl, parseMikaiSeasonsFromHtml, ashdiPlaybackCache, resolveAshdiPlaybackUrl, inferAnimeSeasonNumber, loadMikaiSeasons, pickPreferredDub, loadHikkaDetail, unifyAnimeDataWithExternalDubs, sourceCache, getCachedSource, setCachedSource, switchProviderSource, refreshAfterSourceSwitch, extractPlayerIframeUrls, extractSourcesFromText
 } from '../services/catalog/catalog.js?v=20260829-catalog-28-v2';
 
-export { Auth, Router, Storage, renderFriendsPage, renderFollowingPage, renderProfilePage, renderPublicProfilePage, renderSettingsPage };
+export { Auth, Router, Storage, renderProfilePage, renderPublicProfilePage, renderSettingsPage };
 export { buildHeroBanner };
 export { calcTotalXP, getLevel, DailyStats, ACHIEVEMENTS, getUserRankInfo, initRatingPage, loadRatingPage, loadRatingList };
 export {
