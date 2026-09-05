@@ -3,7 +3,7 @@ import { auth, db, initialized as firebaseInitialized } from '../services/fireba
 import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_PROXY_URL, MIKAI_BASE, GENRE_MAP } from '../config/constants.js?v=20260824-settings-redesign-v1';
 import { safeQuery, safeQueryAll } from '../utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from '../utils/image.js';
-import { loadFeature } from '../core/feature-loader.js?v=20260905-deadcode-v1';
+import { loadFeature } from '../core/feature-loader.js?v=20260905-runtime-fix-v2';
 import '../utils/string.js';
 
 export const loadMangaReader = () => loadFeature('manga');
@@ -28,7 +28,7 @@ import { renderSchedulePage } from '../pages/schedule/schedule.js?v=20260904-sch
 import { buildHeroBanner } from '../components/home/heroBanner.js';
 import { renderHomeQuickFilterBar } from '../pages/home/homeQuickFilter.js?v=20260903-home-filter-v2';
 import { renderProfilePage, renderPublicProfilePage } from '../pages/profile/profileLegacy.js?v=20260904-profile-tasks-v2';
-import { calcTotalXP, getLevel, getUserRankInfo, initRatingPage, calculateBaseXP, getXPForLevel, getXPProgress, loadRatingPage, loadRatingList } from '../components/rating/ratingSystem.js?v=20260905-no-achievements-v1';
+import { calcTotalXP, getLevel, getUserRankInfo, initRatingPage, calculateBaseXP, getXPForLevel, getXPProgress, loadRatingPage, loadRatingList } from '../components/rating/ratingSystem.js?v=20260905-runtime-fix-v2';
 import {
     playerPageAnime, playerPageAnimeuaSeasons, externalSourceCache, playerPageCurrentSeason, playerPageCurrentDub, playerPageCurrentSource, playerPageIsOpen,
     setPlayerPageAnimeuaSeasons, setPlayerPageAnime, setPlayerPageCurrentSeason, setPlayerPageCurrentDub, setPlayerPageCurrentSource,
