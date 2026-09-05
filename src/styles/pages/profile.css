@@ -1694,3 +1694,638 @@
 /* Завдання дня всередині вкладки Досягнення профілю */
 #profileTasksInline .rg-daily-wrap { margin: 0 0 18px; }
 #profileTasksInline:empty { display: none; }
+
+
+/* ════════════════════════════════════════════════════════════════════
+   Rescued: profile avatar/banner/effects core styles.
+   These used to live unscoped inside pages/settings.css and were the ONLY
+   definition for .profile-avatar / .profile-banner / .effect-overlay used by
+   the actual profile page (not just the settings preview). Moved here where
+   they belong so the settings.css consolidation (2026-09-05) doesn't break
+   the profile page. Do not delete without checking profileLegacy.js usages.
+   ════════════════════════════════════════════════════════════════════ */
+        /* ===================================================================
+           Ефекти профілю — накладні частинки (дощ / сніг / іскри)
+           =================================================================== */
+        .effect-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .effect-overlay .drop {
+            position: absolute;
+            top: -20px;
+            width: 1px;
+            height: 14px;
+            background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0.55));
+            animation: effectFall linear infinite;
+        }
+        .dark-mode .effect-overlay .drop {
+            background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0.7));
+        }
+        .effect-overlay .flake {
+            position: absolute;
+            top: -10px;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.8);
+            animation: effectFallDrift linear infinite;
+        }
+        .effect-overlay .spark {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 0 6px 1px rgba(255,255,255,0.7);
+            animation: effectTwinkle ease-in-out infinite;
+        }
+        .effect-overlay .heart {
+            position:absolute; top:-12px; color:rgba(255,150,190,.85); font-size:11px;
+            width:10px; height:10px; background:currentColor; transform:rotate(45deg);
+            animation: effectHeart linear infinite;
+        }
+        .effect-overlay .heart::before, .effect-overlay .heart::after { content:''; position:absolute; width:10px; height:10px; border-radius:50%; background:currentColor; }
+        .effect-overlay .heart::before { left:-5px; top:0; } .effect-overlay .heart::after { left:0; top:-5px; }
+        .effect-overlay .bubble { position:absolute; top:-12px; width:8px; height:8px; border:1px solid rgba(255,255,255,.65); border-radius:50%; animation: effectBubble linear infinite; }
+        @keyframes effectHeart { 0% { transform:translateY(0) rotate(45deg) scale(.7); opacity:0; } 15% { opacity:.85; } 100% { transform:translate(18px,175px) rotate(45deg) scale(1.2); opacity:0; } }
+        @keyframes effectBubble { 0% { transform:translateY(0) scale(.7); opacity:0; } 15% { opacity:.7; } 100% { transform:translate(-12px,175px) scale(1.35); opacity:0; } }
+        @keyframes effectFall {
+            0% { transform: translateY(0); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translateY(170px); opacity: 0; }
+        }
+        @keyframes effectFallDrift {
+            0% { transform: translate(0,0); opacity: 0; }
+            10% { opacity: 0.9; }
+            100% { transform: translate(14px,170px); opacity: 0; }
+        }
+        @keyframes effectTwinkle {
+            0%, 100% { opacity: 0.15; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.3); }
+        }
+
+        /* Атмосфера профілю — накладні тонування */
+        .atmosphere-night {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.65) 100%);
+        }
+        .atmosphere-light {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0.02));
+        }
+        .atmosphere-fog {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(200,200,200,0.35), rgba(200,200,200,0.05));
+            backdrop-filter: blur(1.5px);
+        }
+        .atmosphere-aurora { position:absolute; inset:0; background:linear-gradient(120deg,rgba(87,214,185,.32),rgba(125,91,209,.25),rgba(39,127,168,.3)); mix-blend-mode:screen; }
+        .atmosphere-sunset { position:absolute; inset:0; background:linear-gradient(180deg,rgba(255,172,92,.3),rgba(184,65,111,.38)); mix-blend-mode:screen; }
+
+        /* Декорація аватара */
+        .avatar-decoration-glow {
+            border-radius: 50%;
+            box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.25), 0 0 18px 4px rgba(var(--accent-rgb),0.35);
+            animation: avatarGlowPulse 2.4s ease-in-out infinite;
+        }
+        @keyframes avatarGlowPulse {
+            0%, 100% { box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.2), 0 0 14px 2px rgba(var(--accent-rgb),0.25); }
+            50% { box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.4), 0 0 22px 6px rgba(var(--accent-rgb),0.5); }
+        }
+        .avatar-decoration-double::after {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 50%;
+            border: 2px solid var(--border-hover);
+            pointer-events: none;
+        }
+        .avatar-decoration-dashed::after {
+            content: '';
+            position: absolute;
+            inset: -7px;
+            border-radius: 50%;
+            border: 2px dashed var(--text-muted);
+            pointer-events: none;
+            animation: avatarDashSpin 12s linear infinite;
+        }
+        .avatar-decoration-halo::after { content:''; position:absolute; inset:-8px; border-radius:50%; border:3px solid rgba(var(--accent-rgb),.6); box-shadow:0 0 16px rgba(var(--accent-rgb),.45); pointer-events:none; }
+        .avatar-decoration-diamond::after { content:'◆'; position:absolute; right:-9px; top:-10px; color:var(--accent); font-size:16px; text-shadow:0 0 8px rgba(var(--accent-rgb),.7); pointer-events:none; }
+        @keyframes avatarDashSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .settings-option-item[data-group="effect"].active,
+        .settings-option-item[data-group="atmosphere"].active,
+        .settings-option-item[data-group="avatarDecoration"].active {
+            box-shadow: 0 8px 20px -14px var(--accent);
+        }
+
+        /* Фільтри банера — юзер сам обирає стиль, більше не форсимо ч/б */
+        .profile-banner.banner-effect-grayscale img,
+        .profile-banner.banner-effect-grayscale video { filter: grayscale(100%) contrast(1.1); }
+        .profile-banner.banner-effect-contrast img,
+        .profile-banner.banner-effect-contrast video { filter: contrast(1.4) saturate(1.15) brightness(0.95); }
+        .profile-banner.banner-effect-muted img,
+        .profile-banner.banner-effect-muted video { filter: grayscale(45%) saturate(0.55); }
+        .profile-banner.banner-effect-sepia img,
+        .profile-banner.banner-effect-sepia video { filter: sepia(0.55) contrast(1.05); }
+        .profile-banner.banner-effect-invert img,
+        .profile-banner.banner-effect-invert video { filter: invert(1) hue-rotate(180deg); }
+        .profile-banner.banner-effect-blur img,
+        .profile-banner.banner-effect-blur video { filter: grayscale(55%) contrast(1.05) blur(2.5px); }
+        .profile-banner.banner-effect-grain img,
+        .profile-banner.banner-effect-grain video { filter: grayscale(70%) contrast(1.3) brightness(0.9); }
+        .profile-banner.banner-effect-fog img,
+        .profile-banner.banner-effect-fog video { filter: grayscale(60%) brightness(0.85); }
+        .profile-banner.banner-effect-grain::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            opacity: 0.18;
+            mix-blend-mode: overlay;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+        .profile-banner.banner-effect-fog::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(200,200,200,0.4), rgba(200,200,200,0.05));
+        }
+
+        #profilePageContainer {
+            display: none;
+            animation: fadeInUp .3s var(--ui-ease);
+            margin-top: 0.5rem;
+            width: 100%;
+        }
+        #profilePageContainer.active {
+            display: block;
+        }
+
+        .profile-wrapper {
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            margin-bottom: 1.2rem;
+        }
+        @media (min-width:480px) {
+            .profile-wrapper {
+                border-radius: var(--radius-lg);
+                margin-bottom: 1.5rem;
+            }
+        }
+        @media (min-width:768px) {
+            .profile-wrapper {
+                border-radius: var(--radius-xl);
+                margin-bottom: 1.8rem;
+            }
+        }
+
+        @media (min-width:900px) {
+            #profilePageContainer .profile-wrapper {
+                width: 100vw;
+                margin-left: calc(50% - 50vw);
+                border-left: 0;
+                border-right: 0;
+                border-radius: 0;
+            }
+            #profilePageContainer .profile-info,
+            #profilePageContainer .profile-tabs,
+            #profilePageContainer #profilePanels {
+                width: min(1180px, calc(100% - 48px));
+                margin-left: auto;
+                margin-right: auto;
+            }
+        }
+
+        .profile-banner {
+            width: 100%;
+            height: 110px;
+            position: relative;
+            overflow: hidden;
+            background: var(--tag-bg);
+            cursor: pointer;
+        }
+        @media (min-width:480px) {
+            .profile-banner { height: 130px; }
+        }
+        @media (min-width:768px) {
+            .profile-banner { height: 150px; }
+        }
+        .profile-banner.profile-banner--narrow { height: auto; aspect-ratio: 4 / 1; }
+        .profile-banner.profile-banner--wide { height: auto; aspect-ratio: 2 / 1; }
+
+        .profile-banner img,
+        .profile-banner video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: transparent;
+            opacity: 1;
+            filter: none;
+            transition: opacity .3s ease, filter .3s ease;
+        }
+        .profile-banner:hover img,
+        .profile-banner:hover video {
+            opacity: 1;
+        }
+        /* GIF autoplay: no grayscale on GIF banners */
+        .profile-banner.is-gif img,
+        .profile-banner.is-gif video {
+            filter: none;
+            opacity: 1;
+        }
+        .profile-banner.is-gif:hover img,
+        .profile-banner.is-gif:hover video {
+            opacity: 1;
+        }
+        .profile-banner-media,
+        .profile-avatar-media { transform-origin: center center; will-change: transform; }
+        .profile-banner-edit {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all .25s ease;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .profile-banner-edit:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+        .profile-banner-edit svg {
+            width: 15px;
+            height: 15px;
+        }
+
+        .profile-info {
+            padding: 0 1rem 1.2rem;
+            position: relative;
+            margin-top: -40px;
+        }
+        @media (min-width:480px) {
+            .profile-info {
+                padding: 0 1.2rem 1.5rem;
+                margin-top: -44px;
+            }
+        }
+        @media (min-width:768px) {
+            .profile-info {
+                padding: 0 1.5rem 1.8rem;
+                margin-top: -48px;
+            }
+        }
+
+        .profile-avatar-wrap {
+            position: relative;
+            width: 76px;
+            height: 76px;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+        @media (min-width:480px) {
+            .profile-avatar-wrap {
+                width: 84px;
+                height: 84px;
+                margin-bottom: 14px;
+            }
+        }
+        @media (min-width:768px) {
+            .profile-avatar-wrap {
+                width: 92px;
+                height: 92px;
+                margin-bottom: 16px;
+            }
+        }
+
+        .profile-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid var(--bg);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            background:
+                linear-gradient(45deg, #ccc 25%, transparent 25%),
+                linear-gradient(-45deg, #ccc 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #ccc 75%),
+                linear-gradient(-45deg, transparent 75%, #ccc 75%);
+            background-size: 12px 12px;
+            background-position: 0 0, 0 6px, 6px -6px, -6px 0px;
+            background-color: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .profile-avatar img,
+        .profile-avatar video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: transparent;
+            filter: none;
+        }
+        /* GIF autoplay: no grayscale on GIF avatars */
+        .profile-avatar.is-gif img,
+        .profile-avatar.is-gif video {
+            filter: none;
+        }
+        .profile-avatar .avatar-placeholder {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+        @media (min-width:480px) {
+            .profile-avatar .avatar-placeholder { font-size: 32px; }
+        }
+        @media (min-width:768px) {
+            .profile-avatar .avatar-placeholder { font-size: 36px; }
+        }
+
+        .profile-avatar-badge {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 2px solid var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .25s ease;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .profile-avatar-wrap:hover .profile-avatar-badge {
+            background: rgba(40, 40, 40, 0.9);
+            color: #fff;
+        }
+        .profile-avatar-badge svg {
+            width: 12px;
+            height: 12px;
+        }
+
+/* Profile video media */
+.profile-avatar video { object-fit: cover; filter: none; }
+
+/* Profile wide-screen polish: the profile surface must reach the viewport edges. */
+@media (min-width: 900px) {
+    body:has(#profilePageContainer.active) .app-container {
+        max-width: none;
+        padding-left: 0;
+        padding-right: 0;
+        overflow-x: visible;
+    }
+
+    #profilePageContainer.active {
+        width: 100%;
+        margin-top: 0;
+    }
+
+    #profilePageContainer.active .profile-wrapper {
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+        border-left: 0;
+        border-right: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: var(--bg);
+    }
+
+    #profilePageContainer.active .profile-banner {
+        border-radius: 0;
+    }
+
+    #profilePageContainer.active .profile-info,
+    #profilePageContainer.active .profile-tabs,
+    #profilePageContainer.active #profilePanels {
+        box-sizing: border-box;
+        width: min(1180px, calc(100% - 48px));
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+
+/* ========================================================================
+   Appearance redesign v2 — mobile-first profile customization studio
+   ======================================================================== */
+.appearance-intro {
+    align-items: flex-start;
+    gap: 0.9rem;
+    padding: 1.15rem;
+    margin: 0.35rem 0 1rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+    border-radius: 24px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), var(--surface));
+    box-shadow: 0 14px 34px -24px rgba(0,0,0,.4);
+}
+.appearance-intro-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    box-shadow: 0 8px 18px -10px var(--accent);
+    font-size: 1.1rem;
+}
+.appearance-intro h3 { font-size: 1.05rem; letter-spacing: -.01em; }
+.appearance-intro p { max-width: 38rem; font-size: .82rem; }
+.appearance-section-card {
+    padding: 1.15rem;
+    margin-bottom: 1rem;
+    border-radius: 24px;
+    border-color: color-mix(in srgb, var(--border) 88%, var(--accent));
+    box-shadow: 0 16px 40px -30px rgba(0,0,0,.48);
+}
+.appearance-section-card > .settings-section-title,
+.appearance-section-card > .settings-section-title:not(:first-child) {
+    margin-top: 1.45rem;
+    margin-bottom: .65rem;
+    padding-top: .2rem;
+    font-size: .77rem;
+    letter-spacing: .12em;
+}
+.appearance-section-card > .settings-section-title:first-child { margin-top: 0; }
+.appearance-media-grid { gap: .85rem; }
+.appearance-media-block .settings-section-title { margin-top: 0; }
+.settings-field textarea#settingsBioInput {
+    min-height: 112px;
+    padding: .95rem 1rem;
+    border-radius: 18px;
+    font-size: 1rem;
+    line-height: 1.55;
+    background: color-mix(in srgb, var(--tag-bg) 84%, var(--surface));
+    border: 1px solid var(--border);
+    resize: vertical;
+}
+.settings-field textarea#settingsBioInput:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.settings-bio-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .6rem;
+    margin: .7rem 0 .35rem;
+}
+.settings-bio-bold-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .48rem;
+    min-height: 40px;
+    padding: .58rem .85rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--tag-bg);
+    color: var(--text-secondary);
+    font: 800 .78rem/1 inherit;
+    cursor: pointer;
+    transition: transform .16s ease, border-color .16s ease, background .16s ease, color .16s ease, box-shadow .16s ease;
+}
+.settings-bio-bold-btn:hover { transform: translateY(-1px); border-color: var(--border-hover); color: var(--text); }
+.settings-bio-bold-btn:active { transform: scale(.97); }
+.settings-bio-bold-btn.active {
+    color: var(--accent-text);
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 8px 18px -12px var(--accent);
+}
+.settings-bio-tool-hint { color: var(--text-muted); font-size: .72rem; line-height: 1.35; }
+.settings-media-card { border-radius: 20px; }
+.settings-media-preview--banner { min-height: 148px; }
+.settings-media-actions { flex-wrap: wrap; max-width: calc(100% - 1rem); justify-content: flex-end; }
+.settings-media-card--avatar { min-height: 96px; border-radius: 20px; }
+
+/* Two-column option cards, matching the reference mobile presentation. */
+.settings-option-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .72rem;
+    margin: .7rem 0 1.35rem;
+}
+.settings-option-item {
+    min-height: 94px;
+    justify-content: center;
+    gap: .55rem;
+    padding: .85rem .55rem;
+    border: 1.5px solid var(--border);
+    border-radius: 18px;
+    background: linear-gradient(145deg, var(--tag-bg), color-mix(in srgb, var(--surface) 72%, var(--tag-bg)));
+    color: var(--text-secondary);
+    font-size: .82rem;
+    line-height: 1.2;
+    box-shadow: 0 8px 20px -18px rgba(0,0,0,.7);
+}
+.settings-option-item i { font-size: 1.35rem; opacity: .9; }
+.settings-option-item:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 12px 22px -18px var(--accent); }
+.settings-option-item.active {
+    border: 2px solid var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+    color: var(--text);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent), 0 14px 24px -20px var(--accent);
+}
+.settings-option-item.active i { color: var(--accent); }
+
+.appearance-preview-card { padding: 1rem; }
+.appearance-preview-card .settings-preview-toggle-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+    margin: 0 0 .75rem;
+    border: 1px solid var(--border);
+    background: var(--text);
+    color: var(--bg);
+    font-size: .82rem;
+}
+.settings-preview-panel {
+    min-height: 0;
+    border-radius: 22px;
+    background: var(--surface);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 72%, transparent);
+}
+.settings-preview-profile { min-height: 0; }
+.settings-preview-banner { height: 148px; }
+.settings-preview-info { padding: 0 1.05rem 1.05rem; margin-top: -37px; }
+.settings-preview-info .settings-preview-avatar-wrap { width: 76px; height: 76px; margin-bottom: .7rem; }
+.settings-preview-nick-row { font-size: 1.12rem; }
+.settings-preview-handle { font-size: .74rem; }
+.settings-preview-bio { margin-top: .7rem; font-size: .88rem; line-height: 1.5; }
+.settings-preview-bio.is-bold { font-weight: 800; color: var(--text); }
+.settings-preview-bio-btn { cursor: default; background: color-mix(in srgb, var(--tag-bg) 82%, var(--surface)); }
+.settings-preview-sticker-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .48rem; }
+.settings-preview-sticker-slot { border-radius: 13px; }
+.settings-preview-tabs { margin-top: 1.1rem; }
+
+@media (min-width: 760px) {
+    .settings-option-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .settings-preview-sticker-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+    .appearance-intro { padding: 1rem; border-radius: 20px; }
+    .appearance-section-card { padding: .9rem; border-radius: 20px; }
+    .appearance-media-grid { gap: .7rem; }
+    .settings-media-actions { position: static; padding: .65rem; max-width: none; justify-content: stretch; background: var(--surface); }
+    .settings-media-actions .settings-media-btn { flex: 1 1 auto; justify-content: center; min-width: 0; }
+    .settings-media-actions .settings-media-delete { flex: 0 0 40px; }
+    .settings-media-preview--banner { aspect-ratio: 16 / 7; min-height: 118px; }
+    .settings-media-card--avatar { align-items: stretch; flex-wrap: wrap; }
+    .settings-media-card--avatar .settings-media-actions { min-width: 0; }
+    .settings-bio-tool-hint { flex: 1 1 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .settings-option-item, .settings-bio-bold-btn { transition: none; }
+}
+
+/* Banner controls stay outside the media preview so mobile users can always change, edit, or remove it. */
+.settings-media-card--banner .settings-media-actions {
+    position: static;
+    width: 100%;
+    max-width: none;
+    padding: .72rem;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+}
+.settings-media-edit-image {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+@media (max-width: 680px) {
+    .settings-media-card--banner .settings-media-actions {
+        justify-content: stretch;
+        gap: .5rem;
+    }
+    .settings-media-card--banner .settings-media-actions .settings-media-btn {
+        flex: 1 1 calc(50% - .25rem);
+        min-width: 0;
+        padding-inline: .72rem;
+    }
+    .settings-media-card--banner .settings-media-actions .settings-media-delete {
+        flex: 0 0 40px;
+    }
+}
