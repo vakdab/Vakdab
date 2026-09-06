@@ -95,10 +95,8 @@ function buildHomeQuickFilterHtml() {
             </div>
           </div>
         </div>
-        <div class="hqf-panel-footer">
-          <button class="hqf-ok-btn" id="hqfOkBtn" type="button">OK</button>
-        </div>
       </div>
+      <button class="hqf-ok-btn" id="hqfOkBtn" type="button">OK</button>
     `;
 }
 

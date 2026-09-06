@@ -377,3 +377,39 @@
     .home-quick-filter .hqf-categories-toggle .hqf-label { font-size: .96rem; }
     .home-quick-filter.is-open .hqf-panel.open { top: 58px; }
 }
+
+
+/* Keep OK outside the scrollable filters panel. */
+.hqf-ok-btn {
+    display: none;
+}
+.home-quick-filter.is-open .hqf-panel.open {
+    position: relative;
+    top: auto !important;
+    left: auto;
+    right: auto;
+    max-height: min(68vh, 900px);
+    overflow-y: auto;
+    border-radius: 0 0 24px 24px;
+}
+.home-quick-filter.is-open > .hqf-ok-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: min(124px, 38%);
+    min-height: 54px;
+    margin: 12px auto 0;
+    border-radius: 18px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .16);
+}
+@media (max-width: 600px) {
+    .home-quick-filter.is-open .hqf-panel.open {
+        top: auto !important;
+        max-height: 68vh;
+    }
+    .home-quick-filter.is-open > .hqf-ok-btn {
+        min-height: 54px;
+        margin-top: 12px;
+        border-radius: 18px;
+    }
+}
