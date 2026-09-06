@@ -25,7 +25,7 @@ import { Router } from '../core/compat/router.js?v=20260901-home-recs-v3';
 import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260824-settings-redesign-v1';
 import { initBottomNav } from '../components/navigation/bottomNav.js';
 import { renderSchedulePage } from '../pages/schedule/schedule.js?v=20260904-schedule-fix-v2';
-import { buildHeroBanner } from '../components/home/heroBanner.js';
+import { buildHeroBanner } from '../components/home/heroBanner.js?v=20260906-hero-fix-v1';
 import { renderHomeQuickFilterBar } from '../pages/home/homeQuickFilter.js?v=20260903-home-filter-v2';
 import { renderProfilePage, renderPublicProfilePage } from '../pages/profile/profileLegacy.js?v=20260906-remove-thought-v1';
 import { calcTotalXP, getLevel, getUserRankInfo, initRatingPage, calculateBaseXP, getXPForLevel, getXPProgress, loadRatingPage, loadRatingList } from '../components/rating/ratingSystem.js?v=20260905-xp-rules-v1';
