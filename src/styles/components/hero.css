@@ -672,7 +672,7 @@
             top: auto;
             left: auto;
             right: 14px;
-            bottom: 24px;
+            bottom: 36px;
             z-index: 30;
             display: flex;
             flex-direction: column;
@@ -717,7 +717,7 @@
         @media (max-width: 480px) {
             .hero-community-overlay {
                 right: 10px;
-                bottom: 20px;
+                bottom: 32px;
                 width: min(40vw, 160px);
                 gap: 8px;
             }
