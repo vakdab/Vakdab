@@ -347,7 +347,7 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
             slide.dataset.url = item.url;
 
             const safePoster = poster || '';
-            const bgStyle = 'background: linear-gradient(135deg, #1a1a1a, #2d2d2d);';
+            const bgStyle = 'background-image: linear-gradient(135deg, #1a1a1a, #2d2d2d);';
 
             const bookmarked = isHeroItemBookmarked(item.url);
             slide.innerHTML = `
