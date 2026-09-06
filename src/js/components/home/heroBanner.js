@@ -66,6 +66,23 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
         const HERO_SLIDE_DURATION = 6500;
         const HERO_CACHE_KEY = 'vakdab_hero_cache_v2';
 
+        let heroMountedSlide = null;
+        const heroPreloadedImages = new Set();
+
+        // Прогрів постера слайда: Promise резолвиться true після завантаження,
+        // false — при помилці. Закешовані URL не качаємо двічі.
+        function preloadHeroImage(url) {
+            if (!url) return Promise.resolve(false);
+            if (heroPreloadedImages.has(url)) return Promise.resolve(true);
+            return new Promise(resolve => {
+                const img = new Image();
+                const done = ok => { heroPreloadedImages.add(url); resolve(ok); };
+                img.onload = () => done(true);
+                img.onerror = () => done(false);
+                img.src = url;
+            });
+        }
+
         function getCurrentRoute() {
             if (window.Router?.currentRoute) return window.Router.currentRoute;
             const hash = window.location.hash.slice(1) || 'main';
@@ -173,6 +190,9 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
                 buildHeroIndicators();
                 initHeroControls();
                 startHeroRotation();
+            } else if (heroItems.length > 1 && !heroRotationTimer) {
+                // Повернення на головну після зупинки ротації — відновлюємо автопрокрутку
+                startHeroRotation();
             }
 
             // Фонове оновлення свіжими даними з Hikka API
@@ -245,7 +265,7 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
             buildHeroIndicators();
             startHeroRotation();
             loadHeroItemDetails(0).then(() => {
-                if (heroCurrentIndex === 0) renderHeroSlide(heroItems[0]);
+                if (heroCurrentIndex === 0) updateHeroSlideContent(heroItems[0]);
             }).catch(() => {});
             if (heroItems.length > 1) loadHeroItemDetails(1).catch(() => {});
         }
@@ -323,13 +343,11 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
                 : '';
 
             const slide = document.createElement('div');
-            slide.className = 'hero-slide active';
+            slide.className = 'hero-slide';
             slide.dataset.url = item.url;
 
             const safePoster = poster || '';
-            const bgStyle = safePoster
-                ? `background-image: url('${safePoster}');`
-                : 'background: linear-gradient(135deg, #1a1a1a, #2d2d2d);';
+            const bgStyle = 'background: linear-gradient(135deg, #1a1a1a, #2d2d2d);';
 
             const bookmarked = isHeroItemBookmarked(item.url);
             slide.innerHTML = `
@@ -352,18 +370,36 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
                 </div>
             `;
 
-            // Плавне завантаження фону
-            if (safePoster) {
-                const img = new Image();
-                img.onload = () => {
-                    const bg = slide.querySelector('.hero-slide-bg');
-                    if (bg) bg.style.backgroundImage = `url('${safePoster}')`;
-                };
-                img.src = safePoster;
-            }
+            // Прибираємо слайди, що застрягли без активації (наприклад, при швидких свайпах)
+            container.querySelectorAll('.hero-slide:not(.active)').forEach(el => el.remove());
 
-            container.innerHTML = '';
+            const previousSlide = heroMountedSlide;
             container.appendChild(slide);
+            heroMountedSlide = slide;
+
+            // Кросфейд: активуємо новий слайд лише коли постер завантажився,
+            // щоб не було чорного спалаху. Старий слайд тримаємо до кінця переходу.
+            const activateSlide = () => {
+                if (heroMountedSlide !== slide) return;
+                slide.classList.add('active');
+                if (previousSlide && previousSlide !== slide) {
+                    setTimeout(() => previousSlide.remove(), 850);
+                }
+            };
+
+            if (safePoster) {
+                preloadHeroImage(safePoster).then(ok => {
+                    if (ok && heroMountedSlide === slide) {
+                        const bg = slide.querySelector('.hero-slide-bg');
+                        if (bg) bg.style.backgroundImage = `url('${safePoster}')`;
+                    }
+                    activateSlide();
+                });
+                // Страхування: навіть якщо картинка зависла — показуємо слайд не пізніше 7с
+                setTimeout(activateSlide, 7000);
+            } else {
+                activateSlide();
+            }
 
             // Клік по слайду відкриває сторінку, якщо це не був свайп і не клік по кнопках
             slide.addEventListener('click', (e) => {
@@ -392,6 +428,53 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
                 favBtn.setAttribute('aria-pressed', String(active));
                 favBtn.setAttribute('aria-label', active ? 'Видалити з обраного' : 'Додати в обране');
             });
+        }
+
+        function updateHeroSlideContent(item) {
+            // Оновлюємо текст слайда на місці (жанри/опис/мета після догрузки деталей)
+            // без повного рендера — анімації та фон не перезапускаються.
+            const slide = heroMountedSlide;
+            if (!slide || !item || slide.dataset.url !== item.url) return;
+
+            const rawTitle = String(item.title || 'Без назви').trim();
+            const title = rawTitle.length > 40 ? rawTitle.substring(0, 40).trimEnd() + '…' : rawTitle;
+            const titleEl = slide.querySelector('.hero-slide-title');
+            if (titleEl) titleEl.innerHTML = escapeHeroText(title);
+
+            const genres = Array.isArray(item.genres) && item.genres.length ? item.genres : ['Аніме'];
+            const tagsEl = slide.querySelector('.hero-slide-tags');
+            if (tagsEl) tagsEl.innerHTML = genres.slice(0, 3).map(g => `<span class="hero-tag genre-tag">${escapeHeroText(g)}</span>`).join('');
+
+            const ratingRow = slide.querySelector('.hero-rating-row');
+            if (ratingRow) {
+                const rawRating = item.score ?? item.rating;
+                let rating = '';
+                if (rawRating && !isNaN(parseFloat(rawRating)) && !String(rawRating).includes('_') && !String(rawRating).toLowerCase().includes('pg')) {
+                    rating = parseFloat(rawRating).toFixed(1);
+                } else {
+                    let seed = 0;
+                    for (let i = 0; i < rawTitle.length; i++) seed += rawTitle.charCodeAt(i);
+                    rating = (8.0 + (seed % 15) / 10).toFixed(1);
+                }
+                const metaParts = [];
+                if (item.year) metaParts.push(item.year);
+                if (item.totalEpisodes > 0) metaParts.push(item.totalEpisodes + ' еп.');
+                const metaHtml = metaParts.length > 0
+                    ? `<span class="hero-info-separator">·</span><span class="hero-meta">${metaParts.join(' <span class="hero-meta-dot"></span> ')}</span>`
+                    : '';
+                ratingRow.innerHTML = `<span class="hero-rating-badge"><span class="star">★</span> ${rating}</span>${metaHtml}`;
+            }
+
+            const synopsis = cleanHeroSynopsis(item.synopsis);
+            if (synopsis) {
+                let descEl = slide.querySelector('.hero-slide-desc');
+                if (!descEl) {
+                    descEl = document.createElement('div');
+                    descEl.className = 'hero-slide-desc';
+                    ratingRow?.parentNode?.insertBefore(descEl, ratingRow);
+                }
+                descEl.textContent = synopsis;
+            }
         }
 
         function buildHeroIndicators() {
@@ -432,12 +515,16 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
 
             if (!heroItems[idx].detailsLoaded) {
                 loadHeroItemDetails(idx).then(() => {
-                    if (heroCurrentIndex === idx) renderHeroSlide(heroItems[idx]);
+                    if (heroCurrentIndex === idx) updateHeroSlideContent(heroItems[idx]);
                 }).catch(() => {});
             }
             const nextIdx = (idx + 1) % heroItems.length;
-            if (heroItems[nextIdx] && !heroItems[nextIdx].detailsLoaded) {
-                loadHeroItemDetails(nextIdx).catch(() => {});
+            if (heroItems[nextIdx]) {
+                // Прогрів: постер і деталі наступного слайда вантажаться заздалегідь
+                preloadHeroImage(heroItems[nextIdx].images?.jpg?.large_image_url || '');
+                if (!heroItems[nextIdx].detailsLoaded) {
+                    loadHeroItemDetails(nextIdx).catch(() => {});
+                }
             }
         }
 
@@ -585,3 +672,6 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
         window.buildHeroBanner = buildHeroBanner;
         window.heroNextSlide = nextSlide;
         window.heroPrevSlide = prevSlide;
+        window.stopHeroRotation = stopHeroRotation;
+        window.pauseHeroRotation = pauseHeroRotation;
+        window.resumeHeroRotation = resumeHeroRotation;
