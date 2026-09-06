@@ -3,7 +3,7 @@
 // основний блок круглих карток на головній сторінці.
 import { GENRE_MAP } from '../../config/constants.js?v=20260902-home-quick-filter-v2';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v4';
-import { searchPageState, loadHomeRecommendations, setHomeRecommendationFilter, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams } from './homeLegacy.js?v=20260903-home-filter-v1';
+import { searchPageState, loadHomeRecommendations, setHomeRecommendationFilter, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams } from './homeLegacy.js?v=20260906-remove-ranobe-v1';
 
 const YEAR_OPTIONS = [
     { key: '', label: 'Будь-який' },
