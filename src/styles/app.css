@@ -9,7 +9,7 @@
 @import url('./utils/utilities.css?v=20260903-feed-simple-append-v1');
 @import url('./components/header.css');
 @import url('./components/hero.css');
-@import url('./components/home-quick-filter.css?v=20260906-ok-outside-panel-v1');
+@import url('./components/home-quick-filter.css?v=20260906-no-inner-scroll-v1');
 @import url('./components/bottom-nav.css');
 @import url('./components/left-menu.css');
 @import url('./components/toast.css');
