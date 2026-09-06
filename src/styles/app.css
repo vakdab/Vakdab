@@ -85,3 +85,15 @@ img,video,iframe{max-width:100%}
     bottom: 12px !important;
   }
 }
+
+/* Slide selector belongs under the hero actions, never on top of them. */
+.hero-wrapper #heroDots.hero-dots {
+  top: auto !important;
+  bottom: 10px !important;
+  margin: 0 !important;
+}
+@media (max-width: 600px) {
+  .hero-wrapper #heroDots.hero-dots {
+    bottom: 10px !important;
+  }
+}
