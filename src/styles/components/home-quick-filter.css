@@ -147,9 +147,6 @@
     display: flex;
     flex-direction: column;
     gap: .55rem;
-    max-height: 260px;
-    overflow-y: auto;
-    padding-right: .3rem;
 }
 .hqf-option {
     display: flex;
@@ -412,4 +409,19 @@
         margin-top: 12px;
         border-radius: 18px;
     }
+}
+
+
+/* Панель категорій розгортається повністю — без внутрішнього скролу.
+   Гортається вся сторінка, а не маленька коробка з категоріями. */
+.hqf-panel.open,
+.home-quick-filter .hqf-panel.open,
+.home-quick-filter.is-open .hqf-panel.open {
+    max-height: none !important;
+    overflow: visible !important;
+}
+.hqf-option-list {
+    max-height: none !important;
+    overflow: visible !important;
+    padding-right: 0 !important;
 }
