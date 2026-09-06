@@ -171,6 +171,16 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
             const wrapper = document.getElementById('heroWrapper');
             if (!wrapper) return;
 
+            // Захист від дублювання: якщо через кеш працюють дві копії модуля,
+            // друга копія не має будувати другу карусель поверх першої.
+            if (window.__vakdabHeroActive) {
+                if (getCurrentRoute() === 'main' && typeof window.resumeHeroRotation === 'function' && !heroRotationTimer && heroItems.length > 1) {
+                    startHeroRotation();
+                }
+                return;
+            }
+            window.__vakdabHeroActive = true;
+
             // Якщо ми не на головній сторінці — ховаємо банер
             if (getCurrentRoute() !== 'main') {
                 wrapper.style.display = 'none';
