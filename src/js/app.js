@@ -1,4 +1,4 @@
-import { bootstrap } from './core/bootstrap.js?v=20260906-hero-fix-v2';
+import { bootstrap } from './core/bootstrap.js?v=20260906-hero-fix-v3';
 
 const telegramStartParam = globalThis.Telegram?.WebApp?.initDataUnsafe?.start_param || '';
 if (telegramStartParam === 'live' && window.location.hash.slice(1) !== 'live') window.location.hash = 'live';
