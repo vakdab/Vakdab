@@ -672,12 +672,12 @@
             top: auto;
             left: auto;
             right: 14px;
-            bottom: 76px;
+            bottom: 58px;
             z-index: 30;
             display: flex;
             flex-direction: column;
             align-items: stretch;
-            width: min(42vw, 250px);
+            width: min(38vw, 220px);
             gap: 10px;
             pointer-events: none;
         }
@@ -717,8 +717,8 @@
         @media (max-width: 480px) {
             .hero-community-overlay {
                 right: 10px;
-                bottom: 72px;
-                width: min(52vw, 220px);
+                bottom: 54px;
+                width: min(48vw, 200px);
                 gap: 8px;
             }
             .hero-community-link {
