@@ -12,6 +12,28 @@ export const DEFAULT_CHAPTER_URL = `${HONEY_WEB}/read/db4ed14e-f564-4103-be20-68
 const jsonCache = new Map();
 const chapterFramesCache = new Map();
 const chapterListCache = new Map();
+const mangaReaderResolveCache = new Map();
+
+// LocalStorage cache helpers for lightning-fast repeat opens
+const STORAGE_PREFIX = 'vakdab_manga_';
+function loadStoredCache(key) {
+    try {
+        const item = localStorage.getItem(STORAGE_PREFIX + key);
+        if (!item) return null;
+        const parsed = JSON.parse(item);
+        if (parsed.exp && parsed.exp < Date.now()) {
+            localStorage.removeItem(STORAGE_PREFIX + key);
+            return null;
+        }
+        return parsed.data;
+    } catch { return null; }
+}
+
+function saveStoredCache(key, data, ttlMs = 24 * 3600 * 1000) {
+    try {
+        localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify({ data, exp: Date.now() + ttlMs }));
+    } catch { /* storage full */ }
+}
 
 export function safeUrl(value, fallback = '') {
     try {
@@ -170,6 +192,14 @@ export async function getChapterFrames(chapterUrl) {
     const ids = parseChapterUrl(chapterUrl);
     const cacheKey = ids.url;
     if (chapterFramesCache.has(cacheKey)) return chapterFramesCache.get(cacheKey);
+    
+    // Check localStorage cache
+    const stored = loadStoredCache(`frames_${ids.chapterId}`);
+    if (stored && Array.isArray(stored) && stored.length > 0) {
+        chapterFramesCache.set(cacheKey, Promise.resolve(stored));
+        return stored;
+    }
+
     const request = (async () => {
         let payload;
         try {
@@ -184,6 +214,9 @@ export async function getChapterFrames(chapterUrl) {
             .map(([index, resourceId]) => ({ content: pageImageUrl(resourceId), resourceId: String(resourceId), index: Number(index) }));
         debugLog('manga', 'honey-frame-manifest', { chapterId: ids.chapterId, titleId: ids.titleId, apiResourceCount: Object.keys(resourceIds).length, frontendPages: pages.length });
         if (!pages.length) throw new Error('У цьому розділі Honey Manga немає сторінок.');
+        
+        // Save in localStorage cache for instant return next time
+        saveStoredCache(`frames_${ids.chapterId}`, pages, 7 * 24 * 3600 * 1000);
         return pages;
     })().catch(error => { chapterFramesCache.delete(cacheKey); throw error; });
     chapterFramesCache.set(cacheKey, request);
@@ -263,6 +296,10 @@ export async function resolveHoneyReaderUrl(titles = []) {
     const queries = [...new Set((Array.isArray(titles) ? titles : [titles]).map(value => String(value || '').trim()).filter(Boolean))];
     for (const query of queries) {
         try {
+            const cacheKey = `url_${query}`;
+            const cached = mangaReaderResolveCache.get(cacheKey) || loadStoredCache(cacheKey);
+            if (cached) return cached;
+
             const results = await fetchJson(`/v2/manga/pattern?query=${encodeURIComponent(query)}`, {}, HONEY_SEARCH_API);
             const manga = (Array.isArray(results) ? results : []).find(item => honeyTitleMatches(item, queries));
             const mangaId = String(manga?.id || '');
@@ -277,19 +314,58 @@ export async function resolveHoneyReaderUrl(titles = []) {
             const candidates = [
                 ...sorted.filter(chapter => chapter?.isMonetized !== true),
                 ...sorted.filter(chapter => chapter?.isMonetized === true)
-            ];
-            for (const chapter of candidates.slice(0, 12)) {
-                if (!chapter?.id) continue;
-                try {
-                    const frames = await fetchJson(`/v2/chapter/frames/${encodeURIComponent(chapter.id)}/${encodeURIComponent(mangaId)}`);
-                    if (hasHoneyPageResources(frames)) return `${HONEY_WEB}/read/${encodeURIComponent(chapter.id)}/${encodeURIComponent(mangaId)}`;
-                } catch { /* The next readable chapter is checked below. */ }
+            ].filter(chapter => Boolean(chapter?.id)).slice(0, 12);
+
+            let resolvedUrl = '';
+            // Probe candidates in parallel batches of 4 for speed
+            for (let i = 0; i < candidates.length; i += 4) {
+                const batch = candidates.slice(i, i + 4);
+                const results = await Promise.allSettled(
+                    batch.map(cand => fetchJson(`/v2/chapter/frames/${encodeURIComponent(cand.id)}/${encodeURIComponent(mangaId)}`)
+                        .then(frames => ({ candidate: cand, hasFrames: hasHoneyPageResources(frames) }))
+                    )
+                );
+                for (const res of results) {
+                    if (res.status === 'fulfilled' && res.value.hasFrames) {
+                        resolvedUrl = `${HONEY_WEB}/read/${encodeURIComponent(res.value.candidate.id)}/${encodeURIComponent(mangaId)}`;
+                        break;
+                    }
+                }
+                if (resolvedUrl) break;
             }
-            const fallback = selectHoneyReaderChapter(chapters);
-            if (fallback?.id) return `${HONEY_WEB}/read/${encodeURIComponent(fallback.id)}/${encodeURIComponent(mangaId)}`;
+
+            if (!resolvedUrl) {
+                const fallback = selectHoneyReaderChapter(chapters);
+                if (fallback?.id) resolvedUrl = `${HONEY_WEB}/read/${encodeURIComponent(fallback.id)}/${encodeURIComponent(mangaId)}`;
+            }
+
+            if (resolvedUrl) {
+                mangaReaderResolveCache.set(cacheKey, resolvedUrl);
+                saveStoredCache(cacheKey, resolvedUrl, 3 * 24 * 3600 * 1000);
+                return resolvedUrl;
+            }
         } catch { /* Try another known title before hiding the reader button. */ }
     }
     return '';
+}
+
+export function saveMangaReadingProgress(titleId, chapterUrl, pageIndex = 0) {
+    if (!titleId) return;
+    try {
+        localStorage.setItem(`vakdab_manga_prog_${titleId}`, JSON.stringify({
+            chapterUrl,
+            pageIndex: Number(pageIndex) || 0,
+            updatedAt: Date.now()
+        }));
+    } catch { /* ignore */ }
+}
+
+export function getMangaReadingProgress(titleId) {
+    if (!titleId) return null;
+    try {
+        const raw = localStorage.getItem(`vakdab_manga_prog_${titleId}`);
+        return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
 }
 
 export function getReaderBackgroundData(titleId, chapterUrl) {
@@ -305,4 +381,5 @@ export function clearMangaCache() {
     jsonCache.clear();
     chapterFramesCache.clear();
     chapterListCache.clear();
+    mangaReaderResolveCache.clear();
 }

@@ -118,17 +118,6 @@ class MainActivity : AppCompatActivity() {
                 // Keep internal app navigation inside the WebView
                 return false
             }
-
-            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                super.onPageStarted(view, url, favicon)
-                // If TV device, notify web application
-                if (isTvDevice()) {
-                    view?.evaluateJavascript(
-                        "window.localStorage.setItem('vakdab_tv_mode', 'true'); document.documentElement.classList.add('android-tv-mode');",
-                        null
-                    )
-                }
-            }
         }
 
         webView.webChromeClient = object : WebChromeClient() {

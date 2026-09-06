@@ -7,16 +7,45 @@ const JINA_READER_ORIGIN = 'https://r.jina.ai/';
 // Current full RanobeLib catalog size: 393 full pages × 60 + 18 records on the last page.
 // The API does not expose `meta.total`; this value is refreshed when the catalog boundary changes.
 export const RANOBELIB_TOTAL_COUNT = 23598;
-const TRANSLATE_ENDPOINT = 'https://translate.googleapis.com/translate_a/single';
+const TRANSLATE_ENDPOINT = 'https://clients5.google.com/translate_a/t';
+const TRANSLATE_FALLBACK_AT = 'https://translate.google.com/translate_a/single';
+const TRANSLATE_FALLBACK_MYMEMORY = 'https://api.mymemory.translated.net/get';
+const TRANSLATE_FALLBACK_GTX = 'https://translate.googleapis.com/translate_a/single';
+
 const translationCache = new Map();
 const htmlCache = new Map();
 const ranobeTotalCache = new Map();
+const ranobeChaptersCache = new Map();
 // Keep the in-flight resolver alive after a UI timeout so a background prefetch
 // can finish and make the next card activation immediate.
 const ranobeReaderPendingCache = new Map();
 const bakaReaderPendingCache = new Map();
 export const RANOBE_FETCH_TIMEOUT_MS = 10000;
 export const RANOBE_RESOLVE_TIMEOUT_MS = 15000;
+
+// Load persisted translation cache from localStorage if available
+try {
+    if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem('vakdab_novel_tr_cache');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed && typeof parsed === 'object') {
+                for (const [k, v] of Object.entries(parsed)) {
+                    if (k && v && typeof v === 'string') translationCache.set(k, v);
+                }
+            }
+        }
+    }
+} catch { /* ignore storage errors */ }
+
+function persistTranslationCache() {
+    try {
+        if (typeof localStorage !== 'undefined' && translationCache.size > 0) {
+            const entries = [...translationCache.entries()].slice(-300);
+            localStorage.setItem('vakdab_novel_tr_cache', JSON.stringify(Object.fromEntries(entries)));
+        }
+    } catch { /* ignore quota errors */ }
+}
 
 async function fetchRanobeText(endpoint, options = {}) {
     const controller = new AbortController();
@@ -331,6 +360,31 @@ async function resolveBakaReaderUrl(sourceUrl) {
     return pending;
 }
 
+export async function fetchRanobeChaptersDirect(slug) {
+    const cleanSlug = String(slug || '').trim().replace(/^https?:\/\/ranobelib\.me\/ru\/(?:book\/)?/i, '').replace(/\/.*$/, '');
+    if (!cleanSlug) return [];
+    if (ranobeChaptersCache.has(cleanSlug)) return ranobeChaptersCache.get(cleanSlug);
+    try {
+        const response = await fetchRanobeText(`https://api.cdnlibs.org/api/manga/${encodeURIComponent(cleanSlug)}/chapters`, {
+            headers: { Accept: 'application/json' }
+        });
+        if (!response.ok) throw new Error(`Ranobe chapters API: HTTP ${response.status}`);
+        const payload = await response.json();
+        const data = Array.isArray(payload?.data) ? payload.data : [];
+        const chapters = data.map((item, index) => {
+            const vol = item?.volume ?? 1;
+            const num = item?.number ?? index;
+            const name = item?.name ? normalizeNovelText(item.name) : `Том ${vol} Глава ${num}`;
+            const url = `https://ranobelib.me/ru/${cleanSlug}/read/v${vol}/c${num}`;
+            return { id: item?.id, volume: String(vol), number: String(num), name, title: name, url };
+        });
+        if (chapters.length) ranobeChaptersCache.set(cleanSlug, chapters);
+        return chapters;
+    } catch {
+        return [];
+    }
+}
+
 export async function fetchRanobeChapter(chapterUrl, options = {}) {
     if (isBakaChapterLink(chapterUrl)) {
         const markdown = await fetchBakaMarkdown(chapterUrl, options);
@@ -350,9 +404,78 @@ export async function fetchRanobeChapter(chapterUrl, options = {}) {
             nextUrl: currentIndex >= 0 && currentIndex < chapterList.length - 1 ? chapterList[currentIndex + 1].url : chapter.nextUrl
         };
     }
+
+    const chapterAbsolute = absoluteUrl(chapterUrl);
+    const apiMatch = chapterAbsolute.match(/\/ru\/([^/]+)\/read\/v(\d+)\/c([^/?#]+)/i);
+
+    if (apiMatch) {
+        const [, slug, volume, number] = apiMatch;
+        try {
+            const [chapterRes, chaptersList] = await Promise.all([
+                fetchRanobeText(`https://api.cdnlibs.org/api/manga/${encodeURIComponent(slug)}/chapter?number=${encodeURIComponent(number)}&volume=${encodeURIComponent(volume)}`, {
+                    headers: { Accept: 'application/json' }
+                }),
+                fetchRanobeChaptersDirect(slug).catch(() => [])
+            ]);
+
+            if (chapterRes.ok) {
+                const chapterJson = await chapterRes.json();
+                const chapterData = chapterJson?.data || {};
+                const rawContent = String(chapterData?.content || '');
+
+                if (rawContent && rawContent.length > 50) {
+                    const heading = normalizeNovelText(chapterData?.name || `Том ${volume} Глава ${number}`);
+                    let paragraphs = [];
+
+                    if (typeof DOMParser !== 'undefined') {
+                        const doc = new DOMParser().parseFromString(`<div>${rawContent}</div>`, 'text/html');
+                        const pNodes = [...doc.querySelectorAll('p,blockquote,li')];
+                        if (pNodes.length) {
+                            paragraphs = pNodes.map(p => normalizeNovelText(p.textContent)).filter(t => t.length >= 2);
+                        }
+                    }
+
+                    if (!paragraphs.length) {
+                        paragraphs = rawContent
+                            .replace(/<\/p>/gi, '\n')
+                            .replace(/<br\s*\/?>/gi, '\n')
+                            .replace(/<[^>]+>/g, '')
+                            .split(/\n+/)
+                            .map(normalizeNovelText)
+                            .filter(t => t.length >= 2);
+                    }
+
+                    paragraphs = sanitizeChapterLines(paragraphs, heading);
+
+                    const imageUrls = [];
+                    const attachments = Array.isArray(chapterData?.attachments) ? chapterData.attachments : [];
+                    for (const att of attachments) {
+                        const imgUrl = att?.url || att?.file || att?.image;
+                        if (imgUrl) imageUrls.push(absoluteUrl(imgUrl));
+                    }
+
+                    const currentIndex = chaptersList.findIndex(item => item.url === chapterAbsolute || (item.volume === String(volume) && item.number === String(number)));
+                    const prevUrl = currentIndex > 0 ? chaptersList[currentIndex - 1].url : '';
+                    const nextUrl = currentIndex >= 0 && currentIndex < chaptersList.length - 1 ? chaptersList[currentIndex + 1].url : '';
+
+                    return {
+                        title: heading,
+                        paragraphs: paragraphs.length ? paragraphs : ['Розділ завантажено.'],
+                        imageUrls,
+                        chapterUrl: chapterAbsolute,
+                        prevUrl,
+                        nextUrl,
+                        chapterList: chaptersList
+                    };
+                }
+            }
+        } catch (apiError) {
+            console.warn('Ranobe direct chapter API fallback to scraper:', apiError);
+        }
+    }
+
     const chapterHtml = await fetchRanobeHtml(chapterUrl, options);
     const chapter = parseRanobeChapterHtml(chapterHtml, chapterUrl);
-    const chapterAbsolute = absoluteUrl(chapterUrl);
     let chapterList = parseRanobeChapterList(chapterHtml, chapterUrl);
     const bookUrl = chapterAbsolute.replace(/\/ru\/([^/]+)\/read\/v\d+\/c\d+(?:[/?#].*)?$/i, '/ru/book/$1');
     if (chapterList.length <= 1 && bookUrl) {
@@ -367,21 +490,87 @@ export async function fetchRanobeChapter(chapterUrl, options = {}) {
     };
 }
 
+function cleanUkrainianText(text) {
+    return String(text || '')
+        .replace(/([\u0400-\u04FF])'([\u0400-\u04FF])/g, '$1’$2')
+        .replace(/(?:^|\n)- /g, '$1— ')
+        .replace(/(?:^|\n)– /g, '$1— ')
+        .trim();
+}
+
 async function translateChunk(text) {
     const value = normalizeNovelText(text);
     if (!value) return '';
     if (translationCache.has(value)) return translationCache.get(value);
-    const query = new URLSearchParams({ client: 'gtx', sl: 'ru', tl: 'uk', dt: 't', q: value });
-    const response = await fetch(`${TRANSLATE_ENDPOINT}?${query}`, { mode: 'cors', credentials: 'omit' });
-    if (!response.ok) throw new Error(`Перекладач: HTTP ${response.status}`);
-    const data = await response.json();
-    const translated = Array.isArray(data?.[0]) ? data[0].map(row => row?.[0] || '').join('') : '';
-    if (!translated) throw new Error('Перекладач повернув порожню відповідь');
-    translationCache.set(value, translated);
-    return translated;
+
+    // Primary: Google dict-chrome-ex (Fastest, clean, CORS-friendly)
+    try {
+        const query = new URLSearchParams({ client: 'dict-chrome-ex', sl: 'auto', tl: 'uk', q: value });
+        const response = await fetch(`${TRANSLATE_ENDPOINT}?${query}`, { mode: 'cors', credentials: 'omit' });
+        if (response.ok) {
+            const data = await response.json();
+            const translated = Array.isArray(data?.[0]) ? data[0][0] : (typeof data?.[0] === 'string' ? data[0] : '');
+            if (translated && typeof translated === 'string') {
+                const cleaned = cleanUkrainianText(translated);
+                translationCache.set(value, cleaned);
+                persistTranslationCache();
+                return cleaned;
+            }
+        }
+    } catch { /* try fallback 1 */ }
+
+    // Fallback 1: Google translate single client=at
+    try {
+        const query = new URLSearchParams({ client: 'at', sl: 'auto', tl: 'uk', dt: 't', q: value });
+        const response = await fetch(`${TRANSLATE_FALLBACK_AT}?${query}`, { mode: 'cors', credentials: 'omit' });
+        if (response.ok) {
+            const data = await response.json();
+            const pieces = Array.isArray(data?.[0]) ? data[0].map(row => row?.[0] || '').join('') : '';
+            if (pieces) {
+                const cleaned = cleanUkrainianText(pieces);
+                translationCache.set(value, cleaned);
+                persistTranslationCache();
+                return cleaned;
+            }
+        }
+    } catch { /* try fallback 2 */ }
+
+    // Fallback 2: MyMemory API
+    try {
+        const query = new URLSearchParams({ q: value.slice(0, 500), langpair: 'ru|uk' });
+        const response = await fetch(`${TRANSLATE_FALLBACK_MYMEMORY}?${query}`, { mode: 'cors', credentials: 'omit' });
+        if (response.ok) {
+            const data = await response.json();
+            const translated = data?.responseData?.translatedText;
+            if (translated && typeof translated === 'string') {
+                const cleaned = cleanUkrainianText(translated);
+                translationCache.set(value, cleaned);
+                persistTranslationCache();
+                return cleaned;
+            }
+        }
+    } catch { /* try fallback 3 */ }
+
+    // Fallback 3: Google GTX with sl=auto
+    try {
+        const query = new URLSearchParams({ client: 'gtx', sl: 'auto', tl: 'uk', dt: 't', q: value });
+        const response = await fetch(`${TRANSLATE_FALLBACK_GTX}?${query}`, { mode: 'cors', credentials: 'omit' });
+        if (response.ok) {
+            const data = await response.json();
+            const translated = Array.isArray(data?.[0]) ? data[0].map(row => row?.[0] || '').join('') : '';
+            if (translated) {
+                const cleaned = cleanUkrainianText(translated);
+                translationCache.set(value, cleaned);
+                persistTranslationCache();
+                return cleaned;
+            }
+        }
+    } catch { /* return original */ }
+
+    return value;
 }
 
-function splitTranslationBatches(paragraphs, maxChars = 3500) {
+function splitTranslationBatches(paragraphs, maxChars = 2000) {
     const batches = []; let current = []; let length = 0;
     for (const paragraph of paragraphs) {
         const nextLength = length + paragraph.length + 2;
@@ -396,7 +585,7 @@ export async function translateNovelParagraphs(paragraphs, options = {}) {
     const source = (Array.isArray(paragraphs) ? paragraphs : []).map(normalizeNovelText).filter(Boolean);
     if (!source.length) return [];
     const result = [];
-    const maxChars = options.maxChars || 1200;
+    const maxChars = options.maxChars || 1500;
     for (const batch of splitTranslationBatches(source, maxChars)) {
         try {
             const translated = await translateChunk(batch.join('\n\n'));
@@ -404,7 +593,13 @@ export async function translateNovelParagraphs(paragraphs, options = {}) {
             if (pieces.length === batch.length) { result.push(...pieces); continue; }
         } catch { /* fallback to smaller requests below */ }
         const pending = [...batch]; const translatedBatch = new Array(batch.length); let cursor = 0;
-        const worker = async () => { while (cursor < pending.length) { const index = cursor++; try { translatedBatch[index] = await translateChunk(pending[index]); } catch { translatedBatch[index] = pending[index]; } } };
+        const worker = async () => {
+            while (cursor < pending.length) {
+                const index = cursor++;
+                try { translatedBatch[index] = await translateChunk(pending[index]); }
+                catch { translatedBatch[index] = pending[index]; }
+            }
+        };
         await Promise.all(Array.from({ length: Math.min(4, pending.length) }, worker));
         result.push(...translatedBatch);
     }
@@ -588,20 +783,51 @@ function homeCatalogCatalogMeta(items, page, hasNextPage, total = items.length) 
 export async function searchRanobe(query, options = {}) {
     const phrase = normalizeNovelText(query);
     if (!phrase) return [];
+
+    // Primary: fast direct JSON API search
+    try {
+        const res = await fetchRanobeText(`https://api.cdnlibs.org/api/manga?q=${encodeURIComponent(phrase)}&site_id[]=3&per_page=20`, {
+            headers: { Accept: 'application/json' },
+            ...options
+        });
+        if (res.ok) {
+            const payload = await res.json();
+            const data = Array.isArray(payload?.data) ? payload.data : [];
+            const matches = [];
+            for (const item of data) {
+                const title = cleanRanobeCatalogTitle(item?.rus_name || item?.name || item?.eng_name || '');
+                const slug = item?.slug_url || (item?.id ? `${item.id}--${item.slug || ''}` : '');
+                if (!title || !slug) continue;
+                const url = `${RANOBELIB_ORIGIN}/ru/book/${slug}`;
+                matches.push({ url, title, slug, score: scoreNovelTitleMatch(phrase, title) });
+            }
+            if (matches.length) return matches.sort((a, b) => b.score - a.score);
+        }
+    } catch { /* fallback to HTML scraper */ }
+
     const url = `${RANOBELIB_ORIGIN}/ru?section=search&phrase=${encodeURIComponent(phrase)}`;
-    const html = await fetchRanobeHtml(url, options);
-    const document = parseDocument(html);
-    const matches = []; const seen = new Set();
-    for (const anchor of document.querySelectorAll('a[href*="/book/"]')) {
-        const href = absoluteUrl(anchor.href); const title = normalizeNovelText(anchor.textContent);
-        if (!href || seen.has(href) || !title) continue;
-        seen.add(href); matches.push({ url: href, title, score: scoreNovelTitleMatch(phrase, title) });
+    try {
+        const html = await fetchRanobeHtml(url, options);
+        const document = parseDocument(html);
+        const matches = []; const seen = new Set();
+        for (const anchor of document.querySelectorAll('a[href*="/book/"]')) {
+            const href = absoluteUrl(anchor.href); const title = normalizeNovelText(anchor.textContent);
+            if (!href || seen.has(href) || !title) continue;
+            seen.add(href); matches.push({ url: href, title, score: scoreNovelTitleMatch(phrase, title) });
+        }
+        return matches.sort((a, b) => b.score - a.score);
+    } catch {
+        return [];
     }
-    return matches.sort((a, b) => b.score - a.score);
 }
 
 async function resolveChapterFromBookPage(bookUrl) {
     if (!bookUrl) return '';
+    const slugMatch = String(bookUrl).match(/\/ru\/(?:book\/)?([^/?#]+)/i);
+    if (slugMatch) {
+        const chapters = await fetchRanobeChaptersDirect(slugMatch[1]);
+        if (chapters.length) return chapters[0].url;
+    }
     try {
         const html = await fetchRanobeHtml(bookUrl);
         const links = parseRanobeChapterList(html, '');
@@ -611,10 +837,27 @@ async function resolveChapterFromBookPage(bookUrl) {
 
 async function resolveRanobeReaderInternal(item = {}) {
     if (isChapterLink(item.readerUrl)) return { ...item, readerAvailable: true };
+
+    const targetSlug = item.ranobeSlug || (item.url ? String(item.url).match(/\/ru\/(?:book\/)?([^/?#]+)/i)?.[1] : '');
+    if (targetSlug) {
+        const directChapters = await fetchRanobeChaptersDirect(targetSlug);
+        if (directChapters.length) {
+            const firstChapter = directChapters[0].url;
+            return {
+                ...item,
+                readerAvailable: true,
+                readerUrl: firstChapter,
+                ranobeUrl: item.url || `${RANOBELIB_ORIGIN}/ru/book/${targetSlug}`,
+                chaptersCount: directChapters.length
+            };
+        }
+    }
+
     if (item.url && /\/ru\/book\//i.test(item.url)) {
         const directChapter = await resolveChapterFromBookPage(item.url);
         if (directChapter) return { ...item, readerAvailable: true, readerUrl: directChapter, ranobeUrl: item.url };
     }
+
     const queries = [item.title, item.title_original, item.title_en, item.originalTitle].filter(Boolean);
     let matches = [];
     for (const query of queries) {
@@ -627,6 +870,45 @@ async function resolveRanobeReaderInternal(item = {}) {
     return { ...item, readerAvailable: Boolean(directChapter), readerUrl: directChapter, ranobeUrl: best.url, ranobeTitle: best.title, ranobeMatchScore: best.score };
 }
 
+const ranobeResolvedCache = new Map();
+
+// LocalStorage cache helpers for ranobe
+const NOVEL_STORAGE_PREFIX = 'vakdab_novel_';
+function loadNovelStoredCache(key) {
+    try {
+        if (typeof localStorage === 'undefined') return null;
+        const item = localStorage.getItem(NOVEL_STORAGE_PREFIX + key);
+        if (!item) return null;
+        const parsed = JSON.parse(item);
+        if (parsed.exp && parsed.exp < Date.now()) {
+            localStorage.removeItem(NOVEL_STORAGE_PREFIX + key);
+            return null;
+        }
+        return parsed.data;
+    } catch { return null; }
+}
+
+function saveNovelStoredCache(key, data, ttlMs = 7 * 24 * 3600 * 1000) {
+    try {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem(NOVEL_STORAGE_PREFIX + key, JSON.stringify({ data, exp: Date.now() + ttlMs }));
+    } catch { /* storage full */ }
+}
+
+export function saveNovelReadingProgress(slugOrUrl, chapterUrl) {
+    if (!slugOrUrl) return;
+    try {
+        if (typeof localStorage === 'undefined') return;
+        const key = `prog_${encodeURIComponent(slugOrUrl)}`;
+        saveNovelStoredCache(key, { chapterUrl, updatedAt: Date.now() }, 30 * 24 * 3600 * 1000);
+    } catch { /* ignore */ }
+}
+
+export function getNovelReadingProgress(slugOrUrl) {
+    if (!slugOrUrl) return null;
+    return loadNovelStoredCache(`prog_${encodeURIComponent(slugOrUrl)}`);
+}
+
 export async function resolveRanobeReader(item = {}) {
     const bakaUrl = bakaSourceUrl(item);
     if (bakaUrl) {
@@ -635,10 +917,21 @@ export async function resolveRanobeReader(item = {}) {
     }
     if (isChapterLink(item.readerUrl)) return { ...item, readerAvailable: true };
     const cacheKey = [item.url, item.title, item.title_original, item.title_en, item.originalTitle].filter(Boolean).join('|');
+    
+    // Check in-memory & stored cache
+    const cachedResolved = ranobeResolvedCache.get(cacheKey) || loadNovelStoredCache(`resolved_${cacheKey}`);
+    if (cachedResolved && cachedResolved.readerUrl) return { ...item, ...cachedResolved };
+
     const fallback = { ...item, readerAvailable: false, readerUrl: '' };
     let pending = ranobeReaderPendingCache.get(cacheKey);
     if (!pending) {
-        pending = resolveRanobeReaderInternal(item).catch(() => fallback);
+        pending = resolveRanobeReaderInternal(item).then(res => {
+            if (res && res.readerUrl) {
+                ranobeResolvedCache.set(cacheKey, res);
+                saveNovelStoredCache(`resolved_${cacheKey}`, res);
+            }
+            return res;
+        }).catch(() => fallback);
         ranobeReaderPendingCache.set(cacheKey, pending);
         pending.finally(() => {
             if (ranobeReaderPendingCache.get(cacheKey) === pending) ranobeReaderPendingCache.delete(cacheKey);
@@ -650,4 +943,4 @@ export async function resolveRanobeReader(item = {}) {
     ]);
 }
 
-export function clearNovelCaches() { htmlCache.clear(); translationCache.clear(); bakaReaderPendingCache.clear(); }
+export function clearNovelCaches() { htmlCache.clear(); translationCache.clear(); bakaReaderPendingCache.clear(); ranobeResolvedCache.clear(); }

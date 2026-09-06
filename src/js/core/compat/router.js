@@ -78,16 +78,22 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                 const searchBtn = document.querySelector('.search-circle-btn');
 
                 if (route === 'main') {
-                    hero.style.display = 'block';
+                    if (hero) hero.style.display = 'block';
                     if (quickFilterBar) quickFilterBar.style.display = 'block';
                     if (liveWidget) liveWidget.style.display = 'none';
                     if (logo) logo.style.display = 'flex';
                     if (searchBtn) searchBtn.style.display = 'flex';
+                    if (typeof window.buildHeroBanner === 'function') {
+                        window.buildHeroBanner();
+                    }
                 } else {
-                    hero.style.display = 'none';
+                    if (hero) hero.style.display = 'none';
                     if (quickFilterBar) quickFilterBar.style.display = 'none';
                     if (logo) logo.style.display = 'none';
                     if (searchBtn) searchBtn.style.display = 'none';
+                    if (typeof window.stopHeroRotation === 'function') {
+                        window.stopHeroRotation();
+                    }
                 }
 
                 document.querySelectorAll('.agnative-leftdock__item.selector').forEach(el => el.classList.remove(

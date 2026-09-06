@@ -302,7 +302,24 @@ body.player-page-open > .bottom-sheet-overlay {
 }
 #playerPageModal .player-episode-btn { position: relative; min-width: 72px; overflow: hidden; }
 #playerPageModal .player-episode-title { display: none; }
-#playerPageModal .player-episode-progress { position: absolute; right: 0; bottom: 0; left: 0; height: 3px; background: var(--accent); }
+#playerPageModal .player-episode-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: var(--progress, 0%);
+    max-width: 100%;
+    height: 3px;
+    border-radius: 0 2px 2px 0;
+    background: var(--accent);
+    transition: width .2s ease;
+    pointer-events: none;
+}
+#playerPageModal .player-episode-btn.active .player-episode-progress {
+    background: var(--accent-text, #fff);
+}
+#playerPageModal .player-episode-btn.is-completed .player-episode-progress {
+    background: #10b981;
+}
 #playerPageModal .player-empty-episodes { color: var(--text-muted); font-size: 12px; padding: 4px 2px; }
 #playerPageModal .player-video-error {
     display: flex;
@@ -445,7 +462,7 @@ body.player-page-open > .bottom-sheet-overlay {
 #playerPageModal .player-episode-btn.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 28%, transparent); }
 #playerPageModal .player-episode-number { font-size: 16px; font-weight: 800; }
 #playerPageModal .player-episode-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; }
-#playerPageModal .player-episode-progress { height: 3px; border-radius: 99px; background: color-mix(in srgb, currentColor 35%, transparent); }
+#playerPageModal .player-episode-progress { position: absolute; bottom: 0; left: 0; width: var(--progress, 0%); max-width: 100%; height: 3px; border-radius: 0 2px 2px 0; background: var(--accent); transition: width .2s ease; pointer-events: none; }
 #playerPageModal .player-dub-controls .format-pill,
 #playerPageModal .season-panel button,
 #playerPageModal .episode-panel button { min-height: 44px; border-radius: 12px; font-weight: 700; }

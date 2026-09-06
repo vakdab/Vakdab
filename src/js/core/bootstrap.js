@@ -1,7 +1,6 @@
 import { installGlobalErrorBoundary } from './errors.js';
 import { startGlobalEvents } from './events.js';
 import { parseRoute, getRouter } from './router.js';
-import { initAndroidTv } from './androidTv.js';
 
 let bootstrapPromise = null;
 
@@ -17,7 +16,14 @@ export function bootstrap() {
         }
     });
     startGlobalEvents();
-    initAndroidTv();
+
+    // Ensure any legacy TV mode state is completely purged
+    try {
+        localStorage.removeItem('vakdab_tv_mode');
+        document.documentElement.classList.remove('android-tv-mode');
+        document.body.classList.remove('android-tv-mode');
+    } catch (_) {}
+
     bootstrapPromise = import('../legacy/app-legacy.js?v=20260905-runtime-fix-v2')
         .then(module => {
             window.VakDabLegacy = module;

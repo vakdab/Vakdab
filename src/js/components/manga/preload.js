@@ -2,7 +2,7 @@ function limitForConnection() {
     const type = navigator.connection?.effectiveType || '';
     if (/2g|slow-2g/i.test(type)) return 1;
     if (/3g/i.test(type)) return 2;
-    return 3;
+    return 4;
 }
 
 function isLoadedState(state) {
@@ -102,7 +102,7 @@ export function createPagePreloader(figures, options = {}) {
         enqueue(figure, true, true);
     };
 
-    const preloadAround = (index, radius = 3) => {
+    const preloadAround = (index, radius = 4) => {
         for (let i = Math.max(0, index - 1); i <= index + radius; i += 1) {
             if (i !== index) enqueue(figures[i], i < index + 2);
         }

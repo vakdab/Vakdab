@@ -12,7 +12,7 @@ import {
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
 } from '../home/homeLegacy.js?v=20260829-vertical-catalog-28-v1';
-import { renderProfilePage } from '../profile/profileLegacy.js?v=20260905-remove-profile-stats-v1';
+import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove-thought-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
 } from '../../legacy/app-legacy.js?v=20260901-home-recs-v3';
@@ -183,6 +183,8 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 const hikkaPosterUrl = normalizePosterUrl(anime.images?.jpg?.large_image_url);
                 const mikaiPosterUrl = normalizePosterUrl(anime.mikaiPosterUrl || '', '');
                 const posterUrl = mikaiPosterUrl || hikkaPosterUrl;
+                setPlayerFramePoster(posterUrl);
+                document.getElementById('playerPreviewPlay')?.classList.remove('is-hidden');
                 const heroPoster = document.getElementById('playerHeroPoster');
                 const revealPlayerHero = () => playerHero.classList.remove('is-loading');
                 const posterTargets = [document.getElementById('playerPosterImg'), heroPoster];
@@ -246,7 +248,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 playerPageCurrentEpisodeNum = liveEpisodes.some(ep => String(ep.episode) === requestedLiveEpisode)
                     ? requestedLiveEpisode
                     : '1';
-                playerPageCurrentQuality = '720p';
+                playerPageCurrentQuality = 'Максимальна';
                 buildSeasonRow(seasons);
                 buildEpisodeViews();
                 updateFilterChip();
@@ -564,15 +566,21 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
         }
 
         function closeWatchPage() {
-            // Вбудований плеєр живе на одному screen; при закритті лише очищаємо відео.
+            // Вбудований плеєр живе на одному screen; при закритті зберігаємо прогрес та очищаємо відео.
             document.getElementById('page-info')?.classList.add('active');
             if (playerPagePlayer) {
+                try {
+                    if (typeof playerPagePlayer._persistProgress === 'function') {
+                        playerPagePlayer._persistProgress(true);
+                    }
+                } catch (e) { /* ignore */ }
                 if (playerPagePlayer._timeUpdateListener && playerPagePlayer.videoRef) {
                     playerPagePlayer.videoRef.removeEventListener('timeupdate', playerPagePlayer._timeUpdateListener);
                 }
                 playerPagePlayer.destroy();
                 playerPagePlayer = null;
             }
+            Storage._flushSync?.('history');
             document.getElementById('playerVideoContainer').classList.remove('active');
             document.getElementById('playerPageVideo').innerHTML = '';
         }
@@ -1090,6 +1098,13 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                     return;
                 }
                 playerJikanData = data;
+                const promoFrame = data?.trailer?.images?.maximum_image_url || data?.trailer?.images?.large_image_url || data?.images?.webp?.large_image_url;
+                if (promoFrame) {
+                    const frame = document.getElementById('playerFramePoster');
+                    if (frame && !playerPageIsPlaying) {
+                        setPlayerFramePoster(promoFrame);
+                    }
+                }
                 renderAnimeInformation(data);
                 renderMainCharacters(data);
                 if (document.getElementById('castSection')?.style.display === 'none') renderVoiceCast(data);
@@ -1168,9 +1183,10 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             }
             // The new player deliberately uses buttons instead of a poster grid.
             picker.innerHTML = episodes.map(ep => {
-                const active = String(ep.episode) === String(playerPageCurrentEpisodeNum) ? ' active' : '';
+                const active = sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum) ? ' active' : '';
                 const progress = getEpisodeProgress(ep.episode);
-                return `<button type="button" class="player-episode-btn${active}" data-file="${escapeHtml(ep.file || '')}" data-episode="${escapeHtml(ep.episode || '')}">
+                const completed = progress >= 88 ? ' is-completed' : '';
+                return `<button type="button" class="player-episode-btn${active}${completed}" data-file="${escapeHtml(ep.file || '')}" data-episode="${escapeHtml(ep.episode || '')}">
                     <span class="player-episode-number">${escapeHtml(ep.episode || '—')}</span>
                     <span class="player-episode-title">${escapeHtml(ep.title || `Серія ${ep.episode || ''}`)}</span>
                     ${progress > 0 ? `<span class="player-episode-progress" style="--progress:${progress}%"></span>` : ''}
@@ -1268,20 +1284,28 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                             && normalizeEpisodeValue(h.season, '1') === season);
                         if (!found) return null;
                         const pct = Number(found.progress);
-                        return Number.isFinite(pct) && pct >= 5 && pct < 95 ? pct : null;
+                        return Number.isFinite(pct) && pct >= 2 && pct < 95 ? pct : null;
                     })();
                     if (savedProgress != null) {
+                        let hasSeeked = false;
                         const seekOnce = () => {
-                            video.removeEventListener('loadedmetadata', seekOnce);
+                            if (hasSeeked) return;
                             try {
                                 const dur = Number(video.duration);
                                 if (Number.isFinite(dur) && dur > 0) {
-                                    video.currentTime = Math.min(dur - 1, (savedProgress / 100) * dur);
-                                    showToast(`Продовжуємо з ${Math.round(savedProgress)}%`);
+                                    hasSeeked = true;
+                                    video.removeEventListener('loadedmetadata', seekOnce);
+                                    video.removeEventListener('canplay', seekOnce);
+                                    const target = Math.min(dur - 2, (savedProgress / 100) * dur);
+                                    if (target > 1) {
+                                        video.currentTime = target;
+                                        showToast(`Продовжуємо з ${Math.round(savedProgress)}%`);
+                                    }
                                 }
                             } catch (e) { /* ignore seek errors */ }
                         };
                         video.addEventListener('loadedmetadata', seekOnce);
+                        video.addEventListener('canplay', seekOnce, { once: true });
                     }
                 } catch (e) { /* resume is best-effort */ }
                 const hideFrame = () => {
@@ -1321,11 +1345,12 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                     if (!playerPageAnime || !video) return;
                     const duration = Number(video.duration);
                     if (!Number.isFinite(duration) || duration <= 0) return;
-                    const progress = endedProgress != null
+                    const currentTime = Number(video.currentTime);
+                    const rawProgress = endedProgress != null
                         ? endedProgress
-                        : Math.min(100, Math.max(0, (Number(video.currentTime) / duration) * 100));
+                        : Math.min(100, Math.max(0, (currentTime / duration) * 100));
                     const watchSecondsSoFar = Math.floor(playerPageAccumulatedWatchSeconds);
-                    if (!force && watchSecondsSoFar < 15) return;
+                    if (!force && currentTime < 2 && watchSecondsSoFar < 2) return;
                     const firstSave = !playerPageHistoryUpdated;
                     playerPageHistoryUpdated = true;
                     const ep = normalizeEpisodeValue(epNum || playerPageCurrentEpisodeNum, '1');
@@ -1335,9 +1360,10 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                         Storage.addWatchTime(deltaWatch);
                         playerPageWatchTimeSynced = watchSecondsSoFar;
                     }
-                    const due = force || firstSave || (watchSecondsSoFar - playerPageLastProgressSave >= 5);
+                    const due = force || firstSave || (currentTime - playerPageLastProgressSave >= 4) || (playerPageLastProgressSave === 0);
                     if (!due) return;
-                    playerPageLastProgressSave = watchSecondsSoFar;
+                    playerPageLastProgressSave = currentTime;
+                    const finalProgress = rawProgress >= 88 ? 100 : (Math.round(rawProgress * 10) / 10);
                     const history = Storage.getHistory();
                     const idx = history.findIndex(h => h.url === playerPageAnime.url
                         && sameEpisodeValue(h.episode, ep)
@@ -1347,36 +1373,59 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                         entry.episode = ep;
                         entry.season = season;
                         entry.timestamp = Date.now();
-                        entry.progress = Number.isFinite(progress) ? Math.min(progress, 100) : 0;
-                        entry.duration = Math.max(0, Math.floor(Number(video.currentTime) || 0));
+                        entry.progress = finalProgress;
+                        entry.duration = Math.max(0, Math.floor(currentTime || 0));
+                        entry.totalDuration = Math.max(0, Math.floor(duration || 0));
                         history.unshift(entry);
                     } else {
                         history.unshift({
-                            animeId: playerPageAnime.mal_id || playerPageAnime.url.hashCode(),
+                            animeId: playerPageAnime.mal_id || (playerPageAnime.url ? String(playerPageAnime.url).split('/').filter(Boolean).pop() : '0'),
                             title: playerPageAnime.title,
                             poster: playerPageAnime.images?.jpg?.large_image_url || '',
                             url: playerPageAnime.url,
                             episode: ep,
                             season: season,
                             timestamp: Date.now(),
-                            progress: Number.isFinite(progress) ? Math.min(progress, 100) : 0,
-                            duration: Math.max(0, Math.floor(Number(video.currentTime) || 0))
+                            progress: finalProgress,
+                            duration: Math.max(0, Math.floor(currentTime || 0)),
+                            totalDuration: Math.max(0, Math.floor(duration || 0))
                         });
                         if (history.length > 200) history.length = 200;
                     }
                     Storage.setHistory(history);
+
+                    // Real-time update on active episode button in DOM
+                    const epClean = normalizeEpisodeValue(ep);
+                    const activeBtns = document.querySelectorAll(`.player-episode-btn[data-episode="${epClean}"]`);
+                    activeBtns.forEach(btn => {
+                        let bar = btn.querySelector('.player-episode-progress');
+                        if (!bar && finalProgress > 0) {
+                            bar = document.createElement('span');
+                            bar.className = 'player-episode-progress';
+                            btn.appendChild(bar);
+                        }
+                        if (bar) {
+                            bar.style.setProperty('--progress', `${finalProgress}%`);
+                        }
+                        if (finalProgress >= 88) {
+                            btn.classList.add('is-completed');
+                        } else {
+                            btn.classList.remove('is-completed');
+                        }
+                    });
+
                     if (firstSave) {
                         showToast(`Серію ${ep} збережено в історію`);
-                        buildEpisodeViews();
                     }
                 };
+                playerPagePlayer._persistProgress = persistEpisodeProgress;
                 const onTimeUpdate = () => {
                     syncPlaybackClock();
                     persistEpisodeProgress();
                 };
                 video.addEventListener('timeupdate', onTimeUpdate);
                 // Фіксуємо прогрес і при паузі, і при завершенні серії.
-                video.addEventListener('pause', () => { syncPlaybackClock(); persistEpisodeProgress(); });
+                video.addEventListener('pause', () => { syncPlaybackClock(); persistEpisodeProgress(true); });
                 video.addEventListener('ended', () => { syncPlaybackClock(); persistEpisodeProgress(true, 100); });
                 if (playerPagePlayer._timeUpdateListener) {
                     video.removeEventListener('timeupdate', playerPagePlayer._timeUpdateListener);
@@ -1610,6 +1659,9 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
 
         window.selectQualityFromSheet = function(quality) {
             playerPageCurrentQuality = quality;
+            if (playerPagePlayer && typeof playerPagePlayer.setQuality === 'function') {
+                playerPagePlayer.setQuality(quality);
+            }
             buildBottomSheetData();
             showToast(`Якість: ${quality}`);
         };

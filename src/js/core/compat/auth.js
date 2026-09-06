@@ -139,13 +139,6 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                             mergedProfile.nickname = normalizeNickname(mergedProfile.nickname, '@user');
                             mergedProfile.realName = stripNicknamePrefix(mergedProfile.realName);
                             if (telegramProfile && !mergedProfile.avatar && telegramProfile.photo_url) mergedProfile.avatar = telegramProfile.photo_url;
-                            const localThoughtExpiresAt = Number(localProfileBeforeLoad.thoughtExpiresAt || 0);
-                            if (!mergedProfile.thought && localProfileBeforeLoad.thought && localThoughtExpiresAt > Date.now()) {
-                                mergedProfile.thought = localProfileBeforeLoad.thought;
-                                mergedProfile.thoughtAt = localProfileBeforeLoad.thoughtAt;
-                                mergedProfile.thoughtExpiresAt = localThoughtExpiresAt;
-                                Storage._debounceSync('profile');
-                            }
                             // Доповнюємо Google displayName/photoURL, не перезаписуючи вибрані поля.
                             if ((!mergedProfile.realName || mergedProfile.realName === 'Користувач') && this._user && this._user.displayName) {
                                 mergedProfile.realName = stripNicknamePrefix(this._user.displayName);

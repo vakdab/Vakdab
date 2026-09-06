@@ -120,15 +120,19 @@ import {
             return hikkaCatalog('anime', page, body);
         }
         export async function fetchHikkaTop100() {
-            const pages = await Promise.all(
+            const settled = await Promise.allSettled(
                 [1, 2, 3, 4].map(page => hikkaCatalog('anime', page, {
                     sort: ['score:desc', 'scored_by:desc'],
                     only_translated: true
                 }))
             );
             const unique = new Map();
-            pages.flat().forEach(item => {
-                if (item?.url && !unique.has(item.url)) unique.set(item.url, item);
+            settled.forEach(result => {
+                if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+                    result.value.forEach(item => {
+                        if (item?.url && !unique.has(item.url)) unique.set(item.url, item);
+                    });
+                }
             });
             return [...unique.values()].slice(0, 100);
         }

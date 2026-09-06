@@ -526,7 +526,7 @@ export class LampaPlayer {
                 document.addEventListener('keydown', this._onKeyDown);
             }
 
-            _refreshQualityMenu() {
+            _refreshQualityMenu(autoSelectMax = false) {
                 const menu = this.containerRef?.querySelector('#lpQualityMenu');
                 const labelEl = this.containerRef?.querySelector('#lpQualityLabel');
                 if (!menu) return;
@@ -543,17 +543,56 @@ export class LampaPlayer {
                 const unique = [];
                 levels.forEach((level, index) => {
                     const label = level.height ? `${level.height}p` : `Рівень ${index + 1}`;
-                    if (!unique.some(item => item.label === label)) unique.push({ label, index });
+                    if (!unique.some(item => item.label === label)) {
+                        unique.push({ label, index, height: level.height || 0, bitrate: level.bitrate || 0 });
+                    }
                 });
-                unique.sort((a, b) => parseInt(b.label) - parseInt(a.label));
+                unique.sort((a, b) => (b.height || 0) - (a.height || 0) || (b.bitrate || 0) - (a.bitrate || 0));
+
+                let currentIdx = this.hls ? this.hls.currentLevel : -1;
+                // Auto-select max quality on stream load
+                if (autoSelectMax && unique.length > 0 && this.hls) {
+                    const maxLevel = unique[0];
+                    currentIdx = maxLevel.index;
+                    this.hls.currentLevel = currentIdx;
+                }
+
+                const activeItem = unique.find(item => item.index === currentIdx);
+                const activeLabel = activeItem ? activeItem.label : (currentIdx === -1 ? 'Авто' : 'Макс');
+                if (labelEl) labelEl.textContent = activeLabel;
+
                 menu.innerHTML = '<div class="lp-popover-label">Якість</div>' +
-                    mkBtn(-1, 'Авто', true) +
-                    unique.map(item => mkBtn(item.index, item.label, false)).join('');
+                    mkBtn(-1, 'Авто', currentIdx === -1) +
+                    unique.map(item => mkBtn(item.index, item.label, item.index === currentIdx)).join('');
                 if (rail) {
-                    rail.innerHTML = unique.map(item => mkBtn(item.index, item.label, false)).join('');
+                    rail.innerHTML = unique.map(item => mkBtn(item.index, item.label, item.index === currentIdx)).join('');
                     rail.hidden = false;
                 }
-                if (labelEl) labelEl.textContent = 'Авто';
+            }
+
+            setQuality(qualityString) {
+                if (!this.hls || !this.hls.levels?.length) return;
+                const levels = this.hls.levels;
+                const qStr = String(qualityString || '').toLowerCase().trim();
+                if (qStr.includes('авто') || qStr.includes('auto')) {
+                    this.hls.currentLevel = -1;
+                    this._refreshQualityMenu(false);
+                    return;
+                }
+                if (qStr.includes('макс') || qStr.includes('max')) {
+                    this._refreshQualityMenu(true);
+                    return;
+                }
+                const matchNum = parseInt(qStr);
+                if (Number.isFinite(matchNum)) {
+                    const found = levels.findIndex(lvl => lvl.height === matchNum);
+                    if (found >= 0) {
+                        this.hls.currentLevel = found;
+                        this._refreshQualityMenu(false);
+                        return;
+                    }
+                }
+                this._refreshQualityMenu(true);
             }
 
             _updatePlayBtn() {
@@ -701,7 +740,7 @@ export class LampaPlayer {
                     hls.attachMedia(v);
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
                         if (!isCurrentRequest()) return;
-                        this._refreshQualityMenu();
+                        this._refreshQualityMenu(true);
                         hideLoading();
                         safePlay();
                     });

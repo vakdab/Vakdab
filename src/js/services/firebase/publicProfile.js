@@ -10,10 +10,6 @@ function normalizeProfile(uid, data = {}) {
     const normalizedNickname = nicknameBase ? `@${nicknameBase}` : '@user';
     const rawRealName = String(profile.realName || '').trim();
     const normalizedRealName = rawRealName.replace(/^@+/, '') || (rawNickname && rawNickname !== 'Користувач' ? rawNickname.replace(/^@+/, '') : '');
-    const thought = String(profile.thought || '').trim();
-    const thoughtAt = Number(profile.thoughtAt || 0);
-    const thoughtExpiresAt = Number(profile.thoughtExpiresAt || (thoughtAt + (4 * 60 * 60 * 1000)) || 0);
-    const activeThought = thought && thoughtAt > 0 && thoughtExpiresAt > now ? thought : '';
     return {
         uid,
         nickname: normalizedNickname,
@@ -31,9 +27,6 @@ function normalizeProfile(uid, data = {}) {
         atmosphere: String(profile.atmosphere || 'none'),
         effect: String(profile.effect || 'none'),
         avatarDecoration: String(profile.avatarDecoration || 'none'),
-        thought: activeThought,
-        thoughtAt: activeThought ? thoughtAt : 0,
-        thoughtExpiresAt: activeThought ? thoughtExpiresAt : 0,
         private: profile.private === true,
         hideHistory: profile.hideHistory === true,
         hideBookmarks: profile.hideBookmarks === true,

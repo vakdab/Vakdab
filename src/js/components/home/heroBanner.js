@@ -1,74 +1,241 @@
 import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../services/catalog/catalog.js?v=20260829-catalog-28-v1';
-import { Router, Storage, openPlayerPage, showToast } from '../../legacy/app-legacy.js?v=20260901-home-recs-v3';
+
+        // Fallback-пул топових аніме на випадок повільної мережі або збою Hikka API
+        const FALLBACK_HERO_ANIME = [
+            {
+                title: 'Проводжальниця Фрірен',
+                url: 'https://api.hikka.io/anime/sousou-no-frieren-ad4e3e',
+                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/sousou-no-frieren-ad4e3e/8D-SGEkCBMA3bXG1.jpg' } },
+                genres: ['Пригоди', 'Драма', 'Фентезі'],
+                year: 2023,
+                totalEpisodes: 28,
+                rating: '9.1',
+                synopsis: 'Після десятирічної подорожі та перемоги над Королем Демонів ельфійка-чарівниця Фрірен вирушає у нову мандрівку, щоб пізнати справжнє значення людських зв\'язків.'
+            },
+            {
+                title: 'Атака титанів: Фінал',
+                url: 'https://api.hikka.io/anime/shingeki-no-kyojin-the-final-season-kanketsu-hen-a85942',
+                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/shingeki-no-kyojin-the-final-season-kanketsu-hen-a85942/8D-SG7-uFh97fQ3c.jpg' } },
+                genres: ['Екшн', 'Драма', 'Містика'],
+                year: 2023,
+                totalEpisodes: 2,
+                rating: '9.0',
+                synopsis: 'Гул Землі руйнує все на своєму шляху. Колишні друзі та вороги об\'єднуються в останній спробі зупинити Ерена і врятувати залишки людства.'
+            },
+            {
+                title: 'Магічна битва 2',
+                url: 'https://api.hikka.io/anime/jujutsu-kaisen-tv-2nd-season-4d2218',
+                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/jujutsu-kaisen-tv-2nd-season-4d2218/8D-SGc70h9Lp1V7A.jpg' } },
+                genres: ['Екшн', 'Надприродне', 'Фентезі'],
+                year: 2023,
+                totalEpisodes: 23,
+                rating: '8.8',
+                synopsis: 'Інцидент у Шібуї: чаклуни та прокляття сходяться у жорстокій битві за майбутнє Токіо та долю найсильнішого мага Ґоджо Сатору.'
+            },
+            {
+                title: 'Клинок, який знищує демонів',
+                url: 'https://api.hikka.io/anime/kimetsu-no-yaiba-hashira-geiko-hen-539c89',
+                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/kimetsu-no-yaiba-hashira-geiko-hen-539c89/8D-SG8-bFh97fQ3c.jpg' } },
+                genres: ['Екшн', 'Надприродне', 'Історичний'],
+                year: 2024,
+                totalEpisodes: 8,
+                rating: '8.6',
+                synopsis: 'Тандзіро проходить виснажливе тренування Стовпів, готуючись до неминучого фінального зіткнення з Мудзаном Кібуцудзі.'
+            },
+            {
+                title: 'Людина-бензопила',
+                url: 'https://api.hikka.io/anime/chainsaw-man-8e99e4',
+                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/chainsaw-man-8e99e4/8D-SG9-xFh97fQ3c.jpg' } },
+                genres: ['Екшн', 'Хоррор', 'Надприродне'],
+                year: 2022,
+                totalEpisodes: 12,
+                rating: '8.5',
+                synopsis: 'Денджі живе у злиднях, розплачуючись з боргами якудза разом із демонічним псом Почітою. Після зради він відроджується як Людина-бензопила.'
+            }
+        ];
 
         let heroItems = [],
             heroPool = [],
             heroSeenUrls = new Set(),
             heroCurrentIndex = 0,
             heroRotationTimer = null,
-            heroJustSwiped = false;
+            heroProgressInterval = null,
+            heroJustSwiped = false,
+            heroIsPaused = false;
+
+        const HERO_SLIDE_DURATION = 6500;
+        const HERO_CACHE_KEY = 'vakdab_hero_cache_v2';
+
+        function getCurrentRoute() {
+            if (window.Router?.currentRoute) return window.Router.currentRoute;
+            const hash = window.location.hash.slice(1) || 'main';
+            return hash.split('?')[0];
+        }
+
+        function openPlayer(url) {
+            if (typeof window.openPlayerPage === 'function') {
+                window.openPlayerPage(url);
+            } else {
+                window.location.hash = 'anime?' + new URLSearchParams({ url });
+            }
+        }
+
+        function toast(message) {
+            if (typeof window.showToast === 'function') {
+                window.showToast(message);
+            }
+        }
+
+        function getBookmarks() {
+            if (window.Storage?.getBookmarks) return window.Storage.getBookmarks();
+            try {
+                return JSON.parse(localStorage.getItem('vakdab_bookmarks') || '[]');
+            } catch (_) {
+                return [];
+            }
+        }
+
+        function saveBookmarks(bookmarks) {
+            if (window.Storage?.setBookmarks) {
+                window.Storage.setBookmarks(bookmarks);
+            } else {
+                try {
+                    localStorage.setItem('vakdab_bookmarks', JSON.stringify(bookmarks));
+                } catch (_) {}
+            }
+        }
+
+        function isHeroItemBookmarked(url) {
+            if (!url) return false;
+            return getBookmarks().some(b => b?.url === url);
+        }
+
+        function toggleHeroBookmark(item) {
+            if (!item?.url) return false;
+            const bookmarks = getBookmarks();
+            const idx = bookmarks.findIndex(b => b?.url === item.url);
+            if (idx >= 0) {
+                bookmarks.splice(idx, 1);
+                saveBookmarks(bookmarks);
+                toast('Видалено з обраного');
+                return false;
+            }
+            bookmarks.push({
+                url: item.url,
+                title: item.title || 'Без назви',
+                poster: item.images?.jpg?.large_image_url || '',
+                addedAt: Date.now()
+            });
+            saveBookmarks(bookmarks);
+            toast('Додано до обраного');
+            return true;
+        }
+
+        function loadCachedHeroPool() {
+            try {
+                const cached = sessionStorage.getItem(HERO_CACHE_KEY);
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                }
+            } catch (_) {}
+            return [];
+        }
+
+        function saveCachedHeroPool(pool) {
+            try {
+                if (Array.isArray(pool) && pool.length > 0) {
+                    sessionStorage.setItem(HERO_CACHE_KEY, JSON.stringify(pool.slice(0, 30)));
+                }
+            } catch (_) {}
+        }
 
         export async function buildHeroBanner() {
             const wrapper = document.getElementById('heroWrapper');
             if (!wrapper) return;
 
-            // Паралельно завантажуємо обидва джерела — не чекаємо одне на одне
-            const [topResult, mainResult] = await Promise.allSettled([
-                fetchHikkaTop100(),
-                fetchHikkaMain(1)
-            ]);
-
-            const topAnime = topResult.status === 'fulfilled' ? (topResult.value || []) : [];
-            const ordinaryAnime = mainResult.status === 'fulfilled' ? (mainResult.value || []) : [];
-
-            heroPool = [...topAnime, ...ordinaryAnime]
-                .filter(item => item?.url && item.images?.jpg?.large_image_url)
-                .filter((item, index, list) => list.findIndex(other => other.url === item.url) === index);
-            heroSeenUrls = new Set();
-            heroItems = takeHeroBatch();
-
-            if (heroItems.length === 0) {
-                console.warn('Hero: no items loaded');
-                wrapper.style.display = 'none';
-                return;
-            }
-            if (Router.currentRoute !== 'main') {
+            // Якщо ми не на головній сторінці — ховаємо банер
+            if (getCurrentRoute() !== 'main') {
                 wrapper.style.display = 'none';
                 return;
             }
 
             wrapper.style.display = 'block';
-            heroCurrentIndex = 0;
-            initHeroSwipe();
 
-            // Показуємо перший слайд ОДРАЗУ з тим що є, не чекаємо деталей
-            renderHeroSlide(heroItems[0]);
-            buildHeroIndicators();
-            startHeroRotation();
+            // Швидка ініціалізація з кешу або fallback, щоб користувач бачив банер миттєво
+            if (heroPool.length === 0) {
+                const cachedPool = loadCachedHeroPool();
+                heroPool = cachedPool.length > 0 ? cachedPool : [...FALLBACK_HERO_ANIME];
+                heroSeenUrls = new Set();
+                heroItems = takeHeroBatch();
+                heroCurrentIndex = 0;
+                renderHeroSlide(heroItems[0]);
+                buildHeroIndicators();
+                initHeroControls();
+                startHeroRotation();
+            }
 
-            // Деталі завантажуємо у фоні — оновимо слайд коли прийдуть
-            loadHeroItemDetails(0).then(() => {
-                if (heroCurrentIndex === 0) renderHeroSlide(heroItems[0]);
-            }).catch(() => {});
+            // Фонове оновлення свіжими даними з Hikka API
+            fetchFreshHeroData().catch(err => {
+                console.warn('Hero background fetch note:', err.message);
+            });
+        }
 
-            // Preload деталі наступного слайду у фоні
-            if (heroItems.length > 1) {
-                loadHeroItemDetails(1).catch(() => {});
+        async function fetchFreshHeroData() {
+            const [topResult, mainResult] = await Promise.allSettled([
+                fetchHikkaTop100(),
+                fetchHikkaMain(1)
+            ]);
+
+            const topAnime = topResult.status === 'fulfilled' && Array.isArray(topResult.value) ? topResult.value : [];
+            const ordinaryAnime = mainResult.status === 'fulfilled' && Array.isArray(mainResult.value) ? mainResult.value : [];
+
+            const combined = [...topAnime, ...ordinaryAnime]
+                .filter(item => item?.url && (item.images?.jpg?.large_image_url || item.image))
+                .map(item => ({
+                    ...item,
+                    images: {
+                        jpg: {
+                            large_image_url: item.images?.jpg?.large_image_url || item.image || ''
+                        }
+                    }
+                }))
+                .filter((item, index, list) => list.findIndex(other => other.url === item.url) === index);
+
+            if (combined.length > 0) {
+                heroPool = combined;
+                saveCachedHeroPool(heroPool);
+                // Якщо попередньо використовувався fallback — оновлюємо батч
+                if (heroItems.length === 0 || heroItems[0]?.url === FALLBACK_HERO_ANIME[0].url) {
+                    heroSeenUrls = new Set();
+                    heroItems = takeHeroBatch();
+                    heroCurrentIndex = 0;
+                    if (getCurrentRoute() === 'main') {
+                        renderHeroSlide(heroItems[0]);
+                        buildHeroIndicators();
+                        startHeroRotation();
+                    }
+                }
             }
         }
 
         function takeHeroBatch() {
+            if (!heroPool.length) heroPool = [...FALLBACK_HERO_ANIME];
             const available = heroPool.filter(item => item?.url && !heroSeenUrls.has(item.url));
-            const batch = [...available].sort(() => Math.random() - 0.5).slice(0, 8);
+            if (available.length < 3) {
+                heroSeenUrls.clear();
+            }
+            const poolToPick = heroPool.filter(item => item?.url && !heroSeenUrls.has(item.url));
+            const batch = [...poolToPick].sort(() => Math.random() - 0.5).slice(0, 6);
             batch.forEach(item => heroSeenUrls.add(item.url));
-            return batch;
+            return batch.length ? batch : heroPool.slice(0, 5);
         }
 
         async function loadNextHeroBatch() {
             stopHeroRotation();
             let nextBatch = takeHeroBatch();
-            if (nextBatch.length < 8 && heroSeenUrls.size >= heroPool.length) {
-                heroSeenUrls = new Set();
+            if (!nextBatch.length) {
+                heroSeenUrls.clear();
                 nextBatch = takeHeroBatch();
             }
             if (!nextBatch.length) return;
@@ -87,18 +254,16 @@ import { Router, Storage, openPlayerPage, showToast } from '../../legacy/app-leg
             if (idx < 0 || idx >= heroItems.length) return;
             const item = heroItems[idx];
             if (item.detailsLoaded) return;
-            // Timeout 6с щоб не зависати якщо сайт відповідає повільно
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000));
             try {
                 const detail = await Promise.race([loadHikkaDetail(item.url), timeoutPromise]);
-                item.genres = detail.genres || [];
-                item.totalEpisodes = detail.totalEpisodes || 0;
-                item.synopsis = detail.synopsis || '';
+                item.genres = detail.genres || item.genres || [];
+                item.totalEpisodes = detail.totalEpisodes || item.totalEpisodes || 0;
+                item.synopsis = detail.synopsis || item.synopsis || '';
                 item.year = detail.year || item.year || '';
                 item.detailsLoaded = true;
-                item.rating = (7 + Math.random() * 2.5).toFixed(1);
+                item.rating = item.rating || (7 + Math.random() * 2.5).toFixed(1);
             } catch (e) {
-                console.warn('Hero details fallback:', item.title, e.message);
                 item.genres = item.genres || ['Аніме'];
                 item.totalEpisodes = item.totalEpisodes || 0;
                 item.synopsis = item.synopsis || 'Натисніть «Дивитися», щоб перейти до перегляду.';
@@ -125,42 +290,23 @@ import { Router, Storage, openPlayerPage, showToast } from '../../legacy/app-leg
                 .trim();
         }
 
-        // Улюблене на слайдах героя — той самий локальний список закладок, що й
-        // на картках каталогу та в плеєрі (Storage.getBookmarks/setBookmarks).
-        function isHeroItemBookmarked(url) {
-            if (!url) return false;
-            return Storage.getBookmarks().some(b => b?.url === url);
-        }
-
-        function toggleHeroBookmark(item) {
-            if (!item?.url) return false;
-            const bookmarks = Storage.getBookmarks();
-            const idx = bookmarks.findIndex(b => b?.url === item.url);
-            if (idx >= 0) {
-                bookmarks.splice(idx, 1);
-                Storage.setBookmarks(bookmarks);
-                showToast('Видалено з обраного');
-                return false;
-            }
-            bookmarks.push({
-                url: item.url,
-                title: item.title || 'Без назви',
-                poster: item.images?.jpg?.large_image_url || '',
-                addedAt: Date.now()
-            });
-            Storage.setBookmarks(bookmarks);
-            showToast('Додано до обраного');
-            return true;
-        }
-
         function renderHeroSlide(item) {
             const container = document.getElementById('heroSlidesContainer');
             if (!container || !item) return;
+
             const poster = item.images?.jpg?.large_image_url || '';
             const rawTitle = String(item.title || 'Без назви').trim();
-            const title = rawTitle.length > 38 ? rawTitle.substring(0, 38).trimEnd() + '…' : rawTitle;
+            const title = rawTitle.length > 40 ? rawTitle.substring(0, 40).trimEnd() + '…' : rawTitle;
             const genres = Array.isArray(item.genres) && item.genres.length ? item.genres : ['Аніме'];
-            const rating = item.rating || (7 + Math.random() * 2.5).toFixed(1);
+            const rawRating = item.score ?? item.rating;
+            let rating = '';
+            if (rawRating && !isNaN(parseFloat(rawRating)) && !String(rawRating).includes('_') && !String(rawRating).toLowerCase().includes('pg')) {
+                rating = parseFloat(rawRating).toFixed(1);
+            } else {
+                let seed = 0;
+                for (let i = 0; i < rawTitle.length; i++) seed += rawTitle.charCodeAt(i);
+                rating = (8.0 + (seed % 15) / 10).toFixed(1);
+            }
             const year = item.year || '';
             const episodes = item.totalEpisodes || 0;
             const synopsis = cleanHeroSynopsis(item.synopsis);
@@ -180,7 +326,6 @@ import { Router, Storage, openPlayerPage, showToast } from '../../legacy/app-leg
             slide.className = 'hero-slide active';
             slide.dataset.url = item.url;
 
-            // Fallback poster — якщо зображення не завантажилось
             const safePoster = poster || '';
             const bgStyle = safePoster
                 ? `background-image: url('${safePoster}');`
@@ -188,7 +333,7 @@ import { Router, Storage, openPlayerPage, showToast } from '../../legacy/app-leg
 
             const bookmarked = isHeroItemBookmarked(item.url);
             slide.innerHTML = `
-                <div class="hero-slide-bg" id="heroBg_${Date.now()}" style="${bgStyle}"></div>
+                <div class="hero-slide-bg" style="${bgStyle}"></div>
                 <div class="hero-slide-overlay"></div>
                 <div class="hero-slide-content">
                     <div class="hero-slide-title">${escapeHeroText(title)}</div>
@@ -207,16 +352,12 @@ import { Router, Storage, openPlayerPage, showToast } from '../../legacy/app-leg
                 </div>
             `;
 
-            // Preload poster image — якщо не завантажиться, фон лишається градієнтом
+            // Плавне завантаження фону
             if (safePoster) {
                 const img = new Image();
                 img.onload = () => {
                     const bg = slide.querySelector('.hero-slide-bg');
                     if (bg) bg.style.backgroundImage = `url('${safePoster}')`;
-                };
-                img.onerror = () => {
-                    const bg = slide.querySelector('.hero-slide-bg');
-                    if (bg) bg.style.background = 'linear-gradient(135deg, #1a1a1a, #2d2d2d)';
                 };
                 img.src = safePoster;
             }
@@ -224,21 +365,24 @@ import { Router, Storage, openPlayerPage, showToast } from '../../legacy/app-leg
             container.innerHTML = '';
             container.appendChild(slide);
 
-            // Весь слайд клікабельний — відкриває аніме. Свайп (не тап) перемикає слайди, не відкриваючи сторінку.
-            slide.addEventListener('click', () => {
-                if (heroJustSwiped) { heroJustSwiped = false; return; }
-                if (item.url) openPlayerPage(item.url);
+            // Клік по слайду відкриває сторінку, якщо це не був свайп і не клік по кнопках
+            slide.addEventListener('click', (e) => {
+                if (heroJustSwiped) {
+                    heroJustSwiped = false;
+                    return;
+                }
+                if (e.target.closest('.hero-watch-btn, .hero-fav-btn, .hero-dot')) return;
+                if (item.url) openPlayer(item.url);
             });
 
-            // Кнопка "Дивитись" робить той самий перехід явним і фокусованим —
-            // не залежить від кліку по всьому слайду.
+            // Кнопка «Дивитись»
             slide.querySelector('.hero-watch-btn')?.addEventListener('click', event => {
                 event.preventDefault();
                 event.stopPropagation();
-                if (item.url) openPlayerPage(item.url);
+                if (item.url) openPlayer(item.url);
             });
 
-            // "В обране" — окрема дія, не повинна відкривати плеєр.
+            // Кнопка «В обране»
             const favBtn = slide.querySelector('.hero-fav-btn');
             favBtn?.addEventListener('click', event => {
                 event.preventDefault();
@@ -247,7 +391,6 @@ import { Router, Storage, openPlayerPage, showToast } from '../../legacy/app-leg
                 favBtn.classList.toggle('is-active', active);
                 favBtn.setAttribute('aria-pressed', String(active));
                 favBtn.setAttribute('aria-label', active ? 'Видалити з обраного' : 'Додати в обране');
-                // Icon stays a solid heart; only color/opacity communicate the active state (see .hero-fav-btn.is-active).
             });
         }
 
@@ -261,7 +404,11 @@ import { Router, Storage, openPlayerPage, showToast } from '../../legacy/app-leg
                 dot.className = 'hero-dot' + (idx === heroCurrentIndex ? ' active' : '');
                 dot.setAttribute('aria-label', `Показати рекомендацію ${idx + 1}`);
                 dot.setAttribute('aria-current', String(idx === heroCurrentIndex));
-                dot.addEventListener('click', () => goToSlide(idx));
+                dot.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    goToSlide(idx);
+                });
                 dotsContainer.appendChild(dot);
             });
         }
@@ -275,87 +422,166 @@ import { Router, Storage, openPlayerPage, showToast } from '../../legacy/app-leg
             });
         }
 
-        async function goToSlide(idx) {
+        export async function goToSlide(idx) {
             if (idx < 0 || idx >= heroItems.length) return;
-            if (idx === heroCurrentIndex) return;
+            if (idx === heroCurrentIndex && document.querySelector('.hero-slide')) return;
             heroCurrentIndex = idx;
-            // Показуємо слайд одразу — не чекаємо деталей
             renderHeroSlide(heroItems[idx]);
             updateHeroIndicators();
             resetHeroTimer();
-            // Деталі завантажуємо у фоні — оновимо слайд коли прийдуть
+
             if (!heroItems[idx].detailsLoaded) {
                 loadHeroItemDetails(idx).then(() => {
                     if (heroCurrentIndex === idx) renderHeroSlide(heroItems[idx]);
                 }).catch(() => {});
             }
-            // Preload наступного слайду
             const nextIdx = (idx + 1) % heroItems.length;
-            if (!heroItems[nextIdx].detailsLoaded) {
+            if (heroItems[nextIdx] && !heroItems[nextIdx].detailsLoaded) {
                 loadHeroItemDetails(nextIdx).catch(() => {});
             }
         }
 
-        function nextSlide() {
+        export function nextSlide() {
+            if (!heroItems.length) return;
             if (heroCurrentIndex >= heroItems.length - 1) {
-                loadNextHeroBatch().catch(() => {});
+                if (heroPool.length > heroItems.length) {
+                    loadNextHeroBatch().catch(() => {});
+                } else {
+                    goToSlide(0);
+                }
                 return;
             }
             goToSlide(heroCurrentIndex + 1);
         }
 
-        function prevSlide() {
+        export function prevSlide() {
+            if (!heroItems.length) return;
             goToSlide((heroCurrentIndex - 1 + heroItems.length) % heroItems.length);
         }
 
-        // Гортання пальцем замість стрілок — свайп вліво/вправо перемикає слайди
-        function initHeroSwipe() {
+        function initHeroControls() {
             const wrapper = document.getElementById('heroWrapper');
-            if (!wrapper || wrapper.dataset.swipeInit) return;
-            wrapper.dataset.swipeInit = '1';
-            let startX = 0, startY = 0, tracking = false;
+            if (wrapper) {
+                wrapper.querySelectorAll('.hero-nav-arrow, #heroPrevBtn, #heroNextBtn').forEach(el => el.remove());
+            }
+            initHeroGestures();
+        }
+
+        function initHeroGestures() {
+            const wrapper = document.getElementById('heroWrapper');
+            if (!wrapper || wrapper.dataset.gesturesInit) return;
+            wrapper.dataset.gesturesInit = '1';
+
+            let startX = 0, startY = 0, tracking = false, isDragging = false;
+
+            // Touch-свайп для смартфонів та планшетів
             wrapper.addEventListener('touchstart', (e) => {
                 if (!e.touches.length) return;
                 startX = e.touches[0].clientX;
                 startY = e.touches[0].clientY;
                 tracking = true;
+                isDragging = false;
             }, { passive: true });
+
+            wrapper.addEventListener('touchmove', (e) => {
+                if (!tracking || !e.touches.length) return;
+                const dx = e.touches[0].clientX - startX;
+                const dy = e.touches[0].clientY - startY;
+                if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+                    isDragging = true;
+                }
+            }, { passive: true });
+
             wrapper.addEventListener('touchend', (e) => {
                 if (!tracking || !e.changedTouches.length) return;
                 tracking = false;
                 const dx = e.changedTouches[0].clientX - startX;
                 const dy = e.changedTouches[0].clientY - startY;
-                if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+                if (Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy) * 1.15) {
                     heroJustSwiped = true;
                     if (dx < 0) nextSlide(); else prevSlide();
+                    setTimeout(() => { heroJustSwiped = false; }, 300);
                 }
             }, { passive: true });
+
+            // Drag мишкою для десктопу
+            wrapper.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                if (e.target.closest('button, .hero-dot, a')) return;
+                startX = e.clientX;
+                startY = e.clientY;
+                tracking = true;
+                isDragging = false;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!tracking) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                if (Math.abs(dx) > 15) {
+                    isDragging = true;
+                }
+            });
+
+            window.addEventListener('mouseup', (e) => {
+                if (!tracking) return;
+                tracking = false;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                if (isDragging && Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.15) {
+                    heroJustSwiped = true;
+                    if (dx < 0) nextSlide(); else prevSlide();
+                    setTimeout(() => { heroJustSwiped = false; }, 300);
+                }
+            });
+
+            // Пауза при наведенні курсору на десктопі
+            wrapper.addEventListener('mouseenter', () => pauseHeroRotation());
+            wrapper.addEventListener('mouseleave', () => {
+                if (getCurrentRoute() === 'main') resumeHeroRotation();
+            });
         }
 
-        let heroProgressInterval = null;
-        const HERO_SLIDE_DURATION = 6000;
-
-        function startHeroRotation() {
+        export function startHeroRotation() {
             stopHeroRotation();
+            heroIsPaused = false;
             if (heroItems.length < 2) return;
             const fill = document.getElementById('heroProgressFill');
             let elapsed = 0;
             if (fill) fill.style.width = '0%';
             heroProgressInterval = setInterval(() => {
+                if (heroIsPaused) return;
                 elapsed += 50;
-                if (fill) fill.style.width = (elapsed / HERO_SLIDE_DURATION * 100) + '%';
+                if (fill) fill.style.width = Math.min(100, (elapsed / HERO_SLIDE_DURATION * 100)) + '%';
             }, 50);
-            heroRotationTimer = setTimeout(nextSlide, HERO_SLIDE_DURATION);
+            heroRotationTimer = setTimeout(() => {
+                if (!heroIsPaused) nextSlide();
+            }, HERO_SLIDE_DURATION);
         }
 
-        function stopHeroRotation() {
+        export function stopHeroRotation() {
             if (heroRotationTimer) { clearTimeout(heroRotationTimer); heroRotationTimer = null; }
             if (heroProgressInterval) { clearInterval(heroProgressInterval); heroProgressInterval = null; }
             const fill = document.getElementById('heroProgressFill');
             if (fill) fill.style.width = '0%';
         }
 
-        function resetHeroTimer() {
+        export function pauseHeroRotation() {
+            heroIsPaused = true;
+        }
+
+        export function resumeHeroRotation() {
+            heroIsPaused = false;
+            if (!heroRotationTimer && heroItems.length > 1) {
+                startHeroRotation();
+            }
+        }
+
+        export function resetHeroTimer() {
             stopHeroRotation();
             startHeroRotation();
         }
+
+        window.buildHeroBanner = buildHeroBanner;
+        window.heroNextSlide = nextSlide;
+        window.heroPrevSlide = prevSlide;

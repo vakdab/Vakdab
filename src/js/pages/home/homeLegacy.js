@@ -886,6 +886,19 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             if (!mangaId || Number(item.chapters || 0) <= 0) return item;
             const cacheKey = String(mangaId);
             if (honeyReaderCache.has(cacheKey)) return { ...item, ...honeyReaderCache.get(cacheKey) };
+            
+            // Check local storage
+            try {
+                const stored = localStorage.getItem(`vakdab_manga_reader_${cacheKey}`);
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    if (parsed && parsed.readerUrl) {
+                        honeyReaderCache.set(cacheKey, parsed);
+                        return { ...item, ...parsed };
+                    }
+                }
+            } catch { /* ignore */ }
+
             if (honeyReaderPendingCache.has(cacheKey)) {
                 const pendingReader = await honeyReaderPendingCache.get(cacheKey);
                 return { ...item, ...pendingReader };
@@ -893,36 +906,49 @@ import { fetchRanobeCatalogPage, fetchRanobeCatalogTotal, resolveRanobeReader } 
             const pendingReader = (async () => {
                 try {
                     const payload = await fetchHoneyJson('/v2/chapter/cursor-list', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    // Honey returns newest chapters first. The newest chapter can be
-                    // monetized while older chapters remain public, so pageSize: 1
-                    // incorrectly sent users straight to the paywall.
-                    body: JSON.stringify({ page: 1, pageSize: 100, mangaId: String(mangaId), sortOrder: 'DESC' })
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ page: 1, pageSize: 100, mangaId: String(mangaId), sortOrder: 'DESC' })
                     });
                     const chapters = Array.isArray(payload?.data) ? payload.data : [];
                     const readingOrder = sortHoneyChaptersForReading(chapters);
                     const publicFirst = [
                         ...readingOrder.filter(entry => entry && entry.isMonetized !== true),
                         ...readingOrder.filter(entry => entry && entry.isMonetized === true)
-                    ];
+                    ].filter(entry => Boolean(entry?.id)).slice(0, 12);
+                    
                     let chapter = null;
-                    // A chapter may be marked public but still have no uploaded pages.
-                    // Probe the frames manifest and skip empty chapters before routing.
-                    for (const candidate of publicFirst.slice(0, 12)) {
-                        if (!candidate?.id) continue;
-                        try {
-                            const frames = await fetchHoneyJson(`/v2/chapter/frames/${encodeURIComponent(candidate.id)}/${encodeURIComponent(mangaId)}`);
-                            if (hasHoneyPageResources(frames)) { chapter = candidate; break; }
-                        } catch { /* Try the next chapter; the reader will report paywall only after all candidates fail. */ }
+                    // Probe candidate chapters in parallel batches of 4 for speed
+                    for (let i = 0; i < publicFirst.length; i += 4) {
+                        const batch = publicFirst.slice(i, i + 4);
+                        const results = await Promise.allSettled(
+                            batch.map(cand => fetchHoneyJson(`/v2/chapter/frames/${encodeURIComponent(cand.id)}/${encodeURIComponent(mangaId)}`)
+                                .then(frames => ({ candidate: cand, hasFrames: hasHoneyPageResources(frames) }))
+                            )
+                        );
+                        for (const res of results) {
+                            if (res.status === 'fulfilled' && res.value.hasFrames) {
+                                chapter = res.value.candidate;
+                                break;
+                            }
+                        }
+                        if (chapter) break;
                     }
+
                     chapter ||= selectHoneyReaderChapter(chapters);
-                    return chapter?.id ? {
+                    const result = chapter?.id ? {
                         readerUrl: `${HONEY_WEB}/read/${chapter.id}/${mangaId}`,
                         honeyChapterId: chapter.id,
                         readerTitle: item.title || 'Манґа',
                         readerSource: 'honey-manga.com.ua'
                     } : { readerUrl: '', honeyChapterId: '' };
+
+                    if (result.readerUrl) {
+                        try {
+                            localStorage.setItem(`vakdab_manga_reader_${cacheKey}`, JSON.stringify(result));
+                        } catch { /* ignore */ }
+                    }
+                    return result;
                 } catch (error) {
                     console.warn('Honey Manga chapter lookup failed:', error);
                     return { readerUrl: '', honeyChapterId: '' };

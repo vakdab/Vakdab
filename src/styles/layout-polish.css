@@ -6,12 +6,12 @@ footer {
 
 @media (max-width: 899px) {
     .app-container {
-        padding-bottom: calc(3.25rem + env(safe-area-inset-bottom)) !important;
+        padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
     }
 }
 
 @media (min-width: 900px) {
     .app-container {
-        padding-bottom: 2rem !important;
+        padding-bottom: 2.5rem !important;
     }
 }
