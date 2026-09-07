@@ -96,11 +96,10 @@ function buildHomeQuickFilterHtml() {
           </div>
         </div>
       </div>
-      <button class="hqf-ok-btn" id="hqfOkBtn" type="button">OK</button>
     `;
 }
 
-function applyQuickFilter() {
+function applyQuickFilter({ keepOpen = false } = {}) {
     const params = { sort: quickFilterState.sort };
     if (quickFilterState.genres.size) params.genres = [...quickFilterState.genres];
     if (quickFilterState.type) params.type = quickFilterState.type;
@@ -122,7 +121,7 @@ function applyQuickFilter() {
     const recommendations = document.getElementById('homeRecommendationsContainer');
     if (recommendations) recommendations.style.display = 'block';
 
-    quickFilterState.open = false;
+    quickFilterState.open = keepOpen;
     renderHomeQuickFilterBar();
     loadHomeRecommendations({ reload: true });
     recommendations?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -168,23 +167,29 @@ function wireHomeQuickFilterEvents(container) {
         cb.addEventListener('change', () => {
             if (cb.checked) quickFilterState.genres.add(cb.dataset.genre);
             else quickFilterState.genres.delete(cb.dataset.genre);
+            applyQuickFilter({ keepOpen: true });
         });
     });
 
     container.querySelectorAll('[data-type]').forEach(radio => {
-        radio.addEventListener('change', () => { if (radio.checked) quickFilterState.type = radio.dataset.type; });
+        radio.addEventListener('change', () => {
+            if (radio.checked) quickFilterState.type = radio.dataset.type;
+            applyQuickFilter({ keepOpen: true });
+        });
     });
 
     container.querySelectorAll('[data-year]').forEach(radio => {
-        radio.addEventListener('change', () => { if (radio.checked) quickFilterState.year = radio.dataset.year; });
+        radio.addEventListener('change', () => {
+            if (radio.checked) quickFilterState.year = radio.dataset.year;
+            applyQuickFilter({ keepOpen: true });
+        });
     });
 
     container.querySelectorAll('[data-sort]').forEach(radio => {
-        radio.addEventListener('change', () => { if (radio.checked) quickFilterState.sort = radio.dataset.sort; });
-    });
-
-    document.getElementById('hqfOkBtn')?.addEventListener('click', () => {
-        applyQuickFilter();
+        radio.addEventListener('change', () => {
+            if (radio.checked) quickFilterState.sort = radio.dataset.sort;
+            applyQuickFilter({ keepOpen: true });
+        });
     });
 
     const searchInput = document.getElementById('hqfSearchInput');
