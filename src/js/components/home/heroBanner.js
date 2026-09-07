@@ -84,6 +84,16 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
             },
         ];
 
+        let heroItems = [],
+            heroPool = [],
+            heroSeenUrls = new Set(),
+            heroCurrentIndex = 0,
+            heroRotationTimer = null,
+            heroProgressInterval = null,
+            heroJustSwiped = false,
+            heroIsPaused = false;
+
+        const HERO_SLIDE_DURATION = 6500;
         const HERO_CACHE_KEY = 'vakdab_hero_cache_v3';
 
         let heroMountedSlide = null;
