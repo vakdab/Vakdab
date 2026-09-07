@@ -357,7 +357,11 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
             slide.dataset.url = item.url;
 
             const safePoster = poster || '';
-            const bgStyle = 'background-image: linear-gradient(135deg, #1a1a1a, #2d2d2d);';
+            // Постер і градієнт-заглушка в одному background-image: заглушка видно миттєво,
+            // а фото домальовується поверх щойно довантажиться — без штучного чекання і без чорного екрана.
+            const bgStyle = safePoster
+                ? `background-image: url('${safePoster}'), linear-gradient(135deg, #1a1a1a, #2d2d2d);`
+                : 'background-image: linear-gradient(135deg, #1a1a1a, #2d2d2d);';
 
             const bookmarked = isHeroItemBookmarked(item.url);
             slide.innerHTML = `
@@ -387,28 +391,11 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
             container.appendChild(slide);
             heroMountedSlide = slide;
 
-            // Кросфейд: активуємо новий слайд лише коли постер завантажився,
-            // щоб не було чорного спалаху. Старий слайд тримаємо до кінця переходу.
-            const activateSlide = () => {
-                if (heroMountedSlide !== slide) return;
-                slide.classList.add('active');
-                if (previousSlide && previousSlide !== slide) {
-                    setTimeout(() => previousSlide.remove(), 850);
-                }
-            };
-
-            if (safePoster) {
-                preloadHeroImage(safePoster).then(ok => {
-                    if (ok && heroMountedSlide === slide) {
-                        const bg = slide.querySelector('.hero-slide-bg');
-                        if (bg) bg.style.backgroundImage = `url('${safePoster}')`;
-                    }
-                    activateSlide();
-                });
-                // Страхування: навіть якщо картинка зависла — показуємо слайд не пізніше 7с
-                setTimeout(activateSlide, 7000);
-            } else {
-                activateSlide();
+            // Активуємо одразу — постер і заглушка вже в одному шарі, чекати нічого не треба.
+            // Старий слайд лишається під новим до завершення fade-переходу, потім прибирається.
+            slide.classList.add('active');
+            if (previousSlide && previousSlide !== slide) {
+                setTimeout(() => previousSlide.remove(), 550);
             }
 
             // Клік по слайду відкриває сторінку, якщо це не був свайп і не клік по кнопках
