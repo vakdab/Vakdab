@@ -6,7 +6,7 @@ import {
     openPlayerPage, renderAuthPage, renderGenrePage,
     renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260905-stickers-sync-v1';
+} from '../../legacy/app-legacy.js?v=20260906-hero-fix-v5';
 import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=20260827-live-screen-v1';
 
         export const Router = {
