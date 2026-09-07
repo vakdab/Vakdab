@@ -5,66 +5,86 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
             {
                 title: 'Проводжальниця Фрірен',
                 url: 'https://api.hikka.io/anime/sousou-no-frieren-ad4e3e',
-                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/sousou-no-frieren-ad4e3e/8D-SGEkCBMA3bXG1.jpg' } },
-                genres: ['Пригоди', 'Драма', 'Фентезі'],
+                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/sousou-no-frieren-ad4e3e/8D-SGEkCBMAUE7CgEt9UPQ.jpg' } },
+                genres: ['Драма', 'Шьонен', 'Фентезі'],
                 year: 2023,
                 totalEpisodes: 28,
+                rating: '9.3',
+                synopsis: 'Після перемоги над Королем Демонів ельфійка-чарівниця Фрірен вирушає у нову мандрівку, щоб пізнати справжнє значення людських зв\'язків.'
+            },
+            {
+                title: 'Сталевий алхімік: Братерство',
+                url: 'https://api.hikka.io/anime/fullmetal-alchemist-brotherhood-fc524a',
+                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/fullmetal-alchemist-brotherhood-fc524a/1dRVedKKpa2i_iiHmEcDhA.jpg' } },
+                genres: ['Драма', 'Шьонен', 'Бойовик'],
+                year: 2009,
+                totalEpisodes: 64,
                 rating: '9.1',
-                synopsis: 'Після десятирічної подорожі та перемоги над Королем Демонів ельфійка-чарівниця Фрірен вирушає у нову мандрівку, щоб пізнати справжнє значення людських зв\'язків.'
+                synopsis: 'Брати Елріки шукають філософський камінь, щоб повернути тіла, які втратили під час забороненої алхімічної спроби.'
             },
             {
-                title: 'Атака титанів: Фінал',
-                url: 'https://api.hikka.io/anime/shingeki-no-kyojin-the-final-season-kanketsu-hen-a85942',
-                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/shingeki-no-kyojin-the-final-season-kanketsu-hen-a85942/8D-SG7-uFh97fQ3c.jpg' } },
-                genres: ['Екшн', 'Драма', 'Містика'],
-                year: 2023,
-                totalEpisodes: 2,
-                rating: '9.0',
-                synopsis: 'Гул Землі руйнує все на своєму шляху. Колишні друзі та вороги об\'єднуються в останній спробі зупинити Ерена і врятувати залишки людства.'
+                title: 'Переродження: Життя з нуля в іншому світі — 4 сезон',
+                url: 'https://api.hikka.io/anime/rezero-kara-hajimeru-isekai-seikatsu-4th-season-7f05ab',
+                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/rezero-kara-hajimeru-isekai-seikatsu-4th-season-7f05ab/98gRlrUMjxMDIZ5GJXnnSQ.jpg' } },
+                genres: ['Подорожі в часі', 'Психологія', 'Трилер'],
+                year: 2026,
+                totalEpisodes: 0,
+                rating: '9.1',
+                synopsis: 'Субару знову повертається смертю — новий сезон випробувань у світі, де час єдиною зброєю.'
             },
             {
-                title: 'Магічна битва 2',
-                url: 'https://api.hikka.io/anime/jujutsu-kaisen-tv-2nd-season-4d2218',
-                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/jujutsu-kaisen-tv-2nd-season-4d2218/8D-SGc70h9Lp1V7A.jpg' } },
-                genres: ['Екшн', 'Надприродне', 'Фентезі'],
-                year: 2023,
-                totalEpisodes: 23,
-                rating: '8.8',
-                synopsis: 'Інцидент у Шібуї: чаклуни та прокляття сходяться у жорстокій битві за майбутнє Токіо та долю найсильнішого мага Ґоджо Сатору.'
+                title: 'Химерні пригоди ДжоДжо: Перегони «Сталева куля»',
+                url: 'https://api.hikka.io/anime/jojo-no-kimyou-na-bouken-part-7-steel-ball-run-aae44e',
+                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/steel-ball-run-jojo-no-kimyou-na-bouken-aae44e/eQA9BX87jQFq8_Z1m18MZg.jpg' } },
+                genres: ['Загадкове', 'Бойовик', 'Історичне'],
+                year: 2026,
+                totalEpisodes: 0,
+                rating: '9.1',
+                synopsis: 'Перегони на тисячокілометровій дистанції, де джокеї змагаються не лише на швидкість, а й волею до перемоги.'
             },
             {
-                title: 'Клинок, який знищує демонів',
-                url: 'https://api.hikka.io/anime/kimetsu-no-yaiba-hashira-geiko-hen-539c89',
-                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/kimetsu-no-yaiba-hashira-geiko-hen-539c89/8D-SG8-bFh97fQ3c.jpg' } },
-                genres: ['Екшн', 'Надприродне', 'Історичний'],
+                title: 'Бліч: Тисячолітня кривава війна — Лихо',
+                url: 'https://api.hikka.io/anime/bleach-sennen-kessen-hen-kashin-tan-3ce3e3',
+                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/bleach-sennen-kessen-hen-kashin-tan-3ce3e3/6Qjtoqen-jsLSUBMfPG-Ww.jpg' } },
+                genres: ['Шьонен', 'Бойовик', 'Надприродне'],
                 year: 2024,
-                totalEpisodes: 8,
-                rating: '8.6',
-                synopsis: 'Тандзіро проходить виснажливе тренування Стовпів, готуючись до неминучого фінального зіткнення з Мудзаном Кібуцудзі.'
+                totalEpisodes: 13,
+                rating: '9.1',
+                synopsis: 'Фінальна війна між жнецами душ і квінсі набирає обертів — доля Світу живих і мертвих вирішується зараз.'
             },
             {
-                title: 'Людина-бензопила',
-                url: 'https://api.hikka.io/anime/chainsaw-man-8e99e4',
-                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/chainsaw-man-8e99e4/8D-SG9-xFh97fQ3c.jpg' } },
-                genres: ['Екшн', 'Хоррор', 'Надприродне'],
-                year: 2022,
-                totalEpisodes: 12,
-                rating: '8.5',
-                synopsis: 'Денджі живе у злиднях, розплачуючись з боргами якудза разом із демонічним псом Почітою. Після зради він відроджується як Людина-бензопила.'
-            }
+                title: 'Штайнова;Брама',
+                url: 'https://api.hikka.io/anime/steinsgate-f29797',
+                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/steinsgate-f29797/M-8Gxbqmsq0ScxFZWQAt-Q.jpg' } },
+                genres: ['Психологія', 'Фантастика', 'Трилер'],
+                year: 2011,
+                totalEpisodes: 24,
+                rating: '9.0',
+                synopsis: 'Винахідливий студент випадково створює пристрій, що надсилає повідомлення в минуле — і змінює долю світу.'
+            },
+            {
+                title: 'Атака титанів — 3 сезон, 2 частина',
+                url: 'https://api.hikka.io/anime/shingeki-no-kyojin-season-3-part-2-91a350',
+                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/shingeki-no-kyojin-season-3-part-2-91a350/G2dalZZxHj8T2-MXipYabg.jpg' } },
+                genres: ['Екшн', 'Драма', 'Містика'],
+                year: 2019,
+                totalEpisodes: 10,
+                rating: '9.0',
+                synopsis: 'Армія Ерена веде останній бій за повернення стін і правду про світ за ними.'
+            },
+            {
+                title: 'Людина-бензопила: Арка Резе',
+                url: 'https://api.hikka.io/anime/chainsaw-man-movie-reze-hen-c4febd',
+                images: { jpg: { large_image_url: 'https://cdn.hikka.io/content/anime/chainsaw-man-movie-reze-hen-c4febd/UfgfLlbLkAlsSy2ppbY8Vg.jpg' } },
+                genres: ['Екшн', 'Надприродне', 'Комедія'],
+                year: 2025,
+                totalEpisodes: 1,
+                rating: '9.0',
+                synopsis: 'Денджі зустрічає Резе — дівчину, яка ховає секрет небезпечніший за будь-якого диявола.'
+            },
         ];
 
-        let heroItems = [],
-            heroPool = [],
-            heroSeenUrls = new Set(),
-            heroCurrentIndex = 0,
-            heroRotationTimer = null,
-            heroProgressInterval = null,
-            heroJustSwiped = false,
-            heroIsPaused = false;
-
-        const HERO_SLIDE_DURATION = 6500;
-        const HERO_CACHE_KEY = 'vakdab_hero_cache_v2';
+        const HERO_CACHE_KEY = 'vakdab_hero_cache_v3';
 
         let heroMountedSlide = null;
         const heroPreloadedImages = new Set();
@@ -235,6 +255,23 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
             if (combined.length > 0) {
                 heroPool = combined;
                 saveCachedHeroPool(heroPool);
+                // Самодіагностика: якщо постер активного слайда битий (Hikka ротує URL),
+                // одразу замінюємо батч свіжими даними — банер не висить темним.
+                if (getCurrentRoute() === 'main' && heroItems.length > 0 && heroItems[heroCurrentIndex]) {
+                    const activePoster = heroItems[heroCurrentIndex]?.images?.jpg?.large_image_url || '';
+                    if (activePoster) {
+                        const probe = new Image();
+                        probe.onerror = () => {
+                            if (getCurrentRoute() !== 'main' || heroItems.length === 0) return;
+                            heroSeenUrls = new Set();
+                            heroItems = takeHeroBatch();
+                            heroCurrentIndex = 0;
+                            renderHeroSlide(heroItems[0]);
+                            buildHeroIndicators();
+                        };
+                        probe.src = activePoster;
+                    }
+                }
                 // Якщо попередньо використовувався fallback — оновлюємо батч
                 if (heroItems.length === 0 || heroItems[0]?.url === FALLBACK_HERO_ANIME[0].url) {
                     heroSeenUrls = new Set();
