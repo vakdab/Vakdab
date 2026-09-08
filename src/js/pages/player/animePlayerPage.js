@@ -212,7 +212,11 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 document.getElementById('playerBlurBg').style.backgroundImage = `url(${posterUrl})`;
                 const totalEpisodes = Object.values(anime.seasons || {}).reduce((sum, s) => sum + Object.values(s).reduce((s2,
                     e) => Math.max(s2, e.length), 0), 0);
-                document.getElementById('playerAgeBadge').textContent = anime.score || '—';
+                const rawAnimeScore = String(anime.score ?? '').replace(',', '.').trim();
+                const normalizedAnimeScore = Number.parseFloat(rawAnimeScore);
+                document.getElementById('playerAgeBadge').textContent = Number.isFinite(normalizedAnimeScore)
+                    ? normalizedAnimeScore.toFixed(1)
+                    : '—';
                 const isMovie = playerAnimeIsMovie(anime);
                 document.getElementById('playerStatusTag').textContent = isMovie ? 'Фільм' : (totalEpisodes > 0 ? 'Онгоїнг' : 'Завершено');
                 const animeRuntime = formatMovieRuntime(anime.runtimeMinutes);
