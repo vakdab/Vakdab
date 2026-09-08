@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>ВакДаб • Аніме манга онлайн</title>
+    <title>VakDab • Аніме манга онлайн</title>
     <link rel="preconnect" href="https://monoanime.animegran8.workers.dev" />
     <link rel="preconnect" href="https://vakdab-hikka-proxy.animegran8.workers.dev" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800;900&amp;display=swap" as="style" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&amp;display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-    <meta property="og:title" content="ВакДаб • Аніме манга онлайн" />
-    <meta property="og:description" content="На нашому сайті ВакДаб ви можете дивитися аніме без реклами, читати мангу, знаходити улюблені тайтли та відкривати для себе нові історії" />
+    <meta property="og:title" content="VakDab • Аніме манга онлайн" />
+    <meta property="og:description" content="На нашому сайті VakDab ви можете дивитися аніме без реклами, читати мангу, знаходити улюблені тайтли та відкривати для себе нові історії" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="ВакДаб" />
     <meta property="og:url" content="https://vakdab.web.app" />
@@ -20,9 +20,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <meta name="theme-color" content="#ffffff" />
-    <meta name="description" content="На нашому сайті ВакДаб ви можете дивитися аніме без реклами, читати мангу, знаходити улюблені тайтли та відкривати для себе нові історії" />
+    <meta name="description" content="На нашому сайті VakDab ви можете дивитися аніме без реклами, читати мангу, знаходити улюблені тайтли та відкривати для себе нові історії" />
     <meta name="keywords" content="аніме, аніме онлайн, дивитися аніме, аніме каталог, VakDab, anime" />
-    <meta name="author" content="ВакДаб" />
+    <meta name="author" content="VakDab" />
     <meta name="application-name" content="ВакДаб" />
     <meta name="apple-mobile-web-app-title" content="ВакДаб" />
     <meta name="robots" content="index, follow" />
@@ -38,7 +38,7 @@
         }
     </script>
 
-    <link rel="stylesheet" href="../src/styles/app.css?v=20260906-hero-overlay-v1" />
+    <link rel="stylesheet" href="../src/styles/app.css?v=20260908-merged-search-v1" />
 </head>
 <body class="appletv-agnative-topnav">
 
@@ -50,7 +50,7 @@
                 <div class="logo" id="logoHome" title="На головну">
                     <div class="logo-text">
                         <div class="logo-title-row">
-                            <h1>ВакДаб</h1>
+                            <h1>VakDab</h1>
 
                         </div>
 
@@ -64,17 +64,21 @@
 
 
 
-        <div class="hero-wrapper" id="heroWrapper">
-            <div class="hero-community-overlay" id="communityBanner">
-                <a class="hero-community-link hero-community-link--discord" href="https://discord.gg/zfUuRP7MX" target="_blank" rel="noopener noreferrer" aria-label="Discord спільноти ВакДаб">
+        <div class="community-banner" id="communityBanner">
+            <span class="community-banner__label">Приєднуйся до спільноти</span>
+            <div class="community-banner__links">
+                <a class="community-link community-link--discord" href="https://discord.gg/zfUuRP7MX" target="_blank" rel="noopener noreferrer" aria-label="Discord спільноти ВакДаб">
                     <i class="fa-brands fa-discord" aria-hidden="true"></i>
                     <span>Discord</span>
                 </a>
-                <a class="hero-community-link hero-community-link--telegram" href="https://t.me/VakCommunity" target="_blank" rel="noopener noreferrer" aria-label="Telegram спільноти ВакДаб">
+                <a class="community-link community-link--telegram" href="https://t.me/VakCommunity" target="_blank" rel="noopener noreferrer" aria-label="Telegram спільноти ВакДаб">
                     <i class="fa-brands fa-telegram" aria-hidden="true"></i>
                     <span>Telegram</span>
                 </a>
             </div>
+        </div>
+
+        <div class="hero-wrapper" id="heroWrapper">
             <div id="heroSlidesContainer"></div>
             <div class="hero-dots" id="heroDots"></div>
             <div class="hero-progress-bar"><div class="hero-progress-fill" id="heroProgressFill"></div></div>
@@ -352,7 +356,7 @@
     </div>
 
 
-    <script type="module" src="../src/js/app.js?v=20260906-remove-ranobe-v1"></script>
+    <script type="module" src="../src/js/app.js?v=20260908-merged-search-v1"></script>
 
     <!-- ===== BOTTOM NAV ===== -->
     <nav class="bottom-nav" id="bottomNav" role="navigation" aria-label="Навігація">
