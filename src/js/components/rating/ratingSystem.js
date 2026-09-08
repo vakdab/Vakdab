@@ -1,5 +1,5 @@
 import { Auth } from '../../core/compat/auth.js?v=20260824-settings-redesign-v1';
-import { Router } from '../../core/compat/router.js?v=20260908-rating-fix-v1';
+import { Router } from '../../core/compat/router.js?v=20260908-rating-fix-v2';
 import { Storage } from '../../core/compat/storage.js?v=20260905-stickers-sync-v1';
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
@@ -261,15 +261,14 @@ function isGifUrl(url) {
                 await new Promise(res => setTimeout(res, 150));
                 waited += 150;
             }
-            // Гостям (справді неавторизованим) намагаємось видати анонімний Firebase-сеанс,
-            // щоб рейтинг був доступний без входу
-            if (!Auth.isAuthenticated()) {
+            // Анонімна сесія потрібна лише для запису власних даних. Читання
+            // глобального рейтингу має працювати і для гостя, якщо Firestore rules
+            // дозволяють публічний list users — не блокуємо запит через sign-in failure.
+            if (!Auth.isAuthenticated() && !auth?.currentUser) {
                 try {
                     await signInAnonymously(auth);
                 } catch (e) {
-                    console.warn('Anonymous sign-in failed:', e.code);
-                    showFallback('Глобальний рейтинг тимчасово доступний лише для авторизованих. Увійдіть через Google.');
-                    return;
+                    console.warn('Anonymous guest auth unavailable; trying public leaderboard read:', e.code || e);
                 }
             }
 
@@ -281,7 +280,7 @@ function isGifUrl(url) {
                 const tp = new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 10000));
                 const snap = await Promise.race([getDocs(q), tp]);
 
-                const thisUid = Auth.isAuthenticated() ? Auth._user?.uid : null;
+                const thisUid = Auth._user?.uid || auth?.currentUser?.uid || null;
                 const mapUsers = (snapshot) => {
                     let arr = [];
                     snapshot.forEach(d => {
@@ -335,7 +334,7 @@ function isGifUrl(url) {
             const cfg = LB_SORT_CONFIG[sortKey] || LB_SORT_CONFIG.xp;
             const sorted = [...users].sort((a, b) => cfg.getVal(b) - cfg.getVal(a));
 
-            const myUid = Auth.isAuthenticated() ? Auth._user?.uid : null;
+            const myUid = Auth._user?.uid || auth?.currentUser?.uid || null;
             let html = '';
 
             if (sorted.length >= 3) {
