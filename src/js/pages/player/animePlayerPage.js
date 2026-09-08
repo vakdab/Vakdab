@@ -1,9 +1,9 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
-import { GENRE_MAP } from '../../config/constants.js?v=20260824-settings-redesign-v1';
+import { GENRE_MAP } from '../../config/constants.js?v=20260908-quality-1080-v1';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { Storage } from '../../core/compat/storage.js?v=20260824-settings-redesign-v1';
-import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260824-settings-redesign-v1';
+import { Storage } from '../../core/compat/storage.js?v=20260908-quality-1080-v1';
+import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260908-quality-1080-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -28,7 +28,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
         let _playerLoadController = null; // AbortController для поточного завантаження плеєра
         export let playerPageCurrentSeason = '1';
         export let playerPageCurrentDub = '';
-        let playerPageCurrentQuality = '720p';
+        let playerPageCurrentQuality = '1080p';
         let playerPageActiveEpisodeFile = null;
         let playerPagePlaybackRequest = 0;
         let playerPageCurrentAnimeUrl = null;
@@ -248,7 +248,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 playerPageCurrentEpisodeNum = liveEpisodes.some(ep => String(ep.episode) === requestedLiveEpisode)
                     ? requestedLiveEpisode
                     : '1';
-                playerPageCurrentQuality = 'Максимальна';
+                playerPageCurrentQuality = '1080p';
                 buildSeasonRow(seasons);
                 buildEpisodeViews();
                 updateFilterChip();

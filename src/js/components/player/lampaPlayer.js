@@ -262,12 +262,6 @@ export class LampaPlayer {
                                     ${lpSpeedOption('2', '2x', false)}
                                 </div>
                             </div>
-                            <div class="lp-menu-wrap" id="lpQualityWrap">
-                                <button class="lp-control-pill lp-quality-pill" id="lpQualityBtn" title="Якість відео" aria-haspopup="true" aria-expanded="false">
-                                    <span class="lp-pill-label" id="lpQualityLabel">Авто</span>${LP_CHEVRON}
-                                </button>
-                                <div class="lp-popover lp-quality-menu" id="lpQualityMenu" role="menu" aria-hidden="true"></div>
-                            </div>
                         </div>
                         <div class="lp-volume-group">
                             <button class="lp-btn" id="lpVolBtn" title="Вимкнути звук" aria-label="Вимкнути звук">${LP_ICONS.volOn}</button>
@@ -526,6 +520,21 @@ export class LampaPlayer {
                 document.addEventListener('keydown', this._onKeyDown);
             }
 
+            _select1080Quality() {
+                if (!this.hls?.levels?.length) return;
+                const levels = this.hls.levels;
+                const exact = levels.findIndex(level => Number(level.height) === 1080);
+                const underOrEqual = levels
+                    .map((level, index) => ({ index, height: Number(level.height) || 0 }))
+                    .filter(level => level.height > 0 && level.height <= 1080)
+                    .sort((a, b) => b.height - a.height);
+                const fallback = underOrEqual[0]?.index ?? levels
+                    .map((level, index) => ({ index, height: Number(level.height) || 0 }))
+                    .sort((a, b) => b.height - a.height)[0]?.index;
+                const selected = exact >= 0 ? exact : fallback;
+                if (Number.isInteger(selected)) this.hls.currentLevel = selected;
+            }
+
             _refreshQualityMenu(autoSelectMax = false) {
                 const menu = this.containerRef?.querySelector('#lpQualityMenu');
                 const labelEl = this.containerRef?.querySelector('#lpQualityLabel');
@@ -740,7 +749,7 @@ export class LampaPlayer {
                     hls.attachMedia(v);
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
                         if (!isCurrentRequest()) return;
-                        this._refreshQualityMenu(true);
+                        this._select1080Quality();
                         hideLoading();
                         safePlay();
                     });
