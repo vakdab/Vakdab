@@ -2,8 +2,7 @@
 // Вибираєш жанри/тип/рік/сортування → натискаєш OK → фільтр перерисовує
 // основний блок круглих карток на головній сторінці.
 import { GENRE_MAP } from '../../config/constants.js?v=20260902-home-quick-filter-v2';
-import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v4';
-import { searchPageState, loadHomeRecommendations, setHomeRecommendationFilter, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams } from './homeLegacy.js?v=20260906-remove-ranobe-v1';
+import { loadHomeRecommendations, setHomeRecommendationFilter, setHomeRecommendationSearchQuery, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams } from './homeLegacy.js?v=20260908-inline-search-v1';
 
 const YEAR_OPTIONS = [
     { key: '', label: 'Будь-який' },
@@ -41,6 +40,8 @@ const YEAR_RANGES = {
 };
 
 let quickFilterState = { genres: new Set(), type: '', year: '', sort: 'rating', open: false };
+let hqfSearchQuery = '';
+let hqfSearchDebounceTimer = null;
 
 function genreEntries() {
     return Object.entries(GENRE_MAP).map(([name, slug]) => ({ name, slug }));
@@ -50,8 +51,10 @@ function buildHomeQuickFilterHtml() {
     return `
       <div class="hqf-toolbar hqf-toolbar--merged">
         <div class="hqf-merged-bar" id="hqfMergedBar">
-          <button type="button" class="hqf-search-icon-btn" id="hqfSearchIconBtn" aria-label="Пошук аніме">
-            <i class="fas fa-search" aria-hidden="true"></i>
+          <i class="fas fa-search hqf-search-glass" aria-hidden="true"></i>
+          <input type="search" id="hqfSearchInput" class="hqf-search-input" placeholder="Пошук аніме..." value="${hqfSearchQuery}" autocomplete="off" enterkeyhint="search" aria-label="Пошук аніме">
+          <button type="button" class="hqf-search-clear" id="hqfSearchClear" aria-label="Очистити пошук"${hqfSearchQuery ? '' : ' hidden'}>
+            <i class="fas fa-xmark" aria-hidden="true"></i>
           </button>
           <span class="hqf-merged-divider" aria-hidden="true"></span>
           <button class="hqf-categories-toggle${quickFilterState.open ? ' open' : ''}" id="hqfCategoriesToggle" type="button" aria-label="Обрати категорії" aria-expanded="${quickFilterState.open ? 'true' : 'false'}">
@@ -123,6 +126,7 @@ function applyQuickFilter({ keepOpen = false } = {}) {
     setCurrentCategory('');
     setQuickFilterParams(params);
     setHomeRecommendationFilter(params);
+    setHomeRecommendationSearchQuery(hqfSearchQuery);
 
     document.getElementById('genreSectionsContainer').style.display = 'none';
     document.getElementById('animeContainer').style.display = 'none';
@@ -144,6 +148,8 @@ function showRecommendations() {
     setCurrentPage(1);
     setCurrentSearchQuery('');
     setCurrentCategory('');
+    hqfSearchQuery = '';
+    setHomeRecommendationSearchQuery('');
     document.getElementById('genreSectionsContainer').style.display = 'none';
     const recs = document.getElementById('homeRecommendationsContainer');
     if (recs) {
@@ -200,8 +206,50 @@ function wireHomeQuickFilterEvents(container) {
         });
     });
 
-    document.getElementById('hqfSearchIconBtn')?.addEventListener('click', () => {
-        Router.goTo('search');
+    const searchInput = document.getElementById('hqfSearchInput');
+    const searchClear = document.getElementById('hqfSearchClear');
+
+    const runInlineSearch = () => {
+        setHomeRecommendationSearchQuery(hqfSearchQuery);
+        setCurrentTab('main');
+        setCurrentPage(1);
+        setCurrentSearchQuery('');
+        setCurrentCategory('');
+        // Пошук і фільтри не комбінуємо: активний запит скасовує фільтри
+        setQuickFilterParams(null);
+        setHomeRecommendationFilter(null);
+        document.getElementById('genreSectionsContainer').style.display = 'none';
+        document.getElementById('animeContainer').style.display = 'none';
+        const recommendations = document.getElementById('homeRecommendationsContainer');
+        if (recommendations) {
+            recommendations.style.display = 'block';
+            loadHomeRecommendations({ reload: true });
+        }
+        if (hqfSearchQuery) recommendations?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    searchInput?.addEventListener('input', () => {
+        hqfSearchQuery = searchInput.value.trim();
+        searchClear && (searchClear.hidden = !hqfSearchQuery);
+        clearTimeout(hqfSearchDebounceTimer);
+        hqfSearchDebounceTimer = setTimeout(runInlineSearch, 400);
+    });
+
+    searchInput?.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            clearTimeout(hqfSearchDebounceTimer);
+            runInlineSearch();
+            searchInput.blur();
+        }
+    });
+
+    searchClear?.addEventListener('click', () => {
+        searchInput.value = '';
+        hqfSearchQuery = '';
+        searchClear.hidden = true;
+        clearTimeout(hqfSearchDebounceTimer);
+        runInlineSearch();
     });
 }
 
