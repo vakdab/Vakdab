@@ -52,13 +52,13 @@ function buildHomeQuickFilterHtml() {
       <div class="hqf-toolbar hqf-toolbar--merged">
         <div class="hqf-merged-bar" id="hqfMergedBar">
           <i class="fas fa-search hqf-search-glass" aria-hidden="true"></i>
-          <input type="search" id="hqfSearchInput" class="hqf-search-input" placeholder="Пошук аніме..." value="${hqfSearchQuery}" autocomplete="off" enterkeyhint="search" aria-label="Пошук аніме">
+          <input type="search" id="hqfSearchInput" class="hqf-search-input" placeholder="Пошук" value="${hqfSearchQuery}" autocomplete="off" enterkeyhint="search" aria-label="Пошук">
           <button type="button" class="hqf-search-clear" id="hqfSearchClear" aria-label="Очистити пошук"${hqfSearchQuery ? '' : ' hidden'}>
             <i class="fas fa-xmark" aria-hidden="true"></i>
           </button>
           <span class="hqf-merged-divider" aria-hidden="true"></span>
           <button class="hqf-categories-toggle${quickFilterState.open ? ' open' : ''}" id="hqfCategoriesToggle" type="button" aria-label="Обрати категорії" aria-expanded="${quickFilterState.open ? 'true' : 'false'}">
-            <i class="fas fa-sliders" aria-hidden="true"></i> <span class="hqf-label">Обрати категорії</span> <i class="fas fa-chevron-down hqf-chevron" aria-hidden="true"></i>
+            <i class="fas fa-sliders" aria-hidden="true"></i> <i class="fas fa-chevron-down hqf-chevron" aria-hidden="true"></i>
           </button>
         </div>
       </div>
