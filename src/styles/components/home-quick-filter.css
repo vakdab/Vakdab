@@ -796,3 +796,33 @@
     .hqf-merged-bar .hqf-categories-toggle { flex-basis: 48% !important; min-width: 0 !important; padding: 0 16px 0 12px !important; }
     .hqf-merged-bar .hqf-categories-toggle .hqf-label { font-size: .88rem; }
 }
+
+/* Compact merged search bar: keep both controls optically centered on mobile. */
+.hqf-merged-bar {
+    align-items: center;
+}
+.hqf-merged-bar .hqf-search-input {
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    line-height: 1.25;
+}
+.hqf-merged-bar .hqf-categories-toggle {
+    flex: 0 0 72px !important;
+    width: 72px !important;
+    min-width: 72px !important;
+    justify-content: center;
+    gap: 13px;
+    padding: 0 !important;
+}
+.hqf-merged-bar .hqf-categories-toggle .hqf-chevron {
+    margin-left: 0;
+}
+@media (max-width: 600px) {
+    .hqf-merged-bar .hqf-categories-toggle {
+        flex-basis: 72px !important;
+        width: 72px !important;
+        min-width: 72px !important;
+        padding: 0 !important;
+    }
+}
