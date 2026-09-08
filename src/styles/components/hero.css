@@ -668,11 +668,13 @@
 
         /* ===== COMMUNITY LINKS — bottom-right hero overlay ===== */
         .hero-community-overlay {
-            position: absolute;
-            right: 16px;
-            bottom: 34px;
-            z-index: 30;
-            display: flex;
+            position: absolute !important;
+            right: 16px !important;
+            bottom: 34px !important;
+            z-index: 9999 !important;
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
             align-items: center;
             gap: 9px;
             pointer-events: none;
