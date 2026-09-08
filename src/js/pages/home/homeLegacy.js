@@ -2229,12 +2229,20 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
         export let homeRecommendationScrollBound = false;
         export let homeRecommendationRequestId = 0;
         export let homeRecommendationFilterParams = null;
+        export let homeRecommendationSearchQuery = '';
         let homeRecommendationObserver = null;
 
         export function setHomeRecommendationFilter(params = null) {
             homeRecommendationFilterParams = params
                 ? { ...params, genres: Array.isArray(params.genres) ? [...params.genres] : [] }
                 : null;
+        }
+
+        // Пошук просто в блоці рекомендацій на головній (без переходу на
+        // окрему сторінку пошуку) — вводиш назву в мердж-барі і одразу
+        // бачиш відповідні тайтли у тому ж круглому блоці карток.
+        export function setHomeRecommendationSearchQuery(query = '') {
+            homeRecommendationSearchQuery = String(query || '').trim();
         }
 
         function homeRecommendationTitle() {
@@ -2384,9 +2392,11 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
             container.dataset.loading = 'true';
             container.innerHTML = '<div class="loader home-recommendations-loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження рекомендацій...</div>';
             try {
-                const items = homeRecommendationFilterParams
-                    ? await fetchHikkaQuickFilter(1, homeRecommendationFilterParams)
-                    : await hikkaCatalog('anime', 1, { sort: ['score:desc', 'scored_by:desc'], only_translated: true });
+                const items = homeRecommendationSearchQuery
+                    ? await searchHikka(homeRecommendationSearchQuery, 1)
+                    : homeRecommendationFilterParams
+                        ? await fetchHikkaQuickFilter(1, homeRecommendationFilterParams)
+                        : await hikkaCatalog('anime', 1, { sort: ['score:desc', 'scored_by:desc'], only_translated: true });
                 if (requestId !== homeRecommendationRequestId || Router.currentRoute !== 'main') return;
                 if (!items?.length) throw new Error('Порожній список рекомендацій');
                 homeRecommendationItems = [...items];
@@ -2410,9 +2420,11 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
             } catch (error) {
                 if (requestId !== homeRecommendationRequestId || Router.currentRoute !== 'main') return;
                 console.warn('[home recommendations] failed:', error);
-                container.innerHTML = homeRecommendationFilterParams
-                    ? '<div class="home-recommendations-empty">За цим фільтром нічого не знайдено.</div>'
-                    : '<div class="home-recommendations-empty">Рекомендації тимчасово недоступні.</div>';
+                container.innerHTML = homeRecommendationSearchQuery
+                    ? `<div class="home-recommendations-empty">За запитом «${escapeHtml(homeRecommendationSearchQuery)}» нічого не знайдено.</div>`
+                    : homeRecommendationFilterParams
+                        ? '<div class="home-recommendations-empty">За цим фільтром нічого не знайдено.</div>'
+                        : '<div class="home-recommendations-empty">Рекомендації тимчасово недоступні.</div>';
             } finally {
                 if (requestId !== homeRecommendationRequestId) return;
                 homeRecommendationLoading = false;
@@ -2429,9 +2441,11 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
             if (loader) loader.hidden = false;
             try {
                 const nextPage = homeRecommendationPage + 1;
-                const nextItems = homeRecommendationFilterParams
-                    ? await fetchHikkaQuickFilter(nextPage, homeRecommendationFilterParams)
-                    : await hikkaCatalog('anime', nextPage, { sort: ['score:desc', 'scored_by:desc'], only_translated: true });
+                const nextItems = homeRecommendationSearchQuery
+                    ? await searchHikka(homeRecommendationSearchQuery, nextPage)
+                    : homeRecommendationFilterParams
+                        ? await fetchHikkaQuickFilter(nextPage, homeRecommendationFilterParams)
+                        : await hikkaCatalog('anime', nextPage, { sort: ['score:desc', 'scored_by:desc'], only_translated: true });
                 const existing = new Set(homeRecommendationItems.map(item => item.url));
                 const uniqueItems = nextItems.filter(item => item?.url && !existing.has(item.url));
                 const offset = homeRecommendationItems.length;
