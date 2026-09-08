@@ -48,9 +48,15 @@ function genreEntries() {
 
 function buildHomeQuickFilterHtml() {
     return `
-      <button class="hqf-categories-toggle${quickFilterState.open ? ' open' : ''}" id="hqfCategoriesToggle" type="button" aria-label="Обрати категорії" aria-expanded="${quickFilterState.open ? 'true' : 'false'}">
-        <i class="fas fa-sliders" aria-hidden="true"></i> <span class="hqf-label">Обрати категорії</span> <i class="fas fa-chevron-down hqf-chevron" aria-hidden="true"></i>
-      </button>
+      <div class="hqf-toolbar">
+        <label class="hqf-search-box" for="hqfSearchInput">
+          <i class="fas fa-search" aria-hidden="true"></i>
+          <input id="hqfSearchInput" type="search" inputmode="search" autocomplete="off" placeholder="Пошук аніме..." aria-label="Пошук аніме">
+        </label>
+        <button class="hqf-categories-toggle${quickFilterState.open ? ' open' : ''}" id="hqfCategoriesToggle" type="button" aria-label="Обрати категорії" aria-expanded="${quickFilterState.open ? 'true' : 'false'}">
+          <i class="fas fa-sliders" aria-hidden="true"></i> <span class="hqf-label">Обрати категорії</span> <i class="fas fa-chevron-down hqf-chevron" aria-hidden="true"></i>
+        </button>
+      </div>
 
       <div class="hqf-panel${quickFilterState.open ? ' open' : ''}" id="hqfPanel">
         <div class="hqf-panel-inner">
