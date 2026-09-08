@@ -511,3 +511,36 @@
 @media (prefers-reduced-motion: reduce) {
     .home-quick-filter .hqf-panel.open { animation: none; }
 }
+
+
+/* ===== FLOW POSITION FIX — expanded menu sits above posters ===== */
+.home-quick-filter.is-open {
+    padding-bottom: 1rem;
+}
+
+.home-quick-filter .hqf-panel.open {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    width: 100%;
+    max-height: min(72vh, 720px);
+    margin: 0.35rem 0 0;
+    transform: none;
+    box-sizing: border-box;
+    overflow-y: auto;
+    border-radius: 24px;
+    background: color-mix(in srgb, var(--surface) 80%, transparent) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    backdrop-filter: blur(22px) saturate(140%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.22);
+}
+
+@media (max-width: 600px) {
+    .home-quick-filter .hqf-panel.open {
+        top: auto;
+        width: 100%;
+        max-height: min(70vh, 680px);
+        margin-top: .35rem;
+    }
+}
