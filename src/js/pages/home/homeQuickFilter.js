@@ -48,14 +48,16 @@ function genreEntries() {
 
 function buildHomeQuickFilterHtml() {
     return `
-      <div class="hqf-toolbar">
-        <label class="hqf-search-box" for="hqfSearchInput">
-          <i class="fas fa-search" aria-hidden="true"></i>
-          <input id="hqfSearchInput" type="search" inputmode="search" autocomplete="off" placeholder="Пошук аніме..." aria-label="Пошук аніме">
-        </label>
-        <button class="hqf-categories-toggle${quickFilterState.open ? ' open' : ''}" id="hqfCategoriesToggle" type="button" aria-label="Обрати категорії" aria-expanded="${quickFilterState.open ? 'true' : 'false'}">
-          <i class="fas fa-sliders" aria-hidden="true"></i> <span class="hqf-label">Обрати категорії</span> <i class="fas fa-chevron-down hqf-chevron" aria-hidden="true"></i>
-        </button>
+      <div class="hqf-toolbar hqf-toolbar--merged">
+        <div class="hqf-merged-bar" id="hqfMergedBar">
+          <button type="button" class="hqf-search-icon-btn" id="hqfSearchIconBtn" aria-label="Пошук аніме">
+            <i class="fas fa-search" aria-hidden="true"></i>
+          </button>
+          <span class="hqf-merged-divider" aria-hidden="true"></span>
+          <button class="hqf-categories-toggle${quickFilterState.open ? ' open' : ''}" id="hqfCategoriesToggle" type="button" aria-label="Обрати категорії" aria-expanded="${quickFilterState.open ? 'true' : 'false'}">
+            <i class="fas fa-sliders" aria-hidden="true"></i> <span class="hqf-label">Обрати категорії</span> <i class="fas fa-chevron-down hqf-chevron" aria-hidden="true"></i>
+          </button>
+        </div>
       </div>
 
       <div class="hqf-panel${quickFilterState.open ? ' open' : ''}" id="hqfPanel">
@@ -198,17 +200,9 @@ function wireHomeQuickFilterEvents(container) {
         });
     });
 
-    const searchInput = document.getElementById('hqfSearchInput');
-    if (searchInput) {
-        searchInput.addEventListener('keydown', e => {
-            if (e.key !== 'Enter') return;
-            const query = searchInput.value.trim();
-            if (!query) return;
-            searchPageState.query = query;
-            searchPageState.page = 1;
-            Router.goTo('search');
-        });
-    }
+    document.getElementById('hqfSearchIconBtn')?.addEventListener('click', () => {
+        Router.goTo('search');
+    });
 }
 
 export function renderHomeQuickFilterBar() {
