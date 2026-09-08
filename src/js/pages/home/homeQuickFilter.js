@@ -52,7 +52,7 @@ function buildHomeQuickFilterHtml() {
       <div class="hqf-toolbar hqf-toolbar--merged">
         <div class="hqf-merged-bar" id="hqfMergedBar">
           <i class="fas fa-search hqf-search-glass" aria-hidden="true"></i>
-          <input type="search" id="hqfSearchInput" class="hqf-search-input" placeholder="Пошук" value="${hqfSearchQuery}" autocomplete="off" enterkeyhint="search" aria-label="Пошук">
+          <input type="text" inputmode="search" id="hqfSearchInput" class="hqf-search-input" placeholder="Пошук" value="${hqfSearchQuery}" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" aria-label="Пошук">
           <button type="button" class="hqf-search-clear" id="hqfSearchClear" aria-label="Очистити пошук"${hqfSearchQuery ? '' : ' hidden'}>
             <i class="fas fa-xmark" aria-hidden="true"></i>
           </button>

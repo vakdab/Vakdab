@@ -805,6 +805,13 @@
     height: auto;
     min-height: 0;
     padding: 0;
+    border: 0 !important;
+    border-radius: 0;
+    outline: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    -webkit-appearance: none;
+    appearance: none;
     line-height: 1.25;
 }
 .hqf-merged-bar .hqf-categories-toggle {
