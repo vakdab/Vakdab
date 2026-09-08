@@ -720,26 +720,43 @@
 .dark-mode .hqf-merged-bar {
     background: rgba(24,24,24,.72);
 }
-.hqf-merged-bar .hqf-search-icon-btn {
+.hqf-merged-bar .hqf-search-glass {
     display: flex;
     align-items: center;
     justify-content: center;
     flex: 0 0 54px;
     width: 54px;
+    color: var(--text-muted);
+    font-size: 1.05rem;
+    pointer-events: none;
+}
+.hqf-merged-bar .hqf-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font-size: .95rem;
+    font-family: inherit;
+    outline: none;
+}
+.hqf-merged-bar .hqf-search-input::placeholder { color: var(--text-muted); opacity: .75; }
+.hqf-merged-bar .hqf-search-input::-webkit-search-cancel-button { display: none; }
+.hqf-merged-bar .hqf-search-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 36px;
+    width: 36px;
     border: 0;
     background: none;
     color: var(--text-muted);
-    font-size: 1.05rem;
-    font-family: inherit;
+    font-size: .95rem;
     cursor: pointer;
-    transition: color .18s ease, background .18s ease;
+    transition: color .18s ease;
 }
-.hqf-merged-bar .hqf-search-icon-btn:hover,
-.hqf-merged-bar .hqf-search-icon-btn:focus-visible {
-    color: var(--accent);
-    background: rgba(120,120,120,.08);
-}
-.hqf-merged-bar .hqf-search-icon-btn:active { transform: scale(.88); }
+.hqf-merged-bar .hqf-search-clear:hover { color: var(--accent); }
 .hqf-merged-bar .hqf-merged-divider {
     align-self: center;
     flex: 0 0 1px;
@@ -770,7 +787,9 @@
 .hqf-merged-bar .hqf-categories-toggle:active { transform: none !important; }
 .hqf-merged-bar .hqf-categories-toggle.open { color: var(--accent); }
 @media (max-width: 600px) {
-    .hqf-merged-bar .hqf-search-icon-btn { flex: 0 0 48px; width: 48px; font-size: 1rem; }
+    .hqf-merged-bar .hqf-search-glass { flex: 0 0 44px; width: 44px; font-size: 1rem; }
+    .hqf-merged-bar .hqf-search-clear { flex: 0 0 32px; width: 32px; }
+    .hqf-merged-bar .hqf-search-input { font-size: .88rem; }
     .hqf-merged-bar .hqf-categories-toggle { padding: 0 16px 0 12px !important; }
     .hqf-merged-bar .hqf-categories-toggle .hqf-label { font-size: .88rem; }
 }
