@@ -11,10 +11,12 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
             s.id = 'lampa-player-styles';
             s.textContent = `
                 .lampa-player-container {
-                    width: 100%; aspect-ratio: 16/9; background: #000; position: relative;
+                    width: 100%; max-width: 100%; min-width: 0; aspect-ratio: 16/9;
+                    background: #000; position: relative; box-sizing: border-box;
                     border-radius: 14px; overflow: hidden; cursor: pointer; user-select: none;
                     isolation: isolate; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
                 }
+                .lampa-player-container *, .lampa-player-container *::before, .lampa-player-container *::after { box-sizing: border-box; }
                 .lampa-player-container video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
                 .lampa-player-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
 
@@ -30,16 +32,28 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
                 @keyframes lp-spin { to { transform: rotate(360deg); } }
 
                 .lp-opening-skip {
-                    position: absolute; z-index: 26; left: 16px; bottom: 68px; display: inline-flex;
-                    align-items: center; gap: 6px; width: max-content; max-width: calc(100% - 32px); min-height: 38px;
-                    border: 1px solid rgba(255,255,255,.85); border-radius: 999px; padding: 8px 12px;
-                    color: #000; background: #fff; font: 600 12px/1.15 inherit; letter-spacing: 0;
-                    cursor: pointer; white-space: nowrap; touch-action: manipulation; pointer-events: auto;
-                    transition: transform .15s, background .15s, opacity .15s;
+                    position: absolute; z-index: 26; left: 12px; bottom: 62px;
+                    display: inline-flex !important; align-items: center; justify-content: center; gap: 5px;
+                    width: fit-content !important; max-width: min(178px, calc(100% - 24px)); min-width: 0;
+                    min-height: 34px; height: 34px; border: 1px solid rgba(255,255,255,.9);
+                    border-radius: 999px; padding: 6px 11px; color: #000; background: #fff;
+                    font: 600 12px/1.1 inherit; letter-spacing: 0; cursor: pointer; white-space: nowrap;
+                    touch-action: manipulation; pointer-events: none; opacity: 0;
+                    transform: translate3d(0, 8px, 0) scale(.96); transform-origin: left center;
+                    visibility: hidden; transition: opacity .22s ease, transform .22s ease, visibility 0s linear .22s;
                 }
-                .lp-opening-skip:hover { background: rgba(255,255,255,.82); transform: translateY(-1px); }
-                .lp-opening-skip:active { transform: translateY(0); }
-                .lp-opening-skip svg { width: 14px; height: 14px; fill: currentColor; }
+                .lp-opening-skip.is-visible {
+                    pointer-events: auto; opacity: 1; visibility: visible;
+                    transform: translate3d(0, 0, 0) scale(1);
+                    transition-delay: 0s;
+                }
+                .lp-opening-skip:hover { background: #f4f4f4; transform: translate3d(0, -1px, 0) scale(1.01); }
+                .lp-opening-skip:active { transform: translate3d(0, 0, 0) scale(.98); }
+                .lp-opening-skip svg { width: 13px; height: 13px; flex: 0 0 13px; fill: currentColor; }
+                @media (max-width: 600px) {
+                    .lp-opening-skip { left: 10px; bottom: 58px; max-width: 170px; min-height: 32px; height: 32px; padding: 5px 10px; font-size: 11px; }
+                    .lp-opening-skip svg { width: 12px; height: 12px; flex-basis: 12px; }
+                }
 
                 .lp-controls {
                     position: absolute; bottom: 0; left: 0; right: 0; padding: 14px 16px 14px;
@@ -186,7 +200,7 @@ export class LampaPlayer {
                 this._centerBtn = centerPlay.querySelector('#lpCenterBtn');
                 wrap.appendChild(centerPlay);
                 const openingSkip = document.createElement('button');
-                openingSkip.type = 'button'; openingSkip.className = 'lp-opening-skip'; openingSkip.hidden = true;
+                openingSkip.type = 'button'; openingSkip.className = 'lp-opening-skip'; openingSkip.setAttribute('aria-hidden', 'true');
                 openingSkip.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 4v16l13-8L5 4z"/></svg><span>Пропустити opening</span>';
                 wrap.appendChild(openingSkip);
                 this._openingSkip = openingSkip;
