@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260906-hero-fix-v5';
+} from '../../legacy/app-legacy.js?v=20260909-player-v2';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 
