@@ -32,7 +32,7 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
                 @keyframes lp-spin { to { transform: rotate(360deg); } }
 
                 .lp-opening-skip {
-                    position: absolute; z-index: 26; left: 12px; bottom: 62px;
+                    position: absolute; z-index: 40 !important; left: 12px; bottom: 62px;
                     display: inline-flex !important; align-items: center; justify-content: center; gap: 5px;
                     width: fit-content !important; max-width: min(178px, calc(100% - 24px)); min-width: 0;
                     min-height: 34px; height: 34px; border: 1px solid rgba(255,255,255,.9);
