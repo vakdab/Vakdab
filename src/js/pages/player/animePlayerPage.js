@@ -1,9 +1,9 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
-import { GENRE_MAP } from '../../config/constants.js?v=20260909-aniskip-v1';
+import { GENRE_MAP } from '../../config/constants.js?v=20260909-player-v2';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { Storage } from '../../core/compat/storage.js?v=20260909-aniskip-v1';
-import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260909-aniskip-v1';
+import { Storage } from '../../core/compat/storage.js?v=20260909-player-v2';
+import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260909-player-v2';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -15,7 +15,7 @@ import {
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove-thought-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260906-hero-fix-v5';
+} from '../../legacy/app-legacy.js?v=20260909-player-v2';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 
         // ====================================================================
@@ -1279,8 +1279,12 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             // Sanity-check the timecodes: real openings don't start in the first
             // few seconds and don't run for several minutes. This guards against
             // bad AniSkip matches slipping through.
-            const segments = rawSegments.filter(segment => segment.type === 'op'
-                && segment.start >= 20 && (segment.end - segment.start) >= 30 && (segment.end - segment.start) <= 180);
+            const segments = rawSegments
+                .filter(segment => (segment.type === 'op' || segment.type === 'opening')
+                    && segment.start >= 0
+                    && (segment.end - segment.start) >= 12
+                    && (segment.end - segment.start) <= 240)
+                .sort((a, b) => a.start - b.start);
             if (!segments.length || !video.isConnected) return;
             const button = video.closest('.lampa-player-container')?.querySelector('.lp-opening-skip');
             if (!button) return;
@@ -1306,20 +1310,27 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 playerPagePlayer?._showControls?.();
                 showToast('Opening пропущено');
             };
-            button.addEventListener('pointerup', onSkip, { passive: false });
+            // One click handler is enough. pointerup + click caused a duplicate
+            // event on touch devices and could race with the seek operation.
             button.addEventListener('click', onSkip);
             const onTimeUpdate = () => {
                 const now = Number(video.currentTime);
                 if (!Number.isFinite(now)) return;
                 activeSegment = segments.find(segment => now >= segment.start && now < segment.end) || null;
                 button.hidden = !activeSegment;
+                button.setAttribute('aria-hidden', activeSegment ? 'false' : 'true');
             };
+            // AniSkip may resolve after playback has already started; sync now
+            // instead of waiting for a later timeupdate event.
+            onTimeUpdate();
+            video.addEventListener('loadedmetadata', onTimeUpdate);
             video.addEventListener('timeupdate', onTimeUpdate);
             video.addEventListener('seeking', onTimeUpdate);
+            video.addEventListener('ended', () => { button.hidden = true; }, { once: true });
             video.addEventListener('emptied', () => {
+                video.removeEventListener('loadedmetadata', onTimeUpdate);
                 video.removeEventListener('timeupdate', onTimeUpdate);
                 video.removeEventListener('seeking', onTimeUpdate);
-                button.removeEventListener('pointerup', onSkip);
                 button.removeEventListener('click', onSkip);
                 hideButton();
             }, { once: true });
