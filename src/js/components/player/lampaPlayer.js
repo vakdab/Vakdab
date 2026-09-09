@@ -34,10 +34,11 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
                 .lp-opening-skip {
                     position: absolute; z-index: 40 !important; left: 12px; bottom: 62px;
                     display: inline-flex !important; align-items: center; justify-content: center; gap: 5px;
-                    width: fit-content !important; max-width: min(178px, calc(100% - 24px)); min-width: 0;
-                    min-height: 34px; height: 34px; border: 1px solid rgba(255,255,255,.9);
-                    border-radius: 999px; padding: 6px 11px; color: #000; background: #fff;
-                    font: 600 12px/1.1 inherit; letter-spacing: 0; cursor: pointer; white-space: nowrap;
+                    width: fit-content !important; max-width: min(158px, calc(100% - 24px)); min-width: 0;
+                    min-height: 32px; height: 32px; border: 1px solid rgba(255,255,255,.95);
+                    border-radius: 999px; padding: 5px 9px; color: #111; background: rgba(255,255,255,.78);
+                    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+                    font: 700 11px/1.1 inherit; letter-spacing: 0; cursor: pointer; white-space: nowrap;
                     touch-action: manipulation; pointer-events: none; opacity: 0;
                     transform: translate3d(0, 8px, 0) scale(.96); transform-origin: left center;
                     visibility: hidden; transition: opacity .22s ease, transform .22s ease, visibility 0s linear .22s;
@@ -47,11 +48,11 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
                     transform: translate3d(0, 0, 0) scale(1);
                     transition-delay: 0s;
                 }
-                .lp-opening-skip:hover { background: #f4f4f4; transform: translate3d(0, -1px, 0) scale(1.01); }
+                .lp-opening-skip:hover { background: rgba(255,255,255,.9); transform: translate3d(0, -1px, 0) scale(1.01); }
                 .lp-opening-skip:active { transform: translate3d(0, 0, 0) scale(.98); }
                 .lp-opening-skip svg { width: 13px; height: 13px; flex: 0 0 13px; fill: currentColor; }
                 @media (max-width: 600px) {
-                    .lp-opening-skip { left: 10px; bottom: 58px; max-width: 170px; min-height: 32px; height: 32px; padding: 5px 10px; font-size: 11px; }
+                    .lp-opening-skip { left: 10px; bottom: 58px; max-width: 150px; min-height: 30px; height: 30px; padding: 4px 8px; font-size: 10px; }
                     .lp-opening-skip svg { width: 12px; height: 12px; flex-basis: 12px; }
                 }
 
@@ -201,7 +202,7 @@ export class LampaPlayer {
                 wrap.appendChild(centerPlay);
                 const openingSkip = document.createElement('button');
                 openingSkip.type = 'button'; openingSkip.className = 'lp-opening-skip'; openingSkip.setAttribute('aria-hidden', 'true');
-                openingSkip.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 4v16l13-8L5 4z"/></svg><span>Пропустити opening</span>';
+                openingSkip.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 4v16l13-8L5 4z"/></svg><span>Пропустити Опенінг</span>';
                 wrap.appendChild(openingSkip);
                 this._openingSkip = openingSkip;
 
