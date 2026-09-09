@@ -11,14 +11,9 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
             s.id = 'lampa-player-styles';
             s.textContent = `
                 .lampa-player-container {
-                    width: 100%;
-                    aspect-ratio: 16/9;
-                    background: #000;
-                    position: relative;
-                    border-radius: 12px;
-                    overflow: hidden;
-                    cursor: pointer;
-                    user-select: none;
+                    width: 100%; aspect-ratio: 16/9; background: #08090d; position: relative;
+                    border-radius: 16px; overflow: hidden; cursor: pointer; user-select: none;
+                    box-shadow: 0 18px 45px rgba(0,0,0,.22); isolation: isolate;
                 }
                 .lampa-player-container video {
                     width: 100%;
@@ -54,6 +49,15 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
                     animation: lp-spin 0.8s linear infinite;
                 }
                 @keyframes lp-spin { to { transform: rotate(360deg); } }
+                .lp-opening-skip {
+                    position: absolute; z-index: 26; right: 14px; bottom: 64px; display: inline-flex;
+                    align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,.28);
+                    border-radius: 999px; padding: 10px 15px; color: #fff; background: rgba(17,24,31,.86);
+                    box-shadow: 0 8px 24px rgba(0,0,0,.32); backdrop-filter: blur(12px);
+                    font: 700 13px/1.1 inherit; cursor: pointer; transition: transform .2s, background .2s;
+                }
+                .lp-opening-skip:hover { background: rgba(37,99,235,.95); transform: translateY(-2px); }
+                .lp-opening-skip svg { width: 16px; height: 16px; fill: currentColor; }
                 .lp-controls {
                     position: absolute;
                     bottom: 0; left: 0; right: 0;
@@ -121,7 +125,7 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
                 .lp-select:focus { outline: 2px solid rgba(255,255,255,.55); outline-offset: 1px; }
                 .lampa-player-container:fullscreen, .lampa-player-container:-webkit-full-screen { width: 100vw; height: 100vh; max-width: none; max-height: none; aspect-ratio: auto; border-radius: 0; }
                 .lampa-player-container:fullscreen video, .lampa-player-container:-webkit-full-screen video { object-fit: contain; }
-                @media (max-width: 600px) { .lp-select { font-size: 10px; padding-inline: 2px; } .lp-controls { padding: 8px 8px 10px; } }
+                @media (max-width: 600px) { .lp-select { font-size: 10px; padding-inline: 2px; } .lp-controls { padding: 8px 8px 10px; } .lp-opening-skip { right: 9px; bottom: 58px; padding: 9px 12px; font-size: 12px; } }
                 .lp-time {
                     font-size: 12px;
                     color: rgba(255,255,255,0.85);
@@ -231,13 +235,15 @@ export class LampaPlayer {
                 centerPlay.innerHTML = `<div class="lp-center-play-btn" id="lpCenterBtn">${LP_ICONS.play}</div>`;
                 this._centerBtn = centerPlay.querySelector('#lpCenterBtn');
                 wrap.appendChild(centerPlay);
+                const openingSkip = document.createElement('button');
+                openingSkip.type = 'button'; openingSkip.className = 'lp-opening-skip'; openingSkip.hidden = true;
+                openingSkip.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 4v16l13-8L5 4z"/></svg><span>Пропустити opening</span>';
+                wrap.appendChild(openingSkip);
+                this._openingSkip = openingSkip;
 
                 // Controls
                 const controls = document.createElement('div');
                 controls.className = 'lp-controls';
-                const LP_CHEVRON = '<svg class="lp-chevron" viewBox="0 0 24 24" width="10" height="10"><path d="M7 14l5-5 5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-                const LP_CHECK = '<svg class="lp-check" viewBox="0 0 24 24" width="14" height="14"><path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-                const lpSpeedOption = (value, label, active) => `<button type="button" class="${active ? 'is-active' : ''}" data-speed="${value}" role="menuitemradio" aria-checked="${active}"><span>${label}</span>${LP_CHECK}</button>`;
                 controls.innerHTML = `
                     <div class="lp-progress-wrap" id="lpProgress">
                         <div class="lp-progress-fill" id="lpProgressFill" style="width:0%"></div>
@@ -248,26 +254,10 @@ export class LampaPlayer {
                         <button class="lp-btn lp-skip-btn" id="lpSkipForwardBtn" title="Вперед на 10 секунд" aria-label="Вперед на 10 секунд">${LP_ICONS.skipForward}</button>
                         <span class="lp-time" id="lpTime">0:00 / 0:00</span>
                         <div class="lp-spacer"></div>
-                        <div class="lp-settings-wrap">
-                            <div class="lp-menu-wrap">
-                                <button class="lp-control-pill" id="lpSpeedBtn" title="Швидкість відтворення" aria-haspopup="true" aria-expanded="false">
-                                    <span class="lp-pill-label" id="lpSpeedLabel">1x</span>${LP_CHEVRON}
-                                </button>
-                                <div class="lp-popover lp-speed-menu" id="lpSpeedMenu" role="menu" aria-hidden="true">
-                                    <div class="lp-popover-label">Швидкість</div>
-                                    ${lpSpeedOption('0.75', '0.75x', false)}
-                                    ${lpSpeedOption('1', '1x', true)}
-                                    ${lpSpeedOption('1.25', '1.25x', false)}
-                                    ${lpSpeedOption('1.5', '1.5x', false)}
-                                    ${lpSpeedOption('2', '2x', false)}
-                                </div>
-                            </div>
-                        </div>
                         <div class="lp-volume-group">
                             <button class="lp-btn" id="lpVolBtn" title="Вимкнути звук" aria-label="Вимкнути звук">${LP_ICONS.volOn}</button>
                             <input class="lp-volume" id="lpVolume" type="range" min="0" max="1" step="0.05" value="0.8" aria-label="Гучність">
                         </div>
-                        <button class="lp-btn lp-fullscreen-btn" id="lpFullscreenBtn" title="Повний екран" aria-label="Повний екран">${LP_ICONS.fsEnter}</button>
                     </div>
                 `;
                 this._controls = controls;
@@ -371,7 +361,6 @@ export class LampaPlayer {
                 // Volume — mute toggle plus a compact range slider.
                 const volBtn = wrap.querySelector('#lpVolBtn');
                 const volumeSlider = wrap.querySelector('#lpVolume');
-                const fullscreenBtn = wrap.querySelector('#lpFullscreenBtn');
                 v.volume = this.state.volume ?? 0.8;
                 if (volBtn) volBtn.addEventListener('click', e => {
                     e.stopPropagation();
@@ -389,11 +378,6 @@ export class LampaPlayer {
                     this._updateVolBtn();
                 });
                 v.addEventListener('volumechange', () => this._updateVolBtn());
-                fullscreenBtn?.addEventListener('click', event => {
-                    event.stopPropagation();
-                    this.toggleFullscreen();
-                });
-
                 const skipBy = seconds => {
                     if (!Number.isFinite(v.duration)) return;
                     v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + seconds));
@@ -404,15 +388,11 @@ export class LampaPlayer {
                 skipBackBtn?.addEventListener('click', e => { e.stopPropagation(); skipBy(-10); });
                 skipForwardBtn?.addEventListener('click', e => { e.stopPropagation(); skipBy(10); });
 
-                // Playback speed and quality menus — class-based, animated.
-                const speedBtn = wrap.querySelector('#lpSpeedBtn');
-                const speedMenu = wrap.querySelector('#lpSpeedMenu');
-                const speedLabel = wrap.querySelector('#lpSpeedLabel');
+                // Quality menu support remains available for HLS sources.
                 const qualityBtn = wrap.querySelector('#lpQualityBtn');
                 const qualityMenu = wrap.querySelector('#lpQualityMenu');
                 const qualityLabel = wrap.querySelector('#lpQualityLabel');
                 const qualityRail = this._qualityRail;
-
                 const setMenuOpen = (menu, btn, open) => {
                     if (!menu || !btn) return;
                     menu.classList.toggle('is-open', open);
@@ -420,39 +400,14 @@ export class LampaPlayer {
                     btn.setAttribute('aria-expanded', String(open));
                     btn.classList.toggle('is-open', open);
                 };
-                const isMenuOpen = (menu) => menu && menu.classList.contains('is-open');
-                const closePlayerMenus = () => {
-                    setMenuOpen(speedMenu, speedBtn, false);
-                    setMenuOpen(qualityMenu, qualityBtn, false);
-                };
-
-                if (speedBtn && speedMenu) speedBtn.addEventListener('click', e => {
-                    e.stopPropagation();
-                    const willOpen = !isMenuOpen(speedMenu);
-                    setMenuOpen(qualityMenu, qualityBtn, false);
-                    setMenuOpen(speedMenu, speedBtn, willOpen);
-                });
+                const isMenuOpen = menu => menu && menu.classList.contains('is-open');
+                const closePlayerMenus = () => setMenuOpen(qualityMenu, qualityBtn, false);
                 if (qualityBtn && qualityMenu) qualityBtn.addEventListener('click', e => {
                     e.stopPropagation();
                     const willOpen = !isMenuOpen(qualityMenu);
-                    setMenuOpen(speedMenu, speedBtn, false);
                     this._refreshQualityMenu();
                     setMenuOpen(qualityMenu, qualityBtn, willOpen);
                 });
-
-                speedMenu?.querySelectorAll('[data-speed]').forEach(option => option.addEventListener('click', e => {
-                    e.stopPropagation();
-                    const rate = Number(option.dataset.speed) || 1;
-                    v.playbackRate = rate;
-                    this.state.speed = rate;
-                    if (speedLabel) speedLabel.textContent = rate + 'x';
-                    speedMenu.querySelectorAll('[data-speed]').forEach(o => {
-                        const a = Number(o.dataset.speed) === rate;
-                        o.classList.toggle('is-active', a);
-                        o.setAttribute('aria-checked', String(a));
-                    });
-                    closePlayerMenus();
-                }));
                 const applyQuality = option => {
                     if (!option) return;
                     const idx = Number(option.dataset.qualityIndex);

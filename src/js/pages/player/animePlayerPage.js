@@ -1275,21 +1275,34 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             const malId = playerPageAnime?.externalIds?.mal_id
                 || playerPageAnime?.mal_id
                 || playerJikanData?.mal_id;
-            const segments = await getAniSkipSegments(malId, episode);
+            const segments = (await getAniSkipSegments(malId, episode)).filter(segment => segment.type === 'op');
             if (!segments.length || !video.isConnected) return;
-            const skipped = new Set();
+            const button = video.closest('.lampa-player-container')?.querySelector('.lp-opening-skip');
+            if (!button) return;
+            let activeSegment = null;
+            const hideButton = () => { button.hidden = true; activeSegment = null; };
+            const onSkip = event => {
+                event.stopPropagation();
+                if (!activeSegment) return;
+                video.currentTime = activeSegment.end;
+                hideButton();
+                showToast('Opening пропущено');
+            };
+            button.addEventListener('click', onSkip);
             const onTimeUpdate = () => {
                 const now = Number(video.currentTime);
                 if (!Number.isFinite(now)) return;
-                segments.forEach((segment, index) => {
-                    if (skipped.has(index) || now < segment.start || now >= segment.end) return;
-                    skipped.add(index);
-                    video.currentTime = segment.end;
-                    showToast(segment.type === 'ed' ? 'Пропущено ending' : 'Пропущено opening');
-                });
+                activeSegment = segments.find(segment => now >= segment.start && now < segment.end) || null;
+                button.hidden = !activeSegment;
             };
             video.addEventListener('timeupdate', onTimeUpdate);
-            video.addEventListener('emptied', () => video.removeEventListener('timeupdate', onTimeUpdate), { once: true });
+            video.addEventListener('seeking', onTimeUpdate);
+            video.addEventListener('emptied', () => {
+                video.removeEventListener('timeupdate', onTimeUpdate);
+                video.removeEventListener('seeking', onTimeUpdate);
+                button.removeEventListener('click', onSkip);
+                hideButton();
+            }, { once: true });
         }
 
         async function playEpisode(file, epNum) {
