@@ -1264,7 +1264,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                         const type = String(item.skip_type || item.type || interval.skip_type || '').toLowerCase();
                         return { start, end, type };
                     }).filter(item => Number.isFinite(item.start) && Number.isFinite(item.end)
-                        && item.end > item.start && (item.type === 'op' || item.type === 'ed'));
+                        && item.end > item.start && (item.type === 'op' || item.type === 'opening' || item.type === 'ed' || item.type === 'ending'));
                     // Do not persist empty responses: AniSkip can temporarily fail or
                     // return an incomplete response, and a failed lookup must be retried.
                     if (segments.length) {
@@ -1350,7 +1350,9 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             const onTimeUpdate = () => {
                 const now = Number(media.currentTime);
                 if (!Number.isFinite(now)) return;
-                activeSegment = segments.find(segment => now >= Math.max(0, segment.start - 0.5) && now < segment.end) || null;
+                // Show the action just before the first opening frame so a slow
+                // mobile timeupdate/API response cannot make the button appear late.
+                activeSegment = segments.find(segment => now >= Math.max(0, segment.start - 2) && now < segment.end) || null;
                 setButtonVisible(Boolean(activeSegment));
             };
             // AniSkip may resolve after playback has already started; sync now
