@@ -1280,7 +1280,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             // few seconds and don't run for several minutes. This guards against
             // bad AniSkip matches slipping through.
             const segments = rawSegments.filter(segment => segment.type === 'op'
-                && segment.start >= 3 && (segment.end - segment.start) <= 210);
+                && segment.start >= 20 && (segment.end - segment.start) >= 30 && (segment.end - segment.start) <= 180);
             if (!segments.length || !video.isConnected) return;
             const button = video.closest('.lampa-player-container')?.querySelector('.lp-opening-skip');
             if (!button) return;
