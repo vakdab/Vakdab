@@ -1,9 +1,9 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
-import { GENRE_MAP } from '../../config/constants.js?v=20260909-player-v6';
+import { GENRE_MAP } from '../../config/constants.js?v=20260909-player-v7';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { Storage } from '../../core/compat/storage.js?v=20260909-player-v6';
-import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260909-player-v6';
+import { Storage } from '../../core/compat/storage.js?v=20260909-player-v7';
+import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260909-player-v7';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -15,7 +15,7 @@ import {
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove-thought-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260909-player-v6';
+} from '../../legacy/app-legacy.js?v=20260909-player-v7';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 
         // ====================================================================
@@ -1238,9 +1238,17 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             if (!Number.isInteger(id) || id <= 0 || !Number.isInteger(ep) || ep <= 0) return [];
             const cacheKey = `${id}:${ep}`;
             if (aniSkipCache.has(cacheKey)) return aniSkipCache.get(cacheKey);
+            try {
+                const stored = JSON.parse(localStorage.getItem(`vakdab:aniskip:${cacheKey}`) || 'null');
+                if (Array.isArray(stored) && stored.length) {
+                    const cachedRequest = Promise.resolve(stored);
+                    aniSkipCache.set(cacheKey, cachedRequest);
+                    return cachedRequest;
+                }
+            } catch (_) { /* storage can be unavailable in private web-app mode */ }
             const request = (async () => {
                 const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 5000);
+                const timer = setTimeout(() => controller.abort(), 4500);
                 try {
                     const response = await fetch(`https://api.aniskip.com/v1/skip-times/${id}/${ep}?types=op&types=ed`, {
                         signal: controller.signal,
@@ -1249,7 +1257,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                     if (!response.ok) return [];
                     const payload = await response.json();
                     if (payload?.found !== true || !Array.isArray(payload.results)) return [];
-                    return payload.results.map(item => {
+                    const segments = payload.results.map(item => {
                         const interval = item.interval || item;
                         const start = Number(interval.start_time);
                         const end = Number(interval.end_time);
@@ -1257,6 +1265,8 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                         return { start, end, type };
                     }).filter(item => Number.isFinite(item.start) && Number.isFinite(item.end)
                         && item.end > item.start && (item.type === 'op' || item.type === 'ed'));
+                    try { localStorage.setItem(`vakdab:aniskip:${cacheKey}`, JSON.stringify(segments)); } catch (_) { /* ignore */ }
+                    return segments;
                 } catch (error) {
                     if (error?.name !== 'AbortError') console.warn('[AniSkip] lookup failed:', error);
                     return [];
@@ -1362,6 +1372,12 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             if (!playerPageIsOpen) return;
             const playbackRequest = ++playerPagePlaybackRequest;
             playerPageCurrentEpisodeNum = epNum || '1';
+            // Start AniSkip before any source resolution, layout work, or video
+            // startup. This removes the visible 0:03 -> 0:06 race on first play.
+            const openingSegmentsPromise = getAniSkipSegments(
+                playerPageAnime?.externalIds?.mal_id || playerPageAnime?.mal_id,
+                epNum
+            );
             setAccordionSummary('playerEpisodeSummary', `Серія ${playerPageCurrentEpisodeNum}`);
             setAccordionSummary('playerCompactEpisodeSummary', `Серія ${playerPageCurrentEpisodeNum}`);
             renderAllEpisodeViews(getCurrentEpisodes(), null, null);
@@ -1395,10 +1411,6 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             if (playerPagePlayer) { playerPagePlayer.destroy();
                 playerPagePlayer = null; }
             if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
-            const openingSegmentsPromise = getAniSkipSegments(
-                playerPageAnime?.externalIds?.mal_id || playerPageAnime?.mal_id,
-                epNum
-            );
             playerPagePlayer = new LampaPlayer(videoDiv, { poster: playerPageAnime?.images?.jpg?.large_image_url });
             playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || '', `Серія ${epNum}`);
             playerPageHistoryUpdated = false;
