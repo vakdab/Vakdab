@@ -1,6 +1,6 @@
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, signInAnonymously, sendPasswordResetEmail, deleteUser, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot } from '../config/firebase.js';
 import { auth, db, initialized as firebaseInitialized } from '../services/firebase/client.js';
-import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_PROXY_URL, MIKAI_BASE, GENRE_MAP } from '../config/constants.js?v=20260909-player-v5';
+import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_PROXY_URL, MIKAI_BASE, GENRE_MAP } from '../config/constants.js?v=20260909-player-v6';
 import { safeQuery, safeQueryAll } from '../utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from '../utils/image.js';
 import { loadFeature } from '../core/feature-loader.js?v=20260905-runtime-fix-v2';
@@ -19,10 +19,10 @@ export const PROFILE_STICKER_SLOTS = 8;
         // ====================================================================
         //  СИСТЕМА АВТОРИЗАЦІЇ
         // ====================================================================
-import { Auth } from '../core/compat/auth.js?v=20260909-player-v5';
-import { Storage } from '../core/compat/storage.js?v=20260909-player-v5';
+import { Auth } from '../core/compat/auth.js?v=20260909-player-v6';
+import { Storage } from '../core/compat/storage.js?v=20260909-player-v6';
 import { Router } from '../core/compat/router.js?v=20260901-home-recs-v3';
-import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260909-player-v5';
+import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260909-player-v6';
 import { initBottomNav } from '../components/navigation/bottomNav.js';
 import { renderSchedulePage } from '../pages/schedule/schedule.js?v=20260904-schedule-fix-v2';
 import { buildHeroBanner } from '../components/home/heroBanner.js?v=20260906-hero-fix-v6';
@@ -34,7 +34,7 @@ import {
     setPlayerPageAnimeuaSeasons, setPlayerPageAnime, setPlayerPageCurrentSeason, setPlayerPageCurrentDub, setPlayerPageCurrentSource,
     openPlayerPage, closePlayerPage, buildSeasonRow, updateFilterChip, updateSourceChip, buildEpisodeViews,
     buildBottomSheetData, openBottomSheet, closeBottomSheet, closeMenuPopover, toggleLike, toggleDislike, showViewMode
-} from '../pages/player/animePlayerPage.js?v=20260909-player-v5';
+} from '../pages/player/animePlayerPage.js?v=20260909-player-v6';
 
 import { getProfile, renderSettingsPage } from '../pages/settings/settingsLegacy.js?v=20260903-settings-v2';
 import {
