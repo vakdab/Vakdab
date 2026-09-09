@@ -1270,12 +1270,17 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
 
         async function attachAniSkip(video, episode) {
             if (!video) return;
-            // Hikka/VAKDAB records may carry the ID in either location. The
-            // MAL ID is authoritative; title matching is deliberately avoided.
-            const malId = playerPageAnime?.externalIds?.mal_id
-                || playerPageAnime?.mal_id
-                || playerJikanData?.mal_id;
-            const segments = (await getAniSkipSegments(malId, episode)).filter(segment => segment.type === 'op');
+            // Only trust the MAL ID that came directly with the catalog record.
+            // The Jikan title-search fallback can resolve to the wrong anime and
+            // hand back timecodes for a completely different show, so it is
+            // deliberately excluded here.
+            const malId = playerPageAnime?.externalIds?.mal_id || playerPageAnime?.mal_id;
+            const rawSegments = await getAniSkipSegments(malId, episode);
+            // Sanity-check the timecodes: real openings don't start in the first
+            // few seconds and don't run for several minutes. This guards against
+            // bad AniSkip matches slipping through.
+            const segments = rawSegments.filter(segment => segment.type === 'op'
+                && segment.start >= 3 && (segment.end - segment.start) <= 210);
             if (!segments.length || !video.isConnected) return;
             const button = video.closest('.lampa-player-container')?.querySelector('.lp-opening-skip');
             if (!button) return;
