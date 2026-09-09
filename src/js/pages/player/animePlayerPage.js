@@ -3,6 +3,7 @@ import { auth, db } from '../../services/firebase/client.js';
 import { GENRE_MAP } from '../../config/constants.js?v=20260909-aniskip-v1';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
 import { Storage } from '../../core/compat/storage.js?v=20260909-aniskip-v1';
+import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260909-aniskip-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -16,7 +17,6 @@ import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
 } from '../../legacy/app-legacy.js?v=20260906-hero-fix-v5';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
-        const LampaPlayer = window.VakdabLampaPlayer;
 
         // ====================================================================
         //  ПЛЕЄР

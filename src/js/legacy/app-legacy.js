@@ -22,6 +22,7 @@ export const PROFILE_STICKER_SLOTS = 8;
 import { Auth } from '../core/compat/auth.js?v=20260909-aniskip-v1';
 import { Storage } from '../core/compat/storage.js?v=20260909-aniskip-v1';
 import { Router } from '../core/compat/router.js?v=20260901-home-recs-v3';
+import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260909-aniskip-v1';
 import { initBottomNav } from '../components/navigation/bottomNav.js';
 import { renderSchedulePage } from '../pages/schedule/schedule.js?v=20260904-schedule-fix-v2';
 import { buildHeroBanner } from '../components/home/heroBanner.js?v=20260906-hero-fix-v6';
