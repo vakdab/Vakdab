@@ -1,6 +1,6 @@
 import { loadFeature } from '../../core/feature-loader.js';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260906-hero-fix-v5';
+import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260909-player-v2';
 
 export function initBottomNav() {
 
