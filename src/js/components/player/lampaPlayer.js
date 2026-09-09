@@ -11,160 +11,109 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
             s.id = 'lampa-player-styles';
             s.textContent = `
                 .lampa-player-container {
-                    width: 100%; aspect-ratio: 16/9; background: #08090d; position: relative;
-                    border-radius: 16px; overflow: hidden; cursor: pointer; user-select: none;
-                    box-shadow: 0 18px 45px rgba(0,0,0,.22); isolation: isolate;
+                    width: 100%; aspect-ratio: 16/9; background: #000; position: relative;
+                    border-radius: 14px; overflow: hidden; cursor: pointer; user-select: none;
+                    isolation: isolate; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
                 }
-                .lampa-player-container video {
-                    width: 100%;
-                    height: 100%;
-                    object-fit: contain;
-                    display: block;
-                }
-                .lampa-player-container iframe {
-                    width: 100%;
-                    height: 100%;
-                    border: none;
-                    position: absolute;
-                    top: 0; left: 0;
-                }
+                .lampa-player-container video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
+                .lampa-player-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
+
                 .lp-spinner {
-                    position: absolute;
-                    inset: 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: rgba(0,0,0,0.45);
-                    z-index: 10;
-                    pointer-events: none;
-                    transition: opacity 0.3s;
+                    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+                    background: rgba(0,0,0,.5); z-index: 10; pointer-events: none; transition: opacity .25s;
                 }
-                .lp-spinner.hidden { opacity: 0; pointer-events: none; }
+                .lp-spinner.hidden { opacity: 0; }
                 .lp-spinner-ring {
-                    width: 48px;
-                    height: 48px;
-                    border: 4px solid rgba(255,255,255,0.2);
-                    border-top-color: #fff;
-                    border-radius: 50%;
-                    animation: lp-spin 0.8s linear infinite;
+                    width: 40px; height: 40px; border: 3px solid rgba(255,255,255,.22); border-top-color: #fff;
+                    border-radius: 50%; animation: lp-spin .8s linear infinite;
                 }
                 @keyframes lp-spin { to { transform: rotate(360deg); } }
+
                 .lp-opening-skip {
-                    position: absolute; z-index: 26; right: 14px; bottom: 64px; display: inline-flex;
-                    align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,.28);
-                    border-radius: 999px; padding: 10px 15px; color: #fff; background: rgba(17,24,31,.86);
-                    box-shadow: 0 8px 24px rgba(0,0,0,.32); backdrop-filter: blur(12px);
-                    font: 700 13px/1.1 inherit; cursor: pointer; transition: transform .2s, background .2s;
+                    position: absolute; z-index: 26; right: 16px; bottom: 68px; display: inline-flex;
+                    align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,.85);
+                    border-radius: 999px; padding: 10px 16px; color: #000; background: #fff;
+                    font: 600 13px/1 inherit; letter-spacing: .01em; cursor: pointer;
+                    transition: transform .15s, background .15s, opacity .15s;
                 }
-                .lp-opening-skip:hover { background: rgba(37,99,235,.95); transform: translateY(-2px); }
-                .lp-opening-skip svg { width: 16px; height: 16px; fill: currentColor; }
+                .lp-opening-skip:hover { background: rgba(255,255,255,.82); transform: translateY(-1px); }
+                .lp-opening-skip:active { transform: translateY(0); }
+                .lp-opening-skip svg { width: 14px; height: 14px; fill: currentColor; }
+
                 .lp-controls {
-                    position: absolute;
-                    bottom: 0; left: 0; right: 0;
-                    padding: 10px 14px 12px;
-                    background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
-                    z-index: 20;
-                    transition: opacity 0.3s;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 6px;
+                    position: absolute; bottom: 0; left: 0; right: 0; padding: 14px 16px 14px;
+                    background: linear-gradient(to top, rgba(0,0,0,.82) 0%, rgba(0,0,0,.45) 55%, transparent 100%);
+                    z-index: 20; transition: opacity .25s; display: flex; flex-direction: column; gap: 10px;
                 }
                 .lp-controls.hidden { opacity: 0; pointer-events: none; }
-                .lp-progress-wrap {
-                    width: 100%;
-                    height: 4px;
-                    background: rgba(255,255,255,0.25);
-                    border-radius: 4px;
-                    cursor: pointer;
-                    position: relative;
-                }
-                .lp-progress-wrap:hover { height: 6px; }
-                .lp-progress-fill {
-                    height: 100%;
-                    background: #fff;
-                    border-radius: 4px;
-                    pointer-events: none;
-                    transition: width 0.1s linear;
-                    position: relative;
-                }
+
+                .lp-progress-wrap { width: 100%; height: 3px; background: rgba(255,255,255,.3); border-radius: 3px; cursor: pointer; position: relative; }
+                .lp-progress-wrap:hover { height: 5px; }
+                .lp-progress-fill { height: 100%; background: #fff; border-radius: 3px; pointer-events: none; transition: width .1s linear; position: relative; }
                 .lp-progress-fill::after {
-                    content: '';
-                    position: absolute;
-                    right: -5px;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    width: 12px;
-                    height: 12px;
-                    background: #fff;
-                    border-radius: 50%;
-                    opacity: 0;
-                    transition: opacity 0.2s;
+                    content: ''; position: absolute; right: -5px; top: 50%; transform: translateY(-50%);
+                    width: 11px; height: 11px; background: #fff; border-radius: 50%; opacity: 0; transition: opacity .2s;
+                    box-shadow: 0 0 0 3px rgba(0,0,0,.35);
                 }
                 .lp-progress-wrap:hover .lp-progress-fill::after { opacity: 1; }
-                .lp-bottom-row {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                }
+
+                .lp-bottom-row { display: flex; align-items: center; gap: 14px; }
                 .lp-btn {
-                    background: none;
-                    border: none;
-                    color: #fff;
-                    cursor: pointer;
-                    padding: 4px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    opacity: 0.9;
-                    transition: opacity 0.15s, transform 0.1s;
-                    flex-shrink: 0;
+                    background: none; border: none; color: #fff; cursor: pointer; padding: 4px;
+                    display: flex; align-items: center; justify-content: center; opacity: .92;
+                    transition: opacity .15s, transform .1s; flex-shrink: 0;
                 }
-                .lp-btn:hover { opacity: 1; transform: scale(1.1); }
-                .lp-btn svg { width: 20px; height: 20px; fill: #fff; }
-                .lp-select { background: rgba(20,20,26,.78); color: #fff; border: 1px solid rgba(255,255,255,.22); border-radius: 6px; padding: 4px 5px; font-size: 11px; min-height: 28px; }
-                .lp-select:focus { outline: 2px solid rgba(255,255,255,.55); outline-offset: 1px; }
+                .lp-btn:hover { opacity: 1; transform: scale(1.08); }
+                .lp-btn svg { width: 19px; height: 19px; fill: #fff; }
+                .lp-main-btn svg { width: 22px; height: 22px; }
+                .lp-select { background: rgba(0,0,0,.6); color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 6px; padding: 4px 5px; font-size: 11px; min-height: 28px; }
+                .lp-select:focus { outline: 1px solid rgba(255,255,255,.7); outline-offset: 1px; }
+
                 .lampa-player-container:fullscreen, .lampa-player-container:-webkit-full-screen { width: 100vw; height: 100vh; max-width: none; max-height: none; aspect-ratio: auto; border-radius: 0; }
                 .lampa-player-container:fullscreen video, .lampa-player-container:-webkit-full-screen video { object-fit: contain; }
-                @media (max-width: 600px) { .lp-select { font-size: 10px; padding-inline: 2px; } .lp-controls { padding: 8px 8px 10px; } .lp-opening-skip { right: 9px; bottom: 58px; padding: 9px 12px; font-size: 12px; } }
-                .lp-time {
-                    font-size: 12px;
-                    color: rgba(255,255,255,0.85);
-                    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
-                    white-space: nowrap;
-                    flex-shrink: 0;
-                }
+
+                .lp-time { font-size: 12px; color: rgba(255,255,255,.9); font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0; }
                 .lp-spacer { flex: 1; }
+
                 .lp-center-play {
-                    position: absolute;
-                    inset: 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 15;
-                    pointer-events: none;
+                    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+                    z-index: 15; pointer-events: none;
                 }
                 .lp-center-play-btn {
-                    width: 64px;
-                    height: 64px;
-                    background: rgba(0,0,0,0.55);
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    opacity: 0;
-                    transform: scale(0.7);
-                    transition: opacity 0.25s, transform 0.25s;
-                    backdrop-filter: blur(4px);
+                    width: 58px; height: 58px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.3);
+                    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                    opacity: 0; transform: scale(.7); transition: opacity .22s, transform .22s;
                 }
-                .lp-center-play-btn.show {
-                    opacity: 1;
-                    transform: scale(1);
+                .lp-center-play-btn.show { opacity: 1; transform: scale(1); }
+                .lp-center-play-btn svg { width: 24px; height: 24px; fill: #fff; }
+
+                .lp-error {
+                    position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column;
+                    align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center;
+                    color: #fff; background: rgba(0,0,0,.92); font-size: 13px;
                 }
-                .lp-center-play-btn svg { width: 28px; height: 28px; fill: #fff; }
-                .lp-error { position:absolute; inset:0; z-index:20; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:24px; text-align:center; color:#fff; background:rgba(10,10,14,.88); font-size:13px; }
-                .lp-error strong { font-size:16px; }
-                .lp-error span { max-width:420px; opacity:.78; line-height:1.45; }
-            `;
+                .lp-error strong { font-size: 16px; }
+                .lp-error span { max-width: 420px; opacity: .72; line-height: 1.45; }
+
+                .lp-quality-rail {
+                    position: absolute; z-index: 22; right: 16px; top: 16px; display: flex; flex-direction: column;
+                    gap: 4px; background: rgba(0,0,0,.7); border: 1px solid rgba(255,255,255,.2); border-radius: 10px; padding: 6px;
+                }
+                .lp-quality-rail[hidden] { display: none; }
+                .lp-quality-rail button {
+                    background: none; border: none; color: #fff; opacity: .75; font-size: 12px; padding: 6px 10px;
+                    border-radius: 6px; cursor: pointer; text-align: left;
+                }
+                .lp-quality-rail button.is-active, .lp-quality-rail button:hover { opacity: 1; background: rgba(255,255,255,.12); }
+
+                @media (max-width: 600px) {
+                    .lp-select { font-size: 10px; padding-inline: 2px; }
+                    .lp-controls { padding: 10px 10px 12px; gap: 8px; }
+                    .lp-bottom-row { gap: 10px; }
+                    .lp-opening-skip { right: 10px; bottom: 60px; padding: 9px 13px; font-size: 12px; }
+                }
+
+                        `;
             document.head.appendChild(s);
         })();
 
