@@ -30,10 +30,11 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
                 @keyframes lp-spin { to { transform: rotate(360deg); } }
 
                 .lp-opening-skip {
-                    position: absolute; z-index: 26; right: 16px; bottom: 68px; display: inline-flex;
-                    align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,.85);
-                    border-radius: 999px; padding: 10px 16px; color: #000; background: #fff;
-                    font: 600 13px/1 inherit; letter-spacing: .01em; cursor: pointer;
+                    position: absolute; z-index: 26; left: 16px; bottom: 68px; display: inline-flex;
+                    align-items: center; gap: 8px; max-width: calc(100% - 32px); min-height: 44px;
+                    border: 1px solid rgba(255,255,255,.85); border-radius: 999px; padding: 10px 16px;
+                    color: #000; background: #fff; font: 600 14px/1.15 inherit; letter-spacing: .01em;
+                    cursor: pointer; white-space: nowrap; touch-action: manipulation;
                     transition: transform .15s, background .15s, opacity .15s;
                 }
                 .lp-opening-skip:hover { background: rgba(255,255,255,.82); transform: translateY(-1px); }
@@ -110,7 +111,7 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
                     .lp-select { font-size: 10px; padding-inline: 2px; }
                     .lp-controls { padding: 10px 10px 12px; gap: 8px; }
                     .lp-bottom-row { gap: 10px; }
-                    .lp-opening-skip { right: 10px; bottom: 60px; padding: 9px 13px; font-size: 12px; }
+                    .lp-opening-skip { left: 10px; bottom: 60px; max-width: calc(100% - 20px); min-height: 42px; padding: 9px 13px; font-size: 13px; }
                 }
 
                         `;
@@ -273,13 +274,13 @@ export class LampaPlayer {
 
                 // Click on wrap — toggle play, show controls
                 wrap.addEventListener('click', e => {
-                    if (e.target.closest('.lp-controls, .lp-quality-rail, .video-overlay-topbar, .player-preview-play')) return;
+                    if (e.target.closest('.lp-controls, .lp-quality-rail, .lp-opening-skip, .video-overlay-topbar, .player-preview-play')) return;
                     this._flashCenter();
                     this.togglePlay();
                     this._showControls();
                 });
                 wrap.addEventListener('dblclick', e => {
-                    if (e.target.closest('.lp-controls, .lp-quality-rail, .video-overlay-topbar, .player-preview-play')) return;
+                    if (e.target.closest('.lp-controls, .lp-quality-rail, .lp-opening-skip, .video-overlay-topbar, .player-preview-play')) return;
                     this.toggleFullscreen();
                 });
                 wrap.addEventListener('mousemove', () => this._showControls());

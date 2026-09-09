@@ -1287,10 +1287,19 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             let activeSegment = null;
             const hideButton = () => { button.hidden = true; activeSegment = null; };
             const onSkip = event => {
+                event.preventDefault();
                 event.stopPropagation();
                 if (!activeSegment) return;
-                video.currentTime = activeSegment.end;
+                const targetTime = activeSegment.end;
+                try {
+                    video.currentTime = targetTime;
+                    video.dispatchEvent(new Event('seeking'));
+                } catch (error) {
+                    console.warn('[AniSkip] seek failed:', error);
+                    return;
+                }
                 hideButton();
+                playerPagePlayer?._showControls?.();
                 showToast('Opening пропущено');
             };
             button.addEventListener('click', onSkip);
