@@ -1,9 +1,9 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
-import { GENRE_MAP } from '../../config/constants.js?v=20260909-player-v7';
+import { GENRE_MAP } from '../../config/constants.js?v=20260909-player-v8';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { Storage } from '../../core/compat/storage.js?v=20260909-player-v7';
-import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260909-player-v7';
+import { Storage } from '../../core/compat/storage.js?v=20260909-player-v8';
+import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260909-player-v8';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -15,7 +15,7 @@ import {
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove-thought-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260909-player-v7';
+} from '../../legacy/app-legacy.js?v=20260909-player-v8';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 
         // ====================================================================
@@ -1288,18 +1288,25 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             // Start AniSkip lookup before playback when possible, so the button
             // is ready by the time the opening reaches the screen.
             const rawSegments = await (segmentsPromise || getAniSkipSegments(malId, episode));
-            // Sanity-check the timecodes: real openings don't start in the first
-            // few seconds and don't run for several minutes. This guards against
-            // bad AniSkip matches slipping through.
-            const segments = rawSegments
+            // The player can rebuild its video node while the AniSkip request is
+            // pending. Always bind to the current node/container after the request.
+            const currentVideo = playerPagePlayer?.videoRef?.isConnected
+                ? playerPagePlayer.videoRef
+                : video;
+            const playerWrap = currentVideo?.closest('.lampa-player-container')
+                || playerPagePlayer?.containerRef;
+            // Sanity-check the timecodes, but do not reject a valid result just
+            // because the original video node was replaced during loading.
+            const segments = (Array.isArray(rawSegments) ? rawSegments : [])
                 .filter(segment => (segment.type === 'op' || segment.type === 'opening')
                     && segment.start >= 0
                     && (segment.end - segment.start) >= 12
                     && (segment.end - segment.start) <= 240)
                 .sort((a, b) => a.start - b.start);
-            if (!segments.length || !video.isConnected) return;
-            const button = video.closest('.lampa-player-container')?.querySelector('.lp-opening-skip');
-            if (!button) return;
+            if (!segments.length || !playerWrap) return;
+            const button = playerWrap.querySelector('.lp-opening-skip');
+            const media = currentVideo || playerPagePlayer?.videoRef;
+            if (!button || !media) return;
             let activeSegment = null;
             let lastSkipAt = 0;
             let openingWatchTimer = null;
@@ -1319,9 +1326,9 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 try {
                     // fastSeek is smoother where supported, while currentTime is
                     // the reliable fallback for HLS and embedded mobile players.
-                    if (typeof video.fastSeek === 'function') video.fastSeek(targetTime);
-                    video.currentTime = targetTime;
-                    video.dispatchEvent(new Event('seeking'));
+                    if (typeof media.fastSeek === 'function') media.fastSeek(targetTime);
+                    media.currentTime = targetTime;
+                    media.dispatchEvent(new Event('seeking'));
                 } catch (error) {
                     console.warn('[AniSkip] seek failed:', error);
                     return;
@@ -1334,7 +1341,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             // event on touch devices and could race with the seek operation.
             button.addEventListener('click', onSkip);
             const onTimeUpdate = () => {
-                const now = Number(video.currentTime);
+                const now = Number(media.currentTime);
                 if (!Number.isFinite(now)) return;
                 activeSegment = segments.find(segment => now >= Math.max(0, segment.start - 0.5) && now < segment.end) || null;
                 setButtonVisible(Boolean(activeSegment));
@@ -1342,24 +1349,24 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             // AniSkip may resolve after playback has already started; sync now
             // instead of waiting for a later timeupdate event.
             onTimeUpdate();
-            video.addEventListener('loadedmetadata', onTimeUpdate);
-            video.addEventListener('timeupdate', onTimeUpdate);
-            video.addEventListener('seeking', onTimeUpdate);
-            video.addEventListener('ended', () => hideButton(), { once: true });
+            media.addEventListener('loadedmetadata', onTimeUpdate);
+            media.addEventListener('timeupdate', onTimeUpdate);
+            media.addEventListener('seeking', onTimeUpdate);
+            media.addEventListener('ended', () => hideButton(), { once: true });
             // Some embedded/mobile players throttle timeupdate. Keep the button
             // strictly tied to the actual currentTime in that case as well.
             openingWatchTimer = window.setInterval(() => {
-                if (!video.isConnected) {
+                if (!media.isConnected) {
                     window.clearInterval(openingWatchTimer);
                     openingWatchTimer = null;
                     return;
                 }
                 onTimeUpdate();
             }, 250);
-            video.addEventListener('emptied', () => {
-                video.removeEventListener('loadedmetadata', onTimeUpdate);
-                video.removeEventListener('timeupdate', onTimeUpdate);
-                video.removeEventListener('seeking', onTimeUpdate);
+            media.addEventListener('emptied', () => {
+                media.removeEventListener('loadedmetadata', onTimeUpdate);
+                media.removeEventListener('timeupdate', onTimeUpdate);
+                media.removeEventListener('seeking', onTimeUpdate);
                 button.removeEventListener('click', onSkip);
                 if (openingWatchTimer) window.clearInterval(openingWatchTimer);
                 openingWatchTimer = null;
