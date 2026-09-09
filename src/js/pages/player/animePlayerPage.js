@@ -1285,15 +1285,19 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             const button = video.closest('.lampa-player-container')?.querySelector('.lp-opening-skip');
             if (!button) return;
             let activeSegment = null;
+            let lastSkipAt = 0;
             const hideButton = () => { button.hidden = true; activeSegment = null; };
             const onSkip = event => {
                 event.preventDefault();
                 event.stopPropagation();
+                const now = Date.now();
+                if (now - lastSkipAt < 500) return;
+                lastSkipAt = now;
                 if (!activeSegment) return;
                 const targetTime = activeSegment.end;
                 try {
-                    video.currentTime = targetTime;
-                    video.dispatchEvent(new Event('seeking'));
+                    if (typeof video.fastSeek === 'function') video.fastSeek(targetTime);
+                    else video.currentTime = targetTime;
                 } catch (error) {
                     console.warn('[AniSkip] seek failed:', error);
                     return;
@@ -1302,6 +1306,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 playerPagePlayer?._showControls?.();
                 showToast('Opening пропущено');
             };
+            button.addEventListener('pointerup', onSkip, { passive: false });
             button.addEventListener('click', onSkip);
             const onTimeUpdate = () => {
                 const now = Number(video.currentTime);
@@ -1314,6 +1319,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             video.addEventListener('emptied', () => {
                 video.removeEventListener('timeupdate', onTimeUpdate);
                 video.removeEventListener('seeking', onTimeUpdate);
+                button.removeEventListener('pointerup', onSkip);
                 button.removeEventListener('click', onSkip);
                 hideButton();
             }, { once: true });

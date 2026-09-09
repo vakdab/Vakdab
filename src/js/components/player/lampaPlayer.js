@@ -31,10 +31,10 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
 
                 .lp-opening-skip {
                     position: absolute; z-index: 26; left: 16px; bottom: 68px; display: inline-flex;
-                    align-items: center; gap: 8px; max-width: calc(100% - 32px); min-height: 44px;
-                    border: 1px solid rgba(255,255,255,.85); border-radius: 999px; padding: 10px 16px;
-                    color: #000; background: #fff; font: 600 14px/1.15 inherit; letter-spacing: .01em;
-                    cursor: pointer; white-space: nowrap; touch-action: manipulation;
+                    align-items: center; gap: 6px; width: max-content; max-width: calc(100% - 32px); min-height: 38px;
+                    border: 1px solid rgba(255,255,255,.85); border-radius: 999px; padding: 8px 12px;
+                    color: #000; background: #fff; font: 600 12px/1.15 inherit; letter-spacing: 0;
+                    cursor: pointer; white-space: nowrap; touch-action: manipulation; pointer-events: auto;
                     transition: transform .15s, background .15s, opacity .15s;
                 }
                 .lp-opening-skip:hover { background: rgba(255,255,255,.82); transform: translateY(-1px); }
@@ -111,7 +111,7 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
                     .lp-select { font-size: 10px; padding-inline: 2px; }
                     .lp-controls { padding: 10px 10px 12px; gap: 8px; }
                     .lp-bottom-row { gap: 10px; }
-                    .lp-opening-skip { left: 10px; bottom: 60px; max-width: calc(100% - 20px); min-height: 42px; padding: 9px 13px; font-size: 13px; }
+                    .lp-opening-skip { left: 10px; bottom: 60px; max-width: calc(100% - 20px); min-height: 36px; padding: 7px 11px; font-size: 11px; }
                 }
 
                         `;
