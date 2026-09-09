@@ -1,9 +1,9 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
-import { GENRE_MAP } from '../../config/constants.js?v=20260909-player-v2';
+import { GENRE_MAP } from '../../config/constants.js?v=20260909-player-v3';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { Storage } from '../../core/compat/storage.js?v=20260909-player-v2';
-import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260909-player-v2';
+import { Storage } from '../../core/compat/storage.js?v=20260909-player-v3';
+import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260909-player-v3';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -15,7 +15,7 @@ import {
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove-thought-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260909-player-v2';
+} from '../../legacy/app-legacy.js?v=20260909-player-v3';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 
         // ====================================================================
@@ -1290,7 +1290,12 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             if (!button) return;
             let activeSegment = null;
             let lastSkipAt = 0;
-            const hideButton = () => { button.hidden = true; activeSegment = null; };
+            let openingWatchTimer = null;
+            const setButtonVisible = visible => {
+                button.classList.toggle('is-visible', visible);
+                button.setAttribute('aria-hidden', visible ? 'false' : 'true');
+            };
+            const hideButton = () => { setButtonVisible(false); activeSegment = null; };
             const onSkip = event => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -1317,8 +1322,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 const now = Number(video.currentTime);
                 if (!Number.isFinite(now)) return;
                 activeSegment = segments.find(segment => now >= segment.start && now < segment.end) || null;
-                button.hidden = !activeSegment;
-                button.setAttribute('aria-hidden', activeSegment ? 'false' : 'true');
+                setButtonVisible(Boolean(activeSegment));
             };
             // AniSkip may resolve after playback has already started; sync now
             // instead of waiting for a later timeupdate event.
@@ -1326,12 +1330,24 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             video.addEventListener('loadedmetadata', onTimeUpdate);
             video.addEventListener('timeupdate', onTimeUpdate);
             video.addEventListener('seeking', onTimeUpdate);
-            video.addEventListener('ended', () => { button.hidden = true; }, { once: true });
+            video.addEventListener('ended', () => hideButton(), { once: true });
+            // Some embedded/mobile players throttle timeupdate. Keep the button
+            // strictly tied to the actual currentTime in that case as well.
+            openingWatchTimer = window.setInterval(() => {
+                if (!video.isConnected) {
+                    window.clearInterval(openingWatchTimer);
+                    openingWatchTimer = null;
+                    return;
+                }
+                onTimeUpdate();
+            }, 250);
             video.addEventListener('emptied', () => {
                 video.removeEventListener('loadedmetadata', onTimeUpdate);
                 video.removeEventListener('timeupdate', onTimeUpdate);
                 video.removeEventListener('seeking', onTimeUpdate);
                 button.removeEventListener('click', onSkip);
+                if (openingWatchTimer) window.clearInterval(openingWatchTimer);
+                openingWatchTimer = null;
                 hideButton();
             }, { once: true });
         }
