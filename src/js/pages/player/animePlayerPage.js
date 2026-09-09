@@ -1261,11 +1261,15 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                         const interval = item.interval || item;
                         const start = Number(interval.start_time);
                         const end = Number(interval.end_time);
-                        const type = String(item.skip_type || '').toLowerCase();
+                        const type = String(item.skip_type || item.type || interval.skip_type || '').toLowerCase();
                         return { start, end, type };
                     }).filter(item => Number.isFinite(item.start) && Number.isFinite(item.end)
                         && item.end > item.start && (item.type === 'op' || item.type === 'ed'));
-                    try { localStorage.setItem(`vakdab:aniskip:${cacheKey}`, JSON.stringify(segments)); } catch (_) { /* ignore */ }
+                    // Do not persist empty responses: AniSkip can temporarily fail or
+                    // return an incomplete response, and a failed lookup must be retried.
+                    if (segments.length) {
+                        try { localStorage.setItem(`vakdab:aniskip:${cacheKey}`, JSON.stringify(segments)); } catch (_) { /* ignore */ }
+                    }
                     return segments;
                 } catch (error) {
                     if (error?.name !== 'AbortError') console.warn('[AniSkip] lookup failed:', error);
@@ -1275,6 +1279,9 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 }
             })();
             aniSkipCache.set(cacheKey, request);
+            request.then(segments => {
+                if (!Array.isArray(segments) || !segments.length) aniSkipCache.delete(cacheKey);
+            }).catch(() => aniSkipCache.delete(cacheKey));
             return request;
         }
 
