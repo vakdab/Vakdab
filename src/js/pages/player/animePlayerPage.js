@@ -1,9 +1,9 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
-import { GENRE_MAP } from '../../config/constants.js?v=20260908-quality-1080-v1';
+import { GENRE_MAP } from '../../config/constants.js?v=20260909-aniskip-v1';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { Storage } from '../../core/compat/storage.js?v=20260908-quality-1080-v1';
-import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260908-quality-1080-v1';
+import { Storage } from '../../core/compat/storage.js?v=20260909-aniskip-v1';
+import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260909-aniskip-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -1230,6 +1230,68 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             return h ? `${h} год ${m ? m + ' хв' : ''}`.trim() : `${m} хв`;
         }
 
+        const aniSkipCache = new Map();
+
+        async function getAniSkipSegments(malId, episode) {
+            const id = Number(malId);
+            const ep = Number(episode);
+            if (!Number.isInteger(id) || id <= 0 || !Number.isInteger(ep) || ep <= 0) return [];
+            const cacheKey = `${id}:${ep}`;
+            if (aniSkipCache.has(cacheKey)) return aniSkipCache.get(cacheKey);
+            const request = (async () => {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 5000);
+                try {
+                    const response = await fetch(`https://api.aniskip.com/v1/skip-times/${id}/${ep}?types=op&types=ed`, {
+                        signal: controller.signal,
+                        headers: { Accept: 'application/json' }
+                    });
+                    if (!response.ok) return [];
+                    const payload = await response.json();
+                    if (payload?.found !== true || !Array.isArray(payload.results)) return [];
+                    return payload.results.map(item => {
+                        const interval = item.interval || item;
+                        const start = Number(interval.start_time);
+                        const end = Number(interval.end_time);
+                        const type = String(item.skip_type || '').toLowerCase();
+                        return { start, end, type };
+                    }).filter(item => Number.isFinite(item.start) && Number.isFinite(item.end)
+                        && item.end > item.start && (item.type === 'op' || item.type === 'ed'));
+                } catch (error) {
+                    if (error?.name !== 'AbortError') console.warn('[AniSkip] lookup failed:', error);
+                    return [];
+                } finally {
+                    clearTimeout(timer);
+                }
+            })();
+            aniSkipCache.set(cacheKey, request);
+            return request;
+        }
+
+        async function attachAniSkip(video, episode) {
+            if (!video) return;
+            // Hikka/VAKDAB records may carry the ID in either location. The
+            // MAL ID is authoritative; title matching is deliberately avoided.
+            const malId = playerPageAnime?.externalIds?.mal_id
+                || playerPageAnime?.mal_id
+                || playerJikanData?.mal_id;
+            const segments = await getAniSkipSegments(malId, episode);
+            if (!segments.length || !video.isConnected) return;
+            const skipped = new Set();
+            const onTimeUpdate = () => {
+                const now = Number(video.currentTime);
+                if (!Number.isFinite(now)) return;
+                segments.forEach((segment, index) => {
+                    if (skipped.has(index) || now < segment.start || now >= segment.end) return;
+                    skipped.add(index);
+                    video.currentTime = segment.end;
+                    showToast(segment.type === 'ed' ? 'Пропущено ending' : 'Пропущено opening');
+                });
+            };
+            video.addEventListener('timeupdate', onTimeUpdate);
+            video.addEventListener('emptied', () => video.removeEventListener('timeupdate', onTimeUpdate), { once: true });
+        }
+
         async function playEpisode(file, epNum) {
             if (!file) { showToast('Немає файлу для відтворення'); return; }
             if (!playerPageIsOpen) return;
@@ -1277,6 +1339,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             playerPageIsPlaying = false;
             const video = playerPagePlayer.videoRef;
             if (video) {
+                attachAniSkip(video, epNum).catch(error => console.warn('[AniSkip] attach failed:', error));
                 // Відновлення позиції: якщо цю серію вже частково дивилися — продовжуємо з місця зупинки.
                 try {
                     const savedProgress = (() => {
