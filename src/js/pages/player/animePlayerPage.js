@@ -1,9 +1,9 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
-import { GENRE_MAP } from '../../config/constants.js?v=20260909-player-v4';
+import { GENRE_MAP } from '../../config/constants.js?v=20260909-player-v5';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { Storage } from '../../core/compat/storage.js?v=20260909-player-v4';
-import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260909-player-v4';
+import { Storage } from '../../core/compat/storage.js?v=20260909-player-v5';
+import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260909-player-v5';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -15,7 +15,7 @@ import {
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove-thought-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260909-player-v4';
+} from '../../legacy/app-legacy.js?v=20260909-player-v5';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 
         // ====================================================================
@@ -1268,14 +1268,16 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             return request;
         }
 
-        async function attachAniSkip(video, episode) {
+        async function attachAniSkip(video, episode, segmentsPromise = null) {
             if (!video) return;
             // Only trust the MAL ID that came directly with the catalog record.
             // The Jikan title-search fallback can resolve to the wrong anime and
             // hand back timecodes for a completely different show, so it is
             // deliberately excluded here.
             const malId = playerPageAnime?.externalIds?.mal_id || playerPageAnime?.mal_id;
-            const rawSegments = await getAniSkipSegments(malId, episode);
+            // Start AniSkip lookup before playback when possible, so the button
+            // is ready by the time the opening reaches the screen.
+            const rawSegments = await (segmentsPromise || getAniSkipSegments(malId, episode));
             // Sanity-check the timecodes: real openings don't start in the first
             // few seconds and don't run for several minutes. This guards against
             // bad AniSkip matches slipping through.
@@ -1305,8 +1307,11 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 if (!activeSegment) return;
                 const targetTime = activeSegment.end;
                 try {
+                    // fastSeek is smoother where supported, while currentTime is
+                    // the reliable fallback for HLS and embedded mobile players.
                     if (typeof video.fastSeek === 'function') video.fastSeek(targetTime);
-                    else video.currentTime = targetTime;
+                    video.currentTime = targetTime;
+                    video.dispatchEvent(new Event('seeking'));
                 } catch (error) {
                     console.warn('[AniSkip] seek failed:', error);
                     return;
@@ -1321,7 +1326,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             const onTimeUpdate = () => {
                 const now = Number(video.currentTime);
                 if (!Number.isFinite(now)) return;
-                activeSegment = segments.find(segment => now >= segment.start && now < segment.end) || null;
+                activeSegment = segments.find(segment => now >= Math.max(0, segment.start - 0.5) && now < segment.end) || null;
                 setButtonVisible(Boolean(activeSegment));
             };
             // AniSkip may resolve after playback has already started; sync now
@@ -1390,6 +1395,10 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             if (playerPagePlayer) { playerPagePlayer.destroy();
                 playerPagePlayer = null; }
             if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
+            const openingSegmentsPromise = getAniSkipSegments(
+                playerPageAnime?.externalIds?.mal_id || playerPageAnime?.mal_id,
+                epNum
+            );
             playerPagePlayer = new LampaPlayer(videoDiv, { poster: playerPageAnime?.images?.jpg?.large_image_url });
             playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || '', `Серія ${epNum}`);
             playerPageHistoryUpdated = false;
@@ -1399,7 +1408,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             playerPageIsPlaying = false;
             const video = playerPagePlayer.videoRef;
             if (video) {
-                attachAniSkip(video, epNum).catch(error => console.warn('[AniSkip] attach failed:', error));
+                attachAniSkip(video, epNum, openingSegmentsPromise).catch(error => console.warn('[AniSkip] attach failed:', error));
                 // Відновлення позиції: якщо цю серію вже частково дивилися — продовжуємо з місця зупинки.
                 try {
                     const savedProgress = (() => {
