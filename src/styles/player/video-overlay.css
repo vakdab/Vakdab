@@ -590,7 +590,13 @@
     #playerPageModal .video-overlay-title { font-size: 12px; }
     #playerPageModal .video-overlay-topbar .icon-btn { width: 34px; height: 34px; flex-basis: 34px; border-radius: 10px; }
 
-    #playerPageModal .lp-controls { padding: 6px 8px max(8px, env(safe-area-inset-bottom)); }
+    /* The player is embedded inside the page, not pinned to the device edge.
+       Do not apply iOS safe-area padding here: it lifts the controls visibly upward
+       in the installed/web-app shell while the browser version looks correct. */
+    #playerPageModal .lampa-player-container:not(:fullscreen) .lp-controls {
+        bottom: 0 !important;
+        padding: 6px 8px 8px !important;
+    }
     #playerPageModal .lp-bottom-row { gap: 3px; }
     #playerPageModal .lp-btn,
     #playerPageModal .lp-main-btn { width: 28px; height: 28px; }
