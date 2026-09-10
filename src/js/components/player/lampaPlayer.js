@@ -1,4 +1,3 @@
-import { Anime4KWebGPUBridge } from './anime4kWebGPU.js?v=20260910-anime4k-v3';
 import { PROXY_URL } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 import { getProxyUrl, isEmbedUrl } from '../../utils/image.js';
 import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829-catalog-28-v1';
@@ -19,8 +18,6 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
                 }
                 .lampa-player-container *, .lampa-player-container *::before, .lampa-player-container *::after { box-sizing: border-box; }
                 .lampa-player-container video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; position: relative; z-index: 0; }
-                .lp-anime4k-canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; z-index: 1; pointer-events: none; visibility: hidden; }
-                .lp-anime4k-canvas.is-ready { visibility: visible; }
                 .lampa-player-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
 
                 .lp-spinner {
@@ -85,8 +82,6 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
                 .lp-btn:hover { opacity: 1; transform: scale(1.08); }
                 .lp-btn svg { width: 19px; height: 19px; fill: #fff; }
                 .lp-main-btn svg { width: 22px; height: 22px; }
-                .lp-anime4k-btn { font-size: 10px; font-weight: 800; letter-spacing: .02em; min-width: 28px; }
-                .lp-anime4k-btn.is-active { color: #8bd5ff; opacity: 1; }
                 .lp-select { background: rgba(0,0,0,.6); color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 6px; padding: 4px 5px; font-size: 11px; min-height: 28px; }
                 .lp-select:focus { outline: 1px solid rgba(255,255,255,.7); outline-offset: 1px; }
 
@@ -191,7 +186,6 @@ export class LampaPlayer {
                 v.poster = normalizePosterUrl(this.options.poster);
                 this.videoRef = v;
                 wrap.appendChild(v);
-                this._anime4k = new Anime4KWebGPUBridge(v, wrap);
 
                 // Spinner
                 const spinner = document.createElement('div');
@@ -223,7 +217,6 @@ export class LampaPlayer {
                         <button class="lp-btn lp-main-btn" id="lpPlayBtn" title="Відтворити / Пауза" aria-label="Відтворити">${LP_ICONS.play}</button>
                         <button class="lp-btn lp-skip-btn" id="lpSkipBackBtn" title="Назад на 10 секунд" aria-label="Назад на 10 секунд">${LP_ICONS.skipBack}</button>
                         <button class="lp-btn lp-skip-btn" id="lpSkipForwardBtn" title="Вперед на 10 секунд" aria-label="Вперед на 10 секунд">${LP_ICONS.skipForward}</button>
-                        <button class="lp-btn lp-anime4k-btn" id="lpAnime4kBtn" title="Увімкнути Anime4K" aria-label="Увімкнути Anime4K">4K</button>
                         <span class="lp-time" id="lpTime">0:00 / 0:00</span>
                         <div class="lp-spacer"></div>
                         <div class="lp-volume-group">
@@ -313,29 +306,6 @@ export class LampaPlayer {
                 // Play button
                 const playBtn = wrap.querySelector('#lpPlayBtn');
                 if (playBtn) playBtn.addEventListener('click', e => { e.stopPropagation(); this._flashCenter(); this.togglePlay(); });
-                const anime4kBtn = wrap.querySelector('#lpAnime4kBtn');
-                if (anime4kBtn) {
-                    if (!Anime4KWebGPUBridge.isSupported()) anime4kBtn.hidden = true;
-                    anime4kBtn.addEventListener('click', async e => {
-                        e.stopPropagation();
-                        if (!this._anime4k) return;
-                        if (this._anime4k.active) {
-                            this._anime4k.stop();
-                            anime4kBtn.classList.remove('is-active');
-                            anime4kBtn.title = 'Увімкнути Anime4K';
-                            anime4kBtn.setAttribute('aria-label', anime4kBtn.title);
-                            return;
-                        }
-                        anime4kBtn.disabled = true;
-                        anime4kBtn.textContent = '…';
-                        const started = await this._anime4k.start().catch(() => false);
-                        anime4kBtn.disabled = false;
-                        anime4kBtn.textContent = '4K';
-                        anime4kBtn.classList.toggle('is-active', started);
-                        anime4kBtn.title = started ? 'Вимкнути Anime4K' : 'Anime4K недоступний для цього відео';
-                        anime4kBtn.setAttribute('aria-label', anime4kBtn.title);
-                    });
-                }
 
                 // Progress bar seek
                 const progress = wrap.querySelector('#lpProgress');
@@ -615,8 +585,6 @@ export class LampaPlayer {
             }
 
             loadSource(src, animeTitle, episodeTitle) {
-                // Release the previous GPU pipeline before changing episodes/sources.
-                this._anime4k?.stop();
                 const requestId = ++this._sourceRequestId;
                 this._lastSourceRequest = { src, animeTitle, episodeTitle };
                 if (isEmbedUrl(src)) {
@@ -833,7 +801,6 @@ export class LampaPlayer {
                 if (this._closePlayerMenus) document.removeEventListener('click', this._closePlayerMenus);
                 clearTimeout(this._centerTimer);
                 if (this.hls) { this.hls.destroy(); this.hls = null; }
-                this._anime4k?.stop();
                 if (this.videoRef) { this.videoRef.pause(); this.videoRef.removeAttribute('src'); this.videoRef.load(); }
                 if (this.container) this.container.innerHTML = '';
                 this.videoRef = null;

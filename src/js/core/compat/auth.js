@@ -1,7 +1,7 @@
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260910-anime4k-v1';
+} from '../../legacy/app-legacy.js?v=20260910-player-v1';
 import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../pages/settings/settingsLegacy.js?v=20260905-no-achievements-v1';
 import { Storage } from './storage.js?v=20260905-stickers-sync-v1';
 

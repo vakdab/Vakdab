@@ -1,7 +1,7 @@
-import { GENRE_MAP } from '../../config/constants.js?v=20260910-anime4k-v1';
+import { GENRE_MAP } from '../../config/constants.js?v=20260910-player-v1';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { Storage } from '../../core/compat/storage.js?v=20260910-anime4k-v1';
-import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260910-anime4k-v1';
+import { Storage } from '../../core/compat/storage.js?v=20260910-player-v1';
+import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260910-player-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -13,7 +13,7 @@ import {
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove-thought-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260910-anime4k-v1';
+} from '../../legacy/app-legacy.js?v=20260910-player-v1';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 
         // ====================================================================

@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260910-anime4k-v1';
+} from '../../legacy/app-legacy.js?v=20260910-player-v1';
 
         let settingsState = { tab: 'profile', previewOpen: true };
 
