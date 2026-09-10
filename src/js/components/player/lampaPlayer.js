@@ -1,4 +1,4 @@
-import { Anime4KWebGPUBridge } from './anime4kWebGPU.js?v=20260910-anime4k-v1';
+import { Anime4KWebGPUBridge } from './anime4kWebGPU.js?v=20260910-anime4k-v2';
 import { PROXY_URL } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 import { getProxyUrl, isEmbedUrl } from '../../utils/image.js';
 import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829-catalog-28-v1';

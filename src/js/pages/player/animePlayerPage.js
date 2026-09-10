@@ -1231,9 +1231,42 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
         }
 
         const aniSkipCache = new Map();
+        const aniSkipMalIdCache = new Map();
 
-        async function getAniSkipSegments(malId, episode) {
-            const id = Number(malId);
+        async function resolveAniSkipMalId(anime) {
+            const direct = Number(anime?.externalIds?.mal_id || anime?.mal_id);
+            if (Number.isInteger(direct) && direct > 0) return direct;
+            const title = String(anime?.title || anime?.name || '').trim();
+            if (!title) return 0;
+            const key = title.toLowerCase();
+            if (aniSkipMalIdCache.has(key)) return aniSkipMalIdCache.get(key);
+            const request = (async () => {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 4500);
+                try {
+                    const response = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(title)}&limit=5`, {
+                        signal: controller.signal,
+                        headers: { Accept: 'application/json' }
+                    });
+                    if (!response.ok) return 0;
+                    const payload = await response.json();
+                    const normalized = value => String(value || '').toLowerCase().replace(/[^a-z0-9а-яіїєґ]+/gi, ' ').trim();
+                    const wanted = normalized(title);
+                    const exact = (payload?.data || []).find(item => [item.title, item.title_english, ...(item.title_japanese ? [item.title_japanese] : [])]
+                        .some(candidate => normalized(candidate) === wanted));
+                    return Number(exact?.mal_id || payload?.data?.[0]?.mal_id || 0);
+                } catch (_) {
+                    return 0;
+                } finally {
+                    clearTimeout(timer);
+                }
+            })();
+            aniSkipMalIdCache.set(key, request);
+            return request;
+        }
+
+        async function getAniSkipSegments(anime, episode) {
+            const id = await resolveAniSkipMalId(anime);
             const ep = Number(episode);
             if (!Number.isInteger(id) || id <= 0 || !Number.isInteger(ep) || ep <= 0) return [];
             const cacheKey = `${id}:${ep}`;
@@ -1278,16 +1311,15 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             return request;
         }
 
-        async function attachAniSkip(video, episode, segmentsPromise = null) {
-            if (!video) return;
-            // Only trust the MAL ID that came directly with the catalog record.
-            // The Jikan title-search fallback can resolve to the wrong anime and
-            // hand back timecodes for a completely different show, so it is
-            // deliberately excluded here.
-            const malId = playerPageAnime?.externalIds?.mal_id || playerPageAnime?.mal_id;
+        async function attachAniSkip(video, episode, segmentsPromise = null, playbackRequest = playerPagePlaybackRequest) {
+            if (!video || playbackRequest !== playerPagePlaybackRequest) return;
+            // Prefer the stable MAL ID from the catalog. If it is missing,
+            // getAniSkipSegments resolves a conservative Jikan title fallback.
+            const animeForAniSkip = playerPageAnime;
             // Start AniSkip lookup before playback when possible, so the button
             // is ready by the time the opening reaches the screen.
-            const rawSegments = await (segmentsPromise || getAniSkipSegments(malId, episode));
+            const rawSegments = await (segmentsPromise || getAniSkipSegments(animeForAniSkip, episode));
+            if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
             // The player can rebuild its video node while the AniSkip request is
             // pending. Always bind to the current node/container after the request.
             const currentVideo = playerPagePlayer?.videoRef?.isConnected
@@ -1298,7 +1330,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             // Sanity-check the timecodes, but do not reject a valid result just
             // because the original video node was replaced during loading.
             const segments = (Array.isArray(rawSegments) ? rawSegments : [])
-                .filter(segment => (segment.type === 'op' || segment.type === 'opening')
+                .filter(segment => (segment.type === 'op' || segment.type === 'opening' || segment.type === 'ed' || segment.type === 'ending')
                     && segment.start >= 0
                     && (segment.end - segment.start) >= 12
                     && (segment.end - segment.start) <= 240)
@@ -1314,6 +1346,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 button.classList.toggle('is-visible', visible);
                 button.setAttribute('aria-hidden', visible ? 'false' : 'true');
             };
+            const label = button.querySelector('span');
             const hideButton = () => { setButtonVisible(false); activeSegment = null; };
             const onSkip = event => {
                 event.preventDefault();
@@ -1328,7 +1361,6 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                     // the reliable fallback for HLS and embedded mobile players.
                     if (typeof media.fastSeek === 'function') media.fastSeek(targetTime);
                     media.currentTime = targetTime;
-                    media.dispatchEvent(new Event('seeking'));
                 } catch (error) {
                     console.warn('[AniSkip] seek failed:', error);
                     return;
@@ -1344,34 +1376,32 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 const now = Number(media.currentTime);
                 if (!Number.isFinite(now)) return;
                 activeSegment = segments.find(segment => now >= Math.max(0, segment.start - 0.5) && now < segment.end) || null;
+                if (label) label.textContent = activeSegment?.type === 'ed' || activeSegment?.type === 'ending'
+                    ? 'Пропустити ендинг' : 'Пропустити опенінг';
                 setButtonVisible(Boolean(activeSegment));
             };
             // AniSkip may resolve after playback has already started; sync now
             // instead of waiting for a later timeupdate event.
             onTimeUpdate();
-            media.addEventListener('loadedmetadata', onTimeUpdate);
-            media.addEventListener('timeupdate', onTimeUpdate);
-            media.addEventListener('seeking', onTimeUpdate);
-            media.addEventListener('ended', () => hideButton(), { once: true });
-            // Some embedded/mobile players throttle timeupdate. Keep the button
-            // strictly tied to the actual currentTime in that case as well.
-            openingWatchTimer = window.setInterval(() => {
-                if (!media.isConnected) {
-                    window.clearInterval(openingWatchTimer);
-                    openingWatchTimer = null;
-                    return;
-                }
-                onTimeUpdate();
-            }, 250);
-            media.addEventListener('emptied', () => {
-                media.removeEventListener('loadedmetadata', onTimeUpdate);
-                media.removeEventListener('timeupdate', onTimeUpdate);
-                media.removeEventListener('seeking', onTimeUpdate);
+            const syncEvents = ['loadedmetadata', 'durationchange', 'canplay', 'playing', 'timeupdate', 'progress', 'seeking', 'seeked'];
+            syncEvents.forEach(eventName => media.addEventListener(eventName, onTimeUpdate));
+            const cleanup = () => {
+                syncEvents.forEach(eventName => media.removeEventListener(eventName, onTimeUpdate));
+                media.removeEventListener('ended', cleanup);
+                media.removeEventListener('emptied', cleanup);
                 button.removeEventListener('click', onSkip);
                 if (openingWatchTimer) window.clearInterval(openingWatchTimer);
                 openingWatchTimer = null;
                 hideButton();
-            }, { once: true });
+            };
+            media.addEventListener('ended', cleanup, { once: true });
+            media.addEventListener('emptied', cleanup, { once: true });
+            // Some embedded/mobile players throttle timeupdate. Keep the button
+            // strictly tied to the actual currentTime in that case as well.
+            openingWatchTimer = window.setInterval(() => {
+                if (!media.isConnected) cleanup();
+                else onTimeUpdate();
+            }, 250);
         }
 
         async function playEpisode(file, epNum) {
@@ -1381,10 +1411,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             playerPageCurrentEpisodeNum = epNum || '1';
             // Start AniSkip before any source resolution, layout work, or video
             // startup. This removes the visible 0:03 -> 0:06 race on first play.
-            const openingSegmentsPromise = getAniSkipSegments(
-                playerPageAnime?.externalIds?.mal_id || playerPageAnime?.mal_id,
-                epNum
-            );
+            const openingSegmentsPromise = getAniSkipSegments(playerPageAnime, epNum);
             setAccordionSummary('playerEpisodeSummary', `Серія ${playerPageCurrentEpisodeNum}`);
             setAccordionSummary('playerCompactEpisodeSummary', `Серія ${playerPageCurrentEpisodeNum}`);
             renderAllEpisodeViews(getCurrentEpisodes(), null, null);
@@ -1427,7 +1454,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             playerPageIsPlaying = false;
             const video = playerPagePlayer.videoRef;
             if (video) {
-                attachAniSkip(video, epNum, openingSegmentsPromise).catch(error => console.warn('[AniSkip] attach failed:', error));
+                attachAniSkip(video, epNum, openingSegmentsPromise, playbackRequest).catch(error => console.warn('[AniSkip] attach failed:', error));
                 // Відновлення позиції: якщо цю серію вже частково дивилися — продовжуємо з місця зупинки.
                 try {
                     const savedProgress = (() => {
