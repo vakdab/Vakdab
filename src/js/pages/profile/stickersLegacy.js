@@ -1,5 +1,4 @@
 import { Storage } from '../../core/compat/storage.js?v=20260824-settings-redesign-v1';
-import { db } from '../../services/firebase/client.js';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
 import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260910-anime4k-v1';
 import { uploadBlobToCloudinary } from '../home/homeLegacy.js?v=20260906-remove-ranobe-v1';
@@ -70,61 +69,13 @@ import { uploadBlobToCloudinary } from '../home/homeLegacy.js?v=20260906-remove-
         async function fetchEveryoneStickers() {
             if (_everyoneStickersCache) return _everyoneStickersCache;
             try {
-                const { collection, query, limit, getDocs } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js');
-                const q = query(collection(db, 'users'), limit(500));
-                const snap = await getDocs(q);
-                let sets = [];
-                let singles = [];
-                const users = [];
-                snap.forEach(docSnap => {
-                    const d = docSnap.data();
-                    if (!d.stickers) return;
-                    const ownerId = docSnap.id;
-                    const ownerNickname = d.profile?.nickname || 'Користувач';
-                    const ownerAvatar = d.profile?.avatar || '';
-                    const source = Object.assign(getDefaultStickers(), d.stickers);
-                    const sourceSingles = (Array.isArray(source.singles) ? source.singles : []).filter(single => single && single.image);
-                    const sourceColors = source.colors || {};
-                    sourceSingles.forEach(single => singles.push({
-                        ...single,
-                        _public: true,
-                        _ownerId: ownerId,
-                        _ownerNickname: ownerNickname,
-                        _ownerAvatar: ownerAvatar,
-                        _sourceColor: sourceColors[stickerKeyFor(single)] || ''
-                    }));
-                    (Array.isArray(source.sets) ? source.sets : []).forEach(set => {
-                        const imageIds = (Array.isArray(set.images) ? set.images : []).filter(id => sourceSingles.some(single => single.id === id));
-                        if (!imageIds.length) return;
-                        sets.push({
-                        ...set,
-                        variants: [],
-                        images: imageIds,
-                        _public: true,
-                        _ownerId: ownerId,
-                        _ownerNickname: ownerNickname,
-                        _ownerAvatar: ownerAvatar,
-                        _sourceSingles: sourceSingles,
-                        _sourceColors: sourceColors
-                        });
-                    });
-                    users.push({ id: ownerId, nickname: ownerNickname, avatar: ownerAvatar, stickers: source });
-                });
-                // Фільтруємо дублікати за ID
-                const uniqueSets = [];
-                const setIds = new Set();
-                sets.forEach(s => { if (s.id && !setIds.has(s.id)) { setIds.add(s.id); uniqueSets.push(s); } });
-
-                const uniqueSingles = [];
-                const singleIds = new Set();
-                singles.forEach(s => { if (s.id && !singleIds.has(s.id)) { singleIds.add(s.id); uniqueSingles.push(s); } });
-
-                _everyoneStickersCache = { sets: uniqueSets, singles: uniqueSingles, users };
+                const res = await fetch('/api/stickers/community');
+                if (!res.ok) throw new Error('Помилка сервера: ' + res.status);
+                const data = await res.json();
+                _everyoneStickersCache = { sets: data.sets || [], singles: data.singles || [], users: [] };
                 return _everyoneStickersCache;
             } catch (e) {
                 console.error('[Stickers] Global fetch failed:', e);
-                // Кешуємо порожній результат, щоб render() не входив у нескінченну рекурсію
-                // (fetchEveryoneStickers().then(() => render()) при повторних невдачах)
                 _everyoneStickersCache = { sets: [], singles: [], users: [] };
                 return _everyoneStickersCache;
             }

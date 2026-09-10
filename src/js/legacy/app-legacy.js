@@ -1,5 +1,3 @@
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, signInAnonymously, sendPasswordResetEmail, deleteUser, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot } from '../config/firebase.js';
-import { auth, db, initialized as firebaseInitialized } from '../services/firebase/client.js';
 import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_PROXY_URL, MIKAI_BASE, GENRE_MAP } from '../config/constants.js?v=20260910-aniskip-v2';
 import { safeQuery, safeQueryAll } from '../utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from '../utils/image.js';
@@ -140,15 +138,10 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
         //  API ФУНКЦІЇ
         // ====================================================================
         // ====================================================================
-        //  ДІАГНОСТИКА — зберігаємо дані парсингу у Firestore
+        //  ДІАГНОСТИКА — зберігаємо дані парсингу на сервері
         // ====================================================================
         async function saveParseDiagnostic({ url, ua, platform, playerUrls, allRawSources, rawHtml }) {
             try {
-                if (!firebaseInitialized || !db) {
-                    console.warn('[diagnostic] Firebase not initialized, skipping');
-                    return;
-                }
-                const id = `${Date.now()}_${Math.floor(Math.random()*10000)}`;
                 const rawSnippet = (rawHtml && rawHtml.slice(0, 20000)) || '';
                 const payload = {
                     url,
@@ -156,11 +149,13 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
                     platform,
                     playerUrls: playerUrls || [],
                     allRawSources: allRawSources ? allRawSources.slice(0, 20) : [],
-                    rawSnippet,
-                    createdAt: new Date().toISOString()
+                    rawSnippet
                 };
-                await setDoc(doc(db, 'diagnostics', id), payload);
-                /* console.log removed */
+                await fetch('/api/diagnostics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                }).catch(() => {});
             } catch (e) {
                 console.warn('[diagnostic] saveParseDiagnostic error:', e);
             }
@@ -277,18 +272,8 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
             return `${diffD} дн тому`;
         }
 
-        // Гарантує анонімну Firebase-сесію для гостей, щоб читання Firestore
-        // (рейтинги/відгуки) не впиралось у permission-denied без входу.
         export async function ensureFirebaseGuestAuth() {
-            try {
-                if (!auth) return false;
-                if ((Auth.isAuthenticated && Auth.isAuthenticated()) || auth.currentUser) return true;
-                await signInAnonymously(auth);
-                return true;
-            } catch (e) {
-                console.warn('Anonymous guest auth failed:', e.code || e);
-                return false;
-            }
+            return true;
         }
 
         // Initialize Lucide icons if not already done

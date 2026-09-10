@@ -1,606 +1,456 @@
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signInWithCustomToken, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, signInAnonymously, sendPasswordResetEmail, deleteUser, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot } from '../../config/firebase.js';
-import { auth, db, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
 } from '../../legacy/app-legacy.js?v=20260910-anime4k-v1';
 import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../pages/settings/settingsLegacy.js?v=20260905-no-achievements-v1';
 import { Storage } from './storage.js?v=20260905-stickers-sync-v1';
-import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 
-        const Auth = {
-            _user: null,
-            _listeners: [],
-            _initialized: false,
-            _googleProvider: null,
-            _isGuest: false,
-            _loadingData: false,
-            _lastProfileSync: null,
-            _authResolved: false,
+const TOKEN_KEY = 'vakdab_auth_token';
 
-            init() {
-                if (!firebaseInitialized) {
-                    console.warn('Firebase not available, auth disabled');
-                    return;
+function getAuthHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+}
+
+const Auth = {
+    _user: null,
+    _listeners: [],
+    _initialized: false,
+    _isGuest: false,
+    _loadingData: false,
+    _lastProfileSync: null,
+    _authResolved: false,
+    _welcomeShown: false,
+
+    async init() {
+        if (this._initialized) return;
+        this._initialized = true;
+
+        this._isGuest = localStorage.getItem('vakdab_guest') === '1';
+
+        // Listen for OAuth popup completion (Google, Discord, etc.)
+        window.addEventListener('message', async (event) => {
+            if (event.data?.type === 'VAKDAB_AUTH_SUCCESS') {
+                const payload = event.data.payload || {};
+                if (payload.token) {
+                    localStorage.setItem(TOKEN_KEY, payload.token);
                 }
-                if (this._initialized) return;
-                this._initialized = true;
-                // Відновити guest стан з localStorage
-                this._isGuest = localStorage.getItem('vakdab_guest') === '1';
-                this._googleProvider = new GoogleAuthProvider();
-                // ВИПРАВЛЕННЯ 1: примусовий вибір акаунта при вході через Google
-                // prompt select_account прибрано — Google може входити автоматично якщо вже є сесія
-                onAuthStateChanged(auth, async (user) => {
-                    if (user && this._user && this._user.uid !== user.uid) {
-                        this._welcomeShown = false;
-                    }
-                    if (user && !user.isAnonymous) this._isGuest = false;
-                    this._user = user;
-                    this._authResolved = true;
-                    this._notifyListeners();
-                    if (user) {
-                        // РЕНДЕРИМО ПРОФІЛЬ ОДРАЗУ з поточними localStorage даними
-                        // — не чекаємо _loadUserData (який може висіти на Firestore)
-                        if (Router.currentRoute === 'profile') {
-                            const profContainer = document.getElementById('profilePageContainer');
-                            if (profContainer && profContainer.classList.contains('active')) {
-                                renderProfilePage();
-                            }
-                        }
-                        if (!this._welcomeShown) {
-                            this._welcomeShown = true;
-                            showToast('Привіт, ' + (user.displayName || user.email || 'користувач'));
-                        }
-                        // Завантажуємо з Firestore в фоні — оновимо профіль коли дані прийдуть
-                        try {
-                            await this._loadUserData(user.uid);
-                            if (Router.currentRoute === 'profile') {
-                                const profContainer = document.getElementById('profilePageContainer');
-                                if (profContainer && profContainer.classList.contains('active')) {
-                                    renderProfilePage();
-                                }
-                            }
-                        } catch (e) {
-                            console.warn('Background load failed, using local data:', e.message);
-                        }
-                    } else {
-                        this._welcomeShown = false;
-                        // Не затираємо відновлений гостьовий режим формою входу після null-user callback.
-                        if (Router.currentRoute === 'profile') {
-                            const profContainer = document.getElementById('profilePageContainer');
-                            if (profContainer && profContainer.classList.contains('active')) {
-                                if (this.isGuest()) renderProfilePage();
-                                else renderAuthPage();
-                            }
-                        }
-                    }
-                });
-            },
-
-            _notifyListeners() {
-                this._listeners.forEach(fn => fn(this._user));
-            },
-
-            onAuthStateChanged(fn) {
-                this._listeners.push(fn);
-                if (this._user !== null) fn(this._user);
-            },
-
-            isAuthenticated() {
-                return !!this._user && firebaseInitialized;
-            },
-
-            isGuest() {
-                return this._isGuest;
-            },
-
-            setGuest(val) {
-                this._isGuest = val;
-                if (val) localStorage.setItem('vakdab_guest', '1');
-                else localStorage.removeItem('vakdab_guest');
-                this._notifyListeners();
-            },
-
-            getUser() {
-                return this._user;
-            },
-
-            async _loadUserData(uid) {
-                if (!firebaseInitialized || !db) return;
-                if (this._loadingData) return;
-                this._loadingData = true;
-                // Timeout 5с — не висіти вічно якщо Firestore недоступний
-                const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Firestore timeout')), 5000));
-                // Для існуючого акаунта не читаємо великі localStorage history/sticker packs наперед.
-                // Guest snapshot потрібен лише у гілці створення нового user document нижче.
-                // Завантажуємо з Firestore. НЕ очищаємо localStorage спереду —
-                // якщо завантаження впаде, локальні дані залишаться.
-                try {
-                    const docRef = doc(db, 'users', uid);
-                    const docSnap = await Promise.race([getDoc(docRef), timeout]);
-                    if (docSnap.exists()) {
-                        // Існуючий юзер — завантажуємо його дані з Firestore
-                        const data = docSnap.data();
-                        const localProfileBeforeLoad = Storage.getProfile() || {};
-                        /* console.log removed */
-                        /* console.log removed */
-                        /* console.log removed */
-                        if (data.profile) {
-                            const mergedProfile = Object.assign(getDefaultProfile(), data.profile);
-                            const telegramProfile = this._pendingTelegramProfile;
-                            const legacyNickname = String(mergedProfile.nickname || '').trim();
-                            if (!mergedProfile.realName && legacyNickname && legacyNickname !== '@user' && legacyNickname !== 'Користувач') mergedProfile.realName = stripNicknamePrefix(legacyNickname);
-                            if (telegramProfile && (!mergedProfile.nickname || mergedProfile.nickname === '@user' || mergedProfile.nickname === 'Користувач')) {
-                                mergedProfile.nickname = normalizeNickname(telegramProfile.username || `tg_${telegramProfile.id}`, '@user');
-                            }
-                            if (telegramProfile && (!mergedProfile.realName || mergedProfile.realName === 'Користувач')) {
-                                mergedProfile.realName = [telegramProfile.first_name, telegramProfile.last_name].filter(Boolean).join(' ') || stripNicknamePrefix(mergedProfile.nickname);
-                            }
-                            mergedProfile.nickname = normalizeNickname(mergedProfile.nickname, '@user');
-                            mergedProfile.realName = stripNicknamePrefix(mergedProfile.realName);
-                            if (telegramProfile && !mergedProfile.avatar && telegramProfile.photo_url) mergedProfile.avatar = telegramProfile.photo_url;
-                            // Доповнюємо Google displayName/photoURL, не перезаписуючи вибрані поля.
-                            if ((!mergedProfile.realName || mergedProfile.realName === 'Користувач') && this._user && this._user.displayName) {
-                                mergedProfile.realName = stripNicknamePrefix(this._user.displayName);
-                            }
-                            if ((!mergedProfile.nickname || mergedProfile.nickname === '@user' || mergedProfile.nickname === 'Користувач') && this._user) {
-                                mergedProfile.nickname = normalizeNickname(this._user.email?.split('@')[0] || this._user.displayName, '@user');
-                            }
-                            if (!mergedProfile.avatar && this._user && this._user.photoURL) {
-                                mergedProfile.avatar = this._user.photoURL;
-                            }
-                            Storage._setProfile(mergedProfile);
-                        } else if (this._user && this._user.displayName) {
-                            const p = getDefaultProfile();
-                            p.nickname = this._user.displayName;
-                            if (this._user.photoURL) p.avatar = this._user.photoURL;
-                            Storage._setProfile(p);
-                        } else {
-                            Storage._setProfile(getDefaultProfile());
-                        }
-                        if (data.history) Storage._setHistory(data.history);
-                        if (data.bookmarks) Storage._setBookmarks(data.bookmarks);
-                        if (data.likes) Storage._setLikes(data.likes);
-                        if (data.watchTime) Storage._setWatchTime(data.watchTime);
-                        // Захист від race condition: якщо локальні наліпки новіші за те, що в Firestore
-                        // (наприклад юзер додав наліпку і одразу перезавантажив сторінку до завершення синку) —
-                        // НЕ затираємо їх застарілими даними з хмари, а навпаки — доштовхуємо локальні нагору.
-                        const remoteStickersTS = data.stickersUpdatedAt || 0;
-                        const localStickersTS = Storage.getStickersTS();
-                        if (localStickersTS > remoteStickersTS) {
-                            Storage._debounceSync('stickers');
-                        } else if (data.stickers) {
-                            Storage._setStickers(Object.assign(getDefaultStickers(), data.stickers));
-                        }
-                    } else {
-                        // Новий юзер — переносимо ГОСТЕВІ дані (не чужі!). Читаємо їх лише тут,
-                        // бо для існуючого акаунта це була б зайва важка JSON-операція.
-                        const guestData = {
-                            profile: Storage.getProfile(),
-                            history: Storage.getHistory(),
-                            bookmarks: Storage.getBookmarks(),
-                            likes: Storage.getLikes(),
-                            watchTime: Storage.getWatchTime(),
-                            stickers: Storage.getStickers()
-                        };
-                        const telegramProfile = this._pendingTelegramProfile;
-                        const hasCustomGuestProfile = guestData.profile && guestData.profile.nickname && guestData.profile.nickname !== '@user' && guestData.profile.nickname !== 'Користувач';
-                        if (hasCustomGuestProfile) {
-                            const guestProfile = { ...guestData.profile };
-                            guestProfile.nickname = normalizeNickname(guestProfile.nickname, '@user');
-                            guestProfile.realName = stripNicknamePrefix(guestProfile.realName);
-                            Storage._setProfile(guestProfile);
-                        } else if (telegramProfile) {
-                            const p = getDefaultProfile();
-                            p.nickname = normalizeNickname(telegramProfile.username || `tg_${telegramProfile.id}`, '@user');
-                            p.realName = [telegramProfile.first_name, telegramProfile.last_name].filter(Boolean).join(' ');
-                            if (telegramProfile.photo_url) p.avatar = telegramProfile.photo_url;
-                            Storage._setProfile(p);
-                        } else if (this._user && this._user.displayName) {
-                            const p = getDefaultProfile();
-                            p.realName = stripNicknamePrefix(this._user.displayName);
-                            p.nickname = normalizeNickname(this._user.email?.split('@')[0] || this._user.displayName, '@user');
-                            if (this._user.photoURL) p.avatar = this._user.photoURL;
-                            Storage._setProfile(p);
-                        } else {
-                            Storage._setProfile(getDefaultProfile());
-                        }
-                        if (guestData.history && guestData.history.length) Storage._setHistory(guestData.history);
-                        if (guestData.bookmarks && guestData.bookmarks.length) Storage._setBookmarks(guestData.bookmarks);
-                        if (guestData.likes && Object.keys(guestData.likes).length) Storage._setLikes(guestData.likes);
-                        if (guestData.watchTime) Storage._setWatchTime(guestData.watchTime);
-                        if (guestData.stickers && (guestData.stickers.singles.length || guestData.stickers.sets.length)) Storage._setStickers(guestData.stickers);
-                        await this._createUserDoc(uid);
-                    }
-                } catch (e) {
-                    console.warn('Error loading user data:', e);
-                    // При помилці — створюємо мінімальний профіль
-                    if (this._pendingTelegramProfile) {
-                        const p = getDefaultProfile();
-                        const tg = this._pendingTelegramProfile;
-                        p.nickname = normalizeNickname(tg.username || `tg_${tg.id}`, '@user');
-                        p.realName = [tg.first_name, tg.last_name].filter(Boolean).join(' ');
-                        if (tg.photo_url) p.avatar = tg.photo_url;
-                        Storage._setProfile(p);
-                    } else if (this._user && this._user.displayName) {
-                        const p = getDefaultProfile();
-                        p.realName = stripNicknamePrefix(this._user.displayName);
-                        p.nickname = normalizeNickname(this._user.email?.split('@')[0] || this._user.displayName, '@user');
-                        if (this._user.photoURL) p.avatar = this._user.photoURL;
-                        Storage._setProfile(p);
-                    } else {
-                        Storage._setProfile(getDefaultProfile());
-                    }
-                                } finally {
-                    this._loadingData = false;
-                }
-            },
-
-            async _createUserDoc(uid) {
-                if (!firebaseInitialized || !db) return;
-                try {
-                    let profile = Storage.getProfile() || getDefaultProfile();
-                    // Доповнюємо дані провайдера, не змішуючи display name з @handle.
-                    if (this._user && this._user.displayName && (!profile.realName || profile.realName === 'Користувач')) {
-                        profile.realName = stripNicknamePrefix(this._user.displayName);
-                    }
-                    profile.nickname = normalizeNickname(profile.nickname, '@user');
-                    profile.realName = stripNicknamePrefix(profile.realName);
-                    if (this._user && this._user.photoURL && !profile.avatar) {
-                        profile.avatar = this._user.photoURL;
-                    }
-                    Storage._setProfile(profile);
-                    const docRef = doc(db, 'users', uid);
-                    // Стискаємо фото для Firestore
-                    const profileSync = JSON.parse(JSON.stringify(profile));
-                    if (profileSync.avatar && profileSync.avatar.length > 100000) profileSync.avatar = '';
-                    if (profileSync.banner && profileSync.banner.length > 100000) profileSync.banner = '';
-                    const createHistory = Storage.getHistory().slice(-100).map(h => {
-                        if (h.poster && h.poster.startsWith('data:')) return { ...h, poster: '' };
-                        return h;
-                    });
-                    const createBookmarks = Storage.getBookmarks().map(b => {
-                        if (b.poster && b.poster.startsWith('data:')) return { ...b, poster: '' };
-                        return b;
-                    });
-                    await setDoc(docRef, {
-                        profile: profileSync,
-                        history: createHistory,
-                        bookmarks: createBookmarks,
-                        likes: Storage.getLikes(),
-                        watchTime: Storage.getWatchTime() || 0,
-                        stickers: Storage.getStickers(),
-                        stickersUpdatedAt: Storage.getStickersTS(),
-                        createdAt: serverTimestamp(),
-                        updatedAt: serverTimestamp()
-                    });
-                } catch (e) {
-                    console.warn('Error creating user doc:', e);
-                }
-            },
-
-            async login(email, password) {
-                if (!firebaseInitialized || !auth) {
-                    return { success: false, error: 'Firebase not available' };
-                }
-                try {
-                    const cred = await signInWithEmailAndPassword(auth, email, password);
-                    // onAuthStateChanged() є єдиним власником завантаження профілю.
-                    // Не викликаємо _loadUserData та renderProfilePage вдруге після email login.
-                    this._user = cred.user;
-                    showToast('Успішний вхід');
-                    return { success: true };
-                } catch (e) {
-                    console.warn('Login error:', e);
-                    return { success: false, error: e.message };
-                }
-            },
-
-            async register(email, password, displayName) {
-                if (!firebaseInitialized || !auth) {
-                    return { success: false, error: 'Firebase not available' };
-                }
-                try {
-                    const cred = await createUserWithEmailAndPassword(auth, email, password);
-                    this._user = cred.user;
-                    if (displayName) {
-                        await updateProfile(cred.user, { displayName });
-                    }
-                    const profile = getDefaultProfile();
-                    profile.realName = stripNicknamePrefix(displayName);
-                    profile.nickname = normalizeNickname(email.split('@')[0] || displayName, '@user');
-                    Storage._setProfile(profile);
-                    // Явно створюємо документ в Firestore — не покладаємося тільки на onAuthStateChanged
-                    // (може бути race condition якщо _loadingData вже true)
-                    this._createUserDoc(cred.user.uid).catch(e => console.warn('Register _createUserDoc:', e.message));
-                    this._notifyListeners();
-                    showToast('Акаунт створено');
-                    if (Router.currentRoute === 'profile') renderProfilePage();
-                    return { success: true };
-                } catch (e) {
-                    console.warn('Register error:', e);
-                    return { success: false, error: e.message };
-                }
-            },
-
-            async signInWithTelegram(initData = '') {
-                if (!firebaseInitialized || !auth) return { success: false, error: 'Firebase недоступний' };
-                const rawInitData = String(initData || globalThis.Telegram?.WebApp?.initData || '').trim();
-                if (!rawInitData) return { success: false, error: 'Відкрийте VakDab із Telegram Mini App або скористайтеся іншим способом входу' };
-                try {
-                    const response = await fetch(TELEGRAM_AUTH_ENDPOINT, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ initData: rawInitData })
-                    });
-                    const payload = await response.json().catch(() => ({}));
-                    if (!response.ok || !payload.customToken) throw new Error(payload.error || 'Не вдалося перевірити Telegram');
-                    this._pendingTelegramProfile = payload.telegramUser || null;
-                    const result = await signInWithCustomToken(auth, payload.customToken);
-                    this._user = result.user;
-                    const tg = payload.telegramUser || {};
-                    const displayName = [tg.first_name, tg.last_name].filter(Boolean).join(' ') || (tg.username ? `@${tg.username}` : 'Користувач');
-                    const current = Storage.getProfile() || getDefaultProfile();
-                    if (!current.nickname || current.nickname === '@user' || current.nickname === 'Користувач') current.nickname = normalizeNickname(tg.username || `tg_${tg.id}`, '@user');
-                    if (!current.realName || current.realName === 'Користувач') current.realName = stripNicknamePrefix(displayName);
-                    if (!current.avatar && tg.photo_url) current.avatar = tg.photo_url;
-                    Storage._setProfile(current);
-                    this._notifyListeners();
-                    showToast('Вхід через Telegram успішний');
-                    return { success: true };
-                } catch (e) {
-                    console.warn('Telegram sign-in error:', e);
-                    this._pendingTelegramProfile = null;
-                    return { success: false, error: e.message || 'Помилка входу через Telegram' };
-                }
-            },
-
-            async signInWithGoogle() {
-                if (!firebaseInitialized || !auth || !this._googleProvider) {
-                    return { success: false, error: 'Firebase not available' };
-                }
-                try {
-                    const result = await signInWithPopup(auth, this._googleProvider);
-                    this._user = result.user;
-                    this._notifyListeners();
-                    showToast('Вхід через Google...');
-                    // _loadUserData викличеться через onAuthStateChanged — не дублюємо
-                    return { success: true };
-                } catch (e) {
-                    console.warn('Google sign-in error:', e);
-                    return { success: false, error: e.message };
-                }
-            },
-
-            async logout() {
-                if (!firebaseInitialized || !auth) {
-                    return { success: false, error: 'Firebase not available' };
-                }
-                // 1. Скасувати відкладений debounce-таймер
-                if (Storage._syncTimer) {
-                    clearTimeout(Storage._syncTimer);
-                    Storage._syncTimer = null;
-                }
-
-                showToast('Збереження даних і вихід...');
-
-                // Спочатку чекаємо останній profile write (nickname, bio, avatar тощо),
-                // який міг бути запущений одразу після натискання кнопки збереження.
-                try {
-                    if (this._lastProfileSync) await this._lastProfileSync;
-                } catch (e) {
-                    console.warn('Logout: profile sync error', e.message);
-                }
-
-                // 2. СПОЧАТКУ синхронізуємо — чекаємо завершення (max 6с)
-                // Storage.clear() викликається ТІЛЬКИ після запису в Firestore
-                try {
-                    const timeoutP = new Promise(r => setTimeout(r, 6000));
-                    await Promise.race([this.syncUserData(), timeoutP]);
-                    /* console.log removed */
-                } catch(e) {
-                    console.warn('Logout: sync error', e.message);
-                }
-
-                // 3. ТІЛЬКИ ПІСЛЯ синхронізації очищаємо стан і localStorage
-                this._user = null;
-                this._authResolved = true;
-                this._welcomeShown = false;
-                this._isGuest = false;
-                Storage.clear();
-                this._notifyListeners();
-
-                // 4. Виходимо з Firebase Auth
-                try { await signOut(auth); } catch(e) { console.error("Silent error:", e); }
-
-                showToast('Ви вийшли з акаунту');
-                Router.showProfile();
-                return { success: true };
-            },
-
-            handleExit() {
-                if (this.isGuest()) {
+                if (payload.user) {
+                    this._user = payload.user;
                     this._isGuest = false;
                     localStorage.removeItem('vakdab_guest');
-                    Storage.clear();
-                    this._notifyListeners();
-                    showToast('Гостевий сеанс завершено');
-                    Router.showProfile();
-                } else {
-                    // Юзер — повний logout
-                    this.logout().catch(e => console.warn('Logout error:', e));
-                }
-            },
-
-            // Чи ввійшов юзер через email/пароль (а не Google/анонімно) — для показу "Змінити пароль"
-            hasPasswordProvider() {
-                if (!this.isAuthenticated()) return false;
-                return (this._user.providerData || []).some(p => p.providerId === 'password');
-            },
-
-            providerLabel() {
-                if (this.isGuest() || !this.isAuthenticated()) return 'Гість';
-                if ((this._user.providerData || []).some(p => p.providerId === 'google.com')) return 'Google';
-                if (this.hasPasswordProvider()) return 'Email і пароль';
-                return 'Акаунт';
-            },
-
-            async sendPasswordReset() {
-                if (!firebaseInitialized || !auth || !this._user?.email) {
-                    return { success: false, error: 'Пошта акаунту недоступна' };
-                }
-                try {
-                    await sendPasswordResetEmail(auth, this._user.email);
-                    return { success: true };
-                } catch (e) {
-                    console.warn('Password reset error:', e);
-                    return { success: false, error: e.message };
-                }
-            },
-
-            // Повне і незворотнє видалення акаунту: документ у Firestore + сам обліковий запис Firebase + локальні дані.
-            async deleteAccount() {
-                if (!firebaseInitialized || !auth || !this._user) {
-                    return { success: false, error: 'Акаунт недоступний' };
-                }
-                const uid = this._user.uid;
-                try {
-                    try { await deleteDoc(doc(db, 'users', uid)); } catch (e) { console.warn('Delete user doc failed:', e.message); }
-                    await deleteUser(auth.currentUser);
-                    this._user = null;
                     this._authResolved = true;
-                    this._welcomeShown = false;
-                    this._isGuest = false;
-                    Storage.clear();
                     this._notifyListeners();
-                    return { success: true };
-                } catch (e) {
-                    console.warn('Delete account error:', e);
-                    if (e.code === 'auth/requires-recent-login') {
-                        return { success: false, error: 'requires-recent-login' };
+                    showToast(`Привіт, ${payload.user.displayName || 'користувач'}!`);
+                    await this._loadUserData(payload.user.uid);
+                    if (Router.currentRoute === 'profile') {
+                        renderProfilePage();
                     }
-                    return { success: false, error: e.message };
-                }
-            },
-
-            async syncUserData(options = {}) {
-                if (!firebaseInitialized || !db || !this._user) return { ok: false, error: 'no-auth' };
-                if (!this.isAuthenticated()) return { ok: false, error: 'not-authenticated' };
-                const uid = this._user.uid;
-                const docRef = doc(db, 'users', uid);
-                const scope = options.scope || 'all';
-                const scopeSet = new Set(String(scope).split(',').filter(Boolean));
-                const hasScope = key => scope === 'all' || scopeSet.has(key);
-                const profile = hasScope('profile') ? Storage.getProfile() : null;
-                const history = hasScope('history') ? Storage.getHistory() : [];
-                const bookmarks = hasScope('bookmarks') ? Storage.getBookmarks() : [];
-                const likes = hasScope('likes') ? Storage.getLikes() : {};
-                const watchTime = hasScope('watchTime') ? (Storage.getWatchTime() || 0) : 0;
-                const stickers = hasScope('stickers') ? Storage.getStickers() : null;
-                // Clean profile - strip base64, keep Cloudinary URLs
-                const cleanProfile = JSON.parse(JSON.stringify(profile || {}));
-                if (cleanProfile.avatar && cleanProfile.avatar.startsWith('data:')) {
-                    cleanProfile.avatar = '';
-                }
-                if (cleanProfile.banner && cleanProfile.banner.startsWith('data:')) {
-                    cleanProfile.banner = '';
-                }
-                // BUG FIX: Strip base64 posters from history/bookmarks — they blow up the 1MB Firestore limit
-                const trimHistory = history.slice(-200).map(h => {
-                    if (h.poster && h.poster.startsWith('data:')) return { ...h, poster: '' };
-                    return h;
-                });
-                const cleanBookmarks = bookmarks.map(b => {
-                    if (b.poster && b.poster.startsWith('data:')) return { ...b, poster: '' };
-                    return b;
-                });
-                // Для звичайних змін не відправляємо весь users-документ. Це особливо важливо
-                // для великих sticker packs і довгої history на мобільних пристроях.
-                if (scope !== 'all') {
-                    const partialPayload = { updatedAt: serverTimestamp() };
-                    if (hasScope('profile')) partialPayload.profile = cleanProfile;
-                    if (hasScope('history')) partialPayload.history = trimHistory;
-                    if (hasScope('bookmarks')) partialPayload.bookmarks = cleanBookmarks;
-                    if (hasScope('likes')) partialPayload.likes = likes;
-                    if (hasScope('watchTime')) partialPayload.watchTime = watchTime;
-                    if (hasScope('stickers')) {
-                        partialPayload.stickers = stickers;
-                        partialPayload.stickersUpdatedAt = Storage.getStickersTS();
-                    }
-                    if (hasScope('history') || hasScope('bookmarks') || hasScope('watchTime')) {
-                        const partialXp = calcTotalXP();
-                        partialPayload.xp = partialXp;
-                        partialPayload.level = getLevel(partialXp);
-                    }
-                    try {
-                        await setDoc(docRef, partialPayload, { merge: true });
-                        return { ok: true, scope };
-                    } catch (e) {
-                        console.error('[Firestore] Partial sync FAILED:', scope, e.code, e.message);
-                        return { ok: false, error: e.message };
-                    }
-                }
-                /* console.log removed */
-                /* console.log removed */
-                // Спроба 1: повні дані
-                const _xp = calcTotalXP();
-                const _lv = getLevel(_xp);
-                try {
-                    await setDoc(docRef, {
-                        profile: cleanProfile,
-                        history: trimHistory,
-                        bookmarks: cleanBookmarks,
-                        likes: likes,
-                        watchTime: watchTime,
-                        stickers: stickers,
-                        stickersUpdatedAt: Storage.getStickersTS(),
-                        xp: _xp,
-                        level: _lv,
-                        updatedAt: serverTimestamp()
-                    }, { merge: true });
-                    /* console.log removed */
-                    return { ok: true };
-                } catch (e) {
-                    console.error('[Firestore] Sync FAILED (full):', e.code, e.message);
-                }
-                // Спроба 2: менше історії (можливо документ > 1MB)
-                try {
-                    await setDoc(docRef, {
-                        profile: cleanProfile,
-                        history: trimHistory.slice(-50),
-                        bookmarks: cleanBookmarks,
-                        likes: likes,
-                        watchTime: watchTime,
-                        stickers: stickers,
-                        stickersUpdatedAt: Storage.getStickersTS(),
-                        xp: _xp,
-                        level: _lv,
-                        updatedAt: serverTimestamp()
-                    }, { merge: true });
-                    /* console.log removed */
-                    return { ok: true };
-                } catch (e) {
-                    console.error('[Firestore] Sync FAILED (trimmed):', e.code, e.message);
-                }
-                // Спроба 3: ТІЛЬКИ профіль (БЕЗ перезапису avatar/banner!)
-                // ВАЖЛИВО: не пишемо avatar: '' — це зітре Cloudinary URL!
-                try {
-                    await setDoc(docRef, {
-                        profile: cleanProfile,
-                        watchTime: watchTime,
-                        stickers: stickers,
-                        stickersUpdatedAt: Storage.getStickersTS(),
-                        xp: _xp,
-                        level: _lv,
-                        updatedAt: serverTimestamp()
-                    }, { merge: true });
-                    /* console.log removed */
-                    return { ok: true };
-                } catch (e2) {
-                    console.error('[Firestore] Sync FAILED (profile only):', e2.code, e2.message);
-                    return { ok: false, error: e2.message };
                 }
             }
-        };
+        });
+
+        // Check active session from server
+        try {
+            const res = await fetch('/api/auth/me', {
+                headers: getAuthHeaders()
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.authenticated && data.user) {
+                    this._user = data.user;
+                    this._isGuest = false;
+                    this._authResolved = true;
+                    this._notifyListeners();
+
+                    if (!this._welcomeShown) {
+                        this._welcomeShown = true;
+                        showToast(`Привіт, ${data.user.displayName || 'користувач'}`);
+                    }
+
+                    await this._loadUserData(data.user.uid, data.profile);
+                    if (Router.currentRoute === 'profile') {
+                        const profContainer = document.getElementById('profilePageContainer');
+                        if (profContainer && profContainer.classList.contains('active')) {
+                            renderProfilePage();
+                        }
+                    }
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('Auth session check error:', e);
+        }
+
+        this._user = null;
+        this._authResolved = true;
+        this._notifyListeners();
+
+        if (Router.currentRoute === 'profile') {
+            const profContainer = document.getElementById('profilePageContainer');
+            if (profContainer && profContainer.classList.contains('active')) {
+                if (this.isGuest()) renderProfilePage();
+                else renderAuthPage();
+            }
+        }
+    },
+
+    _notifyListeners() {
+        this._listeners.forEach(fn => {
+            try { fn(this._user); } catch (e) { console.error('Auth listener error:', e); }
+        });
+    },
+
+    onAuthStateChanged(fn) {
+        this._listeners.push(fn);
+        if (this._authResolved) fn(this._user);
+    },
+
+    isAuthenticated() {
+        return !!this._user;
+    },
+
+    isGuest() {
+        return this._isGuest;
+    },
+
+    setGuest(val) {
+        this._isGuest = Boolean(val);
+        if (val) {
+            localStorage.setItem('vakdab_guest', '1');
+            this._user = null;
+        } else {
+            localStorage.removeItem('vakdab_guest');
+        }
+        this._notifyListeners();
+    },
+
+    getUser() {
+        return this._user;
+    },
+
+    getAuthToken() {
+        return localStorage.getItem(TOKEN_KEY) || '';
+    },
+
+    async _loadUserData(uid, preloadedProfile = null) {
+        if (this._loadingData) return;
+        this._loadingData = true;
+        try {
+            const res = await fetch('/api/user/data', {
+                headers: getAuthHeaders()
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.profile || preloadedProfile) {
+                    const prof = data.profile || preloadedProfile;
+                    const merged = Object.assign(getDefaultProfile(), prof);
+                    if (this._user?.displayName && (!merged.realName || merged.realName === 'Користувач')) {
+                        merged.realName = stripNicknamePrefix(this._user.displayName);
+                    }
+                    if (this._user?.photoURL && !merged.avatar) {
+                        merged.avatar = this._user.photoURL;
+                    }
+                    Storage._setProfile(merged);
+                } else if (this._user?.displayName) {
+                    const p = getDefaultProfile();
+                    p.realName = stripNicknamePrefix(this._user.displayName);
+                    p.nickname = normalizeNickname(this._user.displayName, '@user');
+                    if (this._user.photoURL) p.avatar = this._user.photoURL;
+                    Storage._setProfile(p);
+                }
+
+                if (Array.isArray(data.history)) Storage._setHistory(data.history);
+                if (Array.isArray(data.bookmarks)) Storage._setBookmarks(data.bookmarks);
+                if (data.likes && typeof data.likes === 'object') Storage._setLikes(data.likes);
+                if (data.watchTime) Storage._setWatchTime(data.watchTime);
+                if (data.stickers) Storage._setStickers(Object.assign(getDefaultStickers(), data.stickers));
+            }
+        } catch (e) {
+            console.warn('Error loading user data:', e);
+        } finally {
+            this._loadingData = false;
+        }
+    },
+
+    async login(email, password) {
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                return { success: false, error: data.error || 'Невірний email або пароль' };
+            }
+            localStorage.setItem(TOKEN_KEY, data.token);
+            this._user = data.user;
+            this._isGuest = false;
+            localStorage.removeItem('vakdab_guest');
+            this._authResolved = true;
+            this._notifyListeners();
+            await this._loadUserData(data.user.uid, data.profile);
+            showToast(`Привіт, ${data.user.displayName || 'користувач'}!`);
+            if (Router.currentRoute === 'profile') renderProfilePage();
+            return { success: true, user: data.user };
+        } catch (e) {
+            return { success: false, error: e.message || 'Помилка мережі' };
+        }
+    },
+
+    async register(email, password, displayName) {
+        try {
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, displayName })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                return { success: false, error: data.error || 'Помилка реєстрації' };
+            }
+            localStorage.setItem(TOKEN_KEY, data.token);
+            this._user = data.user;
+            this._isGuest = false;
+            localStorage.removeItem('vakdab_guest');
+            this._authResolved = true;
+            this._notifyListeners();
+            await this._loadUserData(data.user.uid, data.profile);
+            showToast('Акаунт успішно зареєстровано!');
+            if (Router.currentRoute === 'profile') renderProfilePage();
+            return { success: true, user: data.user };
+        } catch (e) {
+            return { success: false, error: e.message || 'Помилка реєстрації' };
+        }
+    },
+
+    async quickLogin(provider, nickname) {
+        try {
+            const res = await fetch('/api/auth/quick-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ provider, nickname, name: nickname })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Помилка швидкого входу');
+            localStorage.setItem(TOKEN_KEY, data.token);
+            this._user = data.user;
+            this._isGuest = false;
+            localStorage.removeItem('vakdab_guest');
+            this._authResolved = true;
+            this._notifyListeners();
+            await this._loadUserData(data.user.uid, data.profile);
+            showToast(`Вхід виконано (${provider}): ${data.user.displayName}`);
+            if (Router.currentRoute === 'profile') renderProfilePage();
+            return { success: true, user: data.user };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    },
+
+    async signInWithGoogle() {
+        try {
+            const res = await fetch('/api/auth/google/url');
+            const data = await res.json();
+            if (data.configured && data.url) {
+                const width = 520, height = 640;
+                const left = Math.max(0, (window.innerWidth - width) / 2 + window.screenX);
+                const top = Math.max(0, (window.innerHeight - height) / 2 + window.screenY);
+                window.open(data.url, 'vakdab_oauth', `width=${width},height=${height},left=${left},top=${top}`);
+                return { success: true };
+            } else {
+                const name = prompt('GOOGLE_CLIENT_ID ще не додано у .env.\nВведіть нікнейм або імʼя для тестування входу через Google:', 'Google Користувач');
+                if (!name) return { success: false, error: 'Вхід скасовано' };
+                return await this.quickLogin('google', name);
+            }
+        } catch (e) {
+            console.warn('Google sign-in error:', e);
+            return { success: false, error: e.message };
+        }
+    },
+
+    async signInWithDiscord() {
+        try {
+            const res = await fetch('/api/auth/discord/url');
+            const data = await res.json();
+            if (data.configured && data.url) {
+                const width = 520, height = 680;
+                const left = Math.max(0, (window.innerWidth - width) / 2 + window.screenX);
+                const top = Math.max(0, (window.innerHeight - height) / 2 + window.screenY);
+                window.open(data.url, 'vakdab_oauth', `width=${width},height=${height},left=${left},top=${top}`);
+                return { success: true };
+            } else {
+                const name = prompt('DISCORD_CLIENT_ID ще не додано у .env.\nВведіть ваш Discord нікнейм для тестування входу:', 'DiscordAnime');
+                if (!name) return { success: false, error: 'Вхід скасовано' };
+                return await this.quickLogin('discord', name);
+            }
+        } catch (e) {
+            console.warn('Discord sign-in error:', e);
+            return { success: false, error: e.message };
+        }
+    },
+
+    async signInWithTelegram(telegramData = null) {
+        try {
+            if (telegramData) {
+                const res = await fetch('/api/auth/telegram', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(telegramData)
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Помилка перевірки Telegram');
+                localStorage.setItem(TOKEN_KEY, data.token);
+                this._user = data.user;
+                this._isGuest = false;
+                localStorage.removeItem('vakdab_guest');
+                this._authResolved = true;
+                this._notifyListeners();
+                await this._loadUserData(data.user.uid, data.profile);
+                showToast('Вхід через Telegram успішний');
+                if (Router.currentRoute === 'profile') renderProfilePage();
+                return { success: true };
+            }
+
+            const username = prompt('Введіть ваш Telegram @username для входу на сайті:', '@animer');
+            if (!username) return { success: false, error: 'Вхід скасовано' };
+            const clean = username.replace(/^@+/, '').trim();
+            return await this.quickLogin('telegram', clean);
+        } catch (e) {
+            console.warn('Telegram sign-in error:', e);
+            return { success: false, error: e.message };
+        }
+    },
+
+    async logout() {
+        if (Storage._syncTimer) {
+            clearTimeout(Storage._syncTimer);
+            Storage._syncTimer = null;
+        }
+
+        showToast('Збереження даних і вихід...');
+
+        try {
+            await this.syncUserData();
+        } catch (e) {
+            console.warn('Logout: sync error', e.message);
+        }
+
+        try {
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: getAuthHeaders()
+            });
+        } catch (e) {}
+
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem('vakdab_guest');
+        this._user = null;
+        this._authResolved = true;
+        this._welcomeShown = false;
+        this._isGuest = false;
+        Storage.clear();
+        this._notifyListeners();
+
+        showToast('Ви вийшли з акаунту');
+        Router.showProfile();
+        return { success: true };
+    },
+
+    handleExit() {
+        if (this.isGuest()) {
+            this._isGuest = false;
+            localStorage.removeItem('vakdab_guest');
+            Storage.clear();
+            this._notifyListeners();
+            showToast('Гостьовий сеанс завершено');
+            Router.showProfile();
+        } else {
+            this.logout().catch(e => console.warn('Logout error:', e));
+        }
+    },
+
+    hasPasswordProvider() {
+        return this._user?.provider === 'local';
+    },
+
+    providerLabel() {
+        if (this.isGuest() || !this.isAuthenticated()) return 'Гість';
+        const p = this._user?.provider;
+        if (p === 'google') return 'Google';
+        if (p === 'telegram') return 'Telegram';
+        if (p === 'discord') return 'Discord';
+        if (p === 'local') return 'Email і пароль';
+        return 'Акаунт';
+    },
+
+    async sendPasswordReset() {
+        showToast('Скидання пароля — зверніться до підтримки VakDab');
+        return { success: true };
+    },
+
+    async deleteAccount() {
+        try {
+            const res = await fetch('/api/auth/account', {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Не вдалося видалити акаунт');
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem('vakdab_guest');
+            this._user = null;
+            this._authResolved = true;
+            this._isGuest = false;
+            Storage.clear();
+            this._notifyListeners();
+            showToast('Акаунт успішно видалено');
+            Router.showProfile();
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    },
+
+    async syncUserData(options = {}) {
+        if (!this.isAuthenticated()) return { ok: false, error: 'not-authenticated' };
+        const scope = options.scope || 'all';
+        const scopeSet = new Set(String(scope).split(',').filter(Boolean));
+        const hasScope = key => scope === 'all' || scopeSet.has(key);
+
+        const payload = {};
+        if (hasScope('profile')) payload.profile = Storage.getProfile();
+        if (hasScope('history')) payload.history = Storage.getHistory();
+        if (hasScope('bookmarks')) payload.bookmarks = Storage.getBookmarks();
+        if (hasScope('likes')) payload.likes = Storage.getLikes();
+        if (hasScope('watchTime')) payload.watchTime = Storage.getWatchTime() || 0;
+        if (hasScope('stickers')) {
+            payload.stickers = Storage.getStickers();
+            payload.stickersUpdatedAt = Storage.getStickersTS();
+        }
+        if (hasScope('history') || hasScope('bookmarks') || hasScope('watchTime')) {
+            const xp = calcTotalXP();
+            payload.xp = xp;
+            payload.level = getLevel(xp);
+        }
+
+        try {
+            const res = await fetch('/api/user/sync', {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+            const data = await res.json();
+            return { ok: true, data };
+        } catch (e) {
+            console.warn('Sync error:', e.message);
+            return { ok: false, error: e.message };
+        }
+    }
+};
 
 export { Auth };
