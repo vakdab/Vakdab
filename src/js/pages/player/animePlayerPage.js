@@ -1,12 +1,12 @@
 import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
 import { auth, db } from '../../services/firebase/client.js';
-import { GENRE_MAP } from '../../config/constants.js?v=20260909-player-v8';
+import { GENRE_MAP } from '../../config/constants.js?v=20260910-anime4k-v1';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { Storage } from '../../core/compat/storage.js?v=20260909-player-v8';
-import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260909-player-v8';
+import { Storage } from '../../core/compat/storage.js?v=20260910-anime4k-v1';
+import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260910-anime4k-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
-    resolveAshdiPlaybackUrl, resolveMoonanimeStreamUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
+    resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, searchHikkaAllTitles, switchProviderSource
 } from '../../services/catalog/catalog.js?v=20260829-catalog-28-v1';
 import {
@@ -15,7 +15,7 @@ import {
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove-thought-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260909-player-v8';
+} from '../../legacy/app-legacy.js?v=20260910-anime4k-v1';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 
         // ====================================================================
@@ -1261,15 +1261,11 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                         const interval = item.interval || item;
                         const start = Number(interval.start_time);
                         const end = Number(interval.end_time);
-                        const type = String(item.skip_type || item.type || interval.skip_type || '').toLowerCase();
+                        const type = String(item.skip_type || '').toLowerCase();
                         return { start, end, type };
                     }).filter(item => Number.isFinite(item.start) && Number.isFinite(item.end)
-                        && item.end > item.start && (item.type === 'op' || item.type === 'opening' || item.type === 'ed' || item.type === 'ending'));
-                    // Do not persist empty responses: AniSkip can temporarily fail or
-                    // return an incomplete response, and a failed lookup must be retried.
-                    if (segments.length) {
-                        try { localStorage.setItem(`vakdab:aniskip:${cacheKey}`, JSON.stringify(segments)); } catch (_) { /* ignore */ }
-                    }
+                        && item.end > item.start && (item.type === 'op' || item.type === 'ed'));
+                    try { localStorage.setItem(`vakdab:aniskip:${cacheKey}`, JSON.stringify(segments)); } catch (_) { /* ignore */ }
                     return segments;
                 } catch (error) {
                     if (error?.name !== 'AbortError') console.warn('[AniSkip] lookup failed:', error);
@@ -1279,13 +1275,10 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 }
             })();
             aniSkipCache.set(cacheKey, request);
-            request.then(segments => {
-                if (!Array.isArray(segments) || !segments.length) aniSkipCache.delete(cacheKey);
-            }).catch(() => aniSkipCache.delete(cacheKey));
             return request;
         }
 
-        async function attachAniSkip(video, episode, segmentsPromise = null, playbackRequest = null) {
+        async function attachAniSkip(video, episode, segmentsPromise = null) {
             if (!video) return;
             // Only trust the MAL ID that came directly with the catalog record.
             // The Jikan title-search fallback can resolve to the wrong anime and
@@ -1295,15 +1288,11 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             // Start AniSkip lookup before playback when possible, so the button
             // is ready by the time the opening reaches the screen.
             const rawSegments = await (segmentsPromise || getAniSkipSegments(malId, episode));
-            // Ignore a late AniSkip response from an episode that was replaced
-            // while the lookup was still in flight.
-            if (playbackRequest !== null && playbackRequest !== playerPagePlaybackRequest) return;
-            if (!playerPageIsOpen) return;
             // The player can rebuild its video node while the AniSkip request is
             // pending. Always bind to the current node/container after the request.
             const currentVideo = playerPagePlayer?.videoRef?.isConnected
                 ? playerPagePlayer.videoRef
-                : (video?.isConnected ? video : null);
+                : video;
             const playerWrap = currentVideo?.closest('.lampa-player-container')
                 || playerPagePlayer?.containerRef;
             // Sanity-check the timecodes, but do not reject a valid result just
@@ -1354,31 +1343,35 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             const onTimeUpdate = () => {
                 const now = Number(media.currentTime);
                 if (!Number.isFinite(now)) return;
-                // Show the action just before the first opening frame so a slow
-                // mobile timeupdate/API response cannot make the button appear late.
-                activeSegment = segments.find(segment => now >= Math.max(0, segment.start - 2) && now < segment.end) || null;
+                activeSegment = segments.find(segment => now >= Math.max(0, segment.start - 0.5) && now < segment.end) || null;
                 setButtonVisible(Boolean(activeSegment));
             };
             // AniSkip may resolve after playback has already started; sync now
-            // and on every event that can move the media clock. Relying only on
-            // timeupdate caused the button to appear late or not at all on HLS
-            // and mobile browsers.
+            // instead of waiting for a later timeupdate event.
             onTimeUpdate();
-            ['loadedmetadata', 'loadeddata', 'durationchange', 'canplay', 'play', 'playing', 'timeupdate', 'seeking', 'seeked'].forEach(type => {
-                media.addEventListener(type, onTimeUpdate);
-            });
-            media.addEventListener('ended', hideButton, { once: true });
+            media.addEventListener('loadedmetadata', onTimeUpdate);
+            media.addEventListener('timeupdate', onTimeUpdate);
+            media.addEventListener('seeking', onTimeUpdate);
+            media.addEventListener('ended', () => hideButton(), { once: true });
             // Some embedded/mobile players throttle timeupdate. Keep the button
             // strictly tied to the actual currentTime in that case as well.
             openingWatchTimer = window.setInterval(() => {
-                if (!media.isConnected || (playbackRequest !== null && playbackRequest !== playerPagePlaybackRequest)) {
+                if (!media.isConnected) {
                     window.clearInterval(openingWatchTimer);
                     openingWatchTimer = null;
-                    hideButton();
                     return;
                 }
                 onTimeUpdate();
-            }, 150);
+            }, 250);
+            media.addEventListener('emptied', () => {
+                media.removeEventListener('loadedmetadata', onTimeUpdate);
+                media.removeEventListener('timeupdate', onTimeUpdate);
+                media.removeEventListener('seeking', onTimeUpdate);
+                button.removeEventListener('click', onSkip);
+                if (openingWatchTimer) window.clearInterval(openingWatchTimer);
+                openingWatchTimer = null;
+                hideButton();
+            }, { once: true });
         }
 
         async function playEpisode(file, epNum) {
@@ -1419,21 +1412,6 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                     return;
                 }
             }
-            // MoonAnime normally embeds its own player; resolve the episode
-            // into a direct HLS manifest so it plays in OUR LampaPlayer with
-            // our controls, quality menu and skip-opening. If extraction
-            // fails, finalUrl stays the iframe link and the embed fallback
-            // above takes over.
-            if (/moonanime\.art\/iframe\//i.test(finalUrl)) {
-                showToast('Підключення MoonAnime...');
-                try {
-                    finalUrl = await resolveMoonanimeStreamUrl(finalUrl);
-                } catch (error) {
-                    if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
-                    console.warn('[MoonAnime playback]', error);
-                    showToast('MoonAnime: прямий потік недоступний, відкриваю вбудований плеєр');
-                }
-            }
             if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
             playerPageActiveEpisodeFile = finalUrl;
 
@@ -1442,10 +1420,6 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
             playerPagePlayer = new LampaPlayer(videoDiv, { poster: playerPageAnime?.images?.jpg?.large_image_url });
             playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || '', `Серія ${epNum}`);
-            // Embed providers (MoonAnime iframe) never emit our `playing`
-            // event, so the page poster must be removed here or it stays on
-            // top and blocks the provider's own Play button.
-            if (!playerPagePlayer.videoRef) hidePlayerFramePoster();
             playerPageHistoryUpdated = false;
             playerPageWatchStartTime = 0;
             playerPageAccumulatedWatchSeconds = 0;
@@ -1453,7 +1427,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             playerPageIsPlaying = false;
             const video = playerPagePlayer.videoRef;
             if (video) {
-                attachAniSkip(video, epNum, openingSegmentsPromise, playbackRequest).catch(error => console.warn('[AniSkip] attach failed:', error));
+                attachAniSkip(video, epNum, openingSegmentsPromise).catch(error => console.warn('[AniSkip] attach failed:', error));
                 // Відновлення позиції: якщо цю серію вже частково дивилися — продовжуємо з місця зупинки.
                 try {
                     const savedProgress = (() => {
