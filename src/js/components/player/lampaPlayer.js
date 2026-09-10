@@ -590,7 +590,12 @@ export class LampaPlayer {
                 if (isEmbedUrl(src)) {
                     this.container.innerHTML = '';
                     const iframe = document.createElement('iframe');
-                    iframe.src = src;
+                    // MoonAnime denies direct framing with X-Frame-Options: DENY.
+                    // Load only this provider through our CORS/frame-safe proxy;
+                    // other embed providers keep their original URL and behavior.
+                    iframe.src = /moonanime\.art\/iframe\//i.test(src)
+                        ? getProxyUrl(src, 'desktop')
+                        : src;
                     iframe.setAttribute('allowfullscreen', '');
                     iframe.setAttribute('allow', 'autoplay; fullscreen');
                     iframe.style.cssText = 'width:100%;height:100%;border:none;position:absolute;top:0;left:0;';
