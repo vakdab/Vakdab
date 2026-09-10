@@ -331,7 +331,13 @@ import {
                     (group.isSubs ? subtitleLogos : dubLogos)[teamName] = logoUrl;
                 }
                 if (group.isSubs) return;
-                group.providers.filter(provider => String(provider?.name || '').toUpperCase() === 'ASHDI').forEach(provider => {
+                // Mikai now serves this title through MOONANIME (iframe links),
+                // while older titles still use ASHDI. Do not restrict the parser
+                // to one provider: every non-subtitle provider with playLink is
+                // a valid Mikai playback source.
+                group.providers.forEach(provider => {
+                    const providerName = String(provider?.name || '').trim();
+                    if (!providerName) return;
                     const episodes = dubs.get(teamName) || new Map();
                     (provider.episodes || []).forEach(ep => {
                         const number = String(ep?.number ?? '').trim();
@@ -346,12 +352,12 @@ import {
                                 file: addNoAdsQuery(playLink),
                                 dub: teamName,
                                 teamLogo: logoUrl,
-                                provider: 'ASHDI',
+                                provider: providerName,
                                 createdAt: ep?.createdAt || ''
                             });
                         }
                     });
-                    dubs.set(teamName, episodes);
+                    if (episodes.size) dubs.set(teamName, episodes);
                 });
             });
             const dubObject = {};
