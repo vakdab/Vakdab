@@ -6,32 +6,27 @@
  * remains visible and playback continues normally.
  */
 
-const ANIME4K_CDN = 'https://cdn.jsdelivr.net/npm/anime4k-webgpu@1.0.0/lib/index.js';
+const ANIME4K_ESM = 'https://cdn.jsdelivr.net/npm/anime4k-webgpu@1.0.0/+esm';
 let anime4kModulePromise = null;
 
-function loadAnime4KModule() {
-    if (globalThis['anime4k-webgpu']) return Promise.resolve(globalThis['anime4k-webgpu']);
+async function loadAnime4KModule() {
     if (anime4kModulePromise) return anime4kModulePromise;
-    anime4kModulePromise = new Promise((resolve, reject) => {
-        const existing = document.querySelector('script[data-vakdab-anime4k]');
-        const finish = () => {
-            const module = globalThis['anime4k-webgpu'];
-            if (module) resolve(module);
-            else reject(new Error('Anime4K module did not expose a global API'));
-        };
-        if (existing) {
-            existing.addEventListener('load', finish, { once: true });
-            existing.addEventListener('error', reject, { once: true });
-            if (globalThis['anime4k-webgpu']) finish();
-            return;
+    anime4kModulePromise = import(ANIME4K_ESM).then(imported => {
+        // jsDelivr +esm wraps the package's published UMD entrypoint. Normalize
+        // both the wrapper's default export and its named package export while
+        // keeping the integration a real ES-module import (no global script).
+        const api = imported?.default?.['anime4k-webgpu']
+            || imported?.['anime4k-webgpu']
+            || imported?.default
+            || imported;
+        if (!api || typeof api.ModeA !== 'function' || typeof api.ModeB !== 'function') {
+            throw new Error('Anime4K ES module has no usable presets');
         }
-        const script = document.createElement('script');
-        script.src = ANIME4K_CDN;
-        script.async = true;
-        script.dataset.vakdabAnime4k = '1';
-        script.onload = finish;
-        script.onerror = () => reject(new Error('Anime4K module failed to load'));
-        document.head.appendChild(script);
+        return api;
+    }).catch(error => {
+        // A transient CDN failure must not poison every later episode attempt.
+        anime4kModulePromise = null;
+        throw error;
     });
     return anime4kModulePromise;
 }
