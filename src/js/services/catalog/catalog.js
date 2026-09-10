@@ -10,7 +10,7 @@ import {
     playerPageCurrentDub, playerPageCurrentSeason, playerPageCurrentSource,
     buildBottomSheetData, buildEpisodeViews, buildSeasonRow,
     showToast, updateFilterChip, updateSourceChip
-} from '../../legacy/app-legacy.js?v=20260909-player-v8';
+} from '../../legacy/app-legacy.js?v=20260910-anime4k-v1';
 
         export const CATALOG_POSTER_FALLBACK = './assets/icons/android-chrome-512x512.png';
         export function normalizeAnimeUrl(href = '') {
@@ -331,15 +331,8 @@ import {
                     (group.isSubs ? subtitleLogos : dubLogos)[teamName] = logoUrl;
                 }
                 if (group.isSubs) return;
-                // Collect episodes per provider first. Mikai lists several
-                // providers (ASHDI, MOONANIME, TORTUGA...) for the same team,
-                // and mixing them blindly replaces working links with broken
-                // ones, so the merge below is ordered and per-episode.
-                const providerEpisodes = new Map();
-                group.providers.forEach(provider => {
-                    const providerName = String(provider?.name || '').trim().toUpperCase();
-                    if (!providerName) return;
-                    const episodes = providerEpisodes.get(providerName) || new Map();
+                group.providers.filter(provider => String(provider?.name || '').toUpperCase() === 'ASHDI').forEach(provider => {
+                    const episodes = dubs.get(teamName) || new Map();
                     (provider.episodes || []).forEach(ep => {
                         const number = String(ep?.number ?? '').trim();
                         const playLink = String(ep?.playLink || '').trim();
@@ -353,28 +346,13 @@ import {
                                 file: addNoAdsQuery(playLink),
                                 dub: teamName,
                                 teamLogo: logoUrl,
-                                provider: providerName,
+                                provider: 'ASHDI',
                                 createdAt: ep?.createdAt || ''
                             });
                         }
                     });
-                    if (episodes.size) providerEpisodes.set(providerName, episodes);
+                    dubs.set(teamName, episodes);
                 });
-                if (!providerEpisodes.size) return;
-                // ASHDI is the primary source: the player resolves its direct
-                // HLS manifests. MOONANIME (iframe) only fills episodes that
-                // ASHDI does not have, e.g. teams/uploads without an ASHDI copy.
-                // TORTUGA and unknown providers are ignored on purpose: the
-                // player cannot resolve their links.
-                const merged = new Map();
-                ['ASHDI', 'MOONANIME'].forEach(providerName => {
-                    const episodes = providerEpisodes.get(providerName);
-                    if (!episodes) return;
-                    episodes.forEach((episode, number) => {
-                        if (!merged.has(number)) merged.set(number, episode);
-                    });
-                });
-                if (merged.size) dubs.set(teamName, merged);
             });
             const dubObject = {};
             [...dubs.entries()].sort(([a], [b]) => a.localeCompare(b, 'uk')).forEach(([team, episodes]) => {
@@ -405,68 +383,6 @@ import {
             const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
             const proxiedManifest = getProxyUrl(manifest, isMobileDevice ? 'mobile' : 'desktop');
             ashdiPlaybackCache.set(ashdiPageUrl, proxiedManifest);
-            return proxiedManifest;
-        }
-
-        const moonanimeStreamCache = new Map();
-
-        // MoonAnime wraps its player config in an obfuscated inline script:
-        // base64 -> XOR(seed byte + 32-byte key + rolling checksum). This
-        // decrypts it and returns the raw Playerjs config text.
-        function decryptMoonanimePlayerConfig(html) {
-            const scripts = String(html || '').match(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi) || [];
-            for (const raw of scripts) {
-                const body = raw.replace(/^<script[^>]*>/i, '').replace(/<\/script>\s*$/i, '');
-                const blobMatch = body.match(/atob\(\s*"([A-Za-z0-9+\/=]{500,})"\s*\)/);
-                if (!blobMatch || !/Uint8Array\.from\(/.test(body)) continue;
-                try {
-                    const bytes = Uint8Array.from(atob(blobMatch[1]), c => c.charCodeAt(0));
-                    if (bytes.length < 40) continue;
-                    const key = bytes.slice(1, 33);
-                    const out = new Uint8Array(bytes.length - 33);
-                    let rolling = bytes[0];
-                    for (let i = 0; i < out.length; i += 1) {
-                        const k = key[i % 32];
-                        out[i] = bytes[i + 33] ^ k ^ rolling;
-                        rolling = (bytes[i + 33] + k) & 255;
-                    }
-                    const decrypted = new TextDecoder().decode(out);
-                    if (/new\s+Playerjs/.test(decrypted)) return decrypted;
-                } catch (_) { /* try the next inline script */ }
-            }
-            return null;
-        }
-
-        // The Playerjs config stores the stream URL as `file: fn("base64")`,
-        // where fn XOR-decodes with a short key embedded next to it.
-        function decodeMoonanimeConfigValue(decrypted, configKey) {
-            const valueMatch = decrypted.match(new RegExp(configKey + '\\s*:\\s*[A-Za-z_$][\\w$]*\\(\\s*"([A-Za-z0-9+/=]+)"\\s*\\)'));
-            if (!valueMatch) return '';
-            const keyMatch = decrypted.match(/var\s+k\s*=\s*"([^"]+)"/);
-            if (!keyMatch) return '';
-            const key = keyMatch[1];
-            const bytes = Uint8Array.from(atob(valueMatch[1]), c => c.charCodeAt(0));
-            let out = '';
-            for (let i = 0; i < bytes.length; i += 1) out += String.fromCharCode(bytes[i] ^ key.charCodeAt(i % key.length));
-            try { return decodeURIComponent(escape(out)); } catch (_) { return out; }
-        }
-
-        // Resolves a MoonAnime iframe page into a direct HLS manifest so the
-        // episode plays inside our own LampaPlayer instead of their embed.
-        export async function resolveMoonanimeStreamUrl(iframeUrl) {
-            if (!iframeUrl) throw new Error('Порожній MoonAnime URL');
-            const cached = moonanimeStreamCache.get(iframeUrl);
-            if (cached) return cached;
-            const html = await fetchMikaiHtml(iframeUrl);
-            const decrypted = decryptMoonanimePlayerConfig(html);
-            if (!decrypted) throw new Error('не вдалося прочитати плеєр MoonAnime');
-            let manifest = decodeMoonanimeConfigValue(decrypted, 'file');
-            if (!/^https?:\/\//i.test(manifest) || !/\.m3u8/i.test(manifest)) {
-                throw new Error('потік MoonAnime не знайдено');
-            }
-            const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-            const proxiedManifest = getProxyUrl(manifest, isMobileDevice ? 'mobile' : 'desktop');
-            moonanimeStreamCache.set(iframeUrl, proxiedManifest);
             return proxiedManifest;
         }
 
