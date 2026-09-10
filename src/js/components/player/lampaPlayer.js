@@ -85,6 +85,8 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
                 .lp-btn:hover { opacity: 1; transform: scale(1.08); }
                 .lp-btn svg { width: 19px; height: 19px; fill: #fff; }
                 .lp-main-btn svg { width: 22px; height: 22px; }
+                .lp-anime4k-btn { font-size: 10px; font-weight: 800; letter-spacing: .02em; min-width: 28px; }
+                .lp-anime4k-btn.is-active { color: #8bd5ff; opacity: 1; }
                 .lp-select { background: rgba(0,0,0,.6); color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 6px; padding: 4px 5px; font-size: 11px; min-height: 28px; }
                 .lp-select:focus { outline: 1px solid rgba(255,255,255,.7); outline-offset: 1px; }
 
@@ -221,6 +223,7 @@ export class LampaPlayer {
                         <button class="lp-btn lp-main-btn" id="lpPlayBtn" title="Відтворити / Пауза" aria-label="Відтворити">${LP_ICONS.play}</button>
                         <button class="lp-btn lp-skip-btn" id="lpSkipBackBtn" title="Назад на 10 секунд" aria-label="Назад на 10 секунд">${LP_ICONS.skipBack}</button>
                         <button class="lp-btn lp-skip-btn" id="lpSkipForwardBtn" title="Вперед на 10 секунд" aria-label="Вперед на 10 секунд">${LP_ICONS.skipForward}</button>
+                        <button class="lp-btn lp-anime4k-btn" id="lpAnime4kBtn" title="Увімкнути Anime4K" aria-label="Увімкнути Anime4K">4K</button>
                         <span class="lp-time" id="lpTime">0:00 / 0:00</span>
                         <div class="lp-spacer"></div>
                         <div class="lp-volume-group">
@@ -310,6 +313,29 @@ export class LampaPlayer {
                 // Play button
                 const playBtn = wrap.querySelector('#lpPlayBtn');
                 if (playBtn) playBtn.addEventListener('click', e => { e.stopPropagation(); this._flashCenter(); this.togglePlay(); });
+                const anime4kBtn = wrap.querySelector('#lpAnime4kBtn');
+                if (anime4kBtn) {
+                    if (!Anime4KWebGPUBridge.isSupported()) anime4kBtn.hidden = true;
+                    anime4kBtn.addEventListener('click', async e => {
+                        e.stopPropagation();
+                        if (!this._anime4k) return;
+                        if (this._anime4k.active) {
+                            this._anime4k.stop();
+                            anime4kBtn.classList.remove('is-active');
+                            anime4kBtn.title = 'Увімкнути Anime4K';
+                            anime4kBtn.setAttribute('aria-label', anime4kBtn.title);
+                            return;
+                        }
+                        anime4kBtn.disabled = true;
+                        anime4kBtn.textContent = '…';
+                        const started = await this._anime4k.start().catch(() => false);
+                        anime4kBtn.disabled = false;
+                        anime4kBtn.textContent = '4K';
+                        anime4kBtn.classList.toggle('is-active', started);
+                        anime4kBtn.title = started ? 'Вимкнути Anime4K' : 'Anime4K недоступний для цього відео';
+                        anime4kBtn.setAttribute('aria-label', anime4kBtn.title);
+                    });
+                }
 
                 // Progress bar seek
                 const progress = wrap.querySelector('#lpProgress');
