@@ -112,7 +112,7 @@ export class Anime4KWebGPUBridge {
             this.frameHandle = this.video.requestVideoFrameCallback(() => {
                 this.frameHandle = null;
                 this._renderFrame();
-                this._queueNextFrame();
+                if (this.active) this._queueNextFrame();
             });
         } else this._scheduleFallbackFrame();
     }
@@ -160,11 +160,21 @@ export class Anime4KWebGPUBridge {
 
     async start() {
         if (this.started || !Anime4KWebGPUBridge.isSupported()) return false;
-        if (!this.video || !this.host || this.video.readyState < 1 || !this.video.videoWidth || !this.video.videoHeight) return false;
+        if (!this.video || !this.host) return false;
         this.started = true;
         this.video.addEventListener('play', this._onPlay, { passive: true });
         document.addEventListener('visibilitychange', this._onVisibility, { passive: true });
         try {
+            // loadedmetadata exposes dimensions, but copyExternalImageToTexture is
+            // only reliable after the first decoded frame (HAVE_FUTURE_DATA).
+            if (this.video.readyState < 2) {
+                await new Promise(resolve => {
+                    const onLoadedData = () => resolve();
+                    this.video.addEventListener('loadeddata', onLoadedData, { once: true });
+                    this.video.addEventListener('error', onLoadedData, { once: true });
+                });
+            }
+            if (!this.started || !this.video.videoWidth || !this.video.videoHeight) return this._fallback();
             const api = await loadAnime4KModule();
             if (!this.started) return false;
             const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
