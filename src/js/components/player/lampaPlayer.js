@@ -265,8 +265,6 @@ export class LampaPlayer {
                 v.addEventListener('loadedmetadata', () => {
                     if (v.readyState >= 1) this._clearPlaybackError();
                     syncTimeState();
-                    // Anime4K is intentionally best-effort: it never blocks playback.
-                    this._anime4k?.start().catch(() => {});
                 });
                 v.addEventListener('durationchange', syncTimeState);
                 v.addEventListener('timeupdate', syncTimeState);
