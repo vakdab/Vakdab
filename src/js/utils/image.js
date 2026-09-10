@@ -6,6 +6,7 @@ export function getProxyUrl(url, forceUA = 'desktop') {
 }
 export function isEmbedUrl(url = '') {
     return url.includes('tortuga.tw/embed') || url.includes('/embed/') ||
+        /moonanime\.art\/iframe\//i.test(url) ||
         url.includes('aniboom') || url.includes('cdn-iframe') || url.includes('cdnvideohub') ||
         /^https?:\/\/(?:www\.)?mikai\.me\/anime\//i.test(url);
 }

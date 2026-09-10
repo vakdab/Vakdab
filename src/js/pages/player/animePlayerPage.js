@@ -1427,6 +1427,10 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
             playerPagePlayer = new LampaPlayer(videoDiv, { poster: playerPageAnime?.images?.jpg?.large_image_url });
             playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || '', `Серія ${epNum}`);
+            // Embed providers (MoonAnime iframe) never emit our `playing`
+            // event, so the page poster must be removed here or it stays on
+            // top and blocks the provider's own Play button.
+            if (!playerPagePlayer.videoRef) hidePlayerFramePoster();
             playerPageHistoryUpdated = false;
             playerPageWatchStartTime = 0;
             playerPageAccumulatedWatchSeconds = 0;

@@ -331,8 +331,15 @@ import {
                     (group.isSubs ? subtitleLogos : dubLogos)[teamName] = logoUrl;
                 }
                 if (group.isSubs) return;
-                group.providers.filter(provider => String(provider?.name || '').toUpperCase() === 'ASHDI').forEach(provider => {
-                    const episodes = dubs.get(teamName) || new Map();
+                // Collect episodes per provider first. Mikai lists several
+                // providers (ASHDI, MOONANIME, TORTUGA...) for the same team,
+                // and mixing them blindly replaces working links with broken
+                // ones, so the merge below is ordered and per-episode.
+                const providerEpisodes = new Map();
+                group.providers.forEach(provider => {
+                    const providerName = String(provider?.name || '').trim().toUpperCase();
+                    if (!providerName) return;
+                    const episodes = providerEpisodes.get(providerName) || new Map();
                     (provider.episodes || []).forEach(ep => {
                         const number = String(ep?.number ?? '').trim();
                         const playLink = String(ep?.playLink || '').trim();
@@ -346,13 +353,28 @@ import {
                                 file: addNoAdsQuery(playLink),
                                 dub: teamName,
                                 teamLogo: logoUrl,
-                                provider: 'ASHDI',
+                                provider: providerName,
                                 createdAt: ep?.createdAt || ''
                             });
                         }
                     });
-                    dubs.set(teamName, episodes);
+                    if (episodes.size) providerEpisodes.set(providerName, episodes);
                 });
+                if (!providerEpisodes.size) return;
+                // ASHDI is the primary source: the player resolves its direct
+                // HLS manifests. MOONANIME (iframe) only fills episodes that
+                // ASHDI does not have, e.g. teams/uploads without an ASHDI copy.
+                // TORTUGA and unknown providers are ignored on purpose: the
+                // player cannot resolve their links.
+                const merged = new Map();
+                ['ASHDI', 'MOONANIME'].forEach(providerName => {
+                    const episodes = providerEpisodes.get(providerName);
+                    if (!episodes) return;
+                    episodes.forEach((episode, number) => {
+                        if (!merged.has(number)) merged.set(number, episode);
+                    });
+                });
+                if (merged.size) dubs.set(teamName, merged);
             });
             const dubObject = {};
             [...dubs.entries()].sort(([a], [b]) => a.localeCompare(b, 'uk')).forEach(([team, episodes]) => {
