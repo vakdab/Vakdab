@@ -1285,7 +1285,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             return request;
         }
 
-        async function attachAniSkip(video, episode, segmentsPromise = null) {
+        async function attachAniSkip(video, episode, segmentsPromise = null, playbackRequest = null) {
             if (!video) return;
             // Only trust the MAL ID that came directly with the catalog record.
             // The Jikan title-search fallback can resolve to the wrong anime and
@@ -1295,11 +1295,15 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             // Start AniSkip lookup before playback when possible, so the button
             // is ready by the time the opening reaches the screen.
             const rawSegments = await (segmentsPromise || getAniSkipSegments(malId, episode));
+            // Ignore a late AniSkip response from an episode that was replaced
+            // while the lookup was still in flight.
+            if (playbackRequest !== null && playbackRequest !== playerPagePlaybackRequest) return;
+            if (!playerPageIsOpen) return;
             // The player can rebuild its video node while the AniSkip request is
             // pending. Always bind to the current node/container after the request.
             const currentVideo = playerPagePlayer?.videoRef?.isConnected
                 ? playerPagePlayer.videoRef
-                : video;
+                : (video?.isConnected ? video : null);
             const playerWrap = currentVideo?.closest('.lampa-player-container')
                 || playerPagePlayer?.containerRef;
             // Sanity-check the timecodes, but do not reject a valid result just
@@ -1356,31 +1360,25 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 setButtonVisible(Boolean(activeSegment));
             };
             // AniSkip may resolve after playback has already started; sync now
-            // instead of waiting for a later timeupdate event.
+            // and on every event that can move the media clock. Relying only on
+            // timeupdate caused the button to appear late or not at all on HLS
+            // and mobile browsers.
             onTimeUpdate();
-            media.addEventListener('loadedmetadata', onTimeUpdate);
-            media.addEventListener('timeupdate', onTimeUpdate);
-            media.addEventListener('seeking', onTimeUpdate);
-            media.addEventListener('ended', () => hideButton(), { once: true });
+            ['loadedmetadata', 'loadeddata', 'durationchange', 'canplay', 'play', 'playing', 'timeupdate', 'seeking', 'seeked'].forEach(type => {
+                media.addEventListener(type, onTimeUpdate);
+            });
+            media.addEventListener('ended', hideButton, { once: true });
             // Some embedded/mobile players throttle timeupdate. Keep the button
             // strictly tied to the actual currentTime in that case as well.
             openingWatchTimer = window.setInterval(() => {
-                if (!media.isConnected) {
+                if (!media.isConnected || (playbackRequest !== null && playbackRequest !== playerPagePlaybackRequest)) {
                     window.clearInterval(openingWatchTimer);
                     openingWatchTimer = null;
+                    hideButton();
                     return;
                 }
                 onTimeUpdate();
-            }, 250);
-            media.addEventListener('emptied', () => {
-                media.removeEventListener('loadedmetadata', onTimeUpdate);
-                media.removeEventListener('timeupdate', onTimeUpdate);
-                media.removeEventListener('seeking', onTimeUpdate);
-                button.removeEventListener('click', onSkip);
-                if (openingWatchTimer) window.clearInterval(openingWatchTimer);
-                openingWatchTimer = null;
-                hideButton();
-            }, { once: true });
+            }, 150);
         }
 
         async function playEpisode(file, epNum) {
@@ -1436,7 +1434,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             playerPageIsPlaying = false;
             const video = playerPagePlayer.videoRef;
             if (video) {
-                attachAniSkip(video, epNum, openingSegmentsPromise).catch(error => console.warn('[AniSkip] attach failed:', error));
+                attachAniSkip(video, epNum, openingSegmentsPromise, playbackRequest).catch(error => console.warn('[AniSkip] attach failed:', error));
                 // Відновлення позиції: якщо цю серію вже частково дивилися — продовжуємо з місця зупинки.
                 try {
                     const savedProgress = (() => {
