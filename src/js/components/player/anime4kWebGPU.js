@@ -112,7 +112,7 @@ export class Anime4KWebGPUBridge {
             this.frameHandle = this.video.requestVideoFrameCallback(() => {
                 this.frameHandle = null;
                 this._renderFrame();
-                if (this.active) this._queueNextFrame();
+                this._queueNextFrame();
             });
         } else this._scheduleFallbackFrame();
     }
@@ -160,15 +160,11 @@ export class Anime4KWebGPUBridge {
 
     async start() {
         if (this.started || !Anime4KWebGPUBridge.isSupported()) return false;
-        if (!this.video || !this.host) return false;
+        if (!this.video || !this.host || this.video.readyState < 1 || !this.video.videoWidth || !this.video.videoHeight) return false;
         this.started = true;
         this.video.addEventListener('play', this._onPlay, { passive: true });
         document.addEventListener('visibilitychange', this._onVisibility, { passive: true });
         try {
-            // Do not wait for loadeddata here: this enhancement is best-effort and
-            // must never delay native MP4/HLS playback. _renderFrame() waits until
-            // the first decoded frame is available before copying it to the GPU.
-            if (!this.started || !this.video.videoWidth || !this.video.videoHeight) return this._fallback();
             const api = await loadAnime4KModule();
             if (!this.started) return false;
             const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
