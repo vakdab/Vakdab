@@ -1355,23 +1355,38 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 if (now - lastSkipAt < 500) return;
                 lastSkipAt = now;
                 if (!activeSegment) return;
-                const targetTime = activeSegment.end;
+                const targetTime = Number(activeSegment.end);
+                if (!Number.isFinite(targetTime) || targetTime < 0) return;
+                const wasPlaying = !media.paused;
+                let didSeek = false;
                 try {
-                    // fastSeek is smoother where supported, while currentTime is
-                    // the reliable fallback for HLS and embedded mobile players.
-                    if (typeof media.fastSeek === 'function') media.fastSeek(targetTime);
-                    media.currentTime = targetTime;
-                } catch (error) {
-                    console.warn('[AniSkip] seek failed:', error);
+                    // currentTime is the reliable path for native HLS, hls.js,
+                    // Safari and Android. fastSeek is only an optional hint;
+                    // it must never prevent the direct seek from running.
+                    media.currentTime = Math.max(0, targetTime);
+                    didSeek = true;
+                } catch (_) { /* try fastSeek below */ }
+                if (!didSeek && typeof media.fastSeek === 'function') {
+                    try { media.fastSeek(Math.max(0, targetTime)); didSeek = true; } catch (_) { /* ignore */ }
+                }
+                if (!didSeek) {
+                    console.warn('[AniSkip] seek failed');
                     return;
                 }
                 hideButton();
+                if (wasPlaying && media.paused) media.play().catch(() => {});
                 playerPagePlayer?._showControls?.();
-                showToast('Opening пропущено');
+                showToast(activeSegment.type === 'ed' || activeSegment.type === 'ending'
+                    ? 'Ending пропущено' : 'Opening пропущено');
             };
-            // One click handler is enough. pointerup + click caused a duplicate
-            // event on touch devices and could race with the seek operation.
+            // Keep click for keyboard and browsers without Pointer Events. On
+            // touch/pen, pointerup makes the control responsive even when a
+            // browser delays or suppresses synthetic click after a seek.
+            const onPointerUp = event => {
+                if (event.pointerType && event.pointerType !== 'mouse') onSkip(event);
+            };
             button.addEventListener('click', onSkip);
+            button.addEventListener('pointerup', onPointerUp);
             const onTimeUpdate = () => {
                 const now = Number(media.currentTime);
                 if (!Number.isFinite(now)) return;
@@ -1390,6 +1405,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 media.removeEventListener('ended', cleanup);
                 media.removeEventListener('emptied', cleanup);
                 button.removeEventListener('click', onSkip);
+                button.removeEventListener('pointerup', onPointerUp);
                 if (openingWatchTimer) window.clearInterval(openingWatchTimer);
                 openingWatchTimer = null;
                 hideButton();
