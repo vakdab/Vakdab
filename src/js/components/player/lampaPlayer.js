@@ -1,3 +1,4 @@
+import { Anime4KWebGPUBridge } from './anime4kWebGPU.js?v=20260910-anime4k-v1';
 import { PROXY_URL } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 import { getProxyUrl, isEmbedUrl } from '../../utils/image.js';
 import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829-catalog-28-v1';
@@ -17,7 +18,9 @@ import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260829
                     isolation: isolate; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
                 }
                 .lampa-player-container *, .lampa-player-container *::before, .lampa-player-container *::after { box-sizing: border-box; }
-                .lampa-player-container video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
+                .lampa-player-container video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; position: relative; z-index: 0; }
+                .lp-anime4k-canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; z-index: 1; pointer-events: none; visibility: hidden; }
+                .lp-anime4k-canvas.is-ready { visibility: visible; }
                 .lampa-player-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
 
                 .lp-spinner {
@@ -186,6 +189,7 @@ export class LampaPlayer {
                 v.poster = normalizePosterUrl(this.options.poster);
                 this.videoRef = v;
                 wrap.appendChild(v);
+                this._anime4k = new Anime4KWebGPUBridge(v, wrap);
 
                 // Spinner
                 const spinner = document.createElement('div');
@@ -261,6 +265,8 @@ export class LampaPlayer {
                 v.addEventListener('loadedmetadata', () => {
                     if (v.readyState >= 1) this._clearPlaybackError();
                     syncTimeState();
+                    // Anime4K is intentionally best-effort: it never blocks playback.
+                    this._anime4k?.start().catch(() => {});
                 });
                 v.addEventListener('durationchange', syncTimeState);
                 v.addEventListener('timeupdate', syncTimeState);
@@ -585,17 +591,14 @@ export class LampaPlayer {
             }
 
             loadSource(src, animeTitle, episodeTitle) {
+                // Release the previous GPU pipeline before changing episodes/sources.
+                this._anime4k?.stop();
                 const requestId = ++this._sourceRequestId;
                 this._lastSourceRequest = { src, animeTitle, episodeTitle };
                 if (isEmbedUrl(src)) {
                     this.container.innerHTML = '';
                     const iframe = document.createElement('iframe');
-                    // MoonAnime sends X-Frame-Options: DENY, so a direct frame
-                    // is blank/blocked. Route only this provider through our
-                    // proxy; every other embed source keeps its original URL.
-                    iframe.src = /moonanime\.art\/iframe\//i.test(src)
-                        ? getProxyUrl(src, 'desktop')
-                        : src;
+                    iframe.src = src;
                     iframe.setAttribute('allowfullscreen', '');
                     iframe.setAttribute('allow', 'autoplay; fullscreen');
                     iframe.style.cssText = 'width:100%;height:100%;border:none;position:absolute;top:0;left:0;';
@@ -806,6 +809,7 @@ export class LampaPlayer {
                 if (this._closePlayerMenus) document.removeEventListener('click', this._closePlayerMenus);
                 clearTimeout(this._centerTimer);
                 if (this.hls) { this.hls.destroy(); this.hls = null; }
+                this._anime4k?.stop();
                 if (this.videoRef) { this.videoRef.pause(); this.videoRef.removeAttribute('src'); this.videoRef.load(); }
                 if (this.container) this.container.innerHTML = '';
                 this.videoRef = null;
