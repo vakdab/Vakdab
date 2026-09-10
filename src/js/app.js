@@ -1,4 +1,4 @@
-import { bootstrap } from './core/bootstrap.js?v=20260909-player-v8';
+import { bootstrap } from './core/bootstrap.js?v=20260910-anime4k-v1';
 
 const telegramStartParam = globalThis.Telegram?.WebApp?.initDataUnsafe?.start_param || '';
 if (telegramStartParam === 'live' && window.location.hash.slice(1) !== 'live') window.location.hash = 'live';
