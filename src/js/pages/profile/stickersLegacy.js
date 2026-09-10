@@ -1,7 +1,7 @@
 import { Storage } from '../../core/compat/storage.js?v=20260824-settings-redesign-v1';
 import { db } from '../../services/firebase/client.js';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260909-player-v8';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260910-anime4k-v1';
 import { uploadBlobToCloudinary } from '../home/homeLegacy.js?v=20260906-remove-ranobe-v1';
 
         function stickerFaceSvg(variant) {
