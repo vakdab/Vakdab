@@ -6,7 +6,7 @@ import { Storage } from '../../core/compat/storage.js?v=20260909-player-v8';
 import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260909-player-v8';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
-    resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
+    resolveAshdiPlaybackUrl, resolveMoonanimeStreamUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, searchHikkaAllTitles, switchProviderSource
 } from '../../services/catalog/catalog.js?v=20260829-catalog-28-v1';
 import {
@@ -1417,6 +1417,21 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                     videoDiv.innerHTML = '<div class="player-video-error"><i class="fas fa-triangle-exclamation"></i><span>Відео цієї серії недоступне.</span></div>';
                     showToast(`ASHDI: ${error.message || 'відео недоступне'}`);
                     return;
+                }
+            }
+            // MoonAnime normally embeds its own player; resolve the episode
+            // into a direct HLS manifest so it plays in OUR LampaPlayer with
+            // our controls, quality menu and skip-opening. If extraction
+            // fails, finalUrl stays the iframe link and the embed fallback
+            // above takes over.
+            if (/moonanime\.art\/iframe\//i.test(finalUrl)) {
+                showToast('Підключення MoonAnime...');
+                try {
+                    finalUrl = await resolveMoonanimeStreamUrl(finalUrl);
+                } catch (error) {
+                    if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
+                    console.warn('[MoonAnime playback]', error);
+                    showToast('MoonAnime: прямий потік недоступний, відкриваю вбудований плеєр');
                 }
             }
             if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;

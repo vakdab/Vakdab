@@ -408,6 +408,68 @@ import {
             return proxiedManifest;
         }
 
+        const moonanimeStreamCache = new Map();
+
+        // MoonAnime wraps its player config in an obfuscated inline script:
+        // base64 -> XOR(seed byte + 32-byte key + rolling checksum). This
+        // decrypts it and returns the raw Playerjs config text.
+        function decryptMoonanimePlayerConfig(html) {
+            const scripts = String(html || '').match(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi) || [];
+            for (const raw of scripts) {
+                const body = raw.replace(/^<script[^>]*>/i, '').replace(/<\/script>\s*$/i, '');
+                const blobMatch = body.match(/atob\(\s*"([A-Za-z0-9+\/=]{500,})"\s*\)/);
+                if (!blobMatch || !/Uint8Array\.from\(/.test(body)) continue;
+                try {
+                    const bytes = Uint8Array.from(atob(blobMatch[1]), c => c.charCodeAt(0));
+                    if (bytes.length < 40) continue;
+                    const key = bytes.slice(1, 33);
+                    const out = new Uint8Array(bytes.length - 33);
+                    let rolling = bytes[0];
+                    for (let i = 0; i < out.length; i += 1) {
+                        const k = key[i % 32];
+                        out[i] = bytes[i + 33] ^ k ^ rolling;
+                        rolling = (bytes[i + 33] + k) & 255;
+                    }
+                    const decrypted = new TextDecoder().decode(out);
+                    if (/new\s+Playerjs/.test(decrypted)) return decrypted;
+                } catch (_) { /* try the next inline script */ }
+            }
+            return null;
+        }
+
+        // The Playerjs config stores the stream URL as `file: fn("base64")`,
+        // where fn XOR-decodes with a short key embedded next to it.
+        function decodeMoonanimeConfigValue(decrypted, configKey) {
+            const valueMatch = decrypted.match(new RegExp(configKey + '\\s*:\\s*[A-Za-z_$][\\w$]*\\(\\s*"([A-Za-z0-9+/=]+)"\\s*\\)'));
+            if (!valueMatch) return '';
+            const keyMatch = decrypted.match(/var\s+k\s*=\s*"([^"]+)"/);
+            if (!keyMatch) return '';
+            const key = keyMatch[1];
+            const bytes = Uint8Array.from(atob(valueMatch[1]), c => c.charCodeAt(0));
+            let out = '';
+            for (let i = 0; i < bytes.length; i += 1) out += String.fromCharCode(bytes[i] ^ key.charCodeAt(i % key.length));
+            try { return decodeURIComponent(escape(out)); } catch (_) { return out; }
+        }
+
+        // Resolves a MoonAnime iframe page into a direct HLS manifest so the
+        // episode plays inside our own LampaPlayer instead of their embed.
+        export async function resolveMoonanimeStreamUrl(iframeUrl) {
+            if (!iframeUrl) throw new Error('Порожній MoonAnime URL');
+            const cached = moonanimeStreamCache.get(iframeUrl);
+            if (cached) return cached;
+            const html = await fetchMikaiHtml(iframeUrl);
+            const decrypted = decryptMoonanimePlayerConfig(html);
+            if (!decrypted) throw new Error('не вдалося прочитати плеєр MoonAnime');
+            let manifest = decodeMoonanimeConfigValue(decrypted, 'file');
+            if (!/^https?:\/\//i.test(manifest) || !/\.m3u8/i.test(manifest)) {
+                throw new Error('потік MoonAnime не знайдено');
+            }
+            const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+            const proxiedManifest = getProxyUrl(manifest, isMobileDevice ? 'mobile' : 'desktop');
+            moonanimeStreamCache.set(iframeUrl, proxiedManifest);
+            return proxiedManifest;
+        }
+
         export function inferAnimeSeasonNumber(data = {}, ...sources) {
             const explicit = [data.season_number, data.seasonNumber, data.season?.number, data.season?.season_number]
                 .map(Number).find(n => Number.isInteger(n) && n > 0 && n < 100);
