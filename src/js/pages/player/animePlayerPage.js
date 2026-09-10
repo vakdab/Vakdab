@@ -1427,11 +1427,6 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
             playerPagePlayer = new LampaPlayer(videoDiv, { poster: playerPageAnime?.images?.jpg?.large_image_url });
             playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || '', `Серія ${epNum}`);
-            // Embed providers do not expose our HTML5 video element, so the
-            // `playing` listener below can never hide the page poster. Leaving
-            // it visible blocks the provider's own Play button and makes the
-            // iframe look completely unresponsive.
-            if (!playerPagePlayer.videoRef) hidePlayerFramePoster();
             playerPageHistoryUpdated = false;
             playerPageWatchStartTime = 0;
             playerPageAccumulatedWatchSeconds = 0;
