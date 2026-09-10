@@ -165,15 +165,9 @@ export class Anime4KWebGPUBridge {
         this.video.addEventListener('play', this._onPlay, { passive: true });
         document.addEventListener('visibilitychange', this._onVisibility, { passive: true });
         try {
-            // loadedmetadata exposes dimensions, but copyExternalImageToTexture is
-            // only reliable after the first decoded frame (HAVE_FUTURE_DATA).
-            if (this.video.readyState < 2) {
-                await new Promise(resolve => {
-                    const onLoadedData = () => resolve();
-                    this.video.addEventListener('loadeddata', onLoadedData, { once: true });
-                    this.video.addEventListener('error', onLoadedData, { once: true });
-                });
-            }
+            // Do not wait for loadeddata here: this enhancement is best-effort and
+            // must never delay native MP4/HLS playback. _renderFrame() waits until
+            // the first decoded frame is available before copying it to the GPU.
             if (!this.started || !this.video.videoWidth || !this.video.videoHeight) return this._fallback();
             const api = await loadAnime4KModule();
             if (!this.started) return false;
