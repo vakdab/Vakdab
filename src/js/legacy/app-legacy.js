@@ -17,7 +17,7 @@ export const PROFILE_STICKER_SLOTS = 8;
         // ====================================================================
         //  СИСТЕМА АВТОРИЗАЦІЇ
         // ====================================================================
-import { Auth } from '../core/compat/auth.js?v=20260910-aniskip-v2';
+import { Auth } from '../core/compat/auth.js?v=20260911-auth-api-v1';
 import { Storage } from '../core/compat/storage.js?v=20260910-aniskip-v2';
 import { Router } from '../core/compat/router.js?v=20260901-home-recs-v3';
 import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260910-aniskip-v2';

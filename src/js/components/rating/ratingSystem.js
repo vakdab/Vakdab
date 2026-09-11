@@ -1,4 +1,4 @@
-import { Auth } from '../../core/compat/auth.js?v=20260824-settings-redesign-v1';
+import { Auth } from '../../core/compat/auth.js?v=20260911-auth-api-v1';
 import { Router } from '../../core/compat/router.js?v=20260908-rating-fix-v2';
 import { Storage } from '../../core/compat/storage.js?v=20260905-stickers-sync-v1';
 import { renderStickerFaceByKey } from '../../pages/profile/stickersLegacy.js?v=20260905-stickers-sync-v1';
