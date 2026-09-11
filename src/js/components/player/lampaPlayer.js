@@ -1,6 +1,6 @@
 import { PROXY_URL } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 import { getProxyUrl, isEmbedUrl } from '../../utils/image.js';
-import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260911-ashdi-only-v1';
+import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260911-ashdi-fallback-v2';
 
         // ====================================================================
         //  ПЛЕЄР — ПОВНИЙ КАСТОМНИЙ ПЛЕЄР З КОНТРОЛЯМИ

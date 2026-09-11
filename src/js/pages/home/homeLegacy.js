@@ -7,7 +7,7 @@ import {
 import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
 import { debugLog } from '../../utils/debug.js';
 import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260824-settings-redesign-v1';
-import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaQuickFilter, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog/catalog.js?v=20260911-ashdi-only-v1';
+import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaQuickFilter, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog/catalog.js?v=20260911-ashdi-fallback-v2';
 import { getProxyUrl } from '../../utils/image.js';
 import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sortHoneyChaptersForReading } from '../../services/api/manga.js?v=20260824-settings-redesign-v1';
 
@@ -104,7 +104,7 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
             if (currentTab === 'top100') { return await fetchHikkaTop100(); }
             if (currentSearchQuery) { return await searchHikka(currentSearchQuery, currentPage); }
             if (quickFilterParams) {
-                const { fetchHikkaQuickFilter } = await import('../../services/catalog/catalog.js?v=20260911-ashdi-only-v1');
+                const { fetchHikkaQuickFilter } = await import('../../services/catalog/catalog.js?v=20260911-ashdi-fallback-v2');
                 return await fetchHikkaQuickFilter(currentPage, quickFilterParams);
             }
             if (currentCategory) { return await fetchHikkaByCategory(currentCategory, currentPage); }

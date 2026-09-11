@@ -6,9 +6,9 @@ import { Storage } from '../../core/compat/storage.js?v=20260910-anime4k-v1';
 import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260910-anime4k-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
-    resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
+    resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail, loadAnimeOnSeasons, getAnimeOnUrl,
     searchHikka, searchHikkaAllTitles, switchProviderSource
-} from '../../services/catalog/catalog.js?v=20260911-ashdi-only-v1';
+} from '../../services/catalog/catalog.js?v=20260911-ashdi-fallback-v2';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
 } from '../home/homeLegacy.js?v=20260829-vertical-catalog-28-v1';
@@ -178,7 +178,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 playerPageAnime = anime;
                 playerPageAnimeuaSeasons = {};
                 externalSourceCache = {};
-                playerPageSources = anime.mikaiUrl ? ['ASHDI'] : [];
+                playerPageSources = anime.mikaiAvailable ? ['ASHDI'] : anime.animeOnUrl ? ['AnimeON'] : [];
                 playerPageCurrentSource = playerPageSources[0] || 'ASHDI';
                 const hikkaPosterUrl = normalizePosterUrl(anime.images?.jpg?.large_image_url);
                 const mikaiPosterUrl = normalizePosterUrl(anime.mikaiPosterUrl || '', '');

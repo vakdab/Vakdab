@@ -214,207 +214,53 @@ import {
             if (!animeId) return { seasons: {}, dubLogos: {}, subtitleLogos: {} };
             const data = await fetchAnimeOnJson(`https://animeon.club/api/player/${animeId}/translations`);
             const translations = Array.isArray(data?.translations) ? data.translations : [];
-            const ranked = translations.slice().sort((a, b) => {
-                const an = String(a?.translation?.name || ''), bn = String(b?.translation?.name || '');
-                const preferred = name => /fanvox|hajime|робота голосом|одноголос/i.test(name) ? 1 : 0;
-                return preferred(bn) - preferred(an) ||
-                    Math.max(...(b?.player || []).map(x => Number(x?.episodesCount) || 0), 0) -
-                    Math.max(...(a?.player || []).map(x => Number(x?.episodesCount) || 0), 0);
-            });
-            const selected = ranked.find(x => (x?.player || []).some(p => Number(p?.episodesCount) > 0)) || ranked[0];
-            const translation = selected?.translation;
-            const player = (selected?.player || []).slice().sort((a, b) => (Number(b?.episodesCount) || 0) - (Number(a?.episodesCount) || 0))[0];
-            if (!translation || !player) return { seasons: {}, dubLogos: {}, subtitleLogos: {} };
-            const episodesData = await fetchAnimeOnJson(`https://animeon.club/api/player/${animeId}/episodes?take=100&skip=-1&playerId=${encodeURIComponent(player.id)}&translationId=${encodeURIComponent(translation.id)}&includeAlternative=true`);
-            const episodeRefs = Array.isArray(episodesData?.episodes) ? episodesData.episodes : [];
-            const loaded = await Promise.all(episodeRefs.map(async ref => {
-                try {
-                    const episode = await fetchAnimeOnJson(`https://animeon.club/api/player/${encodeURIComponent(ref.id)}/episode`);
-                    const file = String(episode?.videoUrl || '').trim();
-                    return file ? { episode: String(ref.episode), file, dub: translation.name, provider: 'AnimeON', label: translation.name } : null;
-                } catch { return null; }
-            }));
-            const list = loaded.filter(Boolean).sort((a, b) => Number(a.episode) - Number(b.episode));
-            const logo = translation.studios?.[0]?.avatar?.preview ? `https://animeon.club/api/uploads/images/${translation.studios[0].avatar.preview}` : '';
-            return {
-                seasons: list.length ? { '1': { [translation.name || 'AnimeON']: list } } : {},
-                dubLogos: logo ? { [translation.name || 'AnimeON']: logo } : {},
-                subtitleLogos: {}
-            };
-        }
+            const dubEntries = translations
+                .map(entry => {
+                    const translation = entry?.translation;
+                    const player = (entry?.player || [])
+                        .slice()
+                        .sort((a, b) => (Number(b?.episodesCount) || 0) - (Number(a?.episodesCount) || 0))[0];
+                    return { translation, player };
+                })
+                .filter(({ translation, player }) => translation?.id && player?.id && Number(player.episodesCount) > 0);
+            if (!dubEntries.length) return { seasons: {}, dubLogos: {}, subtitleLogos: {} };
 
-        export function resolveMikaiNuxtPayload(payload) {
-            const memo = new Map();
-            const resolving = new Set();
-            const resolveRef = (index) => {
-                if (!Number.isInteger(index) || index < 0 || index >= payload.length) return index;
-                if (memo.has(index)) return memo.get(index);
-                if (resolving.has(index)) return null;
-                resolving.add(index);
-                const raw = payload[index];
-                let value;
-                if (typeof raw === 'number') value = raw;
-                else if (Array.isArray(raw)) {
-                    const tag = typeof raw[0] === 'string' ? raw[0] : '';
-                    if (['ShallowReactive', 'Reactive', 'Set', 'Date', 'URL'].includes(tag) && raw.length > 1) {
-                        value = resolveRef(raw[1]);
-                    } else {
-                        value = raw.map(item => typeof item === 'number' ? resolveRef(item) : item);
-                    }
-                } else if (raw && typeof raw === 'object') {
-                    value = {};
-                    Object.entries(raw).forEach(([key, item]) => {
-                        value[key] = typeof item === 'number' ? resolveRef(item) : item;
-                    });
-                } else value = raw;
-                resolving.delete(index);
-                memo.set(index, value);
-                return value;
-            };
-            return payload.map((_, index) => resolveRef(index));
-        }
-
-        export function addNoAdsQuery(url) {
-            if (!url) return '';
-            return `${url}${url.includes('?') ? '&' : '?'}nopl`;
-        }
-
-        const mikaiHtmlCache = new Map();
-        export async function fetchMikaiHtml(mikaiUrl) {
-            const cacheKey = String(mikaiUrl || '').trim();
-            if (mikaiHtmlCache.has(cacheKey)) return mikaiHtmlCache.get(cacheKey);
-            const proxyUrl = getProxyUrl(mikaiUrl, 'desktop');
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 25000);
-            try {
-                const res = await fetch(proxyUrl, {
-                    mode: 'cors',
-                    credentials: 'omit',
-                    cache: 'no-cache',
-                    signal: controller.signal,
-                    headers: { Accept: 'text/html,application/xhtml+xml' }
-                });
-                if (!res.ok) throw new Error(`Mikai proxy: HTTP ${res.status}`);
-                const html = await res.text();
-                mikaiHtmlCache.set(cacheKey, html);
-                return html;
-            } finally {
-                clearTimeout(timer);
-            }
-        }
-
-        export function getMikaiTeamLogoUrl(team) {
-            const avatarUid = team?.avatarUid || team?.avatar?.uid || team?.avatar?.id || team?.teams?.[0]?.avatarUid || '';
-            return avatarUid ? `https://images.mikai.me/avatar/medium/${encodeURIComponent(avatarUid)}.webp` : '';
-        }
-
-        export function parseMikaiSeasonsFromHtml(html) {
-            const htmlText = String(html || '');
-            const posterCandidates = [...htmlText.matchAll(/https?:\/\/images\.mikai\.me\/(?:ua_poster|poster)\/(?:big|medium|small)\/[^"'<>\s]+/gi)]
-                .map(match => match[0].replace(/&amp;/gi, '&'));
-            const mikaiPosterUrl = posterCandidates.find(url => /\/ua_poster\/big\//i.test(url)) ||
-                posterCandidates.find(url => /\/ua_poster\/medium\//i.test(url)) ||
-                posterCandidates.find(url => /\/poster\/big\//i.test(url)) ||
-                posterCandidates.find(url => /\/poster\/medium\//i.test(url)) || '';
-            const match = htmlText.match(/<script[^>]+id=["']__NUXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
-            if (!match) throw new Error('Mikai Nuxt payload не знайдено');
-            let payload;
-            try { payload = JSON.parse(match[1]); } catch { throw new Error('Mikai Nuxt payload пошкоджений'); }
-            const resolved = resolveMikaiNuxtPayload(payload);
-            const playerGroups = [];
-            resolved.forEach(value => {
-                if (Array.isArray(value?.players)) playerGroups.push(...value.players);
-            });
-            const dubs = new Map();
+            const dubSeasons = {};
             const dubLogos = {};
             const subtitleLogos = {};
-            playerGroups.forEach(group => {
-                if (!group || !Array.isArray(group.providers)) return;
-                const teamName = String(group.team?.name || 'Озвучка').trim();
-                const logoUrl = getMikaiTeamLogoUrl(group.team);
-                if (logoUrl) {
-                    (group.isSubs ? subtitleLogos : dubLogos)[teamName] = logoUrl;
-                }
-                if (group.isSubs) return;
-                group.providers.filter(provider => String(provider?.name || '').toUpperCase() === 'ASHDI').forEach(provider => {
-                    const episodes = dubs.get(teamName) || new Map();
-                    (provider.episodes || []).forEach(ep => {
-                        const number = String(ep?.number ?? '').trim();
-                        const playLink = String(ep?.playLink || '').trim();
-                        if (!number || !playLink) return;
-                        const previous = episodes.get(number);
-                        if (!previous || String(ep?.createdAt || '') > String(previous.createdAt || '')) {
-                            episodes.set(number, {
-                                title: `Серія ${number}`,
-                                season: '1',
-                                episode: number,
-                                file: addNoAdsQuery(playLink),
-                                dub: teamName,
-                                teamLogo: logoUrl,
-                                provider: 'ASHDI',
-                                createdAt: ep?.createdAt || ''
-                            });
+            for (const { translation, player } of dubEntries) {
+                const dubName = String(translation.name || `Озвучка ${translation.id}`).trim();
+                try {
+                    const episodesData = await fetchAnimeOnJson(`https://animeon.club/api/player/${animeId}/episodes?take=100&skip=-1&playerId=${encodeURIComponent(player.id)}&translationId=${encodeURIComponent(translation.id)}&includeAlternative=true`);
+                    const episodeRefs = Array.isArray(episodesData?.episodes) ? episodesData.episodes : [];
+                    let cursor = 0;
+                    const loaded = [];
+                    async function worker() {
+                        while (cursor < episodeRefs.length) {
+                            const ref = episodeRefs[cursor++];
+                            try {
+                                const episode = await fetchAnimeOnJson(`https://animeon.club/api/player/${encodeURIComponent(ref.id)}/episode`);
+                                const file = String(episode?.videoUrl || '').trim();
+                                if (file) loaded.push({ episode: String(ref.episode), file, dub: dubName, provider: 'AnimeON', label: dubName });
+                            } catch { /* keep the remaining episodes available */ }
                         }
-                    });
-                    dubs.set(teamName, episodes);
-                });
-            });
-            const dubObject = {};
-            [...dubs.entries()].sort(([a], [b]) => a.localeCompare(b, 'uk')).forEach(([team, episodes]) => {
-                const list = [...episodes.values()].sort((a, b) => Number(a.episode) - Number(b.episode));
-                if (list.length) dubObject[team] = list;
-            });
+                    }
+                    await Promise.all(Array.from({ length: Math.min(4, episodeRefs.length) }, worker));
+                    loaded.sort((a, b) => Number(a.episode) - Number(b.episode));
+                    if (loaded.length) dubSeasons[dubName] = loaded;
+                    const logo = translation.studios?.[0]?.avatar?.preview || translation.avatar?.preview || '';
+                    if (logo) dubLogos[dubName] = `https://animeon.club/api/uploads/images/${logo}`;
+                } catch (error) {
+                    console.warn(`[AnimeON] Не вдалося завантажити озвучку ${dubName}:`, error);
+                }
+            }
             return {
-                seasons: Object.keys(dubObject).length ? { '1': dubObject } : {},
+                seasons: Object.keys(dubSeasons).length ? { '1': dubSeasons } : {},
                 dubLogos,
-                subtitleLogos,
-                mikaiPosterUrl
+                subtitleLogos
             };
         }
 
-        export const ashdiPlaybackCache = new Map();
-        export async function resolveAshdiPlaybackUrl(ashdiPageUrl) {
-            if (!ashdiPageUrl) throw new Error('Порожній ASHDI URL');
-            const cached = ashdiPlaybackCache.get(ashdiPageUrl);
-            if (cached) return cached;
-            const html = await fetchMikaiHtml(ashdiPageUrl);
-            const normalizedHtml = String(html)
-                .replace(/\\u002F/g, '/')
-                .replace(/\\\//g, '/')
-                .replace(/&amp;/gi, '&');
-            const matches = normalizedHtml.match(/https?:\/\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?/gi) || [];
-            const manifest = matches.find(url => /ashdi\.vip|video\d+/i.test(url)) || matches[0];
-            if (!manifest) throw new Error('ASHDI m3u8 manifest не знайдено');
-            const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-            const proxiedManifest = getProxyUrl(manifest, isMobileDevice ? 'mobile' : 'desktop');
-            ashdiPlaybackCache.set(ashdiPageUrl, proxiedManifest);
-            return proxiedManifest;
-        }
-
-        export function inferAnimeSeasonNumber(data = {}, ...sources) {
-            const explicit = [data.season_number, data.seasonNumber, data.season?.number, data.season?.season_number]
-                .map(Number).find(n => Number.isInteger(n) && n > 0 && n < 100);
-            if (explicit) return String(explicit);
-            const text = [
-                data.title_ua, data.title_en, data.title_ja, data.name_ua, data.name_en,
-                data.slug, data.url, ...sources
-            ].filter(Boolean).join(' ');
-            const match = String(text).match(/(?:\bseason\s*|\bсезон\s*|\bсезона\s*|\bсезону\s*)(\d{1,2})/i) ||
-                String(text).match(/\b(\d{1,2})(?:st|nd|rd|th|-й|-я|-е)?\s*season\b/i) ||
-                String(text).match(/\bs(\d{1,2})(?:\b|[-_])/i);
-            const number = Number(match?.[1]);
-            return Number.isInteger(number) && number > 0 && number < 100 ? String(number) : '1';
-        }
-        export async function loadMikaiSeasons(mikaiUrl) {
-            if (!mikaiUrl) return { seasons: {}, dubLogos: {}, subtitleLogos: {}, mikaiPosterUrl: '' };
-            const html = await fetchMikaiHtml(mikaiUrl);
-            return parseMikaiSeasonsFromHtml(html);
-        }
-        export function pickPreferredDub(seasonData = {}) {
-            const dubs = Object.keys(seasonData || {});
-            return dubs.find(dub => /робота голосом/i.test(dub)) ||
-                dubs.slice().sort((a, b) => (seasonData[b]?.length || 0) - (seasonData[a]?.length || 0))[0] || '';
-        }
 
         export async function loadHikkaDetail(animeUrl) {
             const match = String(animeUrl || '').match(/\/anime\/([^\/?#]+)/i);
@@ -426,6 +272,7 @@ import {
             const item = hikkaItem(d);
             const total = Number(d.episodes_total || d.episodes_released || 0);
             const mikaiUrl = getMikaiUrl(d);
+            const animeOnUrl = getAnimeOnUrl(d);
             let seasons = {};
             let dubLogos = {};
             let subtitleLogos = {};
@@ -440,6 +287,15 @@ import {
                     subtitleLogos = mikaiData.subtitleLogos || {};
                     mikaiPosterUrl = mikaiData.mikaiPosterUrl || '';
                 } catch (error) { console.warn('[Mikai] Не вдалося завантажити ASHDI:', error); }
+            }
+            const mikaiAvailable = Object.keys(seasons).length > 0;
+            if (!mikaiAvailable && animeOnUrl) {
+                try {
+                    const animeOnData = await loadAnimeOnSeasons(animeOnUrl);
+                    seasons = animeOnData.seasons || {};
+                    dubLogos = animeOnData.dubLogos || {};
+                    subtitleLogos = animeOnData.subtitleLogos || {};
+                } catch (error) { console.warn('[AnimeON] Резервне джерело недоступне:', error); }
             }
             return {
                 ...item,
@@ -456,7 +312,9 @@ import {
                 subtitleLogos,
                 mikaiUrl,
                 mikaiPosterUrl,
-                from: mikaiUrl ? 'hikka+mikai+ashdi' : 'hikka',
+                mikaiAvailable,
+                animeOnUrl,
+                from: mikaiAvailable ? 'hikka+mikai+ashdi' : animeOnUrl ? 'hikka+animeon' : 'hikka',
                 externalIds: extractExternalAnimeIds(d)
             };
         }
@@ -514,8 +372,11 @@ import {
                 let sourceData = externalSourceCache[providerName];
                 if (!sourceData) {
                     const isAshdiProvider = /^(mikai\.me|ashdi)$/i.test(String(providerName || '').trim());
-                    if (!isAshdiProvider) throw new Error('Доступне тільки джерело ASHDI');
-                    sourceData = await loadMikaiSeasons(playerPageAnime?.mikaiUrl || getMikaiUrl(playerPageAnime));
+                    if (isAshdiProvider) {
+                        sourceData = await loadMikaiSeasons(playerPageAnime?.mikaiUrl || getMikaiUrl(playerPageAnime));
+                    } else if (/^animeon$/i.test(String(providerName || '').trim())) {
+                        sourceData = await loadAnimeOnSeasons(playerPageAnime?.animeOnUrl || getAnimeOnUrl(playerPageAnime));
+                    } else throw new Error('Невідоме джерело відео');
                     externalSourceCache[providerName] = sourceData;
                 }
                 const mikaiData = sourceData;
