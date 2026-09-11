@@ -1,4 +1,4 @@
-import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../services/catalog/catalog.js?v=20260829-catalog-28-v1';
+import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../services/catalog/catalog.js?v=20260911-ashdi-only-v1';
 
         // Fallback-пул топових аніме на випадок повільної мережі або збою Hikka API
         const FALLBACK_HERO_ANIME = [

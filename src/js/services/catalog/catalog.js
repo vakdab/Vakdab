@@ -279,7 +279,10 @@ import {
             return `${url}${url.includes('?') ? '&' : '?'}nopl`;
         }
 
+        const mikaiHtmlCache = new Map();
         export async function fetchMikaiHtml(mikaiUrl) {
+            const cacheKey = String(mikaiUrl || '').trim();
+            if (mikaiHtmlCache.has(cacheKey)) return mikaiHtmlCache.get(cacheKey);
             const proxyUrl = getProxyUrl(mikaiUrl, 'desktop');
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), 25000);
@@ -292,7 +295,9 @@ import {
                     headers: { Accept: 'text/html,application/xhtml+xml' }
                 });
                 if (!res.ok) throw new Error(`Mikai proxy: HTTP ${res.status}`);
-                return await res.text();
+                const html = await res.text();
+                mikaiHtmlCache.set(cacheKey, html);
+                return html;
             } finally {
                 clearTimeout(timer);
             }
@@ -421,7 +426,6 @@ import {
             const item = hikkaItem(d);
             const total = Number(d.episodes_total || d.episodes_released || 0);
             const mikaiUrl = getMikaiUrl(d);
-            const animeOnUrl = getAnimeOnUrl(d);
             let seasons = {};
             let dubLogos = {};
             let subtitleLogos = {};
@@ -436,14 +440,6 @@ import {
                     subtitleLogos = mikaiData.subtitleLogos || {};
                     mikaiPosterUrl = mikaiData.mikaiPosterUrl || '';
                 } catch (error) { console.warn('[Mikai] Не вдалося завантажити ASHDI:', error); }
-            }
-            if (!Object.keys(seasons).length && animeOnUrl) {
-                try {
-                    const animeOnData = await loadAnimeOnSeasons(animeOnUrl);
-                    seasons = animeOnData.seasons || {};
-                    dubLogos = animeOnData.dubLogos || {};
-                    subtitleLogos = animeOnData.subtitleLogos || {};
-                } catch (error) { console.warn('[AnimeON] Не вдалося завантажити епізоди:', error); }
             }
             return {
                 ...item,
@@ -460,8 +456,7 @@ import {
                 subtitleLogos,
                 mikaiUrl,
                 mikaiPosterUrl,
-                animeOnUrl,
-                from: mikaiUrl ? 'hikka+mikai+ashdi' : animeOnUrl ? 'hikka+animeon+ashdi' : 'hikka',
+                from: mikaiUrl ? 'hikka+mikai+ashdi' : 'hikka',
                 externalIds: extractExternalAnimeIds(d)
             };
         }
@@ -518,10 +513,9 @@ import {
             try {
                 let sourceData = externalSourceCache[providerName];
                 if (!sourceData) {
-                    const isMikaiProvider = /^mikai\.me$/i.test(String(providerName || '').trim());
-                    sourceData = isMikaiProvider
-                        ? await loadMikaiSeasons(playerPageAnime?.mikaiUrl || getMikaiUrl(playerPageAnime))
-                        : await loadAnimeOnSeasons(playerPageAnime?.animeOnUrl || getAnimeOnUrl(playerPageAnime));
+                    const isAshdiProvider = /^(mikai\.me|ashdi)$/i.test(String(providerName || '').trim());
+                    if (!isAshdiProvider) throw new Error('Доступне тільки джерело ASHDI');
+                    sourceData = await loadMikaiSeasons(playerPageAnime?.mikaiUrl || getMikaiUrl(playerPageAnime));
                     externalSourceCache[providerName] = sourceData;
                 }
                 const mikaiData = sourceData;

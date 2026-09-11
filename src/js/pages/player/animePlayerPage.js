@@ -8,7 +8,7 @@ import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, searchHikkaAllTitles, switchProviderSource
-} from '../../services/catalog/catalog.js?v=20260829-catalog-28-v1';
+} from '../../services/catalog/catalog.js?v=20260911-ashdi-only-v1';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
 } from '../home/homeLegacy.js?v=20260829-vertical-catalog-28-v1';
@@ -40,7 +40,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
         export const setPlayerPageCurrentSource = value => { playerPageCurrentSource = value; };
         let playerPageCurrentView = 'grid';
         let playerPageEpisodes = [];
-        let playerPageSources = ['Основне'];
+        let playerPageSources = ['ASHDI'];
         let playerPageCurrentEpisodeNum = '1';
         let playerPageHistoryUpdated = false;
         let playerPageWatchTimeSynced = 0;
@@ -178,8 +178,8 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 playerPageAnime = anime;
                 playerPageAnimeuaSeasons = {};
                 externalSourceCache = {};
-                playerPageSources = anime.mikaiUrl ? ['Mikai.me'] : anime.animeOnUrl ? ['AnimeON'] : ['Основне'];
-                playerPageCurrentSource = playerPageSources[0];
+                playerPageSources = anime.mikaiUrl ? ['ASHDI'] : [];
+                playerPageCurrentSource = playerPageSources[0] || 'ASHDI';
                 const hikkaPosterUrl = normalizePosterUrl(anime.images?.jpg?.large_image_url);
                 const mikaiPosterUrl = normalizePosterUrl(anime.mikaiPosterUrl || '', '');
                 const posterUrl = mikaiPosterUrl || hikkaPosterUrl;
@@ -1784,7 +1784,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
 
             const sourceList = document.getElementById('bsSourceList');
             if (sourceList) {
-                const sources = playerPageSources.length ? playerPageSources : ['Основне'];
+                const sources = playerPageSources.length ? playerPageSources : ['ASHDI'];
                 sourceList.innerHTML = sources.map(s => {
                     const active = s === playerPageCurrentSource ? ' active' : '';
                     return `<div class="source-item${active}" data-value="${escapeHtml(String(s))}" role="button" tabindex="0">${escapeHtml(String(s))}</div>`;
