@@ -1,7 +1,9 @@
-import { GENRE_MAP } from '../../config/constants.js?v=20260910-player-v1';
+import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/firebase.js';
+import { auth, db } from '../../services/firebase/client.js';
+import { GENRE_MAP } from '../../config/constants.js?v=20260910-anime4k-v1';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { Storage } from '../../core/compat/storage.js?v=20260910-player-v1';
-import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260910-player-v1';
+import { Storage } from '../../core/compat/storage.js?v=20260910-anime4k-v1';
+import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260910-anime4k-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -9,11 +11,11 @@ import {
 } from '../../services/catalog/catalog.js?v=20260829-catalog-28-v1';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
-} from '../home/homeLegacy.js?v=20260911-auth-validation-v1';
+} from '../home/homeLegacy.js?v=20260829-vertical-catalog-28-v1';
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove-thought-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260910-player-v1';
+} from '../../legacy/app-legacy.js?v=20260910-anime4k-v1';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 
         // ====================================================================
@@ -2038,7 +2040,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
         });
 
         // ====================================================================
-        //  РЕЙТИНГ ГЛЯДАЧІВ (реальний, спільний серверний рейтинг)
+        //  РЕЙТИНГ ГЛЯДАЧІВ (реальний, спільний, Firestore anime_ratings)
         // ====================================================================
         async function loadAnimeRatingAggregate(animeUrl) {
             const numEl = document.getElementById('playerRatingNum');
@@ -2047,17 +2049,18 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             numEl.textContent = '—';
             if (labelEl) labelEl.textContent = 'ОЦІНКА ГЛЯДАЧІВ';
             try {
+                if (!db) return;
+                await ensureFirebaseGuestAuth();
                 const animeId = String(animeUrl.hashCode ? animeUrl.hashCode() : animeUrl);
-                const res = await fetch(`/api/anime-ratings/${encodeURIComponent(animeId)}`);
-                if (!res.ok) return;
-                const data = await res.json();
-                if (!data || !data.count) {
-                    numEl.textContent = '—';
-                    if (labelEl) labelEl.textContent = 'НЕМАЄ ОЦІНОК';
-                    return;
-                }
-                numEl.textContent = Number(data.score).toFixed(1);
-                if (labelEl) labelEl.textContent = `${data.count} ${data.count === 1 ? 'ГОЛОС' : 'ГОЛОСІВ'}`;
+                const q = query(collection(db, 'anime_ratings'), where('animeId', '==', animeId));
+                const snap = await getDocs(q);
+                if (snap.empty) { numEl.textContent = '—'; if (labelEl) labelEl.textContent = 'НЕМАЄ ОЦІНОК'; return; }
+                let sum = 0, count = 0;
+                snap.forEach(d => { const v = d.data().value; if (v === 1 || v === -1) { sum += v; count++; } });
+                if (count === 0) { numEl.textContent = '—'; if (labelEl) labelEl.textContent = 'НЕМАЄ ОЦІНОК'; return; }
+                const score = (((sum / count) + 1) / 2) * 10; // -1..1 -> 0..10
+                numEl.textContent = score.toFixed(1);
+                if (labelEl) labelEl.textContent = `${count} ${count === 1 ? 'ГОЛОС' : 'ГОЛОСІВ'}`;
             } catch (e) {
                 console.warn('Rating aggregate error:', e);
             }
@@ -2065,17 +2068,14 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
 
         async function syncAnimeRating(animeUrl, value) {
             try {
+                if (!db) return;
+                await ensureFirebaseGuestAuth();
                 const animeId = String(animeUrl.hashCode ? animeUrl.hashCode() : animeUrl);
-                const guestUid = Storage.getDeviceId?.() || 'anon';
-                const token = localStorage.getItem('vakdab_auth_token');
-                const headers = { 'Content-Type': 'application/json' };
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-
-                await fetch(`/api/anime-ratings/${encodeURIComponent(animeId)}`, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({ value, guestUid })
-                });
+                const uid = (auth?.currentUser?.uid) || Storage.getDeviceId?.() || 'anon';
+                const docId = `${animeId}_${uid}`;
+                const ref = doc(db, 'anime_ratings', docId);
+                if (value === 0) { await deleteDoc(ref); }
+                else { await setDoc(ref, { animeId, uid, value, updatedAt: Date.now() }); }
                 loadAnimeRatingAggregate(animeUrl);
             } catch (e) {
                 console.warn('syncAnimeRating error:', e);

@@ -1,6 +1,8 @@
-import { Auth } from '../../core/compat/auth.js?v=20260911-auth-api-v1';
+import { Auth } from '../../core/compat/auth.js?v=20260824-settings-redesign-v1';
 import { Router } from '../../core/compat/router.js?v=20260908-rating-fix-v2';
 import { Storage } from '../../core/compat/storage.js?v=20260905-stickers-sync-v1';
+import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
+import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
 import { renderStickerFaceByKey } from '../../pages/profile/stickersLegacy.js?v=20260905-stickers-sync-v1';
 
 function escapeRatingHtml(value) {
@@ -240,17 +242,88 @@ function isGifUrl(url) {
                     <p style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:8px;">${msg}</p>`;
             };
 
+            // Чекаємо ініціалізацію Firebase (до 6 сек), не блокуючи інший код
+            let waited = 0;
+            while ((!firebaseInitialized || !db) && waited < 6000) {
+                await new Promise(res => setTimeout(res, 250));
+                waited += 250;
+            }
+
+            if (!firebaseInitialized || !db) {
+                showFallback('Firebase недоступний. Перевірте з\'єднання.');
+                return;
+            }
+            // КРИТИЧНО: чекаємо поки Firebase РЕАЛЬНО визначить сесію (_authResolved),
+            // інакше вже залогінений через Google юзер на мить виглядає як "не автентифікований"
+            // (onAuthStateChanged ще не встиг відпрацювати) і потрапляє у гостьову гілку нижче.
+            waited = 0;
+            while (!Auth._authResolved && waited < 4000) {
+                await new Promise(res => setTimeout(res, 150));
+                waited += 150;
+            }
+            // Анонімна сесія потрібна лише для запису власних даних. Читання
+            // глобального рейтингу має працювати і для гостя, якщо Firestore rules
+            // дозволяють публічний list users — не блокуємо запит через sign-in failure.
+            if (!Auth.isAuthenticated() && !auth?.currentUser) {
+                try {
+                    await signInAnonymously(auth);
+                } catch (e) {
+                    console.warn('Anonymous guest auth unavailable; trying public leaderboard read:', e.code || e);
+                }
+            }
+
             try {
-                const res = await fetch('/api/leaderboard');
-                if (!res.ok) throw new Error('Помилка сервера: ' + res.status);
-                const users = await res.json();
-                if (!users || !users.length) {
-                    showFallback('Рейтинг з\'явиться після перегляду серій або реєстрації.');
+                const { collection, query, limit, getDocs, onSnapshot } =
+                    await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js');
+                // Без orderBy — не потребує Firestore composite index. Сортуємо на клієнті.
+                const q = query(collection(db, 'users'), limit(500));
+                const tp = new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 10000));
+                const snap = await Promise.race([getDocs(q), tp]);
+
+                const thisUid = Auth._user?.uid || auth?.currentUser?.uid || null;
+                const mapUsers = (snapshot) => {
+                    let arr = [];
+                    snapshot.forEach(d => {
+                        const data = d.data();
+                        arr.push({
+                            uid: d.id,
+                            realName: data.profile?.realName || '',
+                            name: data.profile?.name || data.profile?.fullName || data.displayName || data.name || '',
+                            fullName: data.profile?.fullName || '',
+                            nickname: data.profile?.nickname || 'Аніматор',
+                            avatar: data.profile?.avatar || '',
+                            avatarVideo: data.profile?.avatarVideo || '',
+                            avatarVideoSettings: data.profile?.avatarVideoSettings || {},
+                            // Поки Firebase snapshot доганяє локальний запис, не показуємо власну стару наліпку.
+                            stickers: (thisUid && d.id === thisUid) ? Storage.getStickers() : (data.stickers || {}),
+                            episodes: Array.isArray(data.history) ? data.history.length : 0,
+                            minutes: Math.floor((data.watchTime || 0) / 60),
+                            bookmarks: Array.isArray(data.bookmarks) ? data.bookmarks.length : 0,
+                            xp: calculateBaseXP({ episodes: Array.isArray(data.history) ? data.history.length : 0, watchSeconds: data.watchTime || 0, bookmarks: Array.isArray(data.bookmarks) ? data.bookmarks.length : 0 }),
+                            level: getLevel(calculateBaseXP({ episodes: Array.isArray(data.history) ? data.history.length : 0, watchSeconds: data.watchTime || 0, bookmarks: Array.isArray(data.bookmarks) ? data.bookmarks.length : 0 }))
+                        });
+                    });
+                    return arr;
+                };
+
+                let users = mapUsers(snap);
+                if (!users.length) {
+                    showFallback('Рейтинг з\'явиться після реєстрації користувачів.');
                     return;
                 }
                 _lbUsersCache = users;
                 renderLeaderboard(lb, users, _lbSortKey);
-            } catch (e) {
+
+                if (window._lbUnsub) { window._lbUnsub(); window._lbUnsub = null; }
+                window._lbUnsub = onSnapshot(q, (snap2) => {
+                    const u = mapUsers(snap2);
+                    if (u.length) {
+                        _lbUsersCache = u;
+                        renderLeaderboard(lb, u, _lbSortKey);
+                    }
+                }, (err) => console.warn('LB snapshot error:', err));
+
+            } catch(e) {
                 console.warn('loadLeaderboard error:', e.message);
                 showFallback('Помилка завантаження: ' + e.message);
             }

@@ -1,3 +1,5 @@
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, signInAnonymously, sendPasswordResetEmail, deleteUser, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot } from '../config/firebase.js';
+import { auth, db, initialized as firebaseInitialized } from '../services/firebase/client.js';
 import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, HIKKA_PROXY_URL, MIKAI_BASE, GENRE_MAP } from '../config/constants.js?v=20260910-aniskip-v2';
 import { safeQuery, safeQueryAll } from '../utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from '../utils/image.js';
@@ -17,7 +19,7 @@ export const PROFILE_STICKER_SLOTS = 8;
         // ====================================================================
         //  СИСТЕМА АВТОРИЗАЦІЇ
         // ====================================================================
-import { Auth } from '../core/compat/auth.js?v=20260911-auth-api-v1';
+import { Auth } from '../core/compat/auth.js?v=20260910-aniskip-v2';
 import { Storage } from '../core/compat/storage.js?v=20260910-aniskip-v2';
 import { Router } from '../core/compat/router.js?v=20260901-home-recs-v3';
 import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260910-aniskip-v2';
@@ -37,7 +39,7 @@ import {
 import { getProfile, renderSettingsPage } from '../pages/settings/settingsLegacy.js?v=20260903-settings-v2';
 import {
     currentTab, currentPage, currentSearchQuery, currentCategory, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, fetchContent, showSkeleton, loadContent, popularRenderGen, renderPopularCards, loadPopularCardDetails, ANIME_CARD_PLACEHOLDER, animeCardDataMap, registerAnimeCardData, TMDB_ENRICH_CONCURRENCY, tmdbEnrichActive, tmdbEnrichQueue, queueTmdbEnrich, pumpTmdbEnrichQueue, runTmdbEnrichJob, animeCardObserver, getAnimeCardObserver, observeAnimeCardsForTmdb, renderCards, renderPagination, showTop100, openRandomAnime, genreList, homeSectionsRequestId, homeCatalogRequestId, preloadHomepageTmdbGroups, homeCatalogPage, homeCatalogItems, homeCatalogLoading, homeCatalogTotal, homeCatalogMode, homeCatalogQuery, homeCatalogSort, homeCatalogView, homeCatalogPreset, homeCatalogGenre, HOME_MANGA_AGE_OPTIONS, honeyCatalogPageCache, HOME_CATALOG_MODES, HOME_CATALOG_PRESETS, homeCatalogRequestBody, HONEY_API, HONEY_SEARCH_API, HONEY_WEB, HONEY_IMAGE, honeySearchCache, honeyReaderCache, honeyAvailabilityMap, honeyAvailabilityMapPromise, loadHoneyAvailabilityMap, normalizeHoneyMatch, fetchHoneyJson, honeyNamesMatch, searchHoneyTitles, resolveHoneyReader, attachHoneyReaders, getHoneyGenreOptions, honeyAgeCategory, homeCatalogGenreHtml, syncHomeCatalogGenreControl, honeyCatalogItem, isHoneyPromoItemRaw, isHoneyPromoItem, fetchHoneyCatalogPage, fetchHomeCatalogPage, getHomeCatalogVisibleItems, formatHomeCatalogNumber, homeCatalogCountText, homeCatalogCardHtml, bindHomeCatalogCards, buildHomeCatalogSectionHtml, renderHomeCatalogGrid, bindHomeCatalogMenu, updateHomeCatalogModeLabels, reloadHomeCatalog, loadHomeCatalogMore, loadAndDisplayGenreSections, statusLabelUa, buildAnimeCarouselSectionHtml, buildPopularVerticalSectionHtml, setHomeRecommendationFilter, loadHomeRecommendations, buildHistoryCarouselSectionHtml, openScheduleItemInPlayer, searchPageState, renderSearchPage, performSearchPage, uploadToCloudinary, isGifUrl, applyGifClass, uploadRawToCloudinary, uploadVideoToCloudinary, isVideoFile, isVideoUrl, profileMediaTransformStyle, profileMediaMarkup, uploadBlobToCloudinary, _imgeditClamp, openImageEditor, editExistingProfileImage, editExistingProfileVideo, compressImage, renderAuthPage, renderHistoryPanel, renderBookmarksPanel, profileEditNick, profileEditBio, removeFlatStickerBackground, stickerBackgroundRemoverPromise, removeStickerBackground, genrePageState, renderGenrePage
-} from '../pages/home/homeLegacy.js?v=20260911-auth-validation-v1';
+} from '../pages/home/homeLegacy.js?v=20260908-inline-search-v2';
 
 import {
     CATALOG_POSTER_FALLBACK, normalizeAnimeUrl, normalizePosterUrl, normalizeGenreList, normalizeSynopsisText, hikkaType, animeTypeLabel, extractExternalAnimeIds, hikkaItem, hikkaRequest, hikkaCatalog, fetchHikkaMain, searchHikka, fetchHikkaByCategory, fetchHikkaTop100, fetchHikkaByGenre, fetchAnimeLite, getExternalWatchUrl, getMikaiUrl, getAnimeOnUrl, getAnimeOnId, fetchAnimeOnJson, loadAnimeOnSeasons, resolveMikaiNuxtPayload, addNoAdsQuery, fetchMikaiHtml, getMikaiTeamLogoUrl, parseMikaiSeasonsFromHtml, ashdiPlaybackCache, resolveAshdiPlaybackUrl, inferAnimeSeasonNumber, loadMikaiSeasons, pickPreferredDub, loadHikkaDetail, unifyAnimeDataWithExternalDubs, sourceCache, getCachedSource, setCachedSource, switchProviderSource, refreshAfterSourceSwitch, extractPlayerIframeUrls, extractSourcesFromText
@@ -53,7 +55,7 @@ export {
     buildBottomSheetData, openBottomSheet, closeBottomSheet, closeMenuPopover, toggleLike, toggleDislike, showViewMode
 };
 export { renderSchedulePage };
-export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, fetchContent, showSkeleton, loadContent, popularRenderGen, renderPopularCards, loadPopularCardDetails, ANIME_CARD_PLACEHOLDER, animeCardDataMap, registerAnimeCardData, TMDB_ENRICH_CONCURRENCY, tmdbEnrichActive, tmdbEnrichQueue, queueTmdbEnrich, pumpTmdbEnrichQueue, runTmdbEnrichJob, animeCardObserver, getAnimeCardObserver, observeAnimeCardsForTmdb, renderCards, renderPagination, showTop100, openRandomAnime, genreList, homeSectionsRequestId, homeCatalogRequestId, preloadHomepageTmdbGroups, homeCatalogPage, homeCatalogItems, homeCatalogLoading, homeCatalogTotal, homeCatalogMode, homeCatalogQuery, homeCatalogSort, homeCatalogView, homeCatalogPreset, homeCatalogGenre, HOME_MANGA_AGE_OPTIONS, honeyCatalogPageCache, HOME_CATALOG_MODES, HOME_CATALOG_PRESETS, homeCatalogRequestBody, HONEY_API, HONEY_SEARCH_API, HONEY_WEB, HONEY_IMAGE, honeySearchCache, honeyReaderCache, honeyAvailabilityMap, honeyAvailabilityMapPromise, loadHoneyAvailabilityMap, normalizeHoneyMatch, fetchHoneyJson, honeyNamesMatch, searchHoneyTitles, resolveHoneyReader, attachHoneyReaders, getHoneyGenreOptions, honeyAgeCategory, homeCatalogGenreHtml, syncHomeCatalogGenreControl, honeyCatalogItem, isHoneyPromoItemRaw, isHoneyPromoItem, fetchHoneyCatalogPage, fetchHomeCatalogPage, getHomeCatalogVisibleItems, formatHomeCatalogNumber, homeCatalogCountText, homeCatalogCardHtml, bindHomeCatalogCards, buildHomeCatalogSectionHtml, renderHomeCatalogGrid, bindHomeCatalogMenu, updateHomeCatalogModeLabels, reloadHomeCatalog, loadHomeCatalogMore, loadAndDisplayGenreSections, statusLabelUa, buildAnimeCarouselSectionHtml, buildPopularVerticalSectionHtml, setHomeRecommendationFilter, loadHomeRecommendations, buildHistoryCarouselSectionHtml, openScheduleItemInPlayer, searchPageState, renderSearchPage, performSearchPage, uploadToCloudinary, isGifUrl, applyGifClass, uploadRawToCloudinary, uploadVideoToCloudinary, isVideoFile, isVideoUrl, profileMediaTransformStyle, profileMediaMarkup, uploadBlobToCloudinary, _imgeditClamp, openImageEditor, editExistingProfileImage, editExistingProfileVideo, compressImage, renderAuthPage, renderHistoryPanel, renderBookmarksPanel, profileEditNick, profileEditBio, removeFlatStickerBackground, stickerBackgroundRemoverPromise, removeStickerBackground, genrePageState, renderGenrePage } from '../pages/home/homeLegacy.js?v=20260911-auth-validation-v1';
+export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, fetchContent, showSkeleton, loadContent, popularRenderGen, renderPopularCards, loadPopularCardDetails, ANIME_CARD_PLACEHOLDER, animeCardDataMap, registerAnimeCardData, TMDB_ENRICH_CONCURRENCY, tmdbEnrichActive, tmdbEnrichQueue, queueTmdbEnrich, pumpTmdbEnrichQueue, runTmdbEnrichJob, animeCardObserver, getAnimeCardObserver, observeAnimeCardsForTmdb, renderCards, renderPagination, showTop100, openRandomAnime, genreList, homeSectionsRequestId, homeCatalogRequestId, preloadHomepageTmdbGroups, homeCatalogPage, homeCatalogItems, homeCatalogLoading, homeCatalogTotal, homeCatalogMode, homeCatalogQuery, homeCatalogSort, homeCatalogView, homeCatalogPreset, homeCatalogGenre, HOME_MANGA_AGE_OPTIONS, honeyCatalogPageCache, HOME_CATALOG_MODES, HOME_CATALOG_PRESETS, homeCatalogRequestBody, HONEY_API, HONEY_SEARCH_API, HONEY_WEB, HONEY_IMAGE, honeySearchCache, honeyReaderCache, honeyAvailabilityMap, honeyAvailabilityMapPromise, loadHoneyAvailabilityMap, normalizeHoneyMatch, fetchHoneyJson, honeyNamesMatch, searchHoneyTitles, resolveHoneyReader, attachHoneyReaders, getHoneyGenreOptions, honeyAgeCategory, homeCatalogGenreHtml, syncHomeCatalogGenreControl, honeyCatalogItem, isHoneyPromoItemRaw, isHoneyPromoItem, fetchHoneyCatalogPage, fetchHomeCatalogPage, getHomeCatalogVisibleItems, formatHomeCatalogNumber, homeCatalogCountText, homeCatalogCardHtml, bindHomeCatalogCards, buildHomeCatalogSectionHtml, renderHomeCatalogGrid, bindHomeCatalogMenu, updateHomeCatalogModeLabels, reloadHomeCatalog, loadHomeCatalogMore, loadAndDisplayGenreSections, statusLabelUa, buildAnimeCarouselSectionHtml, buildPopularVerticalSectionHtml, setHomeRecommendationFilter, loadHomeRecommendations, buildHistoryCarouselSectionHtml, openScheduleItemInPlayer, searchPageState, renderSearchPage, performSearchPage, uploadToCloudinary, isGifUrl, applyGifClass, uploadRawToCloudinary, uploadVideoToCloudinary, isVideoFile, isVideoUrl, profileMediaTransformStyle, profileMediaMarkup, uploadBlobToCloudinary, _imgeditClamp, openImageEditor, editExistingProfileImage, editExistingProfileVideo, compressImage, renderAuthPage, renderHistoryPanel, renderBookmarksPanel, profileEditNick, profileEditBio, removeFlatStickerBackground, stickerBackgroundRemoverPromise, removeStickerBackground, genrePageState, renderGenrePage } from '../pages/home/homeLegacy.js?v=20260908-inline-search-v2';
 
 
         // ====================================================================
@@ -138,10 +140,15 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
         //  API ФУНКЦІЇ
         // ====================================================================
         // ====================================================================
-        //  ДІАГНОСТИКА — зберігаємо дані парсингу на сервері
+        //  ДІАГНОСТИКА — зберігаємо дані парсингу у Firestore
         // ====================================================================
         async function saveParseDiagnostic({ url, ua, platform, playerUrls, allRawSources, rawHtml }) {
             try {
+                if (!firebaseInitialized || !db) {
+                    console.warn('[diagnostic] Firebase not initialized, skipping');
+                    return;
+                }
+                const id = `${Date.now()}_${Math.floor(Math.random()*10000)}`;
                 const rawSnippet = (rawHtml && rawHtml.slice(0, 20000)) || '';
                 const payload = {
                     url,
@@ -149,13 +156,11 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
                     platform,
                     playerUrls: playerUrls || [],
                     allRawSources: allRawSources ? allRawSources.slice(0, 20) : [],
-                    rawSnippet
+                    rawSnippet,
+                    createdAt: new Date().toISOString()
                 };
-                await fetch('/api/diagnostics', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                }).catch(() => {});
+                await setDoc(doc(db, 'diagnostics', id), payload);
+                /* console.log removed */
             } catch (e) {
                 console.warn('[diagnostic] saveParseDiagnostic error:', e);
             }
@@ -272,8 +277,18 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
             return `${diffD} дн тому`;
         }
 
+        // Гарантує анонімну Firebase-сесію для гостей, щоб читання Firestore
+        // (рейтинги/відгуки) не впиралось у permission-denied без входу.
         export async function ensureFirebaseGuestAuth() {
-            return true;
+            try {
+                if (!auth) return false;
+                if ((Auth.isAuthenticated && Auth.isAuthenticated()) || auth.currentUser) return true;
+                await signInAnonymously(auth);
+                return true;
+            } catch (e) {
+                console.warn('Anonymous guest auth failed:', e.code || e);
+                return false;
+            }
         }
 
         // Initialize Lucide icons if not already done

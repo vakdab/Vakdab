@@ -2,7 +2,7 @@
 // Вибираєш жанри/тип/рік/сортування → натискаєш OK → фільтр перерисовує
 // основний блок круглих карток на головній сторінці.
 import { GENRE_MAP } from '../../config/constants.js?v=20260902-home-quick-filter-v2';
-import { loadHomeRecommendations, setHomeRecommendationFilter, setHomeRecommendationSearchQuery, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams } from './homeLegacy.js?v=20260911-auth-validation-v1';
+import { loadHomeRecommendations, setHomeRecommendationFilter, setHomeRecommendationSearchQuery, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, setQuickFilterParams } from './homeLegacy.js?v=20260908-inline-search-v1';
 
 const YEAR_OPTIONS = [
     { key: '', label: 'Будь-який' },

@@ -3,7 +3,7 @@ import {
     Auth, Router, Storage, escapeHtml,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260910-player-v1';
+} from '../../legacy/app-legacy.js?v=20260910-anime4k-v1';
 import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
 import { debugLog } from '../../utils/debug.js';
 import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260824-settings-redesign-v1';
@@ -3341,51 +3341,26 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
         export function renderAuthPage() {
             const container = document.getElementById('profilePageContainer');
             if (!container) return;
-
-            // Preload OAuth endpoints
-            if (typeof Auth?.preloadOAuth === 'function') {
-                Auth.preloadOAuth();
-            }
-
             container.innerHTML = `
             <div class="auth-card">
               <div class="mark"></div>
-              <h1 id="authTitle">Вхід або реєстрація</h1>
-              <p class="sub" id="authSub">Увійдіть за допомогою соцмереж або пошти</p>
+              <h1 id="authTitle">Вхід до акаунта</h1>
+              <p class="sub" id="authSub">Увійдіть за допомогою Google або вашої пошти.</p>
 
-              <div class="auth-oauth-group" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
-                <button class="google-btn" type="button" id="authGoogleBtn">
-                  <svg viewBox="0 0 48 48">
-                    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.3 29.3 35 24 35c-6.1 0-11-4.9-11-11s4.9-11 11-11c2.8 0 5.3 1 7.3 2.8l5.7-5.7C33.6 6.5 29 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z"/>
-                    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 18.9 13 24 13c2.8 0 5.3 1 7.3 2.8l5.7-5.7C33.6 6.5 29 4.5 24 4.5c-7.7 0-14.3 4.3-17.7 10.2z"/>
-                    <path fill="#4CAF50" d="M24 43.5c5.1 0 9.7-1.9 13.2-5.1l-6.1-5.2c-2 1.5-4.5 2.3-7.1 2.3-5.3 0-9.6-3.6-11.2-8.4l-6.5 5C9.7 39.1 16.3 43.5 24 43.5z"/>
-                    <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.7l6.1 5.2C40.8 36.4 43.5 30.7 43.5 24c0-1.2-.1-2.4-.4-3.5z"/>
-                  </svg>
-                  Продовжити через Google
-                </button>
-
-                <button class="google-btn" type="button" id="authDiscordBtn" style="border-color:rgba(88,101,242,0.3);background:rgba(88,101,242,0.07);">
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="#5865F2">
-                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
-                  </svg>
-                  Продовжити через Discord
-                </button>
-              </div>
+              <button class="google-btn" type="button" id="authGoogleBtn">
+                <svg viewBox="0 0 48 48">
+                  <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.3 29.3 35 24 35c-6.1 0-11-4.9-11-11s4.9-11 11-11c2.8 0 5.3 1 7.3 2.8l5.7-5.7C33.6 6.5 29 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z"/>
+                  <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 18.9 13 24 13c2.8 0 5.3 1 7.3 2.8l5.7-5.7C33.6 6.5 29 4.5 24 4.5c-7.7 0-14.3 4.3-17.7 10.2z"/>
+                  <path fill="#4CAF50" d="M24 43.5c5.1 0 9.7-1.9 13.2-5.1l-6.1-5.2c-2 1.5-4.5 2.3-7.1 2.3-5.3 0-9.6-3.6-11.2-8.4l-6.5 5C9.7 39.1 16.3 43.5 24 43.5z"/>
+                  <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.7l6.1 5.2C40.8 36.4 43.5 30.7 43.5 24c0-1.2-.1-2.4-.4-3.5z"/>
+                </svg>
+                Продовжити через Google
+              </button>
 
               <div class="divider">або через email</div>
 
-              <div class="switcher" id="authModeSwitcher">
-                <div class="switcher-thumb"></div>
-                <button type="button" id="tabBtnLogin" class="active">Вхід</button>
-                <button type="button" id="tabBtnRegister">Реєстрація</button>
-              </div>
-
-              <div class="panel active" id="authPanel">
-                <form id="authLoginForm" novalidate>
-                  <div class="field" id="registerNameField" style="display:none;">
-                    <label for="registerName">Нікнейм</label>
-                    <input id="registerName" type="text" placeholder="Ваш нікнейм" autocomplete="nickname">
-                  </div>
+              <div class="panel active" id="authPanel-login">
+                <form id="authLoginForm" onsubmit="return false;">
                   <div class="field">
                     <label for="loginEmail">Email</label>
                     <input id="loginEmail" type="email" placeholder="you@example.com" required autocomplete="email">
@@ -3394,9 +3369,9 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
                     <label for="loginPass">Пароль</label>
                     <input id="loginPass" type="password" placeholder="••••••••" required autocomplete="current-password">
                   </div>
-                  <div class="row-between" id="authForgotRow">
-                    <label class="remember"><input type="checkbox" id="loginRemember" checked>Запам'ятати мене</label>
-                    <a href="#" onclick="showToast('Скидання пароля — зверніться до підтримки');return false;">Забули пароль?</a>
+                  <div class="row-between">
+                    <label class="remember"><input type="checkbox" id="loginRemember">Запам'ятати мене</label>
+                    <a href="#" onclick="showToast('Скидання пароля — звʼяжіться з підтримкою');return false;">Забули пароль?</a>
                   </div>
                   <div class="auth-error" id="authError"></div>
                   <button class="submit-btn" type="submit" id="authLoginSubmit">Увійти</button>
@@ -3413,92 +3388,23 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
             </div>
           `;
 
-            const switcher = document.getElementById('authModeSwitcher');
-            const tabBtnLogin = document.getElementById('tabBtnLogin');
-            const tabBtnRegister = document.getElementById('tabBtnRegister');
-            const registerNameField = document.getElementById('registerNameField');
-            const authForgotRow = document.getElementById('authForgotRow');
-            const authLoginSubmit = document.getElementById('authLoginSubmit');
-            const authTitle = document.getElementById('authTitle');
-            const authSub = document.getElementById('authSub');
-            const errorEl = document.getElementById('authError');
-            let currentAuthMode = 'login';
-
-            function setMode(mode) {
-                currentAuthMode = mode;
-                if (errorEl) errorEl.textContent = '';
-                if (mode === 'register') {
-                    if (switcher) switcher.classList.add('mode-register');
-                    if (tabBtnLogin) tabBtnLogin.classList.remove('active');
-                    if (tabBtnRegister) tabBtnRegister.classList.add('active');
-                    if (registerNameField) registerNameField.style.display = 'block';
-                    if (authForgotRow) authForgotRow.style.display = 'none';
-                    if (authLoginSubmit) authLoginSubmit.textContent = 'Зареєструватися';
-                    if (authTitle) authTitle.textContent = 'Реєстрація акаунта';
-                    if (authSub) authSub.textContent = 'Створіть власний акаунт у VakDab';
-                } else {
-                    if (switcher) switcher.classList.remove('mode-register');
-                    if (tabBtnLogin) tabBtnLogin.classList.add('active');
-                    if (tabBtnRegister) tabBtnRegister.classList.remove('active');
-                    if (registerNameField) registerNameField.style.display = 'none';
-                    if (authForgotRow) authForgotRow.style.display = 'flex';
-                    if (authLoginSubmit) authLoginSubmit.textContent = 'Увійти';
-                    if (authTitle) authTitle.textContent = 'Вхід до акаунта';
-                    if (authSub) authSub.textContent = 'Увійдіть за допомогою соцмереж або пошти';
-                }
-            }
-
-            if (tabBtnLogin) tabBtnLogin.addEventListener('click', () => setMode('login'));
-            if (tabBtnRegister) tabBtnRegister.addEventListener('click', () => setMode('register'));
-
             document.getElementById('authLoginForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 const email = document.getElementById('loginEmail').value.trim();
                 const pass = document.getElementById('loginPass').value;
-                const name = document.getElementById('registerName')?.value?.trim();
-                if (errorEl) errorEl.textContent = '';
-                // Native browser validation is disabled on purpose: Safari can
-                // stop submit before our handler and show the English
-                // "The string did not match the expected pattern" message.
-                // Keep the validation predictable and localized in VakDab.
-                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-                if (!email) {
-                    if (errorEl) errorEl.textContent = 'Введіть email.';
-                    document.getElementById('loginEmail')?.focus();
-                    return;
-                }
-                if (!emailPattern.test(email)) {
-                    if (errorEl) errorEl.textContent = 'Введіть коректний email, наприклад you@example.com.';
-                    document.getElementById('loginEmail')?.focus();
-                    return;
-                }
-                if (!pass) {
-                    if (errorEl) errorEl.textContent = 'Введіть пароль.';
-                    document.getElementById('loginPass')?.focus();
-                    return;
-                }
-                authLoginSubmit.disabled = true;
-                
-                if (currentAuthMode === 'register') {
-                    authLoginSubmit.textContent = 'Реєстрація...';
-                    const result = await Auth.register(email, pass, name || email.split('@')[0]);
-                    authLoginSubmit.disabled = false;
-                    authLoginSubmit.textContent = 'Зареєструватися';
-                    if (!result.success) {
-                        if (errorEl) errorEl.textContent = result.error || 'Помилка реєстрації';
-                    } else {
-                        renderProfilePage();
-                    }
+                const errorEl = document.getElementById('authError');
+                const submitBtn = document.getElementById('authLoginSubmit');
+                errorEl.textContent = '';
+                if (!email || !pass) { errorEl.textContent = 'Будь ласка, заповніть усі поля.'; return; }
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Вхід...';
+                const result = await Auth.login(email, pass);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Увійти';
+                if (!result.success) {
+                    errorEl.textContent = result.error || 'Помилка входу';
                 } else {
-                    authLoginSubmit.textContent = 'Вхід...';
-                    const result = await Auth.login(email, pass);
-                    authLoginSubmit.disabled = false;
-                    authLoginSubmit.textContent = 'Увійти';
-                    if (!result.success) {
-                        if (errorEl) errorEl.textContent = result.error || 'Помилка входу';
-                    } else {
-                        renderProfilePage();
-                    }
+                    renderProfilePage();
                 }
             });
 
@@ -3516,25 +3422,12 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
               </svg>
               Продовжити через Google
             `;
-                if (!result.success && result.error !== 'Вхід скасовано') {
-                    if (errorEl) errorEl.textContent = result.error || 'Помилка Google входу';
+                if (!result.success) {
+                    document.getElementById('authError').textContent = result.error || 'Помилка Google входу';
+                } else {
+                    renderProfilePage();
                 }
             });
-
-            const discordBtn = document.getElementById('authDiscordBtn');
-            if (discordBtn) {
-                discordBtn.addEventListener('click', async function() {
-                    this.disabled = true;
-                    const orig = this.innerHTML;
-                    this.textContent = 'Відкриття Discord...';
-                    const result = await Auth.signInWithDiscord();
-                    this.disabled = false;
-                    this.innerHTML = orig;
-                    if (!result.success && result.error !== 'Вхід скасовано') {
-                        if (errorEl) errorEl.textContent = result.error || 'Помилка входу через Discord';
-                    }
-                });
-            }
 
             document.getElementById('authGuestBtn').addEventListener('click', () => {
                 Auth.setGuest(true);
