@@ -178,7 +178,9 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 playerPageAnime = anime;
                 playerPageAnimeuaSeasons = {};
                 externalSourceCache = {};
-                playerPageSources = anime.mikaiAvailable ? ['ASHDI'] : anime.animeOnUrl ? ['AnimeON'] : [];
+                playerPageSources = anime.mikaiAvailable
+                    ? (anime.animeOnUrl ? ['ASHDI', 'AnimeON'] : ['ASHDI'])
+                    : anime.animeOnUrl ? ['AnimeON'] : [];
                 playerPageCurrentSource = playerPageSources[0] || 'ASHDI';
                 const hikkaPosterUrl = normalizePosterUrl(anime.images?.jpg?.large_image_url);
                 const mikaiPosterUrl = normalizePosterUrl(anime.mikaiPosterUrl || '', '');

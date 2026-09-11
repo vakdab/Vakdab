@@ -216,8 +216,11 @@ import {
             const translations = Array.isArray(data?.translations) ? data.translations : [];
             const dubEntries = translations.map(entry => {
                 const translation = entry?.translation;
-                const player = (entry?.player || []).slice().sort((a, b) =>
-                    (Number(b?.episodesCount) || 0) - (Number(a?.episodesCount) || 0))[0];
+                const player = (entry?.player || []).slice().sort((a, b) => {
+                    const aAshdi = /^ashdi$/i.test(String(a?.name || '')) ? 1 : 0;
+                    const bAshdi = /^ashdi$/i.test(String(b?.name || '')) ? 1 : 0;
+                    return bAshdi - aAshdi || (Number(b?.episodesCount) || 0) - (Number(a?.episodesCount) || 0);
+                })[0];
                 return { translation, player };
             }).filter(({ translation, player }) =>
                 translation?.id && player?.id && Number(player.episodesCount) > 0);

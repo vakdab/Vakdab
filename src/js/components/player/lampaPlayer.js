@@ -584,13 +584,21 @@ export class LampaPlayer {
                 this._centerTimer = setTimeout(() => btn.classList.remove('show'), 600);
             }
 
-            loadSource(src, animeTitle, episodeTitle) {
-                const requestId = ++this._sourceRequestId;
-                this._lastSourceRequest = { src, animeTitle, episodeTitle };
-                if (isEmbedUrl(src)) {
-                    this.container.innerHTML = '';
-                    const iframe = document.createElement('iframe');
-                    iframe.src = src;
+	            loadSource(src, animeTitle, episodeTitle) {
+	                const requestId = ++this._sourceRequestId;
+	                this._lastSourceRequest = { src, animeTitle, episodeTitle };
+	                if (isEmbedUrl(src)) {
+	                    const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+	                    // Moonanime and several fallback embeds reject direct iframe
+	                    // requests (400/X-Frame-Options). Route them through the same
+	                    // CORS/browser proxy used for media sources. Avoid proxying twice
+	                    // when a caller already resolved the URL.
+	                    const iframeSrc = (src && !src.startsWith(PROXY_URL))
+	                        ? getProxyUrl(src, isMobileDevice ? 'mobile' : 'desktop')
+	                        : src;
+	                    this.container.innerHTML = '';
+	                    const iframe = document.createElement('iframe');
+	                    iframe.src = iframeSrc;
                     iframe.setAttribute('allowfullscreen', '');
                     iframe.setAttribute('allow', 'autoplay; fullscreen');
                     iframe.style.cssText = 'width:100%;height:100%;border:none;position:absolute;top:0;left:0;';
