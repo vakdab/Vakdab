@@ -1961,6 +1961,14 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             });
         }
 
+        document.getElementById('playerPageModal')?.addEventListener('click', event => {
+            const link = event.target.closest?.('a[href]');
+            if (!link || !/t\.me\//i.test(link.href)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            showToast('Оберіть озвучку в картці — перехід у Telegram вимкнено');
+        }, true);
+
         const handlePreviewPlay = event => {
             const previewPlayButton = event.target.closest?.('#playerPreviewPlay');
             if (!previewPlayButton) return;

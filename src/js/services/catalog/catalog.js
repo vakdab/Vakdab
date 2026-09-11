@@ -463,7 +463,19 @@ import {
                 } catch (error) { console.warn('[Mikai] Не вдалося завантажити ASHDI:', error); }
             }
             const mikaiAvailable = Object.keys(seasons).length > 0;
-            if (!mikaiAvailable && animeOnUrl) {
+            if (mikaiAvailable && animeOnUrl) {
+                try {
+                    const animeOnData = await loadAnimeOnSeasons(animeOnUrl);
+                    // Mikai may expose a Moon embed that redirects users away from
+                    // the player. Prefer AnimeON's ASHDI episode URLs when available;
+                    // they are resolved to HLS by resolveAshdiPlaybackUrl instead.
+                    if (Object.keys(animeOnData.seasons || {}).length) {
+                        seasons = animeOnData.seasons;
+                        dubLogos = animeOnData.dubLogos || dubLogos;
+                        subtitleLogos = animeOnData.subtitleLogos || subtitleLogos;
+                    }
+                } catch (error) { console.warn('[AnimeON] Не вдалося замінити Moon embed:', error); }
+            } else if (!mikaiAvailable && animeOnUrl) {
                 try {
                     const animeOnData = await loadAnimeOnSeasons(animeOnUrl);
                     seasons = animeOnData.seasons || {};
