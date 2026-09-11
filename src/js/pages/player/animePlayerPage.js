@@ -9,7 +9,7 @@ import {
 } from '../../services/catalog/catalog.js?v=20260829-catalog-28-v1';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
-} from '../home/homeLegacy.js?v=20260829-vertical-catalog-28-v1';
+} from '../home/homeLegacy.js?v=20260911-auth-validation-v1';
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove-thought-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
