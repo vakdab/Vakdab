@@ -626,6 +626,18 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             return eps;
         }
 
+        function getFirstPlayableEpisode() {
+            const current = getCurrentEpisodes().find(ep => ep?.file);
+            if (current) return current;
+            for (const season of Object.values(playerPageAnime?.seasons || {})) {
+                for (const episodes of Object.values(season || {})) {
+                    const episode = (Array.isArray(episodes) ? episodes : []).find(ep => ep?.file);
+                    if (episode) return episode;
+                }
+            }
+            return null;
+        }
+
         function getEpisodeProgress(episode) {
             const history = Storage.getHistory();
             const animeUrl = playerPageCurrentAnimeUrl;
@@ -1949,8 +1961,9 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             });
         }
 
-        const previewPlayButton = document.getElementById('playerPreviewPlay');
-        previewPlayButton?.addEventListener('click', event => {
+        const handlePreviewPlay = event => {
+            const previewPlayButton = event.target.closest?.('#playerPreviewPlay');
+            if (!previewPlayButton) return;
             event.preventDefault();
             event.stopPropagation();
             previewPlayButton.classList.add('is-hidden');
@@ -1959,9 +1972,17 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                 playerPagePlayer._showControls?.();
                 return;
             }
-            const episode = getCurrentEpisodes().find(ep => String(ep.episode) === String(playerPageCurrentEpisodeNum)) || getCurrentEpisodes()[0];
-            if (episode) playEpisode(episode.file, episode.episode);
-        });
+            const episode = getCurrentEpisodes().find(ep => String(ep.episode) === String(playerPageCurrentEpisodeNum) && ep?.file)
+                || getFirstPlayableEpisode();
+            if (episode) {
+                playEpisode(episode.file, episode.episode);
+            } else {
+                previewPlayButton.classList.remove('is-hidden');
+                showToast('Серія ще не готова до відтворення');
+            }
+        };
+        // Delegation also handles the button if the player feature replaces the overlay DOM.
+        document.addEventListener('click', handlePreviewPlay, true);
 
         const compactEpisodeSelect = document.getElementById('playerEpisodeSelect');
         compactEpisodeSelect?.addEventListener('change', () => {
