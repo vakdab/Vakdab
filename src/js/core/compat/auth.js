@@ -23,12 +23,27 @@ const Auth = {
     _lastProfileSync: null,
     _authResolved: false,
     _welcomeShown: false,
+    _oauthCache: {},
+
+    async preloadOAuth() {
+        try {
+            const [gRes, dRes] = await Promise.all([
+                fetch('/api/auth/google/url').then(r => r.json()).catch(() => null),
+                fetch('/api/auth/discord/url').then(r => r.json()).catch(() => null)
+            ]);
+            if (gRes) this._oauthCache.google = gRes;
+            if (dRes) this._oauthCache.discord = dRes;
+        } catch (_) {}
+    },
 
     async init() {
         if (this._initialized) return;
         this._initialized = true;
 
         this._isGuest = localStorage.getItem('vakdab_guest') === '1';
+
+        // Preload OAuth URLs in background so clicks open instantly
+        this.preloadOAuth();
 
         // Listen for OAuth popup completion (Google, Discord, etc.)
         window.addEventListener('message', async (event) => {
@@ -251,78 +266,84 @@ const Auth = {
         }
     },
 
-    async signInWithGoogle() {
+    async _startOAuthFlow(provider) {
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+        const width = 520, height = 660;
+        const screenX = Number(window.screenX || window.screenLeft || 0) || 0;
+        const screenY = Number(window.screenY || window.screenTop || 0) || 0;
+        const left = Math.round(Math.max(0, (window.innerWidth - width) / 2 + screenX));
+        const top = Math.round(Math.max(0, (window.innerHeight - height) / 2 + screenY));
+        const features = isMobile ? '' : `width=${width},height=${height},left=${left},top=${top}`;
+
+        let cached = this._oauthCache[provider];
+        let authWindow = null;
+
+        // Open window synchronously during click event to satisfy Safari pop-up blocker
         try {
-            const res = await fetch('/api/auth/google/url');
-            const data = await res.json();
-            if (data.configured && data.url) {
-                const width = 520, height = 640;
-                const left = Math.max(0, (window.innerWidth - width) / 2 + window.screenX);
-                const top = Math.max(0, (window.innerHeight - height) / 2 + window.screenY);
-                window.open(data.url, 'vakdab_oauth', `width=${width},height=${height},left=${left},top=${top}`);
-                return { success: true };
+            if (cached && cached.configured && cached.url) {
+                authWindow = window.open(cached.url, 'vakdab_oauth', features || undefined);
             } else {
-                const name = prompt('GOOGLE_CLIENT_ID ще не додано у .env.\nВведіть нікнейм або імʼя для тестування входу через Google:', 'Google Користувач');
-                if (!name) return { success: false, error: 'Вхід скасовано' };
-                return await this.quickLogin('google', name);
+                authWindow = window.open('about:blank', 'vakdab_oauth', features || undefined);
             }
         } catch (e) {
-            console.warn('Google sign-in error:', e);
-            return { success: false, error: e.message };
+            console.warn('[OAuth] window.open failed:', e);
         }
+
+        try {
+            let data = cached;
+            if (!data || !data.configured || !data.url) {
+                const res = await fetch(`/api/auth/${provider}/url`);
+                data = await res.json();
+                this._oauthCache[provider] = data;
+            }
+
+            if (data.configured && data.url) {
+                if (authWindow && !authWindow.closed) {
+                    authWindow.location.href = data.url;
+                } else {
+                    // If popup was blocked by browser
+                    if (window.self === window.top) {
+                        window.location.href = data.url;
+                        return { success: true };
+                    }
+                    const newWin = window.open(data.url, '_blank');
+                    if (!newWin) {
+                        return {
+                            success: false,
+                            error: 'Браузер заблокував спливаюче вікно. Будь ласка, дозвольте спливаючі вікна для сайту в налаштуваннях браузера.'
+                        };
+                    }
+                }
+                return { success: true };
+            } else {
+                if (authWindow && !authWindow.closed) {
+                    try { authWindow.close(); } catch (_) {}
+                }
+                if (data.invalidClientId) {
+                    return { success: false, error: data.message };
+                }
+                const promptName = prompt(
+                    `${data.message || 'Провайдер не налаштовано'}\n\nБажаєте увійти в тестовому режимі? Введіть імʼя або нікнейм:`,
+                    provider === 'google' ? 'Google Користувач' : 'DiscordAnime'
+                );
+                if (!promptName) return { success: false, error: 'Вхід скасовано' };
+                return await this.quickLogin(provider, promptName);
+            }
+        } catch (e) {
+            if (authWindow && !authWindow.closed) {
+                try { authWindow.close(); } catch (_) {}
+            }
+            console.warn(`${provider} sign-in error:`, e);
+            return { success: false, error: e.message || 'Помилка авторизації' };
+        }
+    },
+
+    async signInWithGoogle() {
+        return this._startOAuthFlow('google');
     },
 
     async signInWithDiscord() {
-        try {
-            const res = await fetch('/api/auth/discord/url');
-            const data = await res.json();
-            if (data.configured && data.url) {
-                const width = 520, height = 680;
-                const left = Math.max(0, (window.innerWidth - width) / 2 + window.screenX);
-                const top = Math.max(0, (window.innerHeight - height) / 2 + window.screenY);
-                window.open(data.url, 'vakdab_oauth', `width=${width},height=${height},left=${left},top=${top}`);
-                return { success: true };
-            } else {
-                const name = prompt('DISCORD_CLIENT_ID ще не додано у .env.\nВведіть ваш Discord нікнейм для тестування входу:', 'DiscordAnime');
-                if (!name) return { success: false, error: 'Вхід скасовано' };
-                return await this.quickLogin('discord', name);
-            }
-        } catch (e) {
-            console.warn('Discord sign-in error:', e);
-            return { success: false, error: e.message };
-        }
-    },
-
-    async signInWithTelegram(telegramData = null) {
-        try {
-            if (telegramData) {
-                const res = await fetch('/api/auth/telegram', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(telegramData)
-                });
-                const data = await res.json();
-                if (!data.success) throw new Error(data.error || 'Помилка перевірки Telegram');
-                localStorage.setItem(TOKEN_KEY, data.token);
-                this._user = data.user;
-                this._isGuest = false;
-                localStorage.removeItem('vakdab_guest');
-                this._authResolved = true;
-                this._notifyListeners();
-                await this._loadUserData(data.user.uid, data.profile);
-                showToast('Вхід через Telegram успішний');
-                if (Router.currentRoute === 'profile') renderProfilePage();
-                return { success: true };
-            }
-
-            const username = prompt('Введіть ваш Telegram @username для входу на сайті:', '@animer');
-            if (!username) return { success: false, error: 'Вхід скасовано' };
-            const clean = username.replace(/^@+/, '').trim();
-            return await this.quickLogin('telegram', clean);
-        } catch (e) {
-            console.warn('Telegram sign-in error:', e);
-            return { success: false, error: e.message };
-        }
+        return this._startOAuthFlow('discord');
     },
 
     async logout() {
@@ -331,10 +352,13 @@ const Auth = {
             Storage._syncTimer = null;
         }
 
-        showToast('Збереження даних і вихід...');
+        showToast('Вихід з акаунту...');
 
         try {
-            await this.syncUserData();
+            await Promise.race([
+                this.syncUserData(),
+                new Promise(resolve => setTimeout(resolve, 600))
+            ]);
         } catch (e) {
             console.warn('Logout: sync error', e.message);
         }
@@ -342,18 +366,30 @@ const Auth = {
         try {
             await fetch('/api/auth/logout', {
                 method: 'POST',
-                headers: getAuthHeaders()
+                headers: getAuthHeaders(),
+                credentials: 'include'
             });
-        } catch (e) {}
+        } catch (e) {
+            console.warn('Logout fetch error:', e);
+        }
+
+        try {
+            document.cookie = 'vakdab_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=None; Secure';
+            document.cookie = 'vakdab_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        } catch (_) {}
 
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem('vakdab_guest');
+        localStorage.removeItem('vakdab_user');
+        sessionStorage.clear();
+
         this._user = null;
         this._authResolved = true;
         this._welcomeShown = false;
         this._isGuest = false;
-        Storage.clear();
+        try { Storage.clear(); } catch (_) {}
         this._notifyListeners();
+        window.dispatchEvent(new CustomEvent('vakdab_auth_change', { detail: { user: null } }));
 
         showToast('Ви вийшли з акаунту');
         Router.showProfile();
@@ -364,12 +400,22 @@ const Auth = {
         if (this.isGuest()) {
             this._isGuest = false;
             localStorage.removeItem('vakdab_guest');
-            Storage.clear();
+            try { Storage.clear(); } catch (_) {}
             this._notifyListeners();
+            window.dispatchEvent(new CustomEvent('vakdab_auth_change', { detail: { user: null } }));
             showToast('Гостьовий сеанс завершено');
             Router.showProfile();
         } else {
-            this.logout().catch(e => console.warn('Logout error:', e));
+            this.logout().catch(e => {
+                console.warn('Logout error:', e);
+                localStorage.removeItem(TOKEN_KEY);
+                localStorage.removeItem('vakdab_guest');
+                localStorage.removeItem('vakdab_user');
+                this._user = null;
+                this._isGuest = false;
+                this._notifyListeners();
+                Router.showProfile();
+            });
         }
     },
 

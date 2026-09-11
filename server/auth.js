@@ -29,37 +29,17 @@ export function getRedirectUri(req, provider) {
     origin = `${proto}://${host}`;
   }
   origin = origin.replace(/\/+$/, '');
-  return `${origin}/auth/callback?provider=${provider}`;
-}
-
-export function verifyTelegramAuth(data, botToken) {
-  if (!data || typeof data !== 'object') return false;
-  const { hash, ...rest } = data;
-  if (!hash || !botToken) return false;
-
-  const checkString = Object.keys(rest)
-    .sort()
-    .filter(k => rest[k] !== undefined && rest[k] !== null && rest[k] !== '')
-    .map(k => `${k}=${rest[k]}`)
-    .join('\n');
-
-  const secretKey = crypto.createHash('sha256').update(botToken.trim()).digest();
-  const computedHash = crypto.createHmac('sha256', secretKey).update(checkString).digest('hex');
-
-  // Check age (24 hours)
-  const authDate = Number(rest.auth_date);
-  if (authDate && Date.now() / 1000 - authDate > 86400) {
-    console.warn('[Telegram Auth] Auth data expired:', authDate);
-    return false;
-  }
-
-  return computedHash === hash;
+  return `${origin}/auth/callback`;
 }
 
 export async function exchangeGoogleCode(code, redirectUri) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) throw new Error('GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not set');
+  if (!clientId || !clientSecret) throw new Error('GOOGLE_CLIENT_ID або GOOGLE_CLIENT_SECRET не налаштовано');
+
+  if (clientSecret.includes('.apps.googleusercontent.com') || clientSecret === clientId) {
+    throw new Error('У GOOGLE_CLIENT_SECRET введено Client ID (закінчується на .apps.googleusercontent.com). Потрібно вставити Client Secret, який зазвичай починається на GOCSPX-... з Google Cloud Console.');
+  }
 
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -75,6 +55,9 @@ export async function exchangeGoogleCode(code, redirectUri) {
 
   const tokenData = await tokenRes.json();
   if (!tokenRes.ok || !tokenData.access_token) {
+    if (tokenData.error_description === 'The provided client secret is invalid.' || tokenData.error === 'invalid_client') {
+      throw new Error('Недійсний Client Secret (The provided client secret is invalid). Перевірте значення GOOGLE_CLIENT_SECRET у налаштуваннях: воно має починатися з GOCSPX-...');
+    }
     throw new Error(tokenData.error_description || tokenData.error || 'Failed to exchange Google code');
   }
 
@@ -91,8 +74,9 @@ export async function exchangeGoogleCode(code, redirectUri) {
 }
 
 export async function exchangeDiscordCode(code, redirectUri) {
-  const clientId = process.env.DISCORD_CLIENT_ID;
-  const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+  const envId = process.env.DISCORD_CLIENT_ID ? String(process.env.DISCORD_CLIENT_ID).trim() : '';
+  const clientId = /^\d{16,22}$/.test(envId) ? envId : '1547837997091782756';
+  const clientSecret = process.env.DISCORD_CLIENT_SECRET || '1zTCGmqOeLGy48B2TfTOQrQEKK8f3CxC';
   if (!clientId || !clientSecret) throw new Error('DISCORD_CLIENT_ID or DISCORD_CLIENT_SECRET not set');
 
   const tokenRes = await fetch('https://discord.com/api/oauth2/token', {

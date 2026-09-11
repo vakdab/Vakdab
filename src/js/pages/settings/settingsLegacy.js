@@ -576,8 +576,8 @@ import {
                 showToast(res.success ? 'Лист надіслано на вашу пошту' : 'Помилка: ' + res.error);
             });
 
-            document.getElementById('settingsLogoutBtn')?.addEventListener('click', () => {
-                if (!confirm('Вийти з акаунту?')) return;
+            document.getElementById('settingsLogoutBtn')?.addEventListener('click', (e) => {
+                e.preventDefault();
                 Auth.handleExit();
             });
 

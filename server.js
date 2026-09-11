@@ -132,8 +132,17 @@ function renderCallbackHtml(token, user, error) {
 }
 
 // OAuth Callback Route for Google, Discord, etc.
-app.get(['/auth/callback', '/auth/callback/'], async (req, res) => {
-  const { provider, code, error, error_description } = req.query;
+app.get(['/auth/callback', '/auth/callback/', '/auth/google/callback', '/auth/discord/callback'], async (req, res) => {
+  const code = req.query.code;
+  const error = req.query.error;
+  const error_description = req.query.error_description;
+  const state = req.query.state;
+  let provider = req.query.provider || state;
+  if (!provider) {
+    if (req.path.includes('google')) provider = 'google';
+    else if (req.path.includes('discord')) provider = 'discord';
+    else provider = 'google';
+  }
 
   if (error) {
     return res.send(renderCallbackHtml(null, null, error_description || error));
@@ -143,7 +152,17 @@ app.get(['/auth/callback', '/auth/callback/'], async (req, res) => {
   }
 
   try {
-    const redirectUri = getRedirectUri(req, provider);
+    const envAppUrl = process.env.APP_URL;
+    let origin = envAppUrl;
+    if (!origin) {
+      const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+      const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
+      origin = `${proto}://${host}`;
+    }
+    origin = origin.replace(/\/+$/, '');
+    const cleanPath = req.path.replace(/\/+$/, '') || '/auth/callback';
+    const redirectUri = `${origin}${cleanPath}`;
+
     let userData = null;
 
     if (provider === 'google') {
@@ -224,8 +243,8 @@ app.get(['/auth/callback', '/auth/callback/'], async (req, res) => {
       provider: user.provider
     }, null));
   } catch (err) {
-    console.error('[OAuth Callback Error]', err);
-    return res.send(renderCallbackHtml(null, null, err.message || 'Помилка авторизації'));
+    console.warn('[OAuth Callback Warning]', err.message);
+    return res.status(200).send(renderCallbackHtml(null, null, err.message || 'Помилка авторизації'));
   }
 });
 

@@ -3341,6 +3341,12 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
         export function renderAuthPage() {
             const container = document.getElementById('profilePageContainer');
             if (!container) return;
+
+            // Preload OAuth endpoints
+            if (typeof Auth?.preloadOAuth === 'function') {
+                Auth.preloadOAuth();
+            }
+
             container.innerHTML = `
             <div class="auth-card">
               <div class="mark"></div>
@@ -3356,13 +3362,6 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
                     <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.7l6.1 5.2C40.8 36.4 43.5 30.7 43.5 24c0-1.2-.1-2.4-.4-3.5z"/>
                   </svg>
                   Продовжити через Google
-                </button>
-
-                <button class="google-btn" type="button" id="authTelegramBtn" style="border-color:rgba(42,171,238,0.3);background:rgba(42,171,238,0.07);">
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="#2AABEE">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.52 2.77-1.18 3.35-1.39 3.73-1.39.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
-                  </svg>
-                  Продовжити через Telegram
                 </button>
 
                 <button class="google-btn" type="button" id="authDiscordBtn" style="border-color:rgba(88,101,242,0.3);background:rgba(88,101,242,0.07);">
@@ -3501,27 +3500,10 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
               </svg>
               Продовжити через Google
             `;
-                if (!result.success) {
-                    document.getElementById('authError').textContent = result.error || 'Помилка Google входу';
-                } else {
-                    renderProfilePage();
+                if (!result.success && result.error !== 'Вхід скасовано') {
+                    if (errorEl) errorEl.textContent = result.error || 'Помилка Google входу';
                 }
             });
-
-            const telegramBtn = document.getElementById('authTelegramBtn');
-            if (telegramBtn) {
-                telegramBtn.addEventListener('click', async function() {
-                    this.disabled = true;
-                    const orig = this.innerHTML;
-                    this.textContent = 'Вхід через Telegram...';
-                    const result = await Auth.signInWithTelegram();
-                    this.disabled = false;
-                    this.innerHTML = orig;
-                    if (!result.success && result.error !== 'Вхід скасовано') {
-                        if (errorEl) errorEl.textContent = result.error || 'Помилка входу через Telegram';
-                    }
-                });
-            }
 
             const discordBtn = document.getElementById('authDiscordBtn');
             if (discordBtn) {

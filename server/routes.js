@@ -6,9 +6,9 @@ import {
   verifyPassword,
   generateToken,
   getRedirectUri,
-  verifyTelegramAuth,
   exchangeGoogleCode,
   exchangeDiscordCode,
+  extractSessionToken,
   authMiddleware
 } from './auth.js';
 
@@ -37,6 +37,9 @@ function clearSessionCookie(res) {
     httpOnly: true,
     secure: true,
     sameSite: 'none',
+    path: '/'
+  });
+  res.clearCookie('vakdab_session', {
     path: '/'
   });
 }
@@ -145,8 +148,9 @@ apiRouter.post('/auth/login', (req, res) => {
 });
 
 apiRouter.post('/auth/logout', (req, res) => {
-  if (req.sessionToken) {
-    DB.deleteSession(req.sessionToken);
+  const token = req.sessionToken || extractSessionToken(req);
+  if (token) {
+    DB.deleteSession(token);
   }
   clearSessionCookie(res);
   res.json({ success: true });
@@ -180,85 +184,108 @@ apiRouter.get('/auth/google/url', (req, res) => {
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'openid email profile',
+    state: 'google',
     prompt: 'select_account'
   });
 
   res.json({
     configured: true,
+    clientId,
+    redirectUri,
     url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
   });
 });
 
-// -------------------------------------------------------------
-//  TELEGRAM AUTH (Login Widget & Direct verification)
-// -------------------------------------------------------------
+apiRouter.post('/auth/google/verify', async (req, res) => {
+  const { credential, accessToken } = req.body || {};
+  if (!credential && !accessToken) {
+    return res.status(400).json({ error: 'Потрібен credential або accessToken' });
+  }
 
-apiRouter.get('/auth/telegram/config', (req, res) => {
-  res.json({
-    botUsername: process.env.TELEGRAM_BOT_USERNAME || '',
-    hasToken: Boolean(process.env.TELEGRAM_BOT_TOKEN)
-  });
-});
-
-apiRouter.post('/auth/telegram', (req, res) => {
-  const data = req.body || {};
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-
-  if (botToken) {
-    const isValid = verifyTelegramAuth(data, botToken);
-    if (!isValid) {
-      return res.status(401).json({ success: false, error: 'Помилка перевірки підпису Telegram' });
+  try {
+    let userData = null;
+    if (credential) {
+      const gRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+      const gUser = await gRes.json();
+      if (!gRes.ok || !gUser.sub) {
+        return res.status(401).json({ error: 'Недійсний Google токен' });
+      }
+      userData = {
+        provider: 'google',
+        providerId: gUser.sub,
+        email: gUser.email,
+        displayName: gUser.name || gUser.given_name || 'Користувач Google',
+        avatar: gUser.picture || ''
+      };
+    } else if (accessToken) {
+      const gRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      const gUser = await gRes.json();
+      if (!gRes.ok || !gUser.sub) {
+        return res.status(401).json({ error: 'Недійсний Google access token' });
+      }
+      userData = {
+        provider: 'google',
+        providerId: gUser.sub,
+        email: gUser.email,
+        displayName: gUser.name || gUser.given_name || 'Користувач Google',
+        avatar: gUser.picture || ''
+      };
     }
-  } else {
-    // If bot token is not set yet in environment, allow with warning
-    console.warn('[Telegram Auth] TELEGRAM_BOT_TOKEN not configured; permitting demo authentication');
-  }
 
-  const tgId = String(data.id || '');
-  if (!tgId) {
-    return res.status(400).json({ success: false, error: 'Недійсні дані Telegram користувача' });
-  }
+    let user = DB.getUserByProvider('google', userData.providerId);
+    if (!user && userData.email) {
+      user = DB.getUserByEmail(userData.email);
+    }
 
-  let user = DB.getUserByProvider('telegram', tgId);
-  const fullName = [data.first_name, data.last_name].filter(Boolean).join(' ') || data.username || 'Користувач';
-  const username = data.username ? `@${data.username}` : `@tg_${tgId}`;
-  const avatar = data.photo_url || '';
+    if (!user) {
+      const userId = `google_${crypto.randomBytes(8).toString('hex')}`;
+      user = DB.createUser({
+        id: userId,
+        email: userData.email,
+        displayName: userData.displayName,
+        avatar: userData.avatar,
+        provider: 'google',
+        providerId: userData.providerId
+      });
 
-  if (!user) {
-    const userId = `tg_${tgId}`;
-    user = DB.createUser({
-      id: userId,
-      displayName: fullName,
-      avatar,
-      provider: 'telegram',
-      providerId: tgId
+      const cleanNick = (userData.displayName || 'user').replace(/[^\w]/g, '_').slice(0, 18);
+      DB.upsertUserData(userId, {
+        profile: {
+          nickname: `@${cleanNick || 'user'}`,
+          realName: userData.displayName,
+          avatar: userData.avatar,
+          bio: ''
+        }
+      });
+    } else {
+      DB.updateUser(user.id, {
+        displayName: userData.displayName || user.display_name,
+        avatar: userData.avatar || user.avatar
+      });
+    }
+
+    const session = DB.createSession(user.id);
+    setSessionCookie(res, session.token);
+
+    const userProfile = DB.getUserData(user.id);
+    res.json({
+      success: true,
+      token: session.token,
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.display_name,
+        avatar: user.avatar,
+        provider: user.provider,
+        profile: userProfile?.profile || {}
+      }
     });
-
-    const initialProfile = {
-      nickname: username,
-      realName: fullName,
-      avatar,
-      bio: ''
-    };
-    DB.upsertUserData(userId, { profile: initialProfile });
-  } else {
-    DB.updateUser(user.id, {
-      displayName: fullName || user.display_name,
-      avatar: avatar || user.avatar
-    });
+  } catch (err) {
+    console.error('Google verification error:', err);
+    res.status(500).json({ error: err.message || 'Помилка перевірки Google' });
   }
-
-  const token = generateToken();
-  DB.createSession(user.id, token);
-  setSessionCookie(res, token);
-
-  const userData = DB.getUserData(user.id);
-  res.json({
-    success: true,
-    token,
-    user: formatUser(user),
-    profile: userData?.profile || null
-  });
 });
 
 // -------------------------------------------------------------
@@ -266,25 +293,23 @@ apiRouter.post('/auth/telegram', (req, res) => {
 // -------------------------------------------------------------
 
 apiRouter.get('/auth/discord/url', (req, res) => {
-  const clientId = process.env.DISCORD_CLIENT_ID;
-  if (!clientId) {
-    return res.json({
-      configured: false,
-      message: 'DISCORD_CLIENT_ID не налаштовано в змінних середовища'
-    });
-  }
+  const envId = process.env.DISCORD_CLIENT_ID ? String(process.env.DISCORD_CLIENT_ID).trim() : '';
+  const clientId = /^\d{16,22}$/.test(envId) ? envId : '1547837997091782756';
 
   const redirectUri = getRedirectUri(req, 'discord');
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'identify email'
+    scope: 'identify email',
+    state: 'discord',
+    prompt: 'consent'
   });
 
   res.json({
     configured: true,
-    url: `https://discord.com/api/oauth2/authorize?${params.toString()}`
+    redirectUri,
+    url: `https://discord.com/oauth2/authorize?${params.toString()}`
   });
 });
 
