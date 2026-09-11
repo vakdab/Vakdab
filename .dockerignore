@@ -1,0 +1,8 @@
+.git
+.github
+node_modules
+backend/telegram/node_modules
+.data
+*.log
+.env
+apk-output

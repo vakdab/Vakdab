@@ -10,6 +10,10 @@
     "test": "node tests/catalog/catalog-pagination.test.mjs && node tests/manga/manga-loading.test.mjs && node tests/profile/profile-stickers.test.mjs && node tests/telegram/telegram-worker.test.mjs"
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "cookie-parser": "^1.4.7"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

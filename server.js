@@ -1,4 +1,5 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'url';
@@ -15,10 +16,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Trust reverse proxy for correct protocol/host resolution in iframe/Cloud Run
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
+app.use(cookieParser());
 
 // Static files
 app.use(express.static(__dirname));
