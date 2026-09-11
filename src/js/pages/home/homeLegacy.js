@@ -3483,6 +3483,7 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
                 const currentEpisode = Math.max(1, Number(item.episodePosition) || Number(ep) || 1);
                 const totalEpisodes = Math.max(currentEpisode, Number(item.totalEpisodes) || watchedEpisodes || currentEpisode);
                 const animeProgress = Math.min(100, ((currentEpisode - 1 + Math.min(Number(progress), 100) / 100) / totalEpisodes) * 100);
+                const progressPercent = Math.round(animeProgress);
                 html += `
               <div class="profile-history-item" data-profile-url="${escapeHtml(item.url || '')}" role="button" tabindex="0">
                 <div class="profile-thumb">
@@ -3494,13 +3495,13 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
                 <div class="profile-h-info">
                   <div class="profile-h-title">${escapeHtml(title)}</div>
                   <div class="profile-h-sub">
-                    <span>${season ? `Сезон <b>${escapeHtml(String(season))}</b>, ` : ''}<b>Серія ${escapeHtml(String(ep))}</b></span>
+                    <span>${season ? `<b>Сезон ${escapeHtml(String(season))}</b>, ` : ''}<b>Серія ${escapeHtml(String(ep))}</b></span>
                     <span class="dot"></span>
                     <span>${escapeHtml(time)}</span>
                   </div>
                 </div>
                 <div class="profile-h-progress">
-                  <span class="profile-h-watched-count">${watchedEpisodes}</span>
+                  <span class="profile-h-watched-count">${progressPercent}%</span>
                   <div class="profile-h-progress-fill" style="width:${animeProgress}%"></div>
                 </div>
               </div>
