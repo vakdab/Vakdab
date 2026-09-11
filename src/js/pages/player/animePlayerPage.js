@@ -6,9 +6,9 @@ import { Storage } from '../../core/compat/storage.js?v=20260910-anime4k-v1';
 import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260910-anime4k-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
-    resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail, loadAnimeOnSeasons, getAnimeOnUrl,
+    resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, searchHikkaAllTitles, switchProviderSource
-} from '../../services/catalog/catalog.js?v=20260911-ashdi-fallback-v2';
+} from '../../services/catalog/catalog.js?v=20260911-runtime-fix-v3';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
 } from '../home/homeLegacy.js?v=20260829-vertical-catalog-28-v1';
