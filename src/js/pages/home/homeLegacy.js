@@ -3381,7 +3381,7 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
               </div>
 
               <div class="panel active" id="authPanel">
-                <form id="authLoginForm" onsubmit="return false;">
+                <form id="authLoginForm" novalidate>
                   <div class="field" id="registerNameField" style="display:none;">
                     <label for="registerName">Нікнейм</label>
                     <input id="registerName" type="text" placeholder="Ваш нікнейм" autocomplete="nickname">
@@ -3457,8 +3457,24 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
                 const pass = document.getElementById('loginPass').value;
                 const name = document.getElementById('registerName')?.value?.trim();
                 if (errorEl) errorEl.textContent = '';
-                if (!email || !pass) {
-                    if (errorEl) errorEl.textContent = 'Будь ласка, заповніть усі поля.';
+                // Native browser validation is disabled on purpose: Safari can
+                // stop submit before our handler and show the English
+                // "The string did not match the expected pattern" message.
+                // Keep the validation predictable and localized in VakDab.
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+                if (!email) {
+                    if (errorEl) errorEl.textContent = 'Введіть email.';
+                    document.getElementById('loginEmail')?.focus();
+                    return;
+                }
+                if (!emailPattern.test(email)) {
+                    if (errorEl) errorEl.textContent = 'Введіть коректний email, наприклад you@example.com.';
+                    document.getElementById('loginEmail')?.focus();
+                    return;
+                }
+                if (!pass) {
+                    if (errorEl) errorEl.textContent = 'Введіть пароль.';
+                    document.getElementById('loginPass')?.focus();
                     return;
                 }
                 authLoginSubmit.disabled = true;
