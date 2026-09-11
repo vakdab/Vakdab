@@ -17,6 +17,7 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
             _loadingData: false,
             _lastProfileSync: null,
             _authResolved: false,
+            _syncQueue: Promise.resolve(),
 
             init() {
                 if (!firebaseInitialized) {
@@ -33,6 +34,9 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                 onAuthStateChanged(auth, async (user) => {
                     if (user && this._user && this._user.uid !== user.uid) {
                         this._welcomeShown = false;
+                        // localStorage is shared by browser profiles; never use the
+                        // previous account's watch history when switching identities.
+                        Storage.clear();
                     }
                     if (user && !user.isAnonymous) this._isGuest = false;
                     this._user = user;
@@ -158,7 +162,14 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                         } else {
                             Storage._setProfile(getDefaultProfile());
                         }
-                        if (data.history) Storage._setHistory(data.history);
+                        const remoteHistoryTS = Number(data.historyUpdatedAt || 0);
+                        const localHistoryTS = Storage.getHistoryTS();
+                        if (Array.isArray(data.history) && localHistoryTS <= remoteHistoryTS) {
+                            Storage._setHistory(data.history);
+                            try { localStorage.setItem('vakdab_history_ts', String(remoteHistoryTS)); } catch {}
+                        } else if (localHistoryTS > remoteHistoryTS) {
+                            Storage._debounceSync('history');
+                        }
                         if (data.bookmarks) Storage._setBookmarks(data.bookmarks);
                         if (data.likes) Storage._setLikes(data.likes);
                         if (data.watchTime) Storage._setWatchTime(data.watchTime);
@@ -266,6 +277,7 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                     await setDoc(docRef, {
                         profile: profileSync,
                         history: createHistory,
+                        historyUpdatedAt: Storage.getHistoryTS(),
                         bookmarks: createBookmarks,
                         likes: Storage.getLikes(),
                         watchTime: Storage.getWatchTime() || 0,
@@ -484,6 +496,12 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
             },
 
             async syncUserData(options = {}) {
+                const run = this._syncQueue.catch(() => {}).then(() => this._syncUserDataNow(options));
+                this._syncQueue = run.catch(() => {});
+                return run;
+            },
+
+            async _syncUserDataNow(options = {}) {
                 if (!firebaseInitialized || !db || !this._user) return { ok: false, error: 'no-auth' };
                 if (!this.isAuthenticated()) return { ok: false, error: 'not-authenticated' };
                 const uid = this._user.uid;
@@ -520,6 +538,7 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                     const partialPayload = { updatedAt: serverTimestamp() };
                     if (hasScope('profile')) partialPayload.profile = cleanProfile;
                     if (hasScope('history')) partialPayload.history = trimHistory;
+                    if (hasScope('history')) partialPayload.historyUpdatedAt = Storage.getHistoryTS();
                     if (hasScope('bookmarks')) partialPayload.bookmarks = cleanBookmarks;
                     if (hasScope('likes')) partialPayload.likes = likes;
                     if (hasScope('watchTime')) partialPayload.watchTime = watchTime;
@@ -549,6 +568,7 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                     await setDoc(docRef, {
                         profile: cleanProfile,
                         history: trimHistory,
+                        historyUpdatedAt: Storage.getHistoryTS(),
                         bookmarks: cleanBookmarks,
                         likes: likes,
                         watchTime: watchTime,
@@ -568,6 +588,7 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                     await setDoc(docRef, {
                         profile: cleanProfile,
                         history: trimHistory.slice(-50),
+                        historyUpdatedAt: Storage.getHistoryTS(),
                         bookmarks: cleanBookmarks,
                         likes: likes,
                         watchTime: watchTime,

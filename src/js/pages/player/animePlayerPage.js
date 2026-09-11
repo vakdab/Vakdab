@@ -1552,35 +1552,29 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
                     if (!due) return;
                     playerPageLastProgressSave = currentTime;
                     const finalProgress = rawProgress >= 88 ? 100 : (Math.round(rawProgress * 10) / 10);
-                    const history = Storage.getHistory();
-                    const idx = history.findIndex(h => h.url === playerPageAnime.url
-                        && sameEpisodeValue(h.episode, ep)
-                        && normalizeEpisodeValue(h.season, '1') === season);
-                    if (idx >= 0) {
-                        const entry = history.splice(idx, 1)[0] || {};
-                        entry.episode = ep;
-                        entry.season = season;
-                        entry.timestamp = Date.now();
-                        entry.progress = finalProgress;
-                        entry.duration = Math.max(0, Math.floor(currentTime || 0));
-                        entry.totalDuration = Math.max(0, Math.floor(duration || 0));
-                        history.unshift(entry);
-                    } else {
-                        history.unshift({
-                            animeId: playerPageAnime.mal_id || (playerPageAnime.url ? String(playerPageAnime.url).split('/').filter(Boolean).pop() : '0'),
-                            title: playerPageAnime.title,
-                            poster: playerPageAnime.images?.jpg?.large_image_url || '',
-                            url: playerPageAnime.url,
-                            episode: ep,
-                            season: season,
-                            timestamp: Date.now(),
-                            progress: finalProgress,
-                            duration: Math.max(0, Math.floor(currentTime || 0)),
-                            totalDuration: Math.max(0, Math.floor(duration || 0))
-                        });
-                        if (history.length > 200) history.length = 200;
-                    }
-                    Storage.setHistory(history);
+                    const previous = Storage.getWatchEntry(playerPageAnime.url, ep, season) || {};
+                    const totalEpisodes = Object.values(playerPageAnime.seasons || {}).reduce((sum, seasonData) =>
+                        sum + Object.values(seasonData || {}).reduce((max, episodes) => Math.max(max, Array.isArray(episodes) ? episodes.length : 0), 0), 0);
+                    const seasonKeys = Object.keys(playerPageAnime.seasons || {}).sort((a, b) => Number(a) - Number(b));
+                    const episodePosition = seasonKeys.reduce((sum, key) => {
+                        if (Number(key) >= Number(season)) return sum;
+                        return sum + Object.values(playerPageAnime.seasons?.[key] || {}).reduce((max, episodes) => Math.max(max, Array.isArray(episodes) ? episodes.length : 0), 0);
+                    }, 0) + Math.max(1, Number(ep) || 1);
+                    Storage.upsertWatchEntry({
+                        ...previous,
+                        animeId: previous.animeId || playerPageAnime.mal_id || (playerPageAnime.url ? String(playerPageAnime.url).split('/').filter(Boolean).pop() : '0'),
+                        title: playerPageAnime.title,
+                        poster: playerPageAnime.images?.jpg?.large_image_url || previous.poster || '',
+                        url: playerPageAnime.url,
+                        episode: ep,
+                        season,
+                        totalEpisodes: totalEpisodes || previous.totalEpisodes || 0,
+                        episodePosition: episodePosition || previous.episodePosition || 1,
+                        timestamp: Date.now(),
+                        progress: Math.max(Number(previous.progress) || 0, finalProgress),
+                        duration: Math.max(0, Math.floor(currentTime || 0)),
+                        totalDuration: Math.max(0, Math.floor(duration || 0))
+                    });
 
                     // Real-time update on active episode button in DOM
                     const epClean = normalizeEpisodeValue(ep);
@@ -1626,6 +1620,10 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
         export function closePlayerPage() {
             const modal = document.getElementById('playerPageModal');
             if (!modal || (!playerPageIsOpen && !modal.classList.contains('is-open'))) return;
+            // Save the last position before the video is destroyed. The local write
+            // is immediate; the queued Firestore sync receives the complete snapshot.
+            playerPagePlayer?._persistProgress?.(true);
+            Storage._flushSync('history,watchTime');
             playerPageIsOpen = false;
             playerPagePlaybackRequest += 1;
             modal.setAttribute('aria-busy', 'false');

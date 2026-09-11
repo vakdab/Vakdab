@@ -87,7 +87,37 @@ import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-lega
             },
             setHistory(h) {
                 this._setHistory(h);
+                try {
+                    const next = Math.max(Date.now(), this.getHistoryTS() + 1);
+                    localStorage.setItem('vakdab_history_ts', String(next));
+                } catch {}
                 this._debounceSync('history');
+            },
+
+            getHistoryTS() { try { return Number(localStorage.getItem('vakdab_history_ts')) || 0; } catch { return 0; } },
+
+            getWatchEntry(url, episode, season = '1') {
+                const normalizedUrl = String(url || '');
+                const normalizedEpisode = String(episode ?? '').trim();
+                const normalizedSeason = String(season ?? '1').trim();
+                return this.getHistory().find(entry => String(entry?.url || '') === normalizedUrl
+                    && String(entry?.episode ?? '').trim() === normalizedEpisode
+                    && String(entry?.season ?? '1').trim() === normalizedSeason) || null;
+            },
+
+            isEpisodeWatched(url, episode, season = '1') {
+                const entry = this.getWatchEntry(url, episode, season);
+                return !!entry && Number(entry.progress) >= 88;
+            },
+
+            upsertWatchEntry(entry) {
+                if (!entry || typeof entry !== 'object' || !entry.url) return null;
+                const history = this.getHistory().filter(item => !(String(item?.url || '') === String(entry.url)
+                    && String(item?.episode ?? '').trim() === String(entry.episode ?? '').trim()
+                    && String(item?.season ?? '1').trim() === String(entry.season ?? '1').trim()));
+                history.unshift({ ...entry });
+                this.setHistory(history.slice(0, 200));
+                return history[0];
             },
 
             _bookmarksRaw: null,
@@ -189,6 +219,7 @@ import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-lega
             clear() {
                 localStorage.removeItem('vakdab_profile');
                 localStorage.removeItem('vakdab_history');
+                localStorage.removeItem('vakdab_history_ts');
                 localStorage.removeItem('vakdab_bookmarks');
                 localStorage.removeItem('vakdab_likes');
                 this._historyRaw = null;

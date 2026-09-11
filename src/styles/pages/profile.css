@@ -646,14 +646,20 @@
             background: var(--text-muted);
             flex-shrink: 0;
         }
+        .profile-h-sub b {
+            color: var(--text);
+            font-weight: 800;
+        }
 
         .profile-h-progress {
             width: 50px;
             height: 4px;
             border-radius: 2px;
             background: rgba(var(--accent-rgb), 0.06);
-            overflow: hidden;
+            overflow: visible;
             flex-shrink: 0;
+            position: relative;
+            margin-top: 15px;
         }
         @media (min-width:480px) {
             .profile-h-progress { width: 60px; }
@@ -662,6 +668,16 @@
             height: 100%;
             background: var(--accent);
             border-radius: 2px;
+            overflow: hidden;
+        }
+        .profile-h-watched-count {
+            position: absolute;
+            right: 0;
+            bottom: 7px;
+            color: var(--text);
+            font-size: 11px;
+            line-height: 1;
+            font-weight: 800;
         }
 
         .profile-bookmark-grid {

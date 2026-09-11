@@ -153,6 +153,7 @@ function isGifUrl(url) {
             const watchSec   = Storage.getWatchTime() || 0;
             const watchMinutes = Math.floor(watchSec / 60);
             const episodes   = history.length;
+            const watchedEpisodes = history.filter(item => Number(item?.progress) >= 88).length;
             const rankInfo   = getUserRankInfo(episodes, watchMinutes);
             const totalXP    = calcTotalXP();
             const xpLvl      = getLevel(totalXP);
@@ -178,7 +179,7 @@ function isGifUrl(url) {
                         </div>
                     </div>
                     <div class="rg-stats-grid">
-                        <div class="rg-stat-cell"><div class="rg-stat-val">${episodes}</div><div class="rg-stat-label">Серій</div></div>
+                        <div class="rg-stat-cell"><div class="rg-stat-val">${watchedEpisodes}</div><div class="rg-stat-label">Переглянуто</div></div>
                         <div class="rg-stat-cell"><div class="rg-stat-val">${watchMinutes}</div><div class="rg-stat-label">Хвилин</div></div>
                                             </div>
                     <div class="rg-xp-rules-title">За що можна отримати XP</div>
@@ -296,11 +297,11 @@ function isGifUrl(url) {
                             avatarVideoSettings: data.profile?.avatarVideoSettings || {},
                             // Поки Firebase snapshot доганяє локальний запис, не показуємо власну стару наліпку.
                             stickers: (thisUid && d.id === thisUid) ? Storage.getStickers() : (data.stickers || {}),
-                            episodes: Array.isArray(data.history) ? data.history.length : 0,
-                            minutes: Math.floor((data.watchTime || 0) / 60),
-                            bookmarks: Array.isArray(data.bookmarks) ? data.bookmarks.length : 0,
-                            xp: calculateBaseXP({ episodes: Array.isArray(data.history) ? data.history.length : 0, watchSeconds: data.watchTime || 0, bookmarks: Array.isArray(data.bookmarks) ? data.bookmarks.length : 0 }),
-                            level: getLevel(calculateBaseXP({ episodes: Array.isArray(data.history) ? data.history.length : 0, watchSeconds: data.watchTime || 0, bookmarks: Array.isArray(data.bookmarks) ? data.bookmarks.length : 0 }))
+                            episodes: (thisUid && d.id === thisUid) ? Storage.getHistory().filter(item => Number(item?.progress) >= 88).length : (Array.isArray(data.history) ? data.history.filter(item => Number(item?.progress) >= 88).length : 0),
+                            minutes: Math.floor(((thisUid && d.id === thisUid) ? Storage.getWatchTime() : (data.watchTime || 0)) / 60),
+                            bookmarks: (thisUid && d.id === thisUid) ? Storage.getBookmarks().length : (Array.isArray(data.bookmarks) ? data.bookmarks.length : 0),
+                            xp: calculateBaseXP({ episodes: (thisUid && d.id === thisUid) ? Storage.getHistory().filter(item => Number(item?.progress) >= 88).length : (Array.isArray(data.history) ? data.history.filter(item => Number(item?.progress) >= 88).length : 0), watchSeconds: (thisUid && d.id === thisUid) ? Storage.getWatchTime() : (data.watchTime || 0), bookmarks: (thisUid && d.id === thisUid) ? Storage.getBookmarks().length : (Array.isArray(data.bookmarks) ? data.bookmarks.length : 0) }),
+                            level: getLevel(calculateBaseXP({ episodes: (thisUid && d.id === thisUid) ? Storage.getHistory().filter(item => Number(item?.progress) >= 88).length : (Array.isArray(data.history) ? data.history.filter(item => Number(item?.progress) >= 88).length : 0), watchSeconds: (thisUid && d.id === thisUid) ? Storage.getWatchTime() : (data.watchTime || 0), bookmarks: (thisUid && d.id === thisUid) ? Storage.getBookmarks().length : (Array.isArray(data.bookmarks) ? data.bookmarks.length : 0) }))
                         });
                     });
                     return arr;

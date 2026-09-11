@@ -3452,14 +3452,25 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
               </div>
             `;
             }
+            const animeHistory = [];
+            const seenAnime = new Set();
+            const watchedEpisodesByAnime = {};
+            history.forEach((item, index) => {
+                const key = item.url || item.title || `history-${index}`;
+                if (Number(item.progress) >= 88) watchedEpisodesByAnime[key] = (watchedEpisodesByAnime[key] || 0) + 1;
+                if (!seenAnime.has(key)) {
+                    seenAnime.add(key);
+                    animeHistory.push(item);
+                }
+            });
             let html = `
             <div class="profile-panel-header">
               <span class="profile-panel-title">Історія перегляду</span>
-              <span class="profile-panel-count">${history.length} серій</span>
+              <span class="profile-panel-count">${animeHistory.length} аніме</span>
             </div>
             <div class="profile-history-list">
           `;
-            history.slice(0, 30).forEach(item => {
+            animeHistory.slice(0, 30).forEach(item => {
                 const poster = item.poster || '';
                 const rawTitle = item.title || 'Без назви';
             const title = rawTitle.length > 38 ? rawTitle.substring(0, 38) + '…' : rawTitle;
@@ -3467,8 +3478,11 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
                 const season = item.season || '';
                 const time = item.timestamp ? new Date(item.timestamp).toLocaleDateString('uk-UA') : 'невідомо';
                 const progress = item.progress || 0;
-                let epLabel = `Серія ${ep}`;
-                if (season) epLabel = `Сезон ${season}, ${epLabel}`;
+                const animeKey = item.url || item.title || '';
+                const watchedEpisodes = watchedEpisodesByAnime[animeKey] || 0;
+                const currentEpisode = Math.max(1, Number(item.episodePosition) || Number(ep) || 1);
+                const totalEpisodes = Math.max(currentEpisode, Number(item.totalEpisodes) || watchedEpisodes || currentEpisode);
+                const animeProgress = Math.min(100, ((currentEpisode - 1 + Math.min(Number(progress), 100) / 100) / totalEpisodes) * 100);
                 html += `
               <div class="profile-history-item" data-profile-url="${escapeHtml(item.url || '')}" role="button" tabindex="0">
                 <div class="profile-thumb">
@@ -3480,13 +3494,14 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
                 <div class="profile-h-info">
                   <div class="profile-h-title">${escapeHtml(title)}</div>
                   <div class="profile-h-sub">
-                    <span>${escapeHtml(epLabel)}</span>
+                    <span>${season ? `Сезон <b>${escapeHtml(String(season))}</b>, ` : ''}<b>Серія ${escapeHtml(String(ep))}</b></span>
                     <span class="dot"></span>
                     <span>${escapeHtml(time)}</span>
                   </div>
                 </div>
                 <div class="profile-h-progress">
-                  <div class="profile-h-progress-fill" style="width:${Math.min(progress,100)}%"></div>
+                  <span class="profile-h-watched-count">${watchedEpisodes}</span>
+                  <div class="profile-h-progress-fill" style="width:${animeProgress}%"></div>
                 </div>
               </div>
             `;
