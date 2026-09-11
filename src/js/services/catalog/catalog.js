@@ -342,22 +342,33 @@ import {
                     (group.isSubs ? subtitleLogos : dubLogos)[teamName] = logoUrl;
                 }
                 if (group.isSubs) return;
-                group.providers.filter(provider => String(provider?.name || '').toUpperCase() === 'ASHDI').forEach(provider => {
+                const playableProviders = group.providers
+                    .filter(provider => Array.isArray(provider?.episodes) && provider.episodes.length)
+                    .sort((a, b) => {
+                        const aAshdi = String(a?.name || '').toUpperCase() === 'ASHDI' ? 1 : 0;
+                        const bAshdi = String(b?.name || '').toUpperCase() === 'ASHDI' ? 1 : 0;
+                        return bAshdi - aAshdi;
+                    });
+                playableProviders.forEach(provider => {
+                    const providerName = String(provider?.name || 'Mikai').trim();
+                    const isAshdi = providerName.toUpperCase() === 'ASHDI';
                     const episodes = dubs.get(teamName) || new Map();
                     (provider.episodes || []).forEach(ep => {
                         const number = String(ep?.number ?? '').trim();
                         const playLink = String(ep?.playLink || '').trim();
                         if (!number || !playLink) return;
                         const previous = episodes.get(number);
-                        if (!previous || String(ep?.createdAt || '') > String(previous.createdAt || '')) {
+                        // ASHDI wins when both providers have the same episode;
+                        // otherwise keep the newest release from the fallback embed.
+                        if (!previous || (isAshdi && previous.provider !== 'ASHDI') || String(ep?.createdAt || '') > String(previous.createdAt || '')) {
                             episodes.set(number, {
                                 title: `Серія ${number}`,
                                 season: '1',
                                 episode: number,
-                                file: addNoAdsQuery(playLink),
+                                file: isAshdi ? addNoAdsQuery(playLink) : playLink,
                                 dub: teamName,
                                 teamLogo: logoUrl,
-                                provider: 'ASHDI',
+                                provider: providerName,
                                 createdAt: ep?.createdAt || ''
                             });
                         }
