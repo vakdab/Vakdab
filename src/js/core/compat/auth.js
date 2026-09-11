@@ -7,6 +7,26 @@ import { Storage } from './storage.js?v=20260905-stickers-sync-v1';
 
 const TOKEN_KEY = 'vakdab_auth_token';
 
+async function requestAuthJson(url, options = {}) {
+    try {
+        const response = await fetch(url, options);
+        const contentType = response.headers.get('content-type') || '';
+        const body = await response.text();
+        let data = null;
+        try { data = body ? JSON.parse(body) : null; } catch (_) { /* HTML/static-host response */ }
+        if (!response.ok || !data || !contentType.includes('json')) {
+            return {
+                success: false,
+                unavailable: response.status === 404 || !contentType.includes('json'),
+                error: data?.error || 'Сервіс авторизації зараз недоступний. Спробуйте пізніше.'
+            };
+        }
+        return data;
+    } catch (_) {
+        return { success: false, unavailable: true, error: 'Не вдалося підключитися до сервісу авторизації.' };
+    }
+}
+
 function getAuthHeaders() {
     const headers = { 'Content-Type': 'application/json' };
     const token = localStorage.getItem(TOKEN_KEY);
@@ -28,11 +48,11 @@ const Auth = {
     async preloadOAuth() {
         try {
             const [gRes, dRes] = await Promise.all([
-                fetch('/api/auth/google/url').then(r => r.json()).catch(() => null),
-                fetch('/api/auth/discord/url').then(r => r.json()).catch(() => null)
+                requestAuthJson('/api/auth/google/url'),
+                requestAuthJson('/api/auth/discord/url')
             ]);
-            if (gRes) this._oauthCache.google = gRes;
-            if (dRes) this._oauthCache.discord = dRes;
+            if (gRes?.configured) this._oauthCache.google = gRes;
+            if (dRes?.configured) this._oauthCache.discord = dRes;
         } catch (_) {}
     },
 
@@ -192,12 +212,11 @@ const Auth = {
 
     async login(email, password) {
         try {
-            const res = await fetch('/api/auth/login', {
+            const data = await requestAuthJson('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
-            const data = await res.json();
             if (!data.success) {
                 return { success: false, error: data.error || 'Невірний email або пароль' };
             }
@@ -218,12 +237,11 @@ const Auth = {
 
     async register(email, password, displayName) {
         try {
-            const res = await fetch('/api/auth/register', {
+            const data = await requestAuthJson('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password, displayName })
             });
-            const data = await res.json();
             if (!data.success) {
                 return { success: false, error: data.error || 'Помилка реєстрації' };
             }
@@ -292,11 +310,16 @@ const Auth = {
         try {
             let data = cached;
             if (!data || !data.configured || !data.url) {
-                const res = await fetch(`/api/auth/${provider}/url`);
-                data = await res.json();
-                this._oauthCache[provider] = data;
+                data = await requestAuthJson(`/api/auth/${provider}/url`);
+                if (data?.configured) this._oauthCache[provider] = data;
             }
 
+            if (data?.unavailable) {
+                if (authWindow && !authWindow.closed) {
+                    try { authWindow.close(); } catch (_) {}
+                }
+                return { success: false, error: data.error };
+            }
             if (data.configured && data.url) {
                 if (authWindow && !authWindow.closed) {
                     authWindow.location.href = data.url;
