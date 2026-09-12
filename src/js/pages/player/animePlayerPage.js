@@ -1771,6 +1771,8 @@ import {
         document.getElementById('playerSeasonSelect')?.addEventListener('change', event => selectSeasonFromSheet(event.target.value));
 
         export function togglePlayerTeamDropdown(e) {
+            if (e?.__vakdabTeamSelectorHandled) return;
+            if (e) e.__vakdabTeamSelectorHandled = true;
             if (e) {
                 e.preventDefault?.();
                 e.stopPropagation?.();
