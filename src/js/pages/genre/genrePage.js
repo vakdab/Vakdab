@@ -1,4 +1,4 @@
-import { loadGenrePageContent } from '../../legacy/app-legacy.js';
+import { loadGenrePageContent } from '../../legacy/app-legacy.js?v=20260912-team-selector-v6';
 
 export let genrePageState = { slug: '', name: '', page: 1, list: [], hasNextPage: false, total: 0 };
 

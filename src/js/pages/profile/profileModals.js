@@ -1,7 +1,7 @@
 import {
     Auth, Router, Storage, PROFILE_STICKER_SLOTS,
     renderProfilePage, renderSettingsPage, showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js';
+} from '../../legacy/app-legacy.js?v=20260912-team-selector-v6';
 import { escapeHtml } from '../../utils/string.js';
 import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../../services/profile/profileStorage.js';
 import {

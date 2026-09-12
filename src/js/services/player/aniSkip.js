@@ -1,4 +1,4 @@
-import { showToast } from '../../legacy/app-legacy.js';
+import { showToast } from '../../legacy/app-legacy.js?v=20260912-team-selector-v6';
 
 const aniSkipCache = new Map();
 const aniSkipMalIdCache = new Map();
