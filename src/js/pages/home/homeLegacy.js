@@ -43,11 +43,11 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
         }
 
         // ====================================================================
-        export let currentTab = 'main',
-            currentPage = 1,
-            currentSearchQuery = '',
-            currentCategory = '',
-            quickFilterParams = null;
+        export let currentTab = 'main';
+        export let currentPage = 1;
+        export let currentSearchQuery = '';
+        export let currentCategory = '';
+        export let quickFilterParams = null;
 
         // Захист від того, що якийсь webview/CSS знову зробить body власним
         // скрол-контейнером замість документа (саме через це recycler колись

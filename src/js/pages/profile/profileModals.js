@@ -13,11 +13,21 @@ import {
 export function renderAuthPage() {
     const container = document.getElementById('profilePageContainer');
     if (!container) return;
+    const tgUser = globalThis.Telegram?.WebApp?.initDataUnsafe?.user;
+    const tgBtnLabel = tgUser?.first_name ? `Продовжити як ${escapeHtml(tgUser.first_name)} (Telegram)` : 'Продовжити через Telegram';
+
     container.innerHTML = `
     <div class="auth-card">
       <div class="mark"></div>
       <h1 id="authTitle">Вхід до акаунта</h1>
-      <p class="sub" id="authSub">Увійдіть за допомогою Google або вашої пошти.</p>
+      <p class="sub" id="authSub">Увійдіть за допомогою Telegram, Google або вашої пошти.</p>
+
+      <button class="telegram-btn" type="button" id="authTelegramBtn">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.52 2.77-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .37z"/>
+        </svg>
+        ${tgBtnLabel}
+      </button>
 
       <button class="google-btn" type="button" id="authGoogleBtn">
         <svg viewBox="0 0 48 48">
@@ -43,7 +53,7 @@ export function renderAuthPage() {
           </div>
           <div class="row-between">
             <label class="remember"><input type="checkbox" id="loginRemember">Запам'ятати мене</label>
-            <a href="#" onclick="showToast('Скидання пароля — звʼяжіться з підтримкою');return false;">Забули пароль?</a>
+            <a href="#" onclick="showToast('Скидання пароля — скористайтеся налаштуваннями профілю');return false;">Забули пароль?</a>
           </div>
           <div class="auth-error" id="authError"></div>
           <button class="submit-btn" type="submit" id="authLoginSubmit">Увійти</button>
@@ -80,22 +90,36 @@ export function renderAuthPage() {
         }
     });
 
+    const telegramBtn = document.getElementById('authTelegramBtn');
+    if (telegramBtn) {
+        telegramBtn.addEventListener('click', async function() {
+            const errorEl = document.getElementById('authError');
+            errorEl.textContent = '';
+            this.disabled = true;
+            const originalHtml = this.innerHTML;
+            this.textContent = 'Авторизація через Telegram...';
+            const result = await Auth.signInWithTelegram();
+            this.disabled = false;
+            this.innerHTML = originalHtml;
+            if (!result.success) {
+                errorEl.textContent = result.error || 'Помилка входу через Telegram';
+            } else {
+                renderProfilePage();
+            }
+        });
+    }
+
     document.getElementById('authGoogleBtn').addEventListener('click', async function() {
+        const errorEl = document.getElementById('authError');
+        errorEl.textContent = '';
         this.disabled = true;
+        const originalHtml = this.innerHTML;
         this.textContent = 'Завантаження...';
         const result = await Auth.signInWithGoogle();
         this.disabled = false;
-        this.innerHTML = `
-      <svg viewBox="0 0 48 48">
-        <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.3 29.3 35 24 35c-6.1 0-11-4.9-11-11s4.9-11 11-11c2.8 0 5.3 1 7.3 2.8l5.7-5.7C33.6 6.5 29 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z"/>
-        <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 18.9 13 24 13c2.8 0 5.3 1 7.3 2.8l5.7-5.7C33.6 6.5 29 4.5 24 4.5c-7.7 0-14.3 4.3-17.7 10.2z"/>
-        <path fill="#4CAF50" d="M24 43.5c5.1 0 9.7-1.9 13.2-5.1l-6.1-5.2c-2 1.5-4.5 2.3-7.1 2.3-5.3 0-9.6-3.6-11.2-8.4l-6.5 5C9.7 39.1 16.3 43.5 24 43.5z"/>
-        <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.7l6.1 5.2C40.8 36.4 43.5 30.7 43.5 24c0-1.2-.1-2.4-.4-3.5z"/>
-      </svg>
-      Продовжити через Google
-    `;
+        this.innerHTML = originalHtml;
         if (!result.success) {
-            document.getElementById('authError').textContent = result.error || 'Помилка Google входу';
+            errorEl.textContent = result.error || 'Помилка Google входу';
         } else {
             renderProfilePage();
         }

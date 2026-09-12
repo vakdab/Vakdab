@@ -1,6 +1,6 @@
 import { PROXY_URL } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 import { getProxyUrl, isEmbedUrl } from '../../utils/image.js';
-import { normalizePosterUrl } from '../../services/catalog/catalog.js?v=20260911-moonanime-fallback-v4';
+import { normalizePosterUrl, resolveUniversalPlaybackUrl } from '../../services/catalog/catalog.js?v=20260911-moonanime-fallback-v4';
 
         // ====================================================================
         //  ПЛЕЄР — ПОВНИЙ КАСТОМНИЙ ПЛЕЄР З КОНТРОЛЯМИ
@@ -584,60 +584,69 @@ export class LampaPlayer {
                 this._centerTimer = setTimeout(() => btn.classList.remove('show'), 600);
             }
 
-	            loadSource(src, animeTitle, episodeTitle) {
+	            async loadSource(src, animeTitle, episodeTitle) {
 	                const requestId = ++this._sourceRequestId;
 	                this._lastSourceRequest = { src, animeTitle, episodeTitle };
-	                if (isEmbedUrl(src)) {
+
+                    if (src && isEmbedUrl(src)) {
+                        try {
+                            const resolved = await resolveUniversalPlaybackUrl(src);
+                            if (requestId !== this._sourceRequestId) return;
+                            if (resolved && !isEmbedUrl(resolved)) {
+                                src = resolved;
+                            }
+                        } catch (e) {
+                            console.warn('[LampaPlayer embed resolution]', e);
+                        }
+                    }
+
+                    if (src && isEmbedUrl(src)) {
 	                    const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-	                    // Moonanime and several fallback embeds reject direct iframe
-	                    // requests (400/X-Frame-Options). Route them through the same
-	                    // CORS/browser proxy used for media sources. Avoid proxying twice
-	                    // when a caller already resolved the URL.
 	                    const iframeSrc = (src && !src.startsWith(PROXY_URL))
 	                        ? getProxyUrl(src, isMobileDevice ? 'mobile' : 'desktop')
 	                        : src;
 	                    this.container.innerHTML = '';
 	                    const iframe = document.createElement('iframe');
 	                    iframe.src = iframeSrc;
-                    iframe.setAttribute('allowfullscreen', '');
-                    iframe.setAttribute('allow', 'autoplay; fullscreen');
-                    iframe.style.cssText = 'width:100%;height:100%;border:none;position:absolute;top:0;left:0;';
-                    const wrap = document.createElement('div');
-                    wrap.className = 'lampa-player-container';
-                    wrap.style.cssText = 'width:100%;aspect-ratio:16/9;background:#000;position:relative;border-radius:12px;overflow:hidden;';
-                    wrap.appendChild(iframe);
-                    wrap.classList.add('is-loading');
-                    this.container.appendChild(wrap);
-                    this.containerRef = wrap;
-                    if (this.hls) { this.hls.destroy(); this.hls = null; }
-                    this.videoRef = null;
-                    this.state.loading = false;
-                    window.setTimeout(() => { if (requestId === this._sourceRequestId) wrap.classList.remove('is-loading'); }, 120);
-                    return;
-                }
+	                    iframe.setAttribute('allowfullscreen', '');
+	                    iframe.setAttribute('allow', 'autoplay; fullscreen');
+	                    iframe.style.cssText = 'width:100%;height:100%;border:none;position:absolute;top:0;left:0;';
+	                    const wrap = document.createElement('div');
+	                    wrap.className = 'lampa-player-container';
+	                    wrap.style.cssText = 'width:100%;aspect-ratio:16/9;background:#000;position:relative;border-radius:12px;overflow:hidden;';
+	                    wrap.appendChild(iframe);
+	                    wrap.classList.add('is-loading');
+	                    this.container.appendChild(wrap);
+	                    this.containerRef = wrap;
+	                    if (this.hls) { this.hls.destroy(); this.hls = null; }
+	                    this.videoRef = null;
+	                    this.state.loading = false;
+	                    window.setTimeout(() => { if (requestId === this._sourceRequestId) wrap.classList.remove('is-loading'); }, 120);
+	                    return;
+	                }
 
-                if (!this.videoRef) this._init();
-                // Mobile Safari/iOS needs an explicit inline media mode and a mobile UA at the source proxy.
-                const media = this.videoRef;
-                if (media) {
-                    media.playsInline = true;
-                    media.setAttribute('playsinline', '');
-                    media.setAttribute('webkit-playsinline', '');
-                    media.preload = 'metadata';
-                }
-                // Ensure https
-                if (src && src.startsWith('http://')) src = 'https://' + src.slice(7);
-                this.state.src = src;
-                this._clearPlaybackError();
-                const v = this.videoRef;
-                this.state.loading = true;
-                this.state.playing = false;
-                this._spinner.classList.remove('hidden');
-                this._updatePlayBtn();
+	                if (!this.videoRef) this._init();
+	                // Mobile Safari/iOS needs an explicit inline media mode and a mobile UA at the source proxy.
+	                const media = this.videoRef;
+	                if (media) {
+	                    media.playsInline = true;
+	                    media.setAttribute('playsinline', '');
+	                    media.setAttribute('webkit-playsinline', '');
+	                    media.preload = 'metadata';
+	                }
+	                // Ensure https
+	                if (src && src.startsWith('http://')) src = 'https://' + src.slice(7);
+	                this.state.src = src;
+	                this._clearPlaybackError();
+	                const v = this.videoRef;
+	                this.state.loading = true;
+	                this.state.playing = false;
+	                this._spinner.classList.remove('hidden');
+	                this._updatePlayBtn();
 
-                if (this.hls) { this.hls.destroy(); this.hls = null; }
-                v.pause();
-                if (!src) { this.state.loading = false; return; }
+	                if (this.hls) { this.hls.destroy(); this.hls = null; }
+	                v.pause();
+	                if (!src) { this.state.loading = false; return; }
 
                 const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
                 const proxyUrl = (typeof getProxyUrl === 'function' && !src.startsWith(PROXY_URL))
@@ -770,15 +779,29 @@ export class LampaPlayer {
                 this.containerRef.appendChild(error);
             }
 
+            play() {
+                if (!this.videoRef) return;
+                const v = this.videoRef;
+                const p = v.play();
+                if (p && typeof p.catch === 'function') {
+                    p.catch(() => {
+                        v.muted = true;
+                        this.state.muted = true;
+                        this._updateVolBtn();
+                        v.play().catch(() => {});
+                    });
+                }
+            }
+
+            pause() {
+                if (!this.videoRef) return;
+                this.videoRef.pause();
+            }
+
             togglePlay() {
                 if (!this.videoRef) return;
                 const v = this.videoRef;
-                if (v.paused) v.play().catch(() => {
-                            v.muted = true;
-                            this.state.muted = true;
-                            this._updateVolBtn();
-                            v.play().catch(() => {});
-                        }); else v.pause();
+                if (v.paused) this.play(); else this.pause();
             }
 
             toggleFullscreen() {

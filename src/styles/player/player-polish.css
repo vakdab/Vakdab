@@ -812,127 +812,522 @@ body.player-page-open > .bottom-sheet-overlay {
     #playerPageModal .player-compact-option { transition: none; }
 }
 
-/* Always-open player controls: clean layout without accordion affordances. */
-#playerPageModal .player-compact-trigger,
-#playerPageModal .player-accordion-trigger {
-    cursor: default;
-    pointer-events: none;
+/* ============== Redesigned Player Architecture ============== */
+#playerPageModal .player-section {
+    padding: 14px 16px 20px;
+}
+@media (min-width: 760px) {
+    #playerPageModal .player-section {
+        padding: 20px 36px 28px;
+    }
 }
 
-#playerPageModal .player-compact-trigger {
-    min-height: 52px;
-    padding: 0 16px;
+/* Team / Dub Studio Header Card */
+#playerPageModal .player-team-section {
+    margin-bottom: 12px;
 }
-#playerPageModal .player-dub-select-wrap .player-compact-trigger {
-    padding-left: 58px;
+#playerPageModal .player-team-label-row {
+    margin-bottom: 6px;
 }
-#playerPageModal .player-compact-options {
-    max-height: none;
-    overflow: visible;
-    padding: 12px 16px 16px;
-    border-top: 1px solid color-mix(in srgb, var(--text) 9%, transparent);
+#playerPageModal .player-section-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
 }
-#playerPageModal .player-episode-select-wrap .player-compact-options {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+#playerPageModal .player-team-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 14px;
+    border-radius: 14px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 8%, transparent);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
+    user-select: none;
 }
-#playerPageModal .player-dub-select-wrap .player-compact-options {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+#playerPageModal .player-team-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 18%, transparent);
 }
-#playerPageModal .player-season-select-wrap .player-compact-options {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+#playerPageModal .player-team-card:active {
+    transform: scale(0.99);
 }
-#playerPageModal .player-compact-option {
-    width: 100%;
+#playerPageModal .player-team-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     min-width: 0;
-    box-sizing: border-box;
 }
-#playerPageModal .player-dub-option {
-    justify-content: flex-start;
+#playerPageModal .player-team-avatar {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border-radius: 50%;
     overflow: hidden;
+    background: color-mix(in srgb, var(--text) 10%, var(--surface));
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 12px;
+    color: var(--text);
+    text-transform: uppercase;
 }
-#playerPageModal .player-dub-option > span:last-child {
+#playerPageModal .player-team-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+#playerPageModal .player-team-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+#playerPageModal .player-team-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text);
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+#playerPageModal .player-team-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+#playerPageModal .player-team-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--text) 8%, var(--surface));
+    color: var(--text-secondary);
     white-space: nowrap;
 }
-
-#playerPageModal .player-controls {
-    gap: 16px;
-    padding-top: 12px;
+#playerPageModal .player-team-badge--ep {
+    background: color-mix(in srgb, var(--text) 14%, var(--surface));
+    color: var(--text);
 }
-#playerPageModal .player-accordion-trigger {
-    min-height: 54px;
-    padding: 10px 20px;
+#playerPageModal .player-team-right {
+    display: flex;
+    align-items: center;
+    color: var(--text-muted);
 }
-#playerPageModal .player-accordion-panel {
-    padding: 0 20px 18px;
+#playerPageModal .player-team-chevron {
+    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-
-@media (max-width: 380px) {
-    #playerPageModal .player-compact-options { gap: 6px; padding-right: 12px; padding-left: 12px; }
-    #playerPageModal .player-compact-option { padding-right: 8px; padding-left: 8px; font-size: 12px; }
-    #playerPageModal .player-dub-select-wrap .player-compact-trigger { padding-left: 54px; }
+#playerPageModal .player-team-card[aria-expanded="true"] .player-team-chevron {
+    transform: rotate(180deg);
 }
 
-/* Final responsive alignment for episode and dub controls. */
-#playerPageModal .player-episode-picker {
-    display: grid;
-    width: 100%;
-    max-width: none;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-    box-sizing: border-box;
-    max-height: none;
-    overflow: visible;
-}
-#playerPageModal .player-episode-picker .player-episode-btn {
-    width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-}
-#playerPageModal .player-dub-controls {
-    display: grid;
-    width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    box-sizing: border-box;
-}
-#playerPageModal .player-dub-controls .format-pill {
-    width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-    justify-content: flex-start;
+/* Team Dropdown */
+#playerPageModal .player-team-dropdown {
+    margin-top: 8px;
+    border-radius: 14px;
+    background: #18181b;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     overflow: hidden;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+    animation: vdPlayerRise 0.2s ease;
 }
-#playerPageModal .player-dub-controls .dub-label {
+#playerPageModal .player-team-dropdown[hidden] {
+    display: none;
+}
+#playerPageModal .player-team-dropdown-inner {
+    padding: 10px 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+#playerPageModal .player-team-dubs-title,
+#playerPageModal .player-team-group-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffffff;
+    padding: 6px 6px 2px;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+#playerPageModal .player-dub-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+}
+#playerPageModal .player-dub-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+#playerPageModal .player-dub-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    text-align: left;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+#playerPageModal .player-dub-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+#playerPageModal .player-dub-item:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+#playerPageModal .player-dub-item.active {
+    background: rgba(255, 255, 255, 0.1);
+}
+#playerPageModal .player-dub-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+#playerPageModal .player-dub-item-avatar {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 11px;
+    color: #ffffff;
+    text-transform: uppercase;
+}
+#playerPageModal .player-dub-item-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+#playerPageModal .player-dub-item-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-#playerPageModal .player-select-leading {
-    top: 10px;
-    transform: none;
+#playerPageModal .player-dub-item-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #d4d4d8;
+    white-space: nowrap;
+    margin-left: 2px;
+}
+#playerPageModal .player-dub-item.active .player-dub-item-badge {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+}
+#playerPageModal .player-dub-item-right {
+    display: flex;
+    align-items: center;
+    padding-right: 4px;
+}
+#playerPageModal .player-dub-item-check {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+}
+#playerPageModal .player-dub-item.active .player-dub-item-check {
+    display: flex;
 }
 
-@media (max-width: 560px) {
-    #playerPageModal .player-episode-picker,
-    #playerPageModal .player-compact-options {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 8px;
+/* Season selector inside dropdown */
+#playerPageModal .player-season-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+#playerPageModal .player-season-row .season-num {
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+#playerPageModal .player-season-row .season-num:hover {
+    border-color: var(--accent);
+    color: var(--text);
+}
+#playerPageModal .player-season-row .season-num.active {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: var(--accent);
+}
+
+/* Video Container & Center Preview Play Button */
+#playerPageModal .player-video-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    margin-bottom: 16px;
+    cursor: pointer;
+}
+#playerPageModal .player-preview-play {
+    position: absolute;
+    z-index: 12;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px;
+    width: auto !important;
+    height: auto !important;
+    padding: 0;
+    border: none !important;
+    background: transparent !important;
+    cursor: pointer;
+    box-shadow: none !important;
+    transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+#playerPageModal .player-preview-play-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(255, 255, 255, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 6px rgba(255, 255, 255, 0.08);
+    transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+#playerPageModal .player-preview-play-icon svg {
+    width: 22px;
+    height: 22px;
+    margin-left: 3px;
+    fill: #fff;
+}
+#playerPageModal .player-preview-play-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+#playerPageModal .player-preview-play:hover .player-preview-play-icon {
+    transform: scale(1.08);
+    background: rgba(0, 0, 0, 0.88);
+    border-color: #fff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 0 8px rgba(255, 255, 255, 0.16);
+}
+#playerPageModal .player-preview-play:active {
+    transform: translate(-50%, -50%) scale(0.95);
+}
+#playerPageModal .player-preview-play.is-hidden {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translate(-50%, -50%) scale(0.78) !important;
+}
+
+/* Episodes Section */
+#playerPageModal .player-episodes-section {
+    margin-top: 4px;
+}
+#playerPageModal .player-episodes-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+#playerPageModal .player-episodes-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0;
+}
+#playerPageModal .player-episodes-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+#playerPageModal .player-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 5px 11px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+#playerPageModal .player-action-btn:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+#playerPageModal .player-action-btn:active {
+    transform: scale(0.95);
+}
+
+/* 5-Column Modern Episode Grid - Compact */
+#playerPageModal .player-episode-grid-container {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 12px;
+}
+@media (min-width: 600px) {
+    #playerPageModal .player-episode-grid-container {
+        grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+        gap: 6px;
     }
-    #playerPageModal .player-dub-controls,
-    #playerPageModal .player-dub-select-wrap .player-compact-options {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
-    }
-    #playerPageModal .player-episode-picker .player-episode-btn,
-    #playerPageModal .player-compact-option {
-        min-width: 0;
-        padding-right: 6px;
-        padding-left: 6px;
-    }
+}
+#playerPageModal .player-episode-btn {
+    position: relative;
+    height: 38px;
+    min-height: 38px;
+    border-radius: 9px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 0;
+    transition: all 0.15s ease;
+    user-select: none;
+    overflow: hidden;
+}
+#playerPageModal .player-episode-btn:hover {
+    border-color: var(--accent);
+    transform: translateY(-1.5px);
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--text) 8%, transparent);
+}
+#playerPageModal .player-episode-btn:active {
+    transform: scale(0.95);
+}
+#playerPageModal .player-episode-btn.active {
+    background: var(--accent) !important;
+    color: var(--accent-text) !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+#playerPageModal .player-episode-btn.active .player-episode-eye {
+    color: var(--accent-text);
+}
+#playerPageModal .player-episode-eye {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+    color: inherit;
+    pointer-events: none;
+}
+#playerPageModal .player-episode-eye svg {
+    width: 9px;
+    height: 9px;
+}
+#playerPageModal .player-episode-eye.is-watched {
+    display: flex;
+}
+#playerPageModal .player-episode-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: var(--progress, 0%);
+    max-width: 100%;
+    height: 2.5px;
+    border-radius: 0 2px 2px 0;
+    background: var(--accent);
+    pointer-events: none;
+    transition: width 0.2s ease;
+}
+#playerPageModal .player-episode-btn.active .player-episode-progress {
+    background: var(--accent-text);
+}
+
+/* Updated Info Card at the bottom */
+#playerPageModal .player-updated-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--text) 4%, var(--surface));
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+#playerPageModal .player-updated-card:hover {
+    border-color: var(--accent);
+    color: var(--text);
+}
+#playerPageModal .player-updated-card:active {
+    transform: scale(0.99);
+}
+#playerPageModal .player-updated-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+#playerPageModal .player-updated-left svg {
+    color: var(--text-muted);
+}
+#playerPageModal .player-updated-right {
+    display: flex;
+    align-items: center;
+    color: var(--text-muted);
+}
+#playerPageModal .player-updated-chevron {
+    transition: transform 0.2s ease;
 }
 
 

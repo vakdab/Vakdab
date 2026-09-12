@@ -231,18 +231,13 @@ import {
                 try {
                     const episodesData = await fetchAnimeOnJson(`https://animeon.club/api/player/${animeId}/episodes?take=100&skip=-1&playerId=${encodeURIComponent(player.id)}&translationId=${encodeURIComponent(translation.id)}&includeAlternative=true`);
                     const refs = Array.isArray(episodesData?.episodes) ? episodesData.episodes : [];
-                    let cursor = 0; const loaded = [];
-                    async function worker() {
-                        while (cursor < refs.length) {
-                            const ref = refs[cursor++];
-                            try {
-                                const episode = await fetchAnimeOnJson(`https://animeon.club/api/player/${encodeURIComponent(ref.id)}/episode`);
-                                const file = String(episode?.videoUrl || '').trim();
-                                if (file) loaded.push({ episode: String(ref.episode), file, dub: dubName, provider: 'AnimeON', label: dubName });
-                            } catch { /* keep other episodes */ }
-                        }
-                    }
-                    await Promise.all(Array.from({ length: Math.min(4, refs.length) }, worker));
+                    const loaded = refs.map(ref => ({
+                        episode: String(ref.episode),
+                        file: `animeon:${ref.id}`,
+                        dub: dubName,
+                        provider: 'AnimeON',
+                        label: dubName
+                    })).filter(ep => ep.episode);
                     loaded.sort((a, b) => Number(a.episode) - Number(b.episode));
                     if (loaded.length) dubSeasons[dubName] = loaded;
                     const logo = translation.studios?.[0]?.avatar?.preview || translation.avatar?.preview || '';
@@ -339,12 +334,13 @@ import {
             const subtitleLogos = {};
             playerGroups.forEach(group => {
                 if (!group || !Array.isArray(group.providers)) return;
-                const teamName = String(group.team?.name || 'Озвучка').trim();
+                const rawName = String(group.team?.name || (group.isSubs ? 'Субтитри' : 'Озвучка')).trim();
+                const isSubs = !!group.isSubs;
+                const teamName = isSubs && !/субтит|sub/i.test(rawName) ? `${rawName} (Субтитри)` : rawName;
                 const logoUrl = getMikaiTeamLogoUrl(group.team);
                 if (logoUrl) {
-                    (group.isSubs ? subtitleLogos : dubLogos)[teamName] = logoUrl;
+                    (isSubs ? subtitleLogos : dubLogos)[teamName] = logoUrl;
                 }
-                if (group.isSubs) return;
                 const playableProviders = group.providers
                     .filter(provider => Array.isArray(provider?.episodes) && provider.episodes.length)
                     .sort((a, b) => {
@@ -370,6 +366,7 @@ import {
                                 episode: number,
                                 file: isAshdi ? addNoAdsQuery(playLink) : playLink,
                                 dub: teamName,
+                                isSubs: isSubs,
                                 teamLogo: logoUrl,
                                 provider: providerName,
                                 createdAt: ep?.createdAt || ''
@@ -393,6 +390,60 @@ import {
         }
 
         export const ashdiPlaybackCache = new Map();
+        export const universalPlaybackCache = new Map();
+
+        export function decodeMoonAnimeHtml(html) {
+            if (!html) return null;
+            const scriptTags = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
+            const obfuscatedScript = scriptTags.find(s => s.includes('atob(') && s.includes('Uint8Array'));
+            if (obfuscatedScript) {
+                const match = obfuscatedScript.match(/atob\(["']([A-Za-z0-9+/=]+)["']\)/);
+                if (match) {
+                    try {
+                        const b64 = match[1];
+                        const binaryString = typeof atob === 'function' ? atob(b64) : Buffer.from(b64, 'base64').toString('binary');
+                        const _b = Array.from(binaryString).map(c => c.charCodeAt(0));
+                        const _eywfe = _b[0];
+                        const _gudAQ = _b.slice(1, 33);
+                        const _x = new Uint8Array(_b.length - 33);
+                        let _qXseD = _eywfe;
+                        for (let i = 0; i < _x.length; i++) {
+                            const _ig98y = _gudAQ[i % 32];
+                            _x[i] = _b[i + 33] ^ _ig98y ^ _qXseD;
+                            _qXseD = (_b[i + 33] + _ig98y) & 255;
+                        }
+                        const decoded = new TextDecoder().decode(_x);
+                        const keyMatch = decoded.match(/var\s+k\s*=\s*["']([^"']+)["']/i) || decoded.match(/k\s*=\s*["']([^"']+)["']/i);
+                        const key = keyMatch ? keyMatch[1] : 'p2Lznfrx2p3W';
+                        const fileMatch = decoded.match(/_0xd\(["']([A-Za-z0-9+/=]+)["']\)/) || decoded.match(/file\s*:\s*_0xd\(["']([^"']+)["']\)/);
+                        if (fileMatch) {
+                            const encPayload = fileMatch[1];
+                            const b = typeof atob === 'function' ? atob(encPayload) : Buffer.from(encPayload, 'base64').toString('binary');
+                            let r = '';
+                            for (let i = 0; i < b.length; i++) {
+                                r += String.fromCharCode(b.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+                            }
+                            let rawUrl = '';
+                            try {
+                                rawUrl = decodeURIComponent(escape(r));
+                            } catch (_) {
+                                rawUrl = r;
+                            }
+                            if (/https?:\/\/[^\s"'<>]+\.m3u8/i.test(rawUrl)) {
+                                return rawUrl.match(/https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/i)[0];
+                            }
+                        }
+                        const m3u8Inside = decoded.match(/https?:\/\/[^"'\s<>]+\.m3u8[^\s"'<>]*/gi);
+                        if (m3u8Inside) return m3u8Inside[0];
+                    } catch (e) {
+                        console.warn('[MoonAnime decoder error]', e);
+                    }
+                }
+            }
+            const directMatches = String(html).match(/https?:\/\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?/gi) || [];
+            return directMatches.find(url => /moonanime|content\/stream/i.test(url)) || directMatches[0] || null;
+        }
+
         export async function resolveAshdiPlaybackUrl(ashdiPageUrl) {
             if (!ashdiPageUrl) throw new Error('Порожній ASHDI URL');
             const cached = ashdiPlaybackCache.get(ashdiPageUrl);
@@ -408,7 +459,77 @@ import {
             const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
             const proxiedManifest = getProxyUrl(manifest, isMobileDevice ? 'mobile' : 'desktop');
             ashdiPlaybackCache.set(ashdiPageUrl, proxiedManifest);
+            universalPlaybackCache.set(ashdiPageUrl, proxiedManifest);
             return proxiedManifest;
+        }
+
+        export async function resolveUniversalPlaybackUrl(sourceUrl) {
+            if (!sourceUrl) throw new Error('Порожній URL відео');
+            const cached = universalPlaybackCache.get(sourceUrl);
+            if (cached) return cached;
+
+            const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+            const forceUA = isMobileDevice ? 'mobile' : 'desktop';
+
+            if (sourceUrl.startsWith('animeon:')) {
+                const id = sourceUrl.split(':')[1];
+                try {
+                    const episode = await fetchAnimeOnJson(`https://animeon.club/api/player/${encodeURIComponent(id)}/episode`);
+                    if (episode && episode.videoUrl) {
+                        return resolveUniversalPlaybackUrl(episode.videoUrl);
+                    }
+                } catch (e) {
+                    throw new Error('Не вдалося отримати посилання AnimeON');
+                }
+            }
+
+            // 1. Direct m3u8 or mp4 stream
+            if (/\.(?:m3u8|mp4)(?:[?#]|$)/i.test(sourceUrl)) {
+                const proxied = sourceUrl.startsWith(PROXY_URL) ? sourceUrl : getProxyUrl(sourceUrl, forceUA);
+                universalPlaybackCache.set(sourceUrl, proxied);
+                return proxied;
+            }
+
+            // 2. ASHDI pages
+            if (/ashdi\.vip\/vod\//i.test(sourceUrl) || /video\d+\.ashdi/i.test(sourceUrl)) {
+                return resolveAshdiPlaybackUrl(sourceUrl);
+            }
+
+            // 3. MoonAnime embeds/iframes
+            if (/moonanime\.art\/(?:iframe|watch|embed)\//i.test(sourceUrl) || /moonanime/i.test(sourceUrl)) {
+                const html = await fetchMikaiHtml(sourceUrl);
+                const manifest = decodeMoonAnimeHtml(html);
+                if (manifest) {
+                    const proxiedManifest = getProxyUrl(manifest, forceUA);
+                    universalPlaybackCache.set(sourceUrl, proxiedManifest);
+                    return proxiedManifest;
+                }
+            }
+
+            // 4. Tortuga or generic embeds
+            if (isEmbedUrl(sourceUrl)) {
+                try {
+                    const html = await fetchMikaiHtml(sourceUrl);
+                    const normalizedHtml = String(html)
+                        .replace(/\\u002F/g, '/')
+                        .replace(/\\\//g, '/')
+                        .replace(/&amp;/gi, '&');
+                    const matches = normalizedHtml.match(/https?:\/\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?/gi) || [];
+                    const manifest = matches[0];
+                    if (manifest) {
+                        const proxiedManifest = getProxyUrl(manifest, forceUA);
+                        universalPlaybackCache.set(sourceUrl, proxiedManifest);
+                        return proxiedManifest;
+                    }
+                } catch (e) {
+                    console.warn('[Embed resolution fallback]', e);
+                }
+            }
+
+            // Default fallback
+            const proxied = sourceUrl.startsWith(PROXY_URL) ? sourceUrl : getProxyUrl(sourceUrl, forceUA);
+            universalPlaybackCache.set(sourceUrl, proxied);
+            return proxied;
         }
 
         export function inferAnimeSeasonNumber(data = {}, ...sources) {

@@ -291,9 +291,39 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                 }
             },
 
+            formatAuthError(e, isGoogle = false) {
+                if (!e) return 'Помилка авторизації';
+                const msg = String(e.message || e.code || e);
+                const code = String(e.code || msg);
+                const isTma = Boolean(globalThis.Telegram?.WebApp?.initData);
+
+                if (code.includes('auth/invalid-credential') || code.includes('auth/wrong-password') || code.includes('auth/user-not-found')) {
+                    return 'Невірний email або пароль.';
+                }
+                if (code.includes('auth/popup-blocked') || code.includes('auth/popup-closed-by-user') || code.includes('auth/cancelled-popup-request') || code.includes('disallowed_useragent')) {
+                    if (isTma) {
+                        return 'У Telegram Mini App вхід через Google блокується вбудованим браузером. Скористайтеся кнопкою «Продовжити через Telegram».';
+                    }
+                    return 'Вікно авторизації було закрито або заблоковано браузером.';
+                }
+                if (code.includes('auth/email-already-in-use')) {
+                    return 'Цей email вже використовується іншим акаунтом.';
+                }
+                if (code.includes('auth/weak-password')) {
+                    return 'Пароль повинен містити щонайменше 6 символів.';
+                }
+                if (code.includes('auth/network-request-failed')) {
+                    return 'Помилка мережі. Перевірте зʼєднання з інтернетом.';
+                }
+                if (code.includes('auth/too-many-requests')) {
+                    return 'Забагато невдалих спроб. Спробуйте пізніше.';
+                }
+                return msg.replace(/^Firebase:\s*(Error\s*)?(\(auth\/[^)]+\)\.?\s*)?/i, '').trim() || 'Помилка авторизації';
+            },
+
             async login(email, password) {
                 if (!firebaseInitialized || !auth) {
-                    return { success: false, error: 'Firebase not available' };
+                    return { success: false, error: 'Firebase недоступний' };
                 }
                 try {
                     const cred = await signInWithEmailAndPassword(auth, email, password);
@@ -304,13 +334,13 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                     return { success: true };
                 } catch (e) {
                     console.warn('Login error:', e);
-                    return { success: false, error: e.message };
+                    return { success: false, error: this.formatAuthError(e) };
                 }
             },
 
             async register(email, password, displayName) {
                 if (!firebaseInitialized || !auth) {
-                    return { success: false, error: 'Firebase not available' };
+                    return { success: false, error: 'Firebase недоступний' };
                 }
                 try {
                     const cred = await createUserWithEmailAndPassword(auth, email, password);
@@ -331,7 +361,7 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                     return { success: true };
                 } catch (e) {
                     console.warn('Register error:', e);
-                    return { success: false, error: e.message };
+                    return { success: false, error: this.formatAuthError(e) };
                 }
             },
 
@@ -369,18 +399,18 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
 
             async signInWithGoogle() {
                 if (!firebaseInitialized || !auth || !this._googleProvider) {
-                    return { success: false, error: 'Firebase not available' };
+                    return { success: false, error: 'Firebase недоступний' };
                 }
                 try {
                     const result = await signInWithPopup(auth, this._googleProvider);
                     this._user = result.user;
                     this._notifyListeners();
-                    showToast('Вхід через Google...');
+                    showToast('Вхід через Google успішний');
                     // _loadUserData викличеться через onAuthStateChanged — не дублюємо
                     return { success: true };
                 } catch (e) {
                     console.warn('Google sign-in error:', e);
-                    return { success: false, error: e.message };
+                    return { success: false, error: this.formatAuthError(e, true) };
                 }
             },
 
