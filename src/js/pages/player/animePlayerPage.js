@@ -1325,8 +1325,15 @@ import {
             const isBookmarked = bookmarks.some(b => b.url === url);
             btn.classList.toggle('bookmarked', isBookmarked);
             btn.innerHTML = isBookmarked ?
-                '<i class="fas fa-heart" style="color:#ffd700;"></i>' :
-                '<i class="fas fa-heart"></i>';
+                '<i class="fas fa-bookmark"></i>' :
+                '<i class="far fa-bookmark"></i>';
+            const toolbarBtn = document.getElementById('playerToolbarBookmark');
+            if (toolbarBtn) {
+                toolbarBtn.classList.toggle('bookmarked', isBookmarked);
+                toolbarBtn.innerHTML = isBookmarked
+                    ? '<i class="fas fa-bookmark" aria-hidden="true"></i><span>Закладка</span>'
+                    : '<i class="far fa-bookmark" aria-hidden="true"></i><span>Закладка</span>';
+            }
         }
 
         function toggleBookmark() {
@@ -1714,6 +1721,13 @@ import {
         document.getElementById('likeBtn').addEventListener('click', toggleLike);
         document.getElementById('dislikeBtn').addEventListener('click', toggleDislike);
         document.getElementById('playerBookmarkBtn').addEventListener('click', toggleBookmark);
+        document.getElementById('playerToolbarBookmark')?.addEventListener('click', toggleBookmark);
+        document.getElementById('playerToolbarShare')?.addEventListener('click', () => {
+            const url = playerPageCurrentAnimeUrl;
+            const title = playerPageAnime?.title || 'VakDab';
+            if (navigator.share) navigator.share({ title, text: title, url: location.href }).catch(() => {});
+            else navigator.clipboard?.writeText(location.href).then(() => showToast('Посилання скопійовано')).catch(() => showToast('Не вдалося скопіювати посилання'));
+        });
         document.getElementById('videoBackBtn')?.addEventListener('click', () => {
             const videoContainer = document.getElementById('playerVideoContainer');
             videoContainer.classList.remove('active');

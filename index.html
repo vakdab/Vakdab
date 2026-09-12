@@ -245,6 +245,18 @@
                     </button>
                     <div id="playerPageVideo"></div>
                 </div>
+
+                <!-- Quick player actions: compact, touch-friendly and theme-aware. -->
+                <div class="player-mobile-toolbar" aria-label="Дії плеєра">
+                    <span class="player-mobile-toolbar-title"><i class="fas fa-list-ul" aria-hidden="true"></i> Епізоди</span>
+                    <button type="button" class="player-mobile-toolbar-btn" id="playerToolbarShare" title="Поділитися" aria-label="Поділитися">
+                        <i class="fas fa-share-nodes" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="player-mobile-toolbar-btn player-toolbar-bookmark" id="playerToolbarBookmark" title="Закладка" aria-label="Закладка">
+                        <i class="far fa-bookmark" aria-hidden="true"></i><span>Закладка</span>
+                    </button>
+                </div>
+
                 <div class="player-controls" id="playerControls">
                     <div class="player-control-block player-accordion-block is-open" data-accordion="episode">
                         <div class="player-accordion-trigger">
@@ -377,7 +389,7 @@
     </div>
 
 
-    <script type="module" src="./src/js/app.js?v=20260912-content-fix-v2"></script>
+    <script type="module" src="./src/js/app.js?v=20260912-player-mobile-refresh-v1"></script>
 
     <!-- ===== BOTTOM NAV ===== -->
     <nav class="bottom-nav" id="bottomNav" role="navigation" aria-label="Навігація">

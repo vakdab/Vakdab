@@ -934,3 +934,117 @@ body.player-page-open > .bottom-sheet-overlay {
         padding-left: 6px;
     }
 }
+
+
+/* ================================================================
+   Mobile player refresh — matches the VakDab dark/glass visual language.
+   Keep all colours on theme tokens so light mode remains readable.
+================================================================ */
+#playerPageModal .player-section {
+    padding: 0 12px 18px;
+}
+#playerPageModal .player-compact-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 9px;
+    margin: 0 0 12px;
+}
+#playerPageModal .player-compact-controls::before {
+    content: 'Команда';
+    display: block;
+    margin: 0 4px -3px;
+    color: var(--text-secondary, #cfcfcf);
+    font-size: .82rem;
+    font-weight: 600;
+}
+#playerPageModal .player-compact-accordion {
+    min-height: 48px;
+    border: 1px solid var(--border-hover, rgba(255,255,255,.18));
+    border-radius: 14px;
+    background: var(--surface, rgba(255,255,255,.06));
+    box-shadow: 0 8px 22px rgba(0,0,0,.14);
+}
+#playerPageModal .player-compact-accordion::after {
+    content: '\f078';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted, #a8a8a8);
+    pointer-events: none;
+}
+#playerPageModal .player-compact-trigger {
+    min-height: 48px;
+    padding: 10px 42px 10px 16px;
+    display: flex;
+    align-items: center;
+    color: var(--text, #f7f7f7);
+}
+#playerPageModal .player-compact-trigger strong { font-size: .95rem; font-weight: 500; }
+#playerPageModal .player-dub-select-wrap {
+    border-color: var(--accent, #b9a0ff);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, #b9a0ff) 55%, transparent);
+}
+#playerPageModal .player-dub-select-wrap::before {
+    content: 'Плеєр';
+    position: absolute;
+    left: 0;
+    top: -25px;
+    color: var(--text-secondary, #cfcfcf);
+    font-size: .82rem;
+    font-weight: 600;
+}
+#playerPageModal .player-dub-select-wrap { margin-top: 22px; }
+#playerPageModal .player-video-container {
+    border-radius: 0;
+    min-height: 242px;
+    background: var(--surface, #15161b);
+    border: 1px solid var(--border, rgba(255,255,255,.1));
+    box-shadow: 0 14px 35px rgba(0,0,0,.2);
+}
+#playerPageModal .player-preview-play {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent, #b9a0ff) 28%, #251d2f);
+    box-shadow: 0 8px 22px rgba(0,0,0,.28);
+}
+#playerPageModal .player-preview-play svg { width: 28px; height: 28px; fill: var(--accent-text, #fff); }
+#playerPageModal .player-mobile-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    min-height: 54px;
+    padding: 5px 4px 0;
+    color: var(--text-secondary, #cfcfcf);
+}
+#playerPageModal .player-mobile-toolbar-title {
+    margin-right: auto;
+    font-size: .92rem;
+    font-weight: 600;
+}
+#playerPageModal .player-mobile-toolbar-title i { margin-right: 7px; color: var(--accent, #b9a0ff); }
+#playerPageModal .player-mobile-toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 4px;
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary, #cfcfcf);
+    font: inherit;
+    cursor: pointer;
+}
+#playerPageModal .player-mobile-toolbar-btn:hover,
+#playerPageModal .player-mobile-toolbar-btn:focus-visible { color: var(--accent, #b9a0ff); }
+#playerPageModal .player-toolbar-bookmark.bookmarked { color: var(--accent, #b9a0ff); }
+#playerPageModal .player-toolbar-bookmark span { font-size: .86rem; }
+#playerPageModal .player-controls { padding-top: 0; }
+#playerPageModal .player-control-block { border-radius: 14px; overflow: hidden; }
+
+@media (min-width: 700px) {
+    #playerPageModal .player-section { max-width: 720px; margin: 0 auto; }
+    #playerPageModal .player-mobile-toolbar { padding-inline: 8px; }
+}
