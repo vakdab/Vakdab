@@ -1808,44 +1808,38 @@ import {
         }
         window.closePlayerTeamDropdown = closePlayerTeamDropdown;
 
-        // Team Selector Card Trigger & Dropdown handling
-        const teamDropdown = document.getElementById('playerTeamDropdown');
-        const teamTrigger = document.getElementById('playerTeamSelectorTrigger');
-        if (teamTrigger) {
-            teamTrigger.addEventListener('click', togglePlayerTeamDropdown);
-            teamTrigger.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    togglePlayerTeamDropdown(e);
-                }
-            });
-        }
-        if (teamDropdown) {
-            // Delegated click handling for all dub and season options inside dropdown
-            teamDropdown.addEventListener('click', (e) => {
-                const dubBtn = e.target.closest('[data-dub]');
-                if (dubBtn) {
-                    e.stopPropagation();
-                    const chosen = dubBtn.dataset.dub;
-                    selectDubFromSheet(chosen);
-                    closePlayerTeamDropdown();
-                    return;
-                }
-                const seasonBtn = e.target.closest('[data-season]');
-                if (seasonBtn) {
-                    e.stopPropagation();
-                    selectSeasonFromSheet(seasonBtn.dataset.season);
-                    closePlayerTeamDropdown();
-                    return;
-                }
-            });
+        // Delegate selector events because player markup may be replaced after the
+        // module evaluates (feature loading, route transitions, or modal rerenders).
+        document.addEventListener('click', (e) => {
+            const trigger = e.target.closest?.('#playerTeamSelectorTrigger');
+            if (trigger) {
+                togglePlayerTeamDropdown(e);
+                return;
+            }
 
-            document.addEventListener('click', (e) => {
-                if (!teamDropdown.hidden && teamDropdown.style.display !== 'none' && !teamDropdown.contains(e.target) && !teamTrigger.contains(e.target)) {
-                    closePlayerTeamDropdown();
-                }
-            });
-        }
+            const option = e.target.closest?.('#playerTeamDropdown [data-dub], #playerTeamDropdown [data-season]');
+            if (option) {
+                e.stopPropagation();
+                if (option.hasAttribute('data-dub')) selectDubFromSheet(option.dataset.dub);
+                else selectSeasonFromSheet(option.dataset.season);
+                closePlayerTeamDropdown();
+                return;
+            }
+
+            const dropdown = document.getElementById('playerTeamDropdown');
+            const currentTrigger = document.getElementById('playerTeamSelectorTrigger');
+            if (dropdown && !dropdown.hidden && dropdown.style.display !== 'none'
+                && !dropdown.contains(e.target) && !currentTrigger?.contains(e.target)) {
+                closePlayerTeamDropdown();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            const trigger = e.target.closest?.('#playerTeamSelectorTrigger');
+            if (!trigger || (e.key !== 'Enter' && e.key !== ' ')) return;
+            e.preventDefault();
+            togglePlayerTeamDropdown(e);
+        });
 
         // Episodes Section Action Buttons
         document.getElementById('playerEpisodesShareBtn')?.addEventListener('click', async () => {
