@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-script = Path('/home/ubuntu/Vakdab/backend/telegram/worker.js').read_text()
+script = Path(__file__).resolve().parent / 'worker.js'.read_text()
 code = """async () => {
   const script = %SCRIPT%;
   const boundary = `----manus${Date.now()}`;
