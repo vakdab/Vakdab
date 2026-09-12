@@ -1810,6 +1810,16 @@ import {
 
         // Team Selector Card Trigger & Dropdown handling
         const teamDropdown = document.getElementById('playerTeamDropdown');
+        const teamTrigger = document.getElementById('playerTeamSelectorTrigger');
+        if (teamTrigger) {
+            teamTrigger.addEventListener('click', togglePlayerTeamDropdown);
+            teamTrigger.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    togglePlayerTeamDropdown(e);
+                }
+            });
+        }
         if (teamDropdown) {
             // Delegated click handling for all dub and season options inside dropdown
             teamDropdown.addEventListener('click', (e) => {
