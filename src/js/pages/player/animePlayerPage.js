@@ -17,6 +17,16 @@ import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
 } from '../../legacy/app-legacy.js?v=20260910-anime4k-v1';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
+import {
+    JIKAN_STATUS_LABELS, SEASON_LABELS, ANILIST_STATUS_LABELS, ANILIST_RELATION_LABELS, ANILIST_FORMAT_LABELS,
+    fetchJikan, normalizeJikanTitle, resolveJikanById, withTimeout, resolveJikanByTitle,
+    fetchAnilist, normalizeAnilistTitle, fetchAnilistRelations, adaptAnilistMedia,
+    resolveAnilistByTitle, hasCharacterData, resolveJikanAnime, jikanImage
+} from '../../services/metadata/animeExternal.js';
+import {
+    getDirectAniSkipMalId, resolveAniSkipMalId, getAniSkipSegments,
+    attachAniSkip as serviceAttachAniSkip, cleanupAniSkip
+} from '../../services/player/aniSkip.js';
 
         // ====================================================================
         //  ПЛЕЄР
@@ -646,200 +656,8 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
         }
 
         // ====================================================================
-        //  JIKAN / MAL        // ====================================================================
-        //  JIKAN / MAL — персонажі, сейю, зв'язки, студія, broadcast та media.
-        //  Дані завжди прив'язані до MAL ID; пошук за назвою використовується
-        //  тільки коли сторінка Hikka не має зовнішнього ID.
+        //  JIKAN / MAL & ANILIST (див. src/js/services/metadata/animeExternal.js)
         // ====================================================================
-        const JIKAN_BASE = 'https://api.jikan.moe/v4';
-        const jikanCache = new Map();
-        const JIKAN_STATUS_LABELS = {
-            'Currently Airing': 'Онґоїнг', 'Finished Airing': 'Завершено',
-            'Not yet aired': 'Майбутнє', 'Discontinued': 'Скасовано', 'On Hiatus': 'Призупинено'
-        };
-        const SEASON_LABELS = { winter: 'Зима', spring: 'Весна', summer: 'Літо', fall: 'Осінь' };
-
-        async function fetchJikan(path) {
-            if (jikanCache.has(path)) return jikanCache.get(path);
-            const promise = fetch(`${JIKAN_BASE}${path}`, { cache: 'force-cache' }).then(r => {
-                if (!r.ok) throw new Error(`Jikan HTTP ${r.status}`);
-                return r.json();
-            });
-            jikanCache.set(path, promise);
-            try { return await promise; } catch (e) { jikanCache.delete(path); throw e; }
-        }
-
-        function normalizeJikanTitle(v) {
-            return String(v || '').toLowerCase().replace(/[«»'"`]/g, '')
-                .replace(/\b(season|сезон|part|частина|cour|tv|серіал|anime)\s*\d*\b/gi, ' ')
-                .replace(/[^a-zа-яіїєґ0-9]+/gi, ' ').replace(/\s+/g, ' ').trim();
-        }
-
-        async function resolveJikanById(malId) {
-            const data = (await fetchJikan(`/anime/${malId}/full`)).data;
-            if (data) data._provider = 'jikan';
-            return data || null;
-        }
-
-        async function withTimeout(promise, ms, label = 'Запит перевищив час очікування') {
-            let timer;
-            const timeout = new Promise((_, reject) => {
-                timer = setTimeout(() => reject(new Error(label)), ms);
-            });
-            try { return await Promise.race([promise, timeout]); }
-            finally { clearTimeout(timer); }
-        }
-
-        async function resolveJikanByTitle(query) {
-            const result = await fetchJikan(`/anime?q=${encodeURIComponent(query)}&limit=5&sfw=true`);
-            const target = normalizeJikanTitle(query);
-            const candidates = (result.data || []).map(x => {
-                const names = [x.title, x.title_english, x.title_japanese, ...(x.title_synonyms || [])].map(normalizeJikanTitle);
-                let score = names.includes(target) ? 100 : 0;
-                if (names.some(n => n && (n.includes(target) || target.includes(n)))) score += 35;
-                if (x.type === 'TV') score += 4;
-                return { x, score };
-            }).sort((a, b) => b.score - a.score);
-            const best = candidates[0];
-            // Do not attach a weak unrelated title just because search returned something.
-            if (!best || best.score < 35) return null;
-            return resolveJikanById(best.x.mal_id);
-        }
-
-        // ====================================================================
-        //  ANILIST — другий стабільний ID у пріоритеті користувача. Використовуємо,
-        //  коли Jikan/MAL недоступний (live search на MAL часто падає з 504,
-        //  хоча вже кешовані ID-запити можуть проходити) або не знайшов збіг.
-        //  AniList повертає персонажів, зв'язки, студію та nextAiringEpisode
-        //  (Unix-час, тому конвертація часової зони відбувається без ручних зсувів)
-        //  усе в одному GraphQL-запиті.
-        // ====================================================================
-        const ANILIST_BASE = 'https://graphql.anilist.co';
-        const anilistCache = new Map();
-        const ANILIST_STATUS_LABELS = {
-            RELEASING: 'Онґоїнг', FINISHED: 'Завершено', NOT_YET_RELEASED: 'Майбутнє',
-            CANCELLED: 'Скасовано', HIATUS: 'Призупинено'
-        };
-        const ANILIST_RELATION_LABELS = {
-            PREQUEL: 'попередній сезон', SEQUEL: 'наступний сезон', SIDE_STORY: 'спін-оф',
-            SPIN_OFF: 'спін-оф', ALTERNATIVE: "альтернативна версія", SUMMARY: 'короткий переказ',
-            ADAPTATION: 'адаптація', PARENT: 'пов’язаний твір', CHARACTER: 'пов’язаний твір',
-            FULL_STORY: 'повна історія', OTHER: 'пов’язаний твір'
-        };
-        const ANILIST_FORMAT_LABELS = { TV: 'TV Серіал', TV_SHORT: 'TV Серіал', MOVIE: 'Фільм', OVA: 'OVA', ONA: 'ONA', SPECIAL: 'Спешл', MUSIC: 'Музика' };
-
-        const ANILIST_SEARCH_QUERY = `query ($search: String) { Page(perPage: 5) { media(search: $search, type: ANIME, sort: SEARCH_MATCH) {
-            id title { romaji english native } format status season seasonYear episodes duration averageScore genres siteUrl
-            studios(isMain: true) { nodes { name } }
-            nextAiringEpisode { airingAt episode }
-            characters(sort: ROLE, perPage: 10) { edges { role node { name { full native } image { large } } voiceActors(language: JAPANESE) { name { full } image { large } } } } }
-        } }`;
-
-        async function fetchAnilist(query, variables) {
-            const key = JSON.stringify({ query, variables });
-            if (anilistCache.has(key)) return anilistCache.get(key);
-            const promise = fetch(ANILIST_BASE, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({ query, variables })
-            }).then(r => { if (!r.ok) throw new Error(`AniList HTTP ${r.status}`); return r.json(); });
-            anilistCache.set(key, promise);
-            try { return await promise; } catch (e) { anilistCache.delete(key); throw e; }
-        }
-
-        function normalizeAnilistTitle(v) { return normalizeJikanTitle(v); }
-
-        async function fetchAnilistRelations(anilistId) {
-            const query = `query ($id: Int) { Media(id: $id) { relations { edges { relationType(version: 2) node {
-                id type title { romaji english } format startDate { year } coverImage { large } siteUrl } } } } }`;
-            const res = await fetchAnilist(query, { id: anilistId });
-            return res?.data?.Media?.relations?.edges || [];
-        }
-
-        function adaptAnilistMedia(media) {
-            const studios = (media.studios?.nodes || []).map(n => ({ name: n.name }));
-            const characters = (media.characters?.edges || []).map(e => ({
-                character: { name: e.node?.name?.full, name_kanji: e.node?.name?.native, images: { webp: { image_url: e.node?.image?.large } } },
-                role: e.role === 'MAIN' ? 'Головна роль' : 'Другорядна роль',
-                voice_actors: e.voiceActors?.length ? [{ language: 'Japanese', person: { name: e.voiceActors[0].name.full, images: { webp: { image_url: e.voiceActors[0].image?.large } } } }] : []
-            }));
-            const seasonMap = { WINTER: 'winter', SPRING: 'spring', SUMMER: 'summer', FALL: 'fall' };
-            return {
-                _provider: 'anilist', _anilistId: media.id,
-                title: media.title?.romaji || media.title?.english, url: media.siteUrl,
-                type: media.format === 'MOVIE' ? 'Movie' : 'TV',
-                status: media.status, _statusLabel: ANILIST_STATUS_LABELS[media.status] || null,
-                season: seasonMap[media.season] || null, year: media.seasonYear,
-                episodes: media.episodes, duration: media.duration, _durationMinutes: media.duration,
-                airing: media.status === 'RELEASING',
-                _nextAiringDate: media.nextAiringEpisode ? new Date(media.nextAiringEpisode.airingAt * 1000) : null,
-                _nextEpisode: media.nextAiringEpisode?.episode || null,
-                rating: media.averageScore ? `AniList ${(media.averageScore / 10).toFixed(1)}` : null,
-                genres: media.genres || [], studios, characters
-            };
-        }
-
-        async function resolveAnilistByTitle(query) {
-            const res = await fetchAnilist(ANILIST_SEARCH_QUERY, { search: query });
-            const list = res?.data?.Page?.media || [];
-            const target = normalizeAnilistTitle(query);
-            const candidates = list.map(m => {
-                const names = [m.title?.romaji, m.title?.english, m.title?.native].map(normalizeAnilistTitle);
-                let score = names.includes(target) ? 100 : 0;
-                if (names.some(n => n && (n.includes(target) || target.includes(n)))) score += 35;
-                if (m.format === 'TV') score += 4;
-                return { m, score };
-            }).sort((a, b) => b.score - a.score);
-            const best = candidates[0];
-            if (!best || best.score < 35) return null;
-            return adaptAnilistMedia(best.m);
-        }
-
-        function hasCharacterData(data) {
-            return Array.isArray(data?.characters) && data.characters.some(x => x?.character?.name);
-        }
-
-        async function resolveJikanAnime(anime) {
-            const stableMalId = Number(anime?.externalIds?.mal_id);
-            const stableAnilistId = Number(anime?.externalIds?.anilist_id);
-            let jikanFallback = null;
-            // Priority 1: MAL ID. Priority 2: AniList ID. Priority 3/4 handled by title fallback below.
-            if (stableMalId) {
-                try {
-                    const byId = await withTimeout(resolveJikanById(stableMalId), 5000, 'Jikan ID запит перевищив час очікування');
-                    if (byId && hasCharacterData(byId)) return byId;
-                    if (byId) jikanFallback = byId;
-                } catch (e) { console.warn('Jikan ID lookup failed, trying other sources:', e); }
-            }
-            if (stableAnilistId) {
-                try {
-                    const query = `query ($id: Int) { Media(id: $id, type: ANIME) {
-                        id title { romaji english native } format status season seasonYear episodes duration averageScore genres siteUrl
-                        studios(isMain: true) { nodes { name } } nextAiringEpisode { airingAt episode }
-                        characters(sort: ROLE, perPage: 10) { edges { role node { name { full native } image { large } } voiceActors(language: JAPANESE) { name { full } image { large } } } } } }`;
-                    const res = await withTimeout(fetchAnilist(query, { id: stableAnilistId }), 8000, 'AniList ID запит перевищив час очікування');
-                    if (res?.data?.Media) return adaptAnilistMedia(res.data.Media);
-                } catch (e) { console.warn('AniList ID lookup failed, trying title fallback:', e); }
-            }
-            const query = anime?.originalTitle || anime?.title;
-            if (!query) return jikanFallback;
-            // AniList is the preferred title fallback because it usually returns characters and
-            // voice actors faster and more consistently than Jikan's rate-limited search endpoint.
-            try {
-                const anilistMatch = await withTimeout(resolveAnilistByTitle(query), 8000, 'AniList пошук перевищив час очікування');
-                if (anilistMatch) return anilistMatch;
-            } catch (e) { console.warn('AniList title search unavailable:', e); }
-            try {
-                const byTitle = await withTimeout(resolveJikanByTitle(query), 5000, 'Jikan пошук перевищив час очікування');
-                if (byTitle && hasCharacterData(byTitle)) return byTitle;
-                if (byTitle && !jikanFallback) jikanFallback = byTitle;
-            } catch (e) { console.warn('Jikan title search unavailable:', e); }
-            return jikanFallback;
-        }
-
-        function jikanImage(item) {
-            return item?.images?.webp?.image_url || item?.images?.jpg?.image_url || '';
-        }
 
         function setSectionState(id, visible) {
             const el = document.getElementById(id);
@@ -1244,181 +1062,15 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             return h ? `${h} год ${m ? m + ' хв' : ''}`.trim() : `${m} хв`;
         }
 
-        const aniSkipCache = new Map();
-        const aniSkipMalIdCache = new Map();
-        let aniSkipCleanup = null;
-
-        function getDirectAniSkipMalId(anime) {
-            const candidates = [
-                anime?.externalIds?.mal_id,
-                anime?.externalIds?.malId,
-                anime?.external_ids?.mal_id,
-                anime?.external_ids?.malId,
-                anime?.mal_id,
-                anime?.malId
-            ];
-            const value = candidates.map(Number).find(id => Number.isInteger(id) && id > 0);
-            return value || 0;
-        }
-
-        async function resolveAniSkipMalId(anime) {
-            const direct = getDirectAniSkipMalId(anime);
-            if (direct) return direct;
-            const title = String(anime?.title || anime?.name || '').trim();
-            if (!title) return 0;
-            const key = title.toLowerCase();
-            if (aniSkipMalIdCache.has(key)) return aniSkipMalIdCache.get(key);
-            const request = (async () => {
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 4500);
-                try {
-                    const response = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(title)}&limit=5`, {
-                        signal: controller.signal, headers: { Accept: 'application/json' }
-                    });
-                    if (!response.ok) return 0;
-                    const payload = await response.json();
-                    const normalized = value => String(value || '').toLowerCase().replace(/[^a-z0-9а-яіїєґ]+/gi, ' ').trim();
-                    const wanted = normalized(title);
-                    const exact = (payload?.data || []).find(item => [item.title, item.title_english, item.title_japanese]
-                        .some(candidate => normalized(candidate) === wanted));
-                    return Number(exact?.mal_id || payload?.data?.[0]?.mal_id || 0);
-                } catch (_) { return 0; }
-                finally { clearTimeout(timer); }
-            })();
-            aniSkipMalIdCache.set(key, request);
-            return request;
-        }
-
-        async function getAniSkipSegments(anime, episode) {
-            const id = await resolveAniSkipMalId(anime);
-            const ep = Number(episode);
-            console.debug('[AniSkip] MAL ID:', id);
-            console.debug('[AniSkip] Episode:', ep);
-            if (!Number.isInteger(id) || id <= 0 || !Number.isInteger(ep) || ep <= 0) {
-                console.debug('[AniSkip] Request: skipped (missing MAL ID or episode)');
-                return [];
-            }
-            const cacheKey = `${id}:${ep}`;
-            if (aniSkipCache.has(cacheKey)) {
-                console.debug('[AniSkip] Response: memory cache', cacheKey);
-                return aniSkipCache.get(cacheKey);
-            }
-            const storageKey = `vakdab:aniskip:v2:${cacheKey}`;
-            try {
-                const stored = JSON.parse(localStorage.getItem(storageKey) || 'null');
-                if (Array.isArray(stored)) {
-                    console.debug('[AniSkip] Response: local cache', stored);
-                    const cached = Promise.resolve(stored);
-                    aniSkipCache.set(cacheKey, cached);
-                    return cached;
-                }
-            } catch (_) { /* storage unavailable or invalid */ }
-
-            const requestUrl = `https://api.aniskip.com/v2/skip-times/${id}/${ep}?types=op&types=ed&types=recap&episodeLength=0`;
-            console.debug('[AniSkip] Request:', requestUrl);
-            const request = (async () => {
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 6000);
-                try {
-                    const response = await fetch(requestUrl, {
-                        signal: controller.signal, headers: { Accept: 'application/json' }
-                    });
-                    let payload = null;
-                    try { payload = await response.json(); } catch (_) { payload = null; }
-                    console.debug('[AniSkip] Response:', response.status, payload);
-                    if (!response.ok || payload?.found !== true || !Array.isArray(payload.results)) return [];
-                    const segments = payload.results.map(item => {
-                        const interval = item.interval || item;
-                        const start = Number(interval.startTime ?? interval.start_time);
-                        const end = Number(interval.endTime ?? interval.end_time);
-                        const type = String(item.skipType ?? item.skip_type ?? '').toLowerCase();
-                        return { start, end, type };
-                    }).filter(item => Number.isFinite(item.start) && Number.isFinite(item.end)
-                        && item.end > item.start && ['op', 'ed', 'recap', 'opening', 'ending'].includes(item.type));
-                    segments.forEach(segment => console.debug('[AniSkip] OP:', segment.type, 'start', segment.start, 'end', segment.end));
-                    try { localStorage.setItem(storageKey, JSON.stringify(segments)); } catch (_) { /* ignore */ }
-                    return segments;
-                } catch (error) {
-                    console.debug('[AniSkip] Response:', error?.name === 'AbortError' ? 'timeout' : error);
-                    return [];
-                } finally { clearTimeout(timer); }
-            })();
-            aniSkipCache.set(cacheKey, request);
-            return request;
-        }
-
         async function attachAniSkip(video, episode, segmentsPromise = null, playbackRequest = playerPagePlaybackRequest) {
-            if (!video || playbackRequest !== playerPagePlaybackRequest) return;
-            if (aniSkipCleanup) { aniSkipCleanup(); aniSkipCleanup = null; }
-            const animeForAniSkip = playerPageAnime;
-            const rawSegments = await (segmentsPromise || getAniSkipSegments(animeForAniSkip, episode));
-            if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
-            const currentVideo = playerPagePlayer?.videoRef?.isConnected ? playerPagePlayer.videoRef : video;
-            const playerWrap = currentVideo?.closest('.lampa-player-container') || playerPagePlayer?.containerRef;
-            const segments = (Array.isArray(rawSegments) ? rawSegments : [])
-                .map(segment => ({
-                    ...segment,
-                    start: Number(segment.start), end: Number(segment.end),
-                    type: String(segment.type || '').toLowerCase()
-                }))
-                .filter(segment => ['op', 'opening'].includes(segment.type)
-                    && segment.start >= 0 && segment.end > segment.start);
-            const button = playerWrap?.querySelector('.lp-opening-skip');
-            const media = currentVideo || playerPagePlayer?.videoRef;
-            if (!button || !media || !segments.length) {
-                console.debug('[AniSkip] Skip button: hidden');
-                return;
-            }
-            let activeSegment = null;
-            let lastSkipAt = 0;
-            let lastVisible = false;
-            const setButtonVisible = visible => {
-                button.classList.toggle('is-visible', visible);
-                button.setAttribute('aria-hidden', visible ? 'false' : 'true');
-                if (visible !== lastVisible) {
-                    console.debug('[AniSkip] Skip button:', visible ? 'shown' : 'hidden');
-                    lastVisible = visible;
-                }
-            };
-            const hideButton = () => { activeSegment = null; setButtonVisible(false); };
-            const onTimeCheck = () => {
-                const now = Number(media.currentTime);
-                console.debug('[AniSkip] Current time:', now);
-                if (!Number.isFinite(now)) return;
-                activeSegment = segments.find(segment => now >= segment.start && now < segment.end) || null;
-                setButtonVisible(Boolean(activeSegment));
-            };
-            const onSkip = event => {
-                event.preventDefault(); event.stopPropagation();
-                if (Date.now() - lastSkipAt < 500 || !activeSegment) return;
-                lastSkipAt = Date.now();
-                const target = Number(activeSegment.end);
-                if (!Number.isFinite(target)) return;
-                try {
-                    media.currentTime = target;
-                    console.debug('[AniSkip] Skip executed:', target);
-                    activeSegment = null;
-                    setButtonVisible(false);
-                    if (!media.paused) media.play().catch(() => {});
-                    playerPagePlayer?._showControls?.();
-                    showToast('Opening пропущено');
-                } catch (error) { console.debug('[AniSkip] Skip executed: failed', error); }
-            };
-            const onPointerUp = event => { if (event.pointerType && event.pointerType !== 'mouse') onSkip(event); };
-            button.addEventListener('click', onSkip);
-            button.addEventListener('pointerup', onPointerUp);
-            const syncEvents = ['loadedmetadata', 'durationchange', 'canplay', 'playing', 'timeupdate', 'seeked'];
-            syncEvents.forEach(name => media.addEventListener(name, onTimeCheck));
-            const cleanup = () => {
-                syncEvents.forEach(name => media.removeEventListener(name, onTimeCheck));
-                button.removeEventListener('click', onSkip);
-                button.removeEventListener('pointerup', onPointerUp);
-                hideButton();
-                if (aniSkipCleanup === cleanup) aniSkipCleanup = null;
-            };
-            aniSkipCleanup = cleanup;
-            // Critical: the response may arrive while the video is already inside OP.
-            onTimeCheck();
+            return serviceAttachAniSkip(video, episode, {
+                anime: playerPageAnime,
+                segmentsPromise,
+                playbackRequest,
+                getCurrentPlaybackRequest: () => playerPagePlaybackRequest,
+                isPlayerOpen: () => playerPageIsOpen,
+                playerInstance: playerPagePlayer
+            });
         }
 
         async function playEpisode(file, epNum) {
@@ -1426,7 +1078,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             if (!playerPageIsOpen) return;
             // Episode changes must detach the previous episode's listeners and
             // clear its OP state before starting a new AniSkip request.
-            if (aniSkipCleanup) { aniSkipCleanup(); aniSkipCleanup = null; }
+            cleanupAniSkip();
             const playbackRequest = ++playerPagePlaybackRequest;
             playerPageCurrentEpisodeNum = epNum || '1';
             // Start AniSkip before any source resolution, layout work, or video
@@ -1637,6 +1289,7 @@ import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1
             // Save the last position before the video is destroyed. The local write
             // is immediate; the queued Firestore sync receives the complete snapshot.
             playerPagePlayer?._persistProgress?.(true);
+            cleanupAniSkip();
             Storage._flushSync('history,watchTime');
             playerPageIsOpen = false;
             playerPagePlaybackRequest += 1;
