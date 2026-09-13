@@ -1,6 +1,6 @@
 import { searchHikka } from '../../services/catalog/catalog.js';
-import { openPlayerPage } from '../player/animePlayerPage.js?v=20260912-team-selector-v6';
-import { syncLeftdockActive } from '../../legacy/app-legacy.js?v=20260912-team-selector-v6';
+import { openPlayerPage } from '../player/animePlayerPage.js';
+import { syncLeftdockActive } from '../../legacy/app-legacy.js';
 
 export let searchPageState = { query: '', page: 1, list: [], loading: false, hasNextPage: false, total: 0 };
 
