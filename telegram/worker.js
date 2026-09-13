@@ -3,7 +3,7 @@ const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
-const LUNA_WELCOME_IMAGE_URL = `${SITE_BASE_URL}/luna-welcome.png`;
+const LUNA_WELCOME_IMAGE_URL = 'https://raw.githubusercontent.com/vakdab/Vakdab/main/luna-welcome.png';
 const LUNA_WELCOME_CAPTION = `Привіт. Я Луна.
 
 Від сьогодні я твоя компаньйонка.
