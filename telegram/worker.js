@@ -3,27 +3,6 @@ const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
 const SITE_BASE_URL = 'https://vakdab.github.io/Vakdab';
-const LUNA_WELCOME_IMAGE_URL = `${SITE_BASE_URL}/luna-welcome.png`;
-const LUNA_WELCOME_CAPTION = `Привіт. Я Луна.
-
-Від сьогодні я твоя компаньйонка.
-
-Що я вмію:
-
-1. Психолог
-2. Подруга
-3. Співрозмовниця
-4. Писати першою
-5. Допомагати з навчанням
-6. Нагадувати, що треба зробити
-7. Допомагати з вибором: що вдягнути, що подивитись, що купити
-8. Виконувати твої прохання та завдання у потрібний час
-
-Додай мене у свою групу — я зможу модерувати чат, допомагати учасникам і робити чат цікавішим.
-
-Я буду поруч, вислухаю тебе, допоможу та підтримаю.
-
-Пиши в чат будь-яке повідомлення на будь-яку тему — я відповім тобі та поспілкуюся з тобою 24/7.`;
 const SCHEDULE_WEB_APP_URL = `${SITE_BASE_URL}/app/schedule.html?v=mono-20260823-1540`;
 const LIVE_WEB_APP_URL = `${SITE_BASE_URL}/app/live.html?v=mono-20260827-live-46`;
 const REMOVED_FEATURE_PATHS = new Set(['/app/music', '/app/music.html', '/app/watch-party', '/app/watch-party.html', '/src/js/music-app.js', '/src/js/watch-party.js', '/src/styles/music.css', '/src/styles/watch-party.css']);
@@ -223,7 +202,7 @@ async function handleMessage(message, env) {
     await ensureBotCommands(env);
     const state = getState(chatId);
     state.screen = 'home';
-    await sendPhoto(chatId, LUNA_WELCOME_IMAGE_URL, LUNA_WELCOME_CAPTION, { reply_markup: mainKeyboard() }, env);
+    await sendMessage(chatId, 'Оберіть дію:', { reply_markup: mainKeyboard() }, env);
     return;
   }
   if (/^\/f8(?:@\w+)?(?:\s|$)/i.test(text)) {
