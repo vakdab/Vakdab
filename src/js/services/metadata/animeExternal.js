@@ -95,9 +95,94 @@ export function normalizeAnilistTitle(v) { return normalizeJikanTitle(v); }
 
 export async function fetchAnilistRelations(anilistId) {
     const query = `query ($id: Int) { Media(id: $id) { relations { edges { relationType(version: 2) node {
-        id type title { romaji english } format startDate { year } coverImage { large } siteUrl } } } } }`;
+        id type title { romaji english native } format startDate { year } coverImage { large } siteUrl } } } } }`;
     const res = await fetchAnilist(query, { id: anilistId });
     return res?.data?.Media?.relations?.edges || [];
+}
+
+export async function fetchAnimeRelations(anime, existingData = null) {
+    const malId = Number(anime?.externalIds?.mal_id || anime?.mal_id || existingData?.mal_id);
+    const title = anime?.originalTitle || anime?.title_orig || anime?.title_en || anime?.title || existingData?.title || '';
+
+    // 1. Try Shikimori Related API (fast, provides covers and clean relations without heavy rate-limits)
+    try {
+        let shikimoriId = malId;
+        if (!shikimoriId && title) {
+            const searchRes = await withTimeout(
+                fetch(`https://shikimori.one/api/animes?search=${encodeURIComponent(title)}&limit=1`),
+                3500,
+                'Shikimori search timeout'
+            );
+            if (searchRes?.ok) {
+                const searchList = await searchRes.json();
+                if (Array.isArray(searchList) && searchList.length > 0) {
+                    shikimoriId = searchList[0].id;
+                }
+            }
+        }
+
+        if (shikimoriId) {
+            const relRes = await withTimeout(
+                fetch(`https://shikimori.one/api/animes/${shikimoriId}/related`),
+                4000,
+                'Shikimori relations timeout'
+            );
+            if (relRes?.ok) {
+                const relData = await relRes.json();
+                if (Array.isArray(relData) && relData.length > 0) {
+                    const animeRels = relData.filter(item => item.anime && item.anime.kind && !['manga', 'light_novel', 'novel', 'manhwa', 'manhua', 'one_shot', 'doujin'].includes(item.anime.kind.toLowerCase()));
+                    if (animeRels.length > 0) {
+                        return animeRels.map(item => {
+                            const a = item.anime;
+                            const imgPath = a.image?.original || a.image?.preview || '';
+                            const fullImg = imgPath ? (imgPath.startsWith('http') ? imgPath : `https://shikimori.one${imgPath}`) : '';
+                            return {
+                                title: a.russian || a.name,
+                                titleEn: a.name || a.russian,
+                                image: fullImg,
+                                year: a.aired_on ? a.aired_on.slice(0, 4) : '',
+                                typeLabel: a.kind ? a.kind.toUpperCase() : 'TV',
+                                relationLabel: item.relation_russian || item.relation || ''
+                            };
+                        });
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Shikimori relations lookup fallback:', e?.message || e);
+    }
+
+    // 2. Try AniList Relations API
+    try {
+        const stableAnilistId = Number(anime?.externalIds?.anilist_id || existingData?._anilistId);
+        let anilistEdges = [];
+        if (stableAnilistId) {
+            anilistEdges = await withTimeout(fetchAnilistRelations(stableAnilistId), 4000, 'AniList relations timeout');
+        } else if (title) {
+            const query = `query ($search: String) { Media(search: $search, type: ANIME) { relations { edges { relationType(version: 2) node { id type title { romaji english native } format startDate { year } coverImage { large } siteUrl } } } } }`;
+            const res = await withTimeout(fetchAnilist(query, { search: title }), 4000, 'AniList search relations timeout');
+            anilistEdges = res?.data?.Media?.relations?.edges || [];
+        }
+
+        const filtered = (anilistEdges || []).filter(e => e.node?.type === 'ANIME');
+        if (filtered.length > 0) {
+            const unique = [...new Map(filtered.map(e => [e.node.id, e])).values()];
+            return unique.map(e => ({
+                url: e.node.siteUrl,
+                image: e.node.coverImage?.large,
+                title: e.node.title?.english || e.node.title?.romaji || e.node.title?.native,
+                titleEn: e.node.title?.romaji || e.node.title?.english,
+                year: e.node.startDate?.year ? String(e.node.startDate.year) : '',
+                typeLabel: ANILIST_FORMAT_LABELS[e.node.format] || e.node.format,
+                relationLabel: ANILIST_RELATION_LABELS[e.relationType] || e.relationType || null
+            }));
+        }
+    } catch (e) {
+        console.warn('AniList relations lookup fallback:', e?.message || e);
+    }
+
+    return [];
 }
 
 export function adaptAnilistMedia(media) {
@@ -116,6 +201,7 @@ export function adaptAnilistMedia(media) {
         season: seasonMap[media.season] || null, year: media.seasonYear,
         episodes: media.episodes, duration: media.duration, _durationMinutes: media.duration,
         airing: media.status === 'RELEASING',
+        bannerImage: media.bannerImage || null,
         _nextAiringDate: media.nextAiringEpisode ? new Date(media.nextAiringEpisode.airingAt * 1000) : null,
         _nextEpisode: media.nextAiringEpisode?.episode || null,
         rating: media.averageScore ? `AniList ${(media.averageScore / 10).toFixed(1)}` : null,
@@ -181,3 +267,191 @@ export async function resolveJikanAnime(anime) {
 export function jikanImage(item) {
     return item?.images?.webp?.image_url || item?.images?.jpg?.image_url || '';
 }
+
+const videoFramesCache = new Map();
+const animeScreenshotsDataCache = new Map();
+
+/**
+ * Resolves an authentic widescreen video frame/screenshot from the anime, optionally for a specific episode.
+ * Uses Shikimori episode screenshots, Kitsu episode frames, Jikan trailer promo stills, AniList banner or anime poster.
+ */
+export async function resolveAnimeVideoFrame(anime, episodeNum = null) {
+    const key = anime?.url || anime?.id || anime?.title || '';
+    const numericEp = episodeNum != null ? parseInt(episodeNum, 10) : null;
+    const epKey = key && numericEp ? `${key}_ep_${numericEp}` : key;
+
+    if (epKey && videoFramesCache.has(epKey)) {
+        const cached = videoFramesCache.get(epKey);
+        if (cached) return cached;
+    }
+
+    let malId = Number(anime?.externalIds?.mal_id || anime?.mal_id);
+    const searchTitle = anime?.title_orig || anime?.title_en || anime?.title || '';
+
+    let cachedData = key ? animeScreenshotsDataCache.get(key) : null;
+    if (!cachedData) {
+        cachedData = {
+            shikimoriScreenshots: [],
+            kitsuEpisodeThumbs: new Map(),
+            kitsuGenericThumbs: [],
+            jikanTrailer: null,
+            anilistBanner: null,
+            defaultBanner: anime?.bannerUrl || anime?.backdropUrl || anime?.headerImage || ''
+        };
+
+        // 1. Fetch Shikimori Screenshots (real high-res episode video frames)
+        try {
+            let shikimoriId = malId;
+            if (!shikimoriId && searchTitle) {
+                const searchRes = await withTimeout(
+                    fetch(`https://shikimori.one/api/animes?search=${encodeURIComponent(searchTitle)}&limit=3`, {
+                        headers: { 'User-Agent': 'VakDab/1.0' }
+                    }),
+                    3500,
+                    'Shikimori search timeout'
+                );
+                if (searchRes?.ok) {
+                    const searchList = await searchRes.json();
+                    if (Array.isArray(searchList) && searchList.length > 0) {
+                        shikimoriId = searchList[0].id;
+                    }
+                }
+            }
+
+            if (shikimoriId) {
+                const res = await withTimeout(
+                    fetch(`https://shikimori.one/api/animes/${shikimoriId}/screenshots`, {
+                        headers: { 'User-Agent': 'VakDab/1.0' }
+                    }),
+                    4000,
+                    'Shikimori screenshots timeout'
+                );
+                if (res?.ok) {
+                    const list = await res.json();
+                    if (Array.isArray(list) && list.length > 0) {
+                        cachedData.shikimoriScreenshots = list.map(pick => {
+                            const path = pick.original || pick.preview;
+                            return path ? (path.startsWith('http') ? path : `https://shikimori.one${path}`) : null;
+                        }).filter(Boolean);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Shikimori screenshots lookup skipped:', e?.message || e);
+        }
+
+        // 2. Fetch Kitsu Episode Screenshots with episode numbers
+        if (searchTitle) {
+            try {
+                const kitsuRes = await withTimeout(
+                    fetch(`https://kitsu.io/api/edge/anime?filter[text]=${encodeURIComponent(searchTitle)}&include=episodes&page[limit]=1`),
+                    3500,
+                    'Kitsu episode frames timeout'
+                );
+                if (kitsuRes?.ok) {
+                    const kitsuData = await kitsuRes.json();
+                    const epNodes = (kitsuData.included || []).filter(item => item.type === 'episodes');
+                    epNodes.forEach(ep => {
+                        const num = parseInt(ep.attributes?.number, 10);
+                        const thumb = ep.attributes?.thumbnail?.original || ep.attributes?.thumbnail?.large || ep.attributes?.thumbnail?.medium;
+                        if (num && thumb) {
+                            cachedData.kitsuEpisodeThumbs.set(num, thumb);
+                        }
+                        if (thumb) {
+                            cachedData.kitsuGenericThumbs.push(thumb);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn('Kitsu episode frames skipped:', e?.message || e);
+            }
+        }
+
+        // 3. Jikan Trailer promo frame or YouTube video frame
+        try {
+            let jikanData = null;
+            if (malId) {
+                jikanData = await withTimeout(resolveJikanById(malId), 3500, 'Jikan ID lookup timeout');
+            } else if (searchTitle) {
+                jikanData = await withTimeout(resolveJikanByTitle(searchTitle), 3500, 'Jikan title lookup timeout');
+            }
+
+            cachedData.jikanTrailer = jikanData?.trailer?.images?.maximum_image_url
+                || jikanData?.trailer?.images?.large_image_url
+                || (jikanData?.trailer?.youtube_id ? `https://img.youtube.com/vi/${jikanData.trailer.youtube_id}/maxresdefault.jpg` : null);
+        } catch (e) {
+            console.warn('Jikan trailer frame lookup skipped:', e?.message || e);
+        }
+
+        // 4. AniList bannerImage (landscape)
+        const stableAnilistId = Number(anime?.externalIds?.anilist_id);
+        if (stableAnilistId) {
+            try {
+                const query = `query ($id: Int) { Media(id: $id, type: ANIME) { bannerImage } }`;
+                const res = await withTimeout(fetchAnilist(query, { id: stableAnilistId }), 3500, 'AniList banner timeout');
+                cachedData.anilistBanner = res?.data?.Media?.bannerImage || null;
+            } catch (e) {
+                console.warn('AniList banner lookup skipped:', e?.message || e);
+            }
+        }
+
+        if (key) {
+            animeScreenshotsDataCache.set(key, cachedData);
+        }
+    }
+
+    // Resolve frame based on episodeNum
+    let selectedFrame = null;
+
+    // 1. Check Kitsu specific episode thumb
+    if (numericEp && cachedData.kitsuEpisodeThumbs.has(numericEp)) {
+        selectedFrame = cachedData.kitsuEpisodeThumbs.get(numericEp);
+    }
+
+    // 2. Check Shikimori screenshots array by episode index
+    if (!selectedFrame && cachedData.shikimoriScreenshots.length > 0) {
+        if (numericEp && Number.isFinite(numericEp)) {
+            const idx = Math.max(0, (numericEp - 1) % cachedData.shikimoriScreenshots.length);
+            selectedFrame = cachedData.shikimoriScreenshots[idx];
+        } else {
+            selectedFrame = cachedData.shikimoriScreenshots[0];
+        }
+    }
+
+    // 3. Check Kitsu generic thumbs
+    if (!selectedFrame && cachedData.kitsuGenericThumbs.length > 0) {
+        if (numericEp && Number.isFinite(numericEp)) {
+            const idx = Math.max(0, (numericEp - 1) % cachedData.kitsuGenericThumbs.length);
+            selectedFrame = cachedData.kitsuGenericThumbs[idx];
+        } else {
+            selectedFrame = cachedData.kitsuGenericThumbs[0];
+        }
+    }
+
+    // 4. Jikan Trailer
+    if (!selectedFrame && cachedData.jikanTrailer) {
+        selectedFrame = cachedData.jikanTrailer;
+    }
+
+    // 5. AniList Banner
+    if (!selectedFrame && cachedData.anilistBanner) {
+        selectedFrame = cachedData.anilistBanner;
+    }
+
+    // 6. Default Landscape Banner
+    if (!selectedFrame && cachedData.defaultBanner) {
+        selectedFrame = cachedData.defaultBanner;
+    }
+
+    // 7. Poster image fallback (so preview never remains a blank black box)
+    if (!selectedFrame) {
+        selectedFrame = anime?.mikaiPosterUrl || anime?.images?.jpg?.large_image_url || anime?.posterUrl || '';
+    }
+
+    if (selectedFrame && epKey) {
+        videoFramesCache.set(epKey, selectedFrame);
+    }
+
+    return selectedFrame || null;
+}
+

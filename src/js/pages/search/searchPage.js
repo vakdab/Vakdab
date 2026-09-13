@@ -1,6 +1,6 @@
 import { searchHikka } from '../../services/catalog/catalog.js';
-import { openPlayerPage } from '../player/animePlayerPage.js';
-import { syncLeftdockActive } from '../../legacy/app-legacy.js';
+import { openPlayerPage } from '../player/animePlayerPage.js?v=20260913-big-triangle-v5';
+import { syncLeftdockActive } from '../../legacy/app-legacy.js?v=20260913-big-triangle-v5';
 
 export let searchPageState = { query: '', page: 1, list: [], loading: false, hasNextPage: false, total: 0 };
 

@@ -6,7 +6,7 @@ import { Storage } from '../../core/compat/storage.js?v=20260910-anime4k-v1';
 import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260910-anime4k-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
-    resolveAshdiPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
+    resolveAshdiPlaybackUrl, resolveUniversalPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, searchHikkaAllTitles, switchProviderSource
 } from '../../services/catalog/catalog.js?v=20260911-moonanime-fallback-v4';
 import {
@@ -15,13 +15,13 @@ import {
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove-thought-v1';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260910-anime4k-v1';
+} from '../../legacy/app-legacy.js?v=20260912-team-selector-v6';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 import {
     JIKAN_STATUS_LABELS, SEASON_LABELS, ANILIST_STATUS_LABELS, ANILIST_RELATION_LABELS, ANILIST_FORMAT_LABELS,
     fetchJikan, normalizeJikanTitle, resolveJikanById, withTimeout, resolveJikanByTitle,
-    fetchAnilist, normalizeAnilistTitle, fetchAnilistRelations, adaptAnilistMedia,
-    resolveAnilistByTitle, hasCharacterData, resolveJikanAnime, jikanImage
+    fetchAnilist, normalizeAnilistTitle, fetchAnilistRelations, fetchAnimeRelations, adaptAnilistMedia,
+    resolveAnilistByTitle, hasCharacterData, resolveJikanAnime, jikanImage, resolveAnimeVideoFrame
 } from '../../services/metadata/animeExternal.js';
 import {
     getDirectAniSkipMalId, resolveAniSkipMalId, getAniSkipSegments,
@@ -66,6 +66,7 @@ import {
         let playerCharacterItems = [];
         let playerCharacterExpanded = false;
         let playerRelatedItems = [];
+        let playerRelatedExpanded = false;
         let playerMediaItems = [];
         let playerMediaExpanded = false;
         let playerCountdownTimer = null;
@@ -125,6 +126,7 @@ import {
             playerCharacterItems = [];
             playerCharacterExpanded = false;
             playerRelatedItems = [];
+            playerRelatedExpanded = false;
             playerMediaItems = [];
             playerMediaExpanded = false;
             if (playerCountdownTimer) { clearInterval(playerCountdownTimer); playerCountdownTimer = null; }
@@ -158,8 +160,10 @@ import {
             document.getElementById('episodePanel').classList.remove('visible');
             document.getElementById('page-episodes').classList.remove('active');
             document.getElementById('page-info').classList.add('active');
-            document.getElementById('playerSynopsis').textContent = '';
-            document.getElementById('synopsisMoreBtn').style.display = 'none';
+            const synopsisEl = document.getElementById('playerSynopsis');
+            if (synopsisEl) synopsisEl.textContent = '';
+            const moreBtn = document.getElementById('synopsisMoreBtn');
+            if (moreBtn) moreBtn.style.display = 'none';
             document.getElementById('playerTopbarTitle').textContent = '';
             document.getElementById('playerVideoEpisodeOverlay')?.replaceChildren();
             document.getElementById('playerVideoSeasonOverlay')?.replaceChildren();
@@ -174,6 +178,7 @@ import {
             document.getElementById('mainCharactersMoreBtn').hidden = true;
             const _resetRelatedSection = document.getElementById('relatedSeasonsSection');
             if (_resetRelatedSection) _resetRelatedSection.style.display = 'none';
+            closePlayerTeamDropdown();
             updateLikeButton();
             updateDislikeButton();
             updateBookmarkButton(url);
@@ -195,8 +200,17 @@ import {
                 const hikkaPosterUrl = normalizePosterUrl(anime.images?.jpg?.large_image_url);
                 const mikaiPosterUrl = normalizePosterUrl(anime.mikaiPosterUrl || '', '');
                 const posterUrl = mikaiPosterUrl || hikkaPosterUrl;
-                setPlayerFramePoster(posterUrl);
+
+                // Кадр у відеоблоці: відображаємо виключно реальний кадр/скріншот серії та трикутник запуску
+                const initialPoster = anime.bannerUrl || anime.backdropUrl || anime.headerImage || posterUrl;
+                if (initialPoster) {
+                    setPlayerFramePoster(initialPoster);
+                } else {
+                    hidePlayerFramePoster();
+                }
                 document.getElementById('playerPreviewPlay')?.classList.remove('is-hidden');
+                updatePlayerVideoFrame(anime, playerPageCurrentEpisodeNum);
+
                 const heroPoster = document.getElementById('playerHeroPoster');
                 const revealPlayerHero = () => playerHero.classList.remove('is-loading');
                 const posterTargets = [document.getElementById('playerPosterImg'), heroPoster];
@@ -239,17 +253,21 @@ import {
                     normalizeGenreList(anime.genres).slice(0, 4).map(g => `<span class="tag">${escapeHtml(g)}</span>`).join('');
                 document.getElementById('playerEpisodeCountNum').textContent = totalEpisodes;
                 const synopsisEl = document.getElementById('playerSynopsis');
-                synopsisEl.textContent = anime.synopsis || 'Опис відсутній.';
-                const moreBtn = document.getElementById('synopsisMoreBtn');
-                setTimeout(() => {
-                    if (synopsisEl.scrollHeight > synopsisEl.clientHeight + 2) {
-                        moreBtn.style.display = 'block';
+                if (synopsisEl) {
+                    synopsisEl.textContent = anime.synopsis || 'Опис відсутній.';
+                    const moreBtn = document.getElementById('synopsisMoreBtn');
+                    setTimeout(() => {
+                        if (moreBtn && synopsisEl.scrollHeight > synopsisEl.clientHeight + 2) {
+                            moreBtn.style.display = 'block';
+                        }
+                    }, 100);
+                    if (moreBtn) {
+                        moreBtn.onclick = () => {
+                            synopsisEl.classList.toggle('expanded');
+                            moreBtn.textContent = synopsisEl.classList.contains('expanded') ? 'менше' : 'більше';
+                        };
                     }
-                }, 100);
-                moreBtn.onclick = () => {
-                    synopsisEl.classList.toggle('expanded');
-                    moreBtn.textContent = synopsisEl.classList.contains('expanded') ? 'менше' : 'більше';
-                };
+                }
                 updateSourceChip();
                 loadAnimeRatingAggregate(url);
                 const seasons = Object.keys(anime.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
@@ -278,6 +296,27 @@ import {
                 modal.setAttribute('aria-busy', 'false');
                 if (window.lucide) lucide.createIcons();
 
+                // Підготовка активної серії (з історії перегляду або 1-ша серія), але без автозапуску відео
+                const currentEpisodes = getCurrentEpisodes();
+                if (currentEpisodes.length > 0) {
+                    const cw = findContinueWatching(anime);
+                    let targetEp = null;
+                    if (cw && cw.progress < 95 && sameEpisodeValue(cw.season, playerPageCurrentSeason) && cw.dub === playerPageCurrentDub) {
+                        targetEp = currentEpisodes.find(ep => sameEpisodeValue(ep.episode, cw.episode) && ep.file);
+                    }
+                    if (!targetEp) {
+                        targetEp = currentEpisodes.find(ep => sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum) && ep.file)
+                            || currentEpisodes.find(ep => ep.file)
+                            || currentEpisodes[0];
+                    }
+                    if (targetEp) {
+                        playerPageCurrentEpisodeNum = targetEp.episode;
+                        setAccordionSummary('playerEpisodeSummary', `Серія ${playerPageCurrentEpisodeNum}`);
+                        setAccordionSummary('playerCompactEpisodeSummary', `Серія ${playerPageCurrentEpisodeNum}`);
+                        renderAllEpisodeViews(currentEpisodes);
+                    }
+                }
+
                 // Розширена інформація завантажується лише з Jikan/MAL; відео та базові дані — Hikka.
                 loadAndRenderJikanExtras(anime);
             } catch (err) {
@@ -293,19 +332,23 @@ import {
                 if (isNotFound) {
                     icon = 'fa-search';
                     userMsg = 'Аніме не знайдено на джерелі';
-                    document.getElementById('playerSynopsis').textContent = 'Це аніме поки що недоступне.';
+                    const synEl = document.getElementById('playerSynopsis');
+                    if (synEl) synEl.textContent = 'Це аніме поки що недоступне.';
                 } else if (isTimeout) {
                     icon = 'fa-clock';
                     userMsg = 'Час очікування вичерпано. Перевірте з\'єднання і спробуйте ще раз.';
-                    document.getElementById('playerSynopsis').textContent = userMsg;
+                    const synEl = document.getElementById('playerSynopsis');
+                    if (synEl) synEl.textContent = userMsg;
                 } else if (isNetwork) {
                     icon = 'fa-wifi';
                     userMsg = 'Помилка мережі або сервер не відповідає. Спробуйте пізніше.';
-                    document.getElementById('playerSynopsis').textContent = userMsg;
+                    const synEl = document.getElementById('playerSynopsis');
+                    if (synEl) synEl.textContent = userMsg;
                 } else {
                     icon = 'fa-exclamation-circle';
                     userMsg = 'Помилка завантаження. Спробуйте пізніше.';
-                    document.getElementById('playerSynopsis').textContent = userMsg;
+                    const synEl = document.getElementById('playerSynopsis');
+                    if (synEl) synEl.textContent = userMsg;
                 }
                 modal.setAttribute('aria-busy', 'false');
 
@@ -430,8 +473,132 @@ import {
             if (el) el.textContent = value;
         }
 
+        function selectDubFromSheet(dub) {
+            if (!dub) return;
+            playerPageCurrentDub = dub;
+            const episodes = getCurrentEpisodes();
+            const matchingEp = episodes.find(ep => sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum));
+            if (matchingEp) {
+                playerPageCurrentEpisodeNum = matchingEp.episode;
+            } else if (episodes.length) {
+                playerPageCurrentEpisodeNum = episodes[0].episode;
+            }
+            buildEpisodeViews();
+            updateFilterChip();
+            buildBottomSheetData();
+            showToast(`Озвучка: ${dub}`);
+            if (playerPagePlayer) {
+                const currentEp = episodes.find(ep => sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum)) || episodes[0];
+                if (currentEp && currentEp.file) {
+                    playEpisode(currentEp.file, currentEp.episode);
+                }
+            } else {
+                updatePlayerVideoFrame(playerPageAnime, playerPageCurrentEpisodeNum);
+            }
+        }
+        window.selectDubFromSheet = selectDubFromSheet;
+
+        function selectSeasonFromSheet(season) {
+            if (!season) return;
+            playerPageCurrentSeason = season;
+            const dubs = Object.keys(playerPageAnime?.seasons?.[season] || {}).sort();
+            playerPageCurrentDub = dubs.includes(playerPageCurrentDub) ? playerPageCurrentDub : (dubs[0] || '');
+            const episodes = getCurrentEpisodes();
+            playerPageCurrentEpisodeNum = episodes[0]?.episode || '1';
+            buildEpisodeViews();
+            refreshPlayerSeasonPoster(season);
+            updateFilterChip();
+            buildBottomSheetData();
+            showToast(`Сезон ${season}`);
+            if (playerPagePlayer) {
+                const currentEp = episodes.find(ep => sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum)) || episodes[0];
+                if (currentEp && currentEp.file) {
+                    playEpisode(currentEp.file, currentEp.episode);
+                }
+            } else {
+                updatePlayerVideoFrame(playerPageAnime, playerPageCurrentEpisodeNum);
+            }
+        }
+        window.selectSeasonFromSheet = selectSeasonFromSheet;
+
+        function selectQualityFromSheet(quality) {
+            playerPageCurrentQuality = quality;
+            if (playerPagePlayer && typeof playerPagePlayer.setQuality === 'function') {
+                playerPagePlayer.setQuality(quality);
+            }
+            buildBottomSheetData();
+            showToast(`Якість: ${quality}`);
+        }
+        window.selectQualityFromSheet = selectQualityFromSheet;
+
+        function formatDubDisplayName(rawName, isSub) {
+            if (!rawName) return '';
+            let name = String(rawName).trim();
+            // Remove redundant prefix/suffix/enclosed "Субтитри"
+            name = name.replace(/^(субтитри|субтитрами|суб|subs?|subtitles?)[\s:–—\-_]+/i, '');
+            name = name.replace(/[\s:–—\-_]+(субтитри|субтитрами|суб|subs?|subtitles?)$/i, '');
+            name = name.replace(/\s*\((субтитри|субтитрами|суб|subs?|subtitles?)\)\s*/gi, ' ');
+            name = name.replace(/\s*\[(субтитри|субтитрами|суб|subs?|subtitles?)\]\s*/gi, ' ');
+            name = name.trim();
+            return name || (isSub ? 'Субтитри' : rawName);
+        }
+
+        function updateTeamCard() {
+            const teamNameEl = document.getElementById('playerTeamName');
+            const teamEpBadge = document.getElementById('playerTeamEpBadge');
+            const teamTypeBadge = document.getElementById('playerTeamTypeBadge');
+            const teamAvatar = document.getElementById('playerTeamAvatar');
+            const episodes = getCurrentEpisodes();
+            const currentDub = playerPageCurrentDub || 'Озвучка';
+            
+            const isSub = /субтит|sub/i.test(currentDub) || episodes.some(ep => ep?.isSubs) || Boolean(playerPageAnime?.subtitleLogos?.[currentDub]);
+            const displayName = formatDubDisplayName(currentDub, isSub);
+
+            if (teamNameEl) teamNameEl.textContent = displayName;
+            if (teamEpBadge) teamEpBadge.textContent = `${episodes.length} еп.`;
+            if (teamTypeBadge) {
+                teamTypeBadge.textContent = isSub ? 'Субтитри' : 'Озвучка';
+                teamTypeBadge.className = isSub
+                    ? 'player-team-badge player-team-badge--sub'
+                    : 'player-team-badge player-team-badge--dub';
+            }
+
+            if (teamAvatar) {
+                const logoUrl = playerPageAnime?.dubLogos?.[currentDub] ||
+                    playerPageAnime?.subtitleLogos?.[currentDub] ||
+                    playerPageAnime?.seasons?.[playerPageCurrentSeason]?.[currentDub]?.find(ep => ep?.teamLogo)?.teamLogo || '';
+                
+                const words = String(displayName || currentDub).trim().split(/\s+/);
+                let initials = '';
+                if (words.length >= 2) {
+                    initials = (words[0][0] || '') + (words[1][0] || '');
+                } else if (words.length === 1 && words[0].length >= 2) {
+                    initials = words[0].slice(0, 2);
+                } else {
+                    initials = (words[0] || (isSub ? 'СБ' : 'ОЗ')).slice(0, 2);
+                }
+                initials = initials.toUpperCase();
+
+                if (logoUrl) {
+                    teamAvatar.innerHTML = `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(displayName)}" loading="lazy" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex'"><span class="player-team-initials" style="display:none">${escapeHtml(initials)}</span>`;
+                } else {
+                    teamAvatar.innerHTML = `<span class="player-team-initials">${escapeHtml(initials)}</span>`;
+                }
+            }
+
+            const seasons = Object.keys(playerPageAnime?.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
+            const seasonSection = document.getElementById('playerSeasonSelectSection');
+            if (seasonSection) {
+                seasonSection.style.display = (!playerAnimeIsMovie() && seasons.length > 1) ? 'block' : 'none';
+            }
+
+            const updatedEl = document.getElementById('playerUpdatedText');
+            if (updatedEl) {
+                updatedEl.textContent = 'Оновлено нещодавно';
+            }
+        }
+
         function initPlayerAccordions() {
-            // Episode and dub lists are intentionally always visible.
             document.querySelectorAll('#playerControls .player-accordion-block').forEach(block => {
                 const panel = block.querySelector('.player-accordion-panel');
                 block.classList.add('is-open');
@@ -440,7 +607,6 @@ import {
         }
 
         function initCompactAccordions() {
-            // Do not attach collapse/expand handlers: selectors stay open.
             document.querySelectorAll('#playerCompactControls .player-compact-accordion').forEach(block => {
                 block.classList.add('is-open');
                 const panel = block.querySelector('.player-compact-options');
@@ -449,73 +615,78 @@ import {
         }
 
         function renderCompactPlayerSelectors() {
-            initPlayerAccordions();
-            initCompactAccordions();
-            const episodeSummary = playerPageCurrentEpisodeNum ? `Серія ${playerPageCurrentEpisodeNum}` : 'Серія';
-            const dubSummary = playerPageCurrentDub || 'Озвучка';
-            const seasonSummary = `Сезон ${playerPageCurrentSeason || '1'}`;
-            setAccordionSummary('playerEpisodeSummary', episodeSummary);
-            setAccordionSummary('playerCompactEpisodeSummary', episodeSummary);
-            setAccordionSummary('playerDubSummary', dubSummary);
-            setAccordionSummary('playerCompactDubSummary', dubSummary);
-            setAccordionSummary('playerSeasonSummary', seasonSummary);
-            setAccordionSummary('playerCompactSeasonSummary', seasonSummary);
-            const episodeSelect = document.getElementById('playerEpisodeSelect');
-            const dubSelect = document.getElementById('playerDubSelect');
-            const seasonSelect = document.getElementById('playerSeasonSelect');
-            const seasonWrap = document.querySelector('#playerCompactControls .player-season-select-wrap');
-            const episodeLine = document.querySelector('#playerCompactControls .player-episode-select-line');
-            const seasonBlock = document.getElementById('episodeSeasonRow')?.closest('.player-control-block');
-            const episodeBlock = document.getElementById('episodeViewGrid')?.closest('.player-control-block');
+            updateTeamCard();
             const episodes = getCurrentEpisodes();
             const seasons = Object.keys(playerPageAnime?.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
-            const isMovie = playerAnimeIsMovie();
-            const hasSeasonChoice = !isMovie && seasons.length > 1;
-            if (seasonWrap) seasonWrap.hidden = !hasSeasonChoice;
-            if (seasonBlock) seasonBlock.hidden = !hasSeasonChoice;
-            if (episodeLine) episodeLine.hidden = isMovie;
-            if (episodeBlock) episodeBlock.hidden = isMovie;
-            const dubs = Object.keys(playerPageAnime?.seasons?.[playerPageCurrentSeason] || {}).sort();
-            const episodeOptions = document.getElementById('playerCompactEpisodeOptions');
-            if (episodeOptions) {
-                episodeOptions.innerHTML = episodes.length ? episodes.map(ep => {
-                    const active = String(ep.episode) === String(playerPageCurrentEpisodeNum) ? ' active' : '';
-                    const progress = getEpisodeProgress(ep.episode);
-                    return `<button type="button" class="player-compact-option player-episode-option${active}" data-file="${escapeHtml(ep.file || '')}" data-episode="${escapeHtml(ep.episode || '')}"><span>Серія ${escapeHtml(String(ep.episode || '—'))}</span>${progress > 0 ? `<small>${Math.round(progress)}%</small>` : ''}</button>`;
-                }).join('') : '<span class="player-compact-empty">Серії ще не знайдені.</span>';
-                attachEpisodeClickHandlers(episodeOptions);
-            }
-            const dubOptions = document.getElementById('playerCompactDubOptions');
-            if (dubOptions) {
-                dubOptions.innerHTML = dubs.length ? dubs.map(d => {
+            const seasonKey = playerPageCurrentSeason || seasons[0] || '1';
+            const seasonData = playerPageAnime?.seasons?.[seasonKey]
+                || playerPageAnime?.seasons?.[String(seasonKey)]
+                || playerPageAnime?.seasons?.[Number(seasonKey)]
+                || Object.values(playerPageAnime?.seasons || {})[0]
+                || {};
+            const dubs = Object.keys(seasonData).sort();
+
+            const isSub = (dubName) => {
+                const list = seasonData[dubName] || [];
+                return /субтит|sub/i.test(dubName) || list.some(ep => ep?.isSubs) || Boolean(playerPageAnime?.subtitleLogos?.[dubName]);
+            };
+
+            const voiceDubs = dubs.filter(d => !isSub(d));
+            const subDubs = dubs.filter(d => isSub(d));
+
+            const dubControls = document.getElementById('playerDubControls');
+            if (dubControls) {
+                const renderDubItem = (d) => {
                     const active = d === playerPageCurrentDub ? ' active' : '';
-                    return `<button type="button" class="player-compact-option player-dub-option${active}" data-dub="${escapeHtml(String(d))}">${renderDubLogo(d)}<span>${escapeHtml(String(d))}</span></button>`;
-                }).join('') : '<span class="player-compact-empty">Озвучки ще не знайдені.</span>';
-                dubOptions.querySelectorAll('[data-dub]').forEach(button => button.addEventListener('click', () => selectDubFromSheet(button.dataset.dub)));
+                    const dubEps = seasonData[d] || [];
+                    const logoUrl = playerPageAnime?.dubLogos?.[d] || playerPageAnime?.subtitleLogos?.[d] || dubEps.find(ep => ep?.teamLogo)?.teamLogo || '';
+                    const dubIsSub = isSub(d);
+                    const displayName = formatDubDisplayName(d, dubIsSub);
+                    const words = String(displayName || d).trim().split(/\s+/);
+                    let initials = (words.length >= 2 ? (words[0][0] || '') + (words[1][0] || '') : (words[0]?.slice(0, 2) || (dubIsSub ? 'СБ' : 'ОЗ'))).toUpperCase();
+
+                    const avatarHtml = logoUrl
+                        ? `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(displayName)}" loading="lazy" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex'"><span class="player-dub-item-avatar-fallback" style="display:none">${escapeHtml(initials)}</span>`
+                        : `<span class="player-dub-item-avatar-fallback">${escapeHtml(initials)}</span>`;
+
+                    return `<button type="button" class="player-dub-item${active}" data-dub="${escapeHtml(String(d))}" title="${escapeHtml(displayName)}">
+                        <div class="player-dub-item-left">
+                            <div class="player-dub-item-avatar">${avatarHtml}</div>
+                            <span class="player-dub-item-name">${escapeHtml(displayName)}</span>
+                            <span class="player-dub-item-badge">${dubEps.length} еп.</span>
+                        </div>
+                        <div class="player-dub-item-right">
+                            <span class="player-dub-item-check" aria-hidden="true">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </span>
+                        </div>
+                    </button>`;
+                };
+
+                let html = '';
+                if (voiceDubs.length) {
+                    html += `<div class="player-team-group-title">Озвучка</div><div class="player-dub-group">${voiceDubs.map(renderDubItem).join('')}</div>`;
+                }
+                if (subDubs.length) {
+                    html += `<div class="player-team-group-title">Субтитри</div><div class="player-dub-group">${subDubs.map(renderDubItem).join('')}</div>`;
+                }
+                if (!html) {
+                    html = '<span class="player-compact-empty">Озвучки ще не знайдені.</span>';
+                }
+                dubControls.innerHTML = html;
             }
-            const seasonOptions = document.getElementById('playerCompactSeasonOptions');
-            if (seasonOptions) {
-                seasonOptions.innerHTML = seasons.length ? seasons.map(s => `<button type="button" class="player-compact-option player-season-option${s === playerPageCurrentSeason ? ' active' : ''}" data-season="${escapeHtml(String(s))}">Сезон ${escapeHtml(String(s))}</button>`).join('') : '<span class="player-compact-empty">Сезони ще не знайдені.</span>';
-                seasonOptions.querySelectorAll('[data-season]').forEach(button => button.addEventListener('click', () => selectSeasonFromSheet(button.dataset.season)));
+
+            const seasonSelectEl = document.getElementById('episodeSeasonRow');
+            if (seasonSelectEl) {
+                seasonSelectEl.innerHTML = seasons.length ? seasons.map(s => {
+                    const active = s === playerPageCurrentSeason ? ' active' : '';
+                    return `<button type="button" class="season-num${active}" data-season="${escapeHtml(String(s))}">Сезон ${escapeHtml(String(s))}</button>`;
+                }).join('') : '';
             }
-            if (episodeSelect) {
-                episodeSelect.innerHTML = episodes.map(ep => `<option value="${escapeHtml(String(ep.episode))}">Серія ${escapeHtml(String(ep.episode))}</option>`).join('');
-                episodeSelect.value = String(playerPageCurrentEpisodeNum || episodes[0]?.episode || '1');
-            }
-            if (dubSelect) {
-                dubSelect.innerHTML = dubs.map(d => `<option value="${escapeHtml(String(d))}">${escapeHtml(String(d))}</option>`).join('');
-                dubSelect.value = String(playerPageCurrentDub || dubs[0] || '');
-            }
-            if (seasonSelect) {
-                seasonSelect.innerHTML = seasons.map(s => `<option value="${escapeHtml(String(s))}">Сезон ${escapeHtml(String(s))}</option>`).join('');
-                seasonSelect.value = String(playerPageCurrentSeason || seasons[0] || '1');
-            }
+
             const currentIndex = episodes.findIndex(ep => String(ep.episode) === String(playerPageCurrentEpisodeNum));
             document.getElementById('playerPrevEpisode')?.toggleAttribute('disabled', currentIndex <= 0 || !episodes.length);
             document.getElementById('playerNextEpisode')?.toggleAttribute('disabled', currentIndex < 0 || currentIndex >= episodes.length - 1);
-            const logo = playerPageAnime?.dubLogos?.[playerPageCurrentDub] || dubs.flatMap(d => playerPageAnime?.seasons?.[playerPageCurrentSeason]?.[d] || []).find(ep => ep?.teamLogo)?.teamLogo || '';
-            const logoEl = document.getElementById('playerCompactDubLogo');
-            if (logoEl) logoEl.innerHTML = logo ? `<img src="${escapeHtml(logo)}" alt="" loading="lazy">` : escapeHtml(String(playerPageCurrentDub || 'О').trim().slice(0, 1).toUpperCase());
         }
 
         export function updateFilterChip() {
@@ -523,18 +694,6 @@ import {
             if (chip) chip.textContent = `Сезон ${playerPageCurrentSeason} · ${playerPageCurrentDub}`;
             const watchFilterValue = document.getElementById('watchFilterValue');
             if (watchFilterValue) watchFilterValue.textContent = `Сезон ${playerPageCurrentSeason} · ${playerPageCurrentDub}`;
-            const dubs = Object.keys(playerPageAnime?.seasons?.[playerPageCurrentSeason] || {}).sort();
-            let formatHtml = dubs.map(d => {
-                const active = d === playerPageCurrentDub ? ' active-format' : '';
-                return `<span class="format-pill${active}" data-dub="${escapeHtml(d)}" aria-label="${escapeHtml(d)}" style="cursor:pointer;">${renderDubLogo(d)}<span class="dub-label">${escapeHtml(String(d).toUpperCase())}</span></span>`;
-            }).join('');
-            [document.getElementById('playerDubControls')].forEach(formatRow => {
-                if (!formatRow) return;
-                formatRow.innerHTML = formatHtml;
-                formatRow.querySelectorAll('.format-pill[data-dub]').forEach(pill => {
-                    pill.addEventListener('click', () => selectDubFromSheet(pill.dataset.dub));
-                });
-            });
             renderSeasonTabs();
             renderCompactPlayerSelectors();
         }
@@ -631,9 +790,19 @@ import {
         }
 
         function getCurrentEpisodes() {
-            if (!playerPageAnime) return [];
-            const eps = playerPageAnime.seasons?.[playerPageCurrentSeason]?.[playerPageCurrentDub] || [];
-            return eps;
+            if (!playerPageAnime || !playerPageAnime.seasons) return [];
+            const seasonKey = playerPageCurrentSeason || Object.keys(playerPageAnime.seasons)[0] || '1';
+            const seasonData = playerPageAnime.seasons[seasonKey]
+                || playerPageAnime.seasons[String(seasonKey)]
+                || playerPageAnime.seasons[Number(seasonKey)]
+                || Object.values(playerPageAnime.seasons)[0]
+                || {};
+            const dubKey = playerPageCurrentDub || Object.keys(seasonData)[0] || '';
+            const eps = seasonData[dubKey]
+                || seasonData[String(dubKey)]
+                || Object.values(seasonData)[0]
+                || [];
+            return Array.isArray(eps) ? eps : [];
         }
 
         function getFirstPlayableEpisode() {
@@ -888,37 +1057,42 @@ import {
             }));
         }
 
-        async function renderRelatedAnime(data) {
+        async function renderRelatedAnime(data, anime) {
             const list = document.getElementById('relatedList');
             const more = document.getElementById('relatedMoreBtn');
             if (!list) return;
             try {
-                playerRelatedItems = data?._provider === 'anilist' ? await renderRelatedAnimeFromAnilist(data) : await renderRelatedAnimeFromJikan(data);
-                playerRelatedItems = await Promise.all(playerRelatedItems.map(localizeRelatedItem));
-            } catch (e) { console.warn('Related anime lookup failed:', e); playerRelatedItems = []; }
-            if (!playerRelatedItems.length) { setSectionState('relatedSection', false); return; }
+                const targetAnime = anime || playerPageAnime;
+                const rawItems = await fetchAnimeRelations(targetAnime, data);
+                if (rawItems && rawItems.length > 0) {
+                    playerRelatedItems = await Promise.all(rawItems.map(localizeRelatedItem));
+                } else if (data?._provider === 'anilist') {
+                    const anilistItems = await renderRelatedAnimeFromAnilist(data);
+                    playerRelatedItems = await Promise.all(anilistItems.map(localizeRelatedItem));
+                } else if (data) {
+                    const jikanItems = await renderRelatedAnimeFromJikan(data);
+                    playerRelatedItems = await Promise.all(jikanItems.map(localizeRelatedItem));
+                } else {
+                    playerRelatedItems = [];
+                }
+            } catch (e) {
+                console.warn('Related anime lookup failed:', e);
+                playerRelatedItems = [];
+            }
+            if (!playerRelatedItems.length) {
+                setSectionState('relatedSection', false);
+                return;
+            }
             setSectionState('relatedSection', true);
-            const visible = playerRelatedItems.slice(0, 4);
+            const visible = playerRelatedExpanded ? playerRelatedItems : playerRelatedItems.slice(0, 4);
             list.innerHTML = visible.map(relatedCardMarkup).join('');
             list.querySelectorAll('.related-card').forEach(card => card.addEventListener('click', () => openRelatedAnimeInPlayer(card)));
             const count = document.getElementById('relatedCount');
             if (count) count.textContent = `(${playerRelatedItems.length})`;
-            if (more) more.hidden = playerRelatedItems.length <= 4;
-        }
-
-        function renderAnimeMedia(data) {
-            const list = document.getElementById('mediaList');
-            const more = document.getElementById('mediaMoreBtn');
-            if (!list) return;
-            playerMediaItems = [
-                ...(data?.theme?.openings || []).map(x => ({ label: 'Opening', title: x })),
-                ...(data?.theme?.endings || []).map(x => ({ label: 'Ending', title: x }))
-            ].filter(x => x.title).filter((x, i, arr) => arr.findIndex(y => y.label === x.label && y.title === x.title) === i);
-            if (!playerMediaItems.length) { setSectionState('mediaSection', false); return; }
-            setSectionState('mediaSection', true);
-            const items = playerMediaExpanded ? playerMediaItems : playerMediaItems.slice(0, 8);
-            list.innerHTML = items.map((x, i) => `<div class="media-track"><span>${escapeHtml(x.label)}</span><strong>${escapeHtml(x.title)}</strong></div>`).join('');
-            if (more) { more.hidden = playerMediaItems.length <= 8; more.textContent = playerMediaExpanded ? '←' : '→'; }
+            if (more) {
+                more.hidden = playerRelatedItems.length <= 4;
+                more.textContent = playerRelatedExpanded ? '←' : '→';
+            }
         }
 
         async function loadAndRenderJikanExtras(anime) {
@@ -929,25 +1103,24 @@ import {
                     const infoGrid = document.getElementById('animeInfoGrid');
                     if (infoGrid) infoGrid.innerHTML = '<div class="anime-info-placeholder">Розширена інформація тимчасово недоступна</div>';
                     setSectionState('relatedSection', false);
-                    setSectionState('mediaSection', false);
                     setSectionState('mainCharactersSection', false);
+                    await renderRelatedAnime(null, anime);
                     return;
                 }
                 playerJikanData = data;
-                const promoFrame = data?.trailer?.images?.maximum_image_url || data?.trailer?.images?.large_image_url || data?.images?.webp?.large_image_url;
-                if (promoFrame) {
+                const promoFrame = data?.trailer?.images?.maximum_image_url || data?.trailer?.images?.large_image_url;
+                if (promoFrame && !playerPageIsPlaying && !playerPagePlayer?.videoRef) {
                     const frame = document.getElementById('playerFramePoster');
-                    if (frame && !playerPageIsPlaying) {
+                    if (frame && frame.classList.contains('is-hidden')) {
                         setPlayerFramePoster(promoFrame);
                     }
                 }
                 renderAnimeInformation(data);
                 renderMainCharacters(data);
                 if (document.getElementById('castSection')?.style.display === 'none') renderVoiceCast(data);
-                renderAnimeMedia(data);
-                await renderRelatedAnime(data);
+                await renderRelatedAnime(data, anime);
             } catch (e) {
-                console.warn('Jikan anime extras unavailable:', e);
+                console.warn('Anime extras unavailable:', e);
                 const infoGrid = document.getElementById('animeInfoGrid');
                 if (infoGrid) infoGrid.innerHTML = '<div class="anime-info-placeholder">Розширена інформація тимчасово недоступна</div>';
                 const mainCharactersList = document.getElementById('mainCharactersList');
@@ -955,8 +1128,7 @@ import {
                     setSectionState('mainCharactersSection', true);
                     mainCharactersList.innerHTML = '<div class="player-empty-episodes">Персонажі тимчасово недоступні</div>';
                 }
-                setSectionState('relatedSection', false);
-                setSectionState('mediaSection', false);
+                await renderRelatedAnime(null, anime);
             }
         }
 
@@ -993,14 +1165,20 @@ import {
         function attachEpisodeClickHandlers(container) {
             if (!container) return;
             container.querySelectorAll('[data-file]').forEach(card => {
-                card.addEventListener('click', () => {
-                    const file = card.dataset.file;
+                card.addEventListener('click', (e) => {
+                    e.preventDefault();
                     const epNum = card.dataset.episode;
-                    if (!file) return;
+                    if (!epNum) return;
                     playerPageCurrentEpisodeNum = epNum;
                     setAccordionSummary('playerEpisodeSummary', `Серія ${epNum}`);
                     setAccordionSummary('playerCompactEpisodeSummary', `Серія ${epNum}`);
-                    playEpisode(file, epNum);
+                    const episodes = getCurrentEpisodes();
+                    renderAllEpisodeViews(episodes);
+                    if (playerPagePlayer?.videoRef) {
+                        playEpisode(card.dataset.file, epNum);
+                    } else {
+                        updatePlayerVideoFrame(playerPageAnime, epNum);
+                    }
                 });
             });
         }
@@ -1011,26 +1189,33 @@ import {
             const classicContainer = document.getElementById('episodeViewClassic');
             if (!picker) return;
             if (!episodes.length) {
-                const emptyHtml = '<div class="player-empty-episodes">Серії ще не знайдені на цьому джерелі.</div>';
+                const emptyHtml = '<div class="player-empty-episodes">Серії ще не знайдені для цієї озвучки.</div>';
                 picker.innerHTML = emptyHtml;
                 if (compactContainer) compactContainer.innerHTML = '';
                 if (classicContainer) classicContainer.innerHTML = '';
+                updateTeamCard();
                 return;
             }
-            // The new player deliberately uses buttons instead of a poster grid.
             picker.innerHTML = episodes.map(ep => {
                 const active = sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum) ? ' active' : '';
                 const progress = getEpisodeProgress(ep.episode);
                 const completed = progress >= 88 ? ' is-completed' : '';
-                return `<button type="button" class="player-episode-btn${active}${completed}" data-file="${escapeHtml(ep.file || '')}" data-episode="${escapeHtml(ep.episode || '')}">
-                    <span class="player-episode-number">${escapeHtml(ep.episode || '—')}</span>
-                    <span class="player-episode-title">${escapeHtml(ep.title || `Серія ${ep.episode || ''}`)}</span>
+                const isWatched = progress > 0 || completed || Boolean(active);
+                return `<button type="button" class="player-episode-btn${active}${completed}" data-file="${escapeHtml(ep.file || '')}" data-episode="${escapeHtml(ep.episode || '')}" aria-label="Серія ${escapeHtml(String(ep.episode))}">
+                    <span class="player-episode-number">${escapeHtml(String(ep.episode || '—'))}</span>
+                    <span class="player-episode-eye${isWatched ? ' is-watched' : ''}" aria-hidden="true">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </span>
                     ${progress > 0 ? `<span class="player-episode-progress" style="--progress:${progress}%"></span>` : ''}
                 </button>`;
             }).join('');
             if (compactContainer) compactContainer.innerHTML = '';
             if (classicContainer) classicContainer.innerHTML = '';
             attachEpisodeClickHandlers(picker);
+            updateTeamCard();
         }
 
         export async function buildEpisodeViews() {
@@ -1046,13 +1231,34 @@ import {
         function setPlayerFramePoster(frameUrl = '') {
             const frame = document.getElementById('playerFramePoster');
             if (!frame) return;
-            const url = frameUrl || document.getElementById('playerPosterImg')?.src || '';
-            if (url) { frame.src = url; frame.classList.remove('is-hidden'); }
-            else frame.classList.add('is-hidden');
+            const url = frameUrl || '';
+            if (url) {
+                frame.src = url;
+                frame.classList.remove('is-hidden');
+                if (!playerPageIsPlaying && !playerPagePlayer?.videoRef) {
+                    document.getElementById('playerPreviewPlay')?.classList.remove('is-hidden');
+                }
+            } else {
+                frame.classList.add('is-hidden');
+            }
         }
         function hidePlayerFramePoster() {
             const frame = document.getElementById('playerFramePoster');
             if (frame) frame.classList.add('is-hidden');
+        }
+
+        async function updatePlayerVideoFrame(anime = playerPageAnime, episodeNum = playerPageCurrentEpisodeNum) {
+            if (!anime) return;
+            const requestedAnimeUrl = anime.url;
+            const requestedEp = episodeNum;
+            try {
+                const frameUrl = await resolveAnimeVideoFrame(anime, requestedEp);
+                if (frameUrl && playerPageCurrentAnimeUrl === requestedAnimeUrl && !playerPageIsPlaying && !playerPagePlayer?.videoRef) {
+                    setPlayerFramePoster(frameUrl);
+                }
+            } catch (e) {
+                console.warn('[VideoFrame] Update skipped:', e);
+            }
         }
         function formatMovieRuntime(minutes) {
             const n = Number(minutes);
@@ -1091,25 +1297,20 @@ import {
             const videoDiv = document.getElementById('playerPageVideo');
             const previewPlayButton = document.getElementById('playerPreviewPlay');
             previewPlayButton?.classList.add('is-hidden');
+            hidePlayerFramePoster();
             videoContainer.classList.add('active');
             videoContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const videoTitleEl = document.getElementById('playerTopbarTitle');
             if (videoTitleEl) videoTitleEl.textContent = playerPageAnime?.title || '';
             videoDiv.innerHTML = '';
-            setPlayerFramePoster();
             let finalUrl = file;
-            if (/ashdi\.vip\/vod\//i.test(file)) {
-                showToast('Підключення ASHDI через проксі...');
-                try {
-                    finalUrl = await resolveAshdiPlaybackUrl(file);
-                } catch (error) {
-                    if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
-                    console.warn('[ASHDI playback]', error);
-                    videoContainer.classList.remove('active');
-                    videoDiv.innerHTML = '<div class="player-video-error"><i class="fas fa-triangle-exclamation"></i><span>Відео цієї серії недоступне.</span></div>';
-                    showToast(`ASHDI: ${error.message || 'відео недоступне'}`);
-                    return;
-                }
+            try {
+                finalUrl = await resolveUniversalPlaybackUrl(file);
+            } catch (error) {
+                if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
+                console.warn('[Universal playback resolution]', error);
+                // Keep original file as fallback if resolution errored
+                finalUrl = file;
             }
             if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
             playerPageActiveEpisodeFile = finalUrl;
@@ -1118,7 +1319,10 @@ import {
                 playerPagePlayer = null; }
             if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
             playerPagePlayer = new LampaPlayer(videoDiv, { poster: playerPageAnime?.images?.jpg?.large_image_url });
-            playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || '', `Серія ${epNum}`);
+            await playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || '', `Серія ${epNum}`);
+            hidePlayerFramePoster();
+            previewPlayButton?.classList.add('is-hidden');
+            playerPagePlayer.play();
             playerPageHistoryUpdated = false;
             playerPageWatchStartTime = 0;
             playerPageAccumulatedWatchSeconds = 0;
@@ -1304,6 +1508,7 @@ import {
             if (document.fullscreenElement || document.webkitFullscreenElement) {
                 (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen)?.call(document);
             }
+            closePlayerTeamDropdown();
             closeWatchPage();
             modal.style.display = 'none';
             document.documentElement.classList.remove('player-page-open');
@@ -1319,14 +1524,38 @@ import {
         }
 
         function updateBookmarkButton(url) {
-            const btn = document.getElementById('playerBookmarkBtn');
-            if (!btn) return;
             const bookmarks = Storage.getBookmarks();
             const isBookmarked = bookmarks.some(b => b.url === url);
-            btn.classList.toggle('bookmarked', isBookmarked);
-            btn.innerHTML = isBookmarked ?
-                '<i class="fas fa-heart" style="color:#ffd700;"></i>' :
-                '<i class="fas fa-heart"></i>';
+
+            const btn = document.getElementById('playerBookmarkBtn');
+            if (btn) {
+                btn.classList.toggle('bookmarked', isBookmarked);
+                btn.innerHTML = isBookmarked ?
+                    '<i class="fas fa-bookmark"></i>' :
+                    '<i class="far fa-bookmark"></i>';
+            }
+
+            const epBtn = document.getElementById('playerEpisodesBookmarkBtn');
+            if (epBtn) {
+                epBtn.classList.toggle('active', isBookmarked);
+                epBtn.classList.toggle('bookmarked', isBookmarked);
+                const epText = document.getElementById('playerEpisodesBookmarkText');
+                if (epText) {
+                    epText.textContent = isBookmarked ? 'В закладках' : 'Закладка';
+                }
+                const svg = epBtn.querySelector('svg');
+                if (svg) {
+                    svg.setAttribute('fill', isBookmarked ? 'currentColor' : 'none');
+                }
+            }
+
+            const toolbarBtn = document.getElementById('playerToolbarBookmark');
+            if (toolbarBtn) {
+                toolbarBtn.classList.toggle('bookmarked', isBookmarked);
+                toolbarBtn.innerHTML = isBookmarked
+                    ? '<i class="fas fa-bookmark" aria-hidden="true"></i><span>Закладка</span>'
+                    : '<i class="far fa-bookmark" aria-hidden="true"></i><span>Закладка</span>';
+            }
         }
 
         function toggleBookmark() {
@@ -1491,34 +1720,6 @@ import {
             }
         }
 
-        window.selectDubFromSheet = function(dub) {
-            playerPageCurrentDub = dub;
-            buildEpisodeViews();
-            updateFilterChip();
-            buildBottomSheetData();
-            showToast(`Озвучка: ${dub}`);
-        };
-
-        window.selectSeasonFromSheet = function(season) {
-            playerPageCurrentSeason = season;
-            const dubs = Object.keys(playerPageAnime?.seasons?.[season] || {}).sort();
-            playerPageCurrentDub = dubs[0] || '';
-            buildEpisodeViews();
-            refreshPlayerSeasonPoster(season);
-            updateFilterChip();
-            buildBottomSheetData();
-            showToast(`Сезон ${season}`);
-        };
-
-        window.selectQualityFromSheet = function(quality) {
-            playerPageCurrentQuality = quality;
-            if (playerPagePlayer && typeof playerPagePlayer.setQuality === 'function') {
-                playerPagePlayer.setQuality(quality);
-            }
-            buildBottomSheetData();
-            showToast(`Якість: ${quality}`);
-        };
-
         export function openBottomSheet(mode) {
             bottomSheetMode = mode || 'full';
             buildBottomSheetData();
@@ -1622,49 +1823,178 @@ import {
             showToast('Оберіть озвучку в картці — перехід у Telegram вимкнено');
         }, true);
 
+        function startPlaybackAction() {
+            const previewPlayButton = document.getElementById('playerPreviewPlay');
+            previewPlayButton?.classList.add('is-hidden');
+            hidePlayerFramePoster();
+            const episodes = getCurrentEpisodes();
+            if (!episodes || !episodes.length) {
+                previewPlayButton?.classList.remove('is-hidden');
+                showToast('Серії ще не завантажені або недоступні');
+                return;
+            }
+            const targetEp = episodes.find(ep => sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum) && ep.file)
+                || episodes.find(ep => ep.file)
+                || episodes[0];
+            if (targetEp && targetEp.file) {
+                playEpisode(targetEp.file, targetEp.episode);
+            } else {
+                previewPlayButton?.classList.remove('is-hidden');
+                showToast('Файл відео ще недоступний');
+            }
+        }
+
         const handlePreviewPlay = event => {
             const previewPlayButton = event.target.closest?.('#playerPreviewPlay');
             if (!previewPlayButton) return;
             event.preventDefault();
             event.stopPropagation();
-            previewPlayButton.classList.add('is-hidden');
-            if (playerPagePlayer?.videoRef) {
-                playerPagePlayer.togglePlay();
-                playerPagePlayer._showControls?.();
-                return;
-            }
-            const episode = getCurrentEpisodes().find(ep => String(ep.episode) === String(playerPageCurrentEpisodeNum) && ep?.file)
-                || getFirstPlayableEpisode();
-            if (episode) {
-                playEpisode(episode.file, episode.episode);
-            } else {
-                previewPlayButton.classList.remove('is-hidden');
-                showToast('Серія ще не готова до відтворення');
-            }
+            startPlaybackAction();
         };
         // Delegation also handles the button if the player feature replaces the overlay DOM.
         document.addEventListener('click', handlePreviewPlay, true);
 
+        // Direct listeners for poster / video container preview state
+        document.getElementById('playerPreviewPlay')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startPlaybackAction();
+        });
+        document.getElementById('playerFramePoster')?.addEventListener('click', (e) => {
+            if (!playerPagePlayer?.videoRef) {
+                e.preventDefault();
+                e.stopPropagation();
+                startPlaybackAction();
+            }
+        });
+
         const compactEpisodeSelect = document.getElementById('playerEpisodeSelect');
         compactEpisodeSelect?.addEventListener('change', () => {
             const episode = getCurrentEpisodes().find(ep => String(ep.episode) === String(compactEpisodeSelect.value));
-            if (episode) playEpisode(episode.file, episode.episode);
+            if (episode) {
+                playerPageCurrentEpisodeNum = episode.episode;
+                setAccordionSummary('playerEpisodeSummary', `Серія ${episode.episode}`);
+                setAccordionSummary('playerCompactEpisodeSummary', `Серія ${episode.episode}`);
+                renderAllEpisodeViews(getCurrentEpisodes());
+                if (playerPagePlayer?.videoRef) {
+                    playEpisode(episode.file, episode.episode);
+                } else {
+                    updatePlayerVideoFrame(playerPageAnime, episode.episode);
+                }
+            }
         });
         document.getElementById('playerDubSelect')?.addEventListener('change', event => selectDubFromSheet(event.target.value));
         initPlayerAccordions();
         initCompactAccordions();
         document.getElementById('playerSeasonSelect')?.addEventListener('change', event => selectSeasonFromSheet(event.target.value));
+
+        export function togglePlayerTeamDropdown(e) {
+            if (e?.__vakdabTeamSelectorHandled) return;
+            if (e) e.__vakdabTeamSelectorHandled = true;
+            if (e) {
+                e.preventDefault?.();
+                e.stopPropagation?.();
+            }
+            const teamDropdown = document.getElementById('playerTeamDropdown');
+            const teamTrigger = document.getElementById('playerTeamSelectorTrigger');
+            if (!teamDropdown || !teamTrigger) return;
+            
+            const isCurrentlyHidden = teamDropdown.hidden || teamDropdown.hasAttribute('hidden') || teamDropdown.style.display === 'none';
+            if (isCurrentlyHidden) {
+                renderCompactPlayerSelectors();
+                teamDropdown.removeAttribute('hidden');
+                teamDropdown.hidden = false;
+                teamDropdown.style.display = 'block';
+                teamTrigger.setAttribute('aria-expanded', 'true');
+                teamTrigger.classList.add('is-open');
+            } else {
+                closePlayerTeamDropdown();
+            }
+        }
+        window.togglePlayerTeamDropdown = togglePlayerTeamDropdown;
+
+        export function closePlayerTeamDropdown() {
+            const teamDropdown = document.getElementById('playerTeamDropdown');
+            const teamTrigger = document.getElementById('playerTeamSelectorTrigger');
+            if (teamDropdown) {
+                teamDropdown.setAttribute('hidden', '');
+                teamDropdown.hidden = true;
+                teamDropdown.style.display = 'none';
+            }
+            if (teamTrigger) {
+                teamTrigger.setAttribute('aria-expanded', 'false');
+                teamTrigger.classList.remove('is-open');
+            }
+        }
+        window.closePlayerTeamDropdown = closePlayerTeamDropdown;
+
+        // Delegate selector events because player markup may be replaced after the
+        // module evaluates (feature loading, route transitions, or modal rerenders).
+        document.addEventListener('click', (e) => {
+            const trigger = e.target.closest?.('#playerTeamSelectorTrigger');
+            if (trigger) {
+                togglePlayerTeamDropdown(e);
+                return;
+            }
+
+            const option = e.target.closest?.('#playerTeamDropdown [data-dub], #playerTeamDropdown [data-season]');
+            if (option) {
+                e.stopPropagation();
+                if (option.hasAttribute('data-dub')) selectDubFromSheet(option.dataset.dub);
+                else selectSeasonFromSheet(option.dataset.season);
+                closePlayerTeamDropdown();
+                return;
+            }
+
+            const dropdown = document.getElementById('playerTeamDropdown');
+            const currentTrigger = document.getElementById('playerTeamSelectorTrigger');
+            if (dropdown && !dropdown.hidden && dropdown.style.display !== 'none'
+                && !dropdown.contains(e.target) && !currentTrigger?.contains(e.target)) {
+                closePlayerTeamDropdown();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            const trigger = e.target.closest?.('#playerTeamSelectorTrigger');
+            if (!trigger || (e.key !== 'Enter' && e.key !== ' ')) return;
+            e.preventDefault();
+            togglePlayerTeamDropdown(e);
+        });
+
+        // Episodes Section Action Buttons - Bookmark
+        document.getElementById('playerEpisodesBookmarkBtn')?.addEventListener('click', toggleBookmark);
+
         document.getElementById('playerPrevEpisode')?.addEventListener('click', () => {
             const episodes = getCurrentEpisodes();
             const index = episodes.findIndex(ep => String(ep.episode) === String(playerPageCurrentEpisodeNum));
             const episode = episodes[index - 1];
-            if (episode) playEpisode(episode.file, episode.episode);
+            if (episode) {
+                playerPageCurrentEpisodeNum = episode.episode;
+                setAccordionSummary('playerEpisodeSummary', `Серія ${episode.episode}`);
+                setAccordionSummary('playerCompactEpisodeSummary', `Серія ${episode.episode}`);
+                renderAllEpisodeViews(episodes);
+                if (playerPagePlayer?.videoRef) {
+                    playEpisode(episode.file, episode.episode);
+                } else {
+                    updatePlayerVideoFrame(playerPageAnime, episode.episode);
+                }
+            }
         });
         document.getElementById('playerNextEpisode')?.addEventListener('click', () => {
             const episodes = getCurrentEpisodes();
             const index = episodes.findIndex(ep => String(ep.episode) === String(playerPageCurrentEpisodeNum));
             const episode = episodes[index + 1];
-            if (episode) playEpisode(episode.file, episode.episode);
+            if (episode) {
+                playerPageCurrentEpisodeNum = episode.episode;
+                setAccordionSummary('playerEpisodeSummary', `Серія ${episode.episode}`);
+                setAccordionSummary('playerCompactEpisodeSummary', `Серія ${episode.episode}`);
+                renderAllEpisodeViews(episodes);
+                if (playerPagePlayer?.videoRef) {
+                    playEpisode(episode.file, episode.episode);
+                } else {
+                    updatePlayerVideoFrame(playerPageAnime, episode.episode);
+                }
+            }
         });
 
         document.getElementById('playerSourceChip').addEventListener('click', () => {
@@ -1704,16 +2034,29 @@ import {
             renderAnimeMedia(playerJikanData);
         });
         document.getElementById('relatedMoreBtn')?.addEventListener('click', () => {
+            playerRelatedExpanded = !playerRelatedExpanded;
             const list = document.getElementById('relatedList');
+            const more = document.getElementById('relatedMoreBtn');
             if (!list) return;
-            list.innerHTML = playerRelatedItems.map(relatedCardMarkup).join('');
+            const visible = playerRelatedExpanded ? playerRelatedItems : playerRelatedItems.slice(0, 4);
+            list.innerHTML = visible.map(relatedCardMarkup).join('');
             list.querySelectorAll('.related-card').forEach(card => card.addEventListener('click', () => openRelatedAnimeInPlayer(card)));
-            document.getElementById('relatedMoreBtn').hidden = true;
+            if (more) {
+                more.hidden = playerRelatedItems.length <= 4;
+                more.textContent = playerRelatedExpanded ? '←' : '→';
+            }
         });
 
-        document.getElementById('likeBtn').addEventListener('click', toggleLike);
-        document.getElementById('dislikeBtn').addEventListener('click', toggleDislike);
-        document.getElementById('playerBookmarkBtn').addEventListener('click', toggleBookmark);
+        document.getElementById('likeBtn')?.addEventListener('click', toggleLike);
+        document.getElementById('dislikeBtn')?.addEventListener('click', toggleDislike);
+        document.getElementById('playerBookmarkBtn')?.addEventListener('click', toggleBookmark);
+        document.getElementById('playerToolbarBookmark')?.addEventListener('click', toggleBookmark);
+        document.getElementById('playerToolbarShare')?.addEventListener('click', () => {
+            const url = playerPageCurrentAnimeUrl;
+            const title = playerPageAnime?.title || 'VakDab';
+            if (navigator.share) navigator.share({ title, text: title, url: location.href }).catch(() => {});
+            else navigator.clipboard?.writeText(location.href).then(() => showToast('Посилання скопійовано')).catch(() => showToast('Не вдалося скопіювати посилання'));
+        });
         document.getElementById('videoBackBtn')?.addEventListener('click', () => {
             const videoContainer = document.getElementById('playerVideoContainer');
             videoContainer.classList.remove('active');
@@ -1897,7 +2240,7 @@ import {
         document.getElementById('playerPageModal')?.addEventListener('click', e => {
             if (e.target === e.currentTarget) closePlayerPage();
         });
-        document.getElementById('playerShareBtn').addEventListener('click', shareAnime);
+        document.getElementById('playerShareBtn')?.addEventListener('click', shareAnime);
         document.getElementById('watchBackBtn')?.addEventListener('click', closeWatchPage);
         document.getElementById('watchSourcePill')?.addEventListener('click', () => openBottomSheet('source'));
         document.getElementById('watchFilterPill')?.addEventListener('click', () => openBottomSheet('full'));

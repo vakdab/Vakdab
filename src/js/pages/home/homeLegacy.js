@@ -3,7 +3,7 @@ import {
     Auth, Router, Storage, escapeHtml,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260910-anime4k-v1';
+} from '../../legacy/app-legacy.js?v=20260912-team-selector-v6';
 import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
 import { debugLog } from '../../utils/debug.js';
 import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260824-settings-redesign-v1';
@@ -43,11 +43,11 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
         }
 
         // ====================================================================
-        export let currentTab = 'main',
-            currentPage = 1,
-            currentSearchQuery = '',
-            currentCategory = '',
-            quickFilterParams = null;
+        export let currentTab = 'main';
+        export let currentPage = 1;
+        export let currentSearchQuery = '';
+        export let currentCategory = '';
+        export let quickFilterParams = null;
 
         // Захист від того, що якийсь webview/CSS знову зробить body власним
         // скрол-контейнером замість документа (саме через це recycler колись
