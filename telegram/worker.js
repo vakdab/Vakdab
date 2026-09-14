@@ -1,4 +1,24 @@
 
+import {
+  askGeminiAi,
+  generateFallbackSmartReply,
+  parseReminderRequest,
+  saveReminder,
+  listReminders,
+  deleteReminder,
+  popDueReminders,
+  checkGroupMessageModeration,
+  getConversationHistory,
+  appendToHistory,
+  clearConversationHistory,
+  trackProactiveUser,
+  getProactiveUsersList,
+  shouldSendProactiveTo,
+  recordProactiveSent,
+  getRandomProactiveMessage,
+  LUNA_NAME
+} from './ai-assistant.js';
+
 const PROXY_URL = 'https://monoanime.animegran8.workers.dev';
 const HIKKA_API = 'https://api.hikka.io';
 const MIKAI_API_BASE = 'https://api.mikai.me/v1';
@@ -138,6 +158,14 @@ export default {
       console.error('[worker] request failed:', safeError(error));
       return textResponse('Internal Server Error', 500);
     }
+  },
+  async scheduled(event, env, ctx) {
+    try {
+      await checkAndSendDueReminders(env);
+      await checkAndSendProactiveMessages(env);
+    } catch (error) {
+      console.error('[worker:scheduled] execution failed:', safeError(error));
+    }
   }
 };
 
@@ -175,7 +203,39 @@ async function setWebhook(request, env, url) {
   return jsonResponse(await telegram('setWebhook', params, env));
 }
 
+async function checkAndSendDueReminders(env) {
+  try {
+    const dueList = popDueReminders();
+    for (const rem of dueList) {
+      const text = `⏰ <b>Нагадування!</b>\n\n${escapeHtml(rem.text)}\n\n<i>Гарного та продуктивного дня! ✨</i>`;
+      await sendMessage(rem.chatId, text, {}, env);
+    }
+  } catch (err) {
+    console.error('[reminders] check failed:', safeError(err));
+  }
+}
+
+async function checkAndSendProactiveMessages(env) {
+  try {
+    const userIds = getProactiveUsersList();
+    for (const chatId of userIds) {
+      if (shouldSendProactiveTo(chatId, 4)) {
+        const msg = getRandomProactiveMessage();
+        await sendMessage(chatId, msg, { reply_markup: mainKeyboard() }, env);
+        recordProactiveSent(chatId);
+      }
+    }
+  } catch (err) {
+    console.error('[proactive] check failed:', safeError(err));
+  }
+}
+
+async function rememberVisibleMessage(_memoryKey, _messageId, _env) {
+  return true;
+}
+
 async function processUpdate(update, env) {
+  await checkAndSendDueReminders(env);
   if (update?.message) {
     await handleMessage({ ...update.message, __updateId: update.update_id }, env);
   } else if (update?.callback_query) {
@@ -193,18 +253,222 @@ async function handleMessage(message, env) {
 
   const memoryKey = getMemoryKey(message.from);
   const text = (message.text || '').trim();
+
+  // Handle group chats
+  const isGroup = message.chat?.type === 'group' || message.chat?.type === 'supergroup';
+  if (isGroup) {
+    if (message.new_chat_members?.length) {
+      for (const member of message.new_chat_members) {
+        if (member.is_bot) continue;
+        const name = escapeHtml([member.first_name, member.last_name].filter(Boolean).join(' ') || member.username || 'друже');
+        const welcomeText = `👋 <b>Ласкаво просимо, ${name}!</b> Раді бачити тебе в нашій групі!\n\n🌸 Я — бот-помічниця та модератор. Ти можеш звертатися до мене, писати в чат або використовувати команди:\n• <code>/rules</code> — правила групи\n• <code>/topic</code> — цікава тема для бесіди\n• <code>/quiz</code> — міні-вікторина\n• Або просто тегни мене чи напиши відповіддю на моє повідомлення!`;
+        await sendMessage(chatId, welcomeText, {}, env);
+      }
+      return;
+    }
+
+    if (text) {
+      const modCheck = checkGroupMessageModeration(text);
+      if (modCheck.isViolation) {
+        await deleteMessage(chatId, message.message_id, env).catch(() => {});
+        const fromName = escapeHtml([message.from?.first_name, message.from?.last_name].filter(Boolean).join(' ') || message.from?.username || 'Учасник');
+        await sendMessage(chatId, `⚠️ <b>Попередження для ${fromName}:</b>\n${modCheck.reason}. Будь ласка, дотримуйтесь правил чату!`, {}, env);
+        return;
+      }
+    }
+
+    if (/^\/rules(?:@\w+)?(?:\s|$)/i.test(text)) {
+      const rules = `📜 <b>Правила групи:</b>\n1. Будьте ввічливими та поважайте один одного.\n2. Заборонено спам, рекламу та нецензурну лайку.\n3. Підтримуйте гарний настрій та приємне спілкування! ✨`;
+      await sendMessage(chatId, rules, {}, env);
+      return;
+    }
+
+    if (/^\/topic(?:@\w+)?(?:\s|$)/i.test(text)) {
+      const topics = [
+        '🎬 Яке аніме чи фільм справило на вас найбільше враження за останній час і чому?',
+        '☕ Якби ви могли прямо зараз телепортуватися в будь-яку точку світу або аніме-всесвіту, куди б ви вирушили?',
+        '🎧 Який трек стоїть у вас на повторі цього тижня?',
+        '✨ Яка ваша улюблена порада, яка реально змінила ваше життя на краще?',
+        '🎮 У яку гру ви готові грати годинами і ніколи не втомитесь?'
+      ];
+      const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+      await sendMessage(chatId, `💬 <b>Тема для обговорення:</b>\n\n${randomTopic}`, {}, env);
+      return;
+    }
+
+    if (/^\/quiz(?:@\w+)?(?:\s|$)/i.test(text)) {
+      const quizzes = [
+        { q: 'У якому аніме головний герой шукає 7 магічних сфер, що виконують бажання?', a: 'Dragon Ball (Драгонбол)' },
+        { q: 'Як звати духа води / бога річки в аніме «Віднесені привидами»?', a: 'Хаку (Ніґіхаямі Кохакунусі)' },
+        { q: 'Яка назва блокнота, що може позбавляти життя в культовому аніме?', a: 'Death Note (Зошит смерті)' },
+        { q: 'Хто є автором манґи «Берсерк»?', a: 'Кентаро Міура' }
+      ];
+      const pick = quizzes[Math.floor(Math.random() * quizzes.length)];
+      await sendMessage(chatId, `🧠 <b>Міні-вікторина для чату!</b>\n\n❓ <b>Запитання:</b> ${pick.q}\n\n<i>Хто перший напише правильну відповідь у чаті? 👀 (Відповідь під спойлером: <tg-spoiler>${pick.a}</tg-spoiler>)</i>`, {}, env);
+      return;
+    }
+
+    if (/^\/warn(?:@\w+)?(?:\s|$)/i.test(text)) {
+      const targetUser = message.reply_to_message?.from;
+      if (!targetUser) {
+        await sendMessage(chatId, 'ℹ️ Щоб дати попередження, напишіть <code>/warn</code> у відповідь на повідомлення порушника.', {}, env);
+        return;
+      }
+      const targetName = escapeHtml([targetUser.first_name, targetUser.last_name].filter(Boolean).join(' ') || targetUser.username || `ID ${targetUser.id}`);
+      await sendMessage(chatId, `⚠️ <b>Попередження видано для ${targetName}!</b> Дотримуйтесь правил спілкування.`, {}, env);
+      return;
+    }
+
+    if (/^\/mute(?:@\w+)?(?:\s|$)/i.test(text)) {
+      const targetUser = message.reply_to_message?.from;
+      if (!targetUser) {
+        await sendMessage(chatId, 'ℹ️ Щоб замутити користувача, напишіть <code>/mute</code> у відповідь на його повідомлення.', {}, env);
+        return;
+      }
+      const targetName = escapeHtml([targetUser.first_name, targetUser.last_name].filter(Boolean).join(' ') || targetUser.username || `ID ${targetUser.id}`);
+      try {
+        await telegram('restrictChatMember', {
+          chat_id: chatId,
+          user_id: targetUser.id,
+          permissions: { can_send_messages: false },
+          until_date: Math.floor(Date.now() / 1000) + 3600
+        }, env);
+        await sendMessage(chatId, `🔇 <b>${targetName}</b> тимчасово обмежено в праві писати повідомлення на 1 годину.`, {}, env);
+      } catch (err) {
+        await sendMessage(chatId, `⚠️ Не вдалося замутити користувача (переконайтеся, що бот має права адміністратора).`, {}, env);
+      }
+      return;
+    }
+
+    if (/^\/kick(?:@\w+)?(?:\s|$)/i.test(text)) {
+      const targetUser = message.reply_to_message?.from;
+      if (!targetUser) {
+        await sendMessage(chatId, 'ℹ️ Щоб вилучити користувача, напишіть <code>/kick</code> у відповідь на його повідомлення.', {}, env);
+        return;
+      }
+      const targetName = escapeHtml([targetUser.first_name, targetUser.last_name].filter(Boolean).join(' ') || targetUser.username || `ID ${targetUser.id}`);
+      try {
+        await telegram('banChatMember', { chat_id: chatId, user_id: targetUser.id }, env);
+        await telegram('unbanChatMember', { chat_id: chatId, user_id: targetUser.id }, env);
+        await sendMessage(chatId, `👢 <b>${targetName}</b> було вилучено з групи.`, {}, env);
+      } catch (err) {
+        await sendMessage(chatId, `⚠️ Не вдалося вилучити користувача (переконайтеся, що бот має права адміністратора).`, {}, env);
+      }
+      return;
+    }
+
+    const botMention = /@\w*bot\b/i.test(text) || message.reply_to_message?.from?.is_bot;
+    if (botMention && text) {
+      const cleanPrompt = text.replace(/@\w*bot\b/gi, '').trim();
+      if (cleanPrompt) {
+        const history = getConversationHistory(`group:${chatId}`);
+        const aiReply = await askGeminiAi(cleanPrompt, history, env);
+        appendToHistory(`group:${chatId}`, 'user', cleanPrompt);
+        appendToHistory(`group:${chatId}`, 'assistant', aiReply);
+        await sendMessage(chatId, aiReply, { reply_to_message_id: message.message_id }, env);
+        return;
+      }
+    }
+
+    return;
+  }
+
+  // Handle private messages
   if (message.chat?.type === 'private') {
+    trackProactiveUser(chatId);
     await trackBotUser(message.from, chatId, env);
     await rememberVisibleMessage(memoryKey, message.message_id, env);
     void ensureBotCommands(env).catch(error => console.error('[telegram] command sync failed:', safeError(error)));
   }
+
   if (text === '/start') {
     await ensureBotCommands(env);
     const state = getState(chatId);
     state.screen = 'home';
-    await sendMessage(chatId, 'Оберіть дію:', { reply_markup: mainKeyboard() }, env);
+    const welcomeMsg = `🌸 <b>Привіт! Я твій багатофункціональний помічник і подруга VakDab!</b>\n\nОсь що я вмію робити для тебе:\n1. 🧠 <b>Психолог</b> — емоційна підтримка, зняття стресу та затишок.\n2. 🌸 <b>Подруга</b> — щире й тепле спілкування.\n3. 💬 <b>Співрозмовниця</b> — цікаві бесіди на будь-яку тему.\n4. 💌 <b>Писати першою</b> — турбота й дружні нагадування (команда <code>/poke</code>).\n5. 📚 <b>Допомагати з навчанням</b> — пояснення складних тем та домашніх завдань.\n6. ⏰ <b>Нагадувати</b> — створення нагадувань (<code>/remind 15m текст</code>).\n7. 👗🍿🛍️ <b>Допомагати з вибором</b> — що вдягнути, що подивитись, що купити.\n8. ⚡ <b>Виконувати завдання</b> — планування, переклади та розрахунки.\n\n🛡️ <b>Додай мене у свою групу</b> — я автоматично вітатиму учасників, модеруватиму спам та підтримуватиму активність!\n\nОбери дію або просто напиши мені:`;
+    await sendMessage(chatId, welcomeMsg, { reply_markup: mainKeyboard() }, env);
     return;
   }
+
+  if (text === '/poke' || text === '/talk') {
+    const pokes = [
+      '🌸 <b>Привітик!</b> Просто хотіла запитати — як твій настрій і як проходить день? Зроби ковток води та усміхнись! ✨',
+      '✨ <b>Хей!</b> Я тут подумала про тебе. Що цікавого сьогодні сталося? Чим займаєшся?',
+      '☕ <b>Привіт!</b> Нагадую зробити маленьку паузу на відпочинок. Потрібна допомога з навчанням, порада чи просто поговоримо?',
+      '💌 <b>Тиць!</b> Я тут і готова підтримати розмову на будь-яку тему. Про що потеревенимо?'
+    ];
+    const greeting = pokes[Math.floor(Math.random() * pokes.length)];
+    await sendMessage(chatId, greeting, { reply_markup: mainKeyboard() }, env);
+    return;
+  }
+
+  if (text === '/morning') {
+    await sendMessage(chatId, `☀️ <b>Доброго та сонячного ранку!</b>\n\nНехай сьогодні все вдається легко та із задоволенням. Не забудь смачно поснідати та налаштуватися на гарний день! 🌸`, {}, env);
+    return;
+  }
+
+  if (text === '/evening') {
+    await sendMessage(chatId, `🌙 <b>Затишного вечора та солодких снів!</b>\n\nТи чудово попрацював(ла) сьогодні. Відпочивай, набирайся сил і нехай ніч буде спокійною. ✨`, {}, env);
+    return;
+  }
+
+  if (text === '/psychologist') {
+    const prompt = '🧠 <b>Сесія психологічної підтримки та спокою:</b>\n\nЯ тут, щоб вислухати тебе без жодного осуду. Ти можеш поділитися всім, що на душі: тривогами, втомою, сумнівами чи радістю.\n\n<i>Напиши мені, що ти зараз відчуваєш або що тебе турбує?</i>';
+    await sendMessage(chatId, prompt, {}, env);
+    return;
+  }
+
+  if (text === '/friend') {
+    const prompt = '🌸 <b>Привіт, найкраща подруго/друже!</b>\n\nЯ завжди на зв\'язку! Можемо обговорити новини, враження, посміятися або поміркувати про плани.\n\n<i>Про що хочеш потеревенити?</i>';
+    await sendMessage(chatId, prompt, {}, env);
+    return;
+  }
+
+  if (text === '/study') {
+    const prompt = '📚 <b>Твій персональний репетитор та помічник:</b>\n\nЯ допоможу розібратися зі складними темами, підготувати конспект, розв\'язати задачу або пояснити матеріал з будь-якого предмету (математика, історія, мови, програмування тощо).\n\n<i>Надішли своє запитання або тему!</i>';
+    await sendMessage(chatId, prompt, {}, env);
+    return;
+  }
+
+  if (text === '/choose') {
+    const prompt = '👗🍿🛍️ <b>Допомога з вибором:</b>\n\nОбери напрямок або просто напиши мені свій запит:\n• <b>Одяг</b>: що вдягнути під погоду чи подію\n• <b>Аніме / Фільми</b>: що подивитися під твій настрій\n• <b>Покупки</b>: що обрати та чи варто купувати\n\n<i>Напиши, між чим ти обираєш!</i>';
+    await sendMessage(chatId, prompt, {}, env);
+    return;
+  }
+
+  if (text === '/reminders') {
+    const rems = listReminders(chatId);
+    if (!rems.length) {
+      await sendMessage(chatId, '⏰ <b>У вас немає активних нагадувань.</b>\n\nЩоб створити нагадування, напишіть:\n<code>/remind 15m випити води</code> або <code>/remind 18:30 домашнє завдання</code>', {}, env);
+      return;
+    }
+    const lines = ['⏰ <b>Ваші активні нагадування:</b>', ''];
+    for (const rem of rems) {
+      const timeStr = formatUsageDate(rem.remindAt);
+      lines.push(`• <b>${timeStr}</b>: ${escapeHtml(rem.text)} (видалити: <code>/delremind ${rem.id}</code>)`);
+    }
+    await sendMessage(chatId, lines.join('\n'), {}, env);
+    return;
+  }
+
+  const delRemindMatch = text.match(/^\/delremind\s+([A-Za-z0-9_-]+)$/i);
+  if (delRemindMatch) {
+    const id = delRemindMatch[1];
+    const deleted = deleteReminder(id, chatId);
+    if (deleted) {
+      await sendMessage(chatId, '✅ Нагадування успішно видалено!', {}, env);
+    } else {
+      await sendMessage(chatId, '⚠️ Нагадування з таким ID не знайдено.', {}, env);
+    }
+    return;
+  }
+
+  if (text === '/clear' || text === '/forget' || text === '/forgetall') {
+    clearConversationHistory(memoryKey);
+    await sendMessage(chatId, '🧹 Історію розмови очищено. Починаємо з чистого аркуша! ✨', { reply_markup: mainKeyboard() }, env);
+    return;
+  }
+
   if (/^\/f8(?:@\w+)?(?:\s|$)/i.test(text)) {
     if (message.chat?.type !== 'private' || !isBotOwner(message.from)) {
       await sendMessage(chatId, 'Ця команда недоступна.', {}, env);
@@ -214,6 +478,7 @@ async function handleMessage(message, env) {
     await sendMessage(chatId, formatBotUsageReport(stats), {}, env);
     return;
   }
+
   if (/^\/live(?:@\w+)?(?:\s|$)/i.test(text)) {
     if (!isBotOwner(message.from)) {
       await sendMessage(chatId, 'Запуск live доступний лише власнику бота.', {}, env);
@@ -222,12 +487,14 @@ async function handleMessage(message, env) {
     try { await startLiveSession(chatId, env); } catch (error) { console.error('[live] start command failed:', safeError(error)); await sendMessage(chatId, 'Не вдалося запустити налаштування live. Спробуй ще раз.', {}, env); }
     return;
   }
+
   if (/^\/livestart(?:@\w+)?(?:\s|$)/i.test(text)) {
     if (!isBotOwner(message.from)) { await sendMessage(chatId, 'Ця команда доступна лише власнику бота.', {}, env); return; }
     const requestedHours = text.replace(/^\/livestart(?:@\w+)?\s*/i, '').trim();
     try { await startLiveBroadcast(chatId, env, requestedHours || undefined); } catch (error) { console.error('[live] broadcast command failed:', safeError(error)); await sendMessage(chatId, 'Не вдалося запустити трансляцію. Спробуй ще раз.', {}, env); }
     return;
   }
+
   if (/^\/livenext(?:@\w+)?(?:\s|$)/i.test(text)) {
     if (!isBotOwner(message.from)) {
       await sendMessage(chatId, 'Ця команда доступна лише власнику бота.', {}, env);
@@ -236,6 +503,7 @@ async function handleMessage(message, env) {
     try { await prepareLiveNextRange(chatId, env); } catch (error) { console.error('[live] next command failed:', safeError(error)); await sendMessage(chatId, 'Не вдалося перейти до наступного кроку live.', {}, env); }
     return;
   }
+
   if (/^\/livecancel(?:@\w+)?(?:\s|$)/i.test(text)) {
     if (!isBotOwner(message.from)) {
       await sendMessage(chatId, 'Ця команда доступна лише власнику бота.', {}, env);
@@ -244,7 +512,7 @@ async function handleMessage(message, env) {
     try { await cancelLiveSession(chatId, env); } catch (error) { console.error('[live] cancel command failed:', safeError(error)); await sendMessage(chatId, 'Не вдалося скасувати live-сесію. Спробуй ще раз.', {}, env); }
     return;
   }
-  // Команди рулетки обробляємо до relay, інакше активний чат передасть /next як звичайний текст.
+
   const rouletteCommand = text.match(/^\/(next|report)(?:@\w+)?(?:\s|$)/i);
   if (rouletteCommand) {
     const op = rouletteCommand[1].toLowerCase();
@@ -256,15 +524,24 @@ async function handleMessage(message, env) {
     await deliverRouletteResult(chatId, result, env);
     return;
   }
-  // Активна рулетка має перехоплювати і текст, і медіа без text/caption.
+
   if (await relayRouletteMessage(message, env)) return;
   if (message.photo?.length) {
-    await sendMessage(chatId, 'Фото не обробляється. Скористайтеся меню бота.', {}, env);
+    await sendMessage(chatId, 'Фото не обробляється. Скористайтеся меню бота або текстом.', {}, env);
     return;
   }
   if (!text) return;
-  const state = getState(chatId);
 
+  // Reminder parsing
+  const reminderReq = parseReminderRequest(text);
+  if (reminderReq) {
+    const saved = saveReminder(chatId, message.from?.id || chatId, reminderReq.remindAt, reminderReq.text);
+    const dateStr = formatUsageDate(saved.remindAt);
+    await sendMessage(chatId, `⏰ <b>Нагадування збережено!</b>\n\nЯ нагадаю тобі: <b>${escapeHtml(saved.text)}</b>\nЧас: <b>${dateStr}</b> (через ${reminderReq.rawDelay})\n\n<i>ID для скасування: <code>/delremind ${saved.id}</code></i>`, {}, env);
+    return;
+  }
+
+  const state = getState(chatId);
   if (state.screen === 'waiting_for_search') {
     state.searchQuery = text;
     state.searchPage = 1;
@@ -276,12 +553,14 @@ async function handleMessage(message, env) {
   }
 
   if (await handleLiveOwnerText(message, env)) return;
-  state.searchQuery = text;
-  state.searchPage = 1;
-  state.searchType = getContentType(state.searchType).key;
-  state.screen = 'search';
-  await sendMessage(chatId, `Шукаю: <b>${escapeHtml(text)}</b>...`, {}, env);
-  await renderSearch(chatId, 1, env, state.searchType);
+
+  // Default to AI conversational assistant
+  const history = getConversationHistory(memoryKey);
+  const aiResponse = await askGeminiAi(text, history, env);
+  appendToHistory(memoryKey, 'user', text);
+  appendToHistory(memoryKey, 'assistant', aiResponse);
+
+  await sendMessage(chatId, aiResponse, { reply_markup: mainKeyboard() }, env);
 }
 
 function getMemoryKey(from) {
@@ -421,6 +700,52 @@ async function handleCallbackQuery(callback, env) {
     if (data === 'about') {
       state.screen = 'about';
       await replaceMessage(chatId, messageId, aboutUsText(), false, { reply_markup: aboutUsKeyboard() }, env);
+      return;
+    }
+
+    if (data === 'ai:talk') {
+      const prompt = '🌸 <b>Поговоримо по душах!</b>\n\nТи можеш написати мені про що завгодно: як пройшов день, що тебе турбує чи радує. Я завжди вислухаю і підтримаю як найкраща подруга та чуйний психолог.\n\n<i>Напиши своє повідомлення у чат! ✨</i>';
+      await replaceMessage(chatId, messageId, prompt, false, { reply_markup: backHomeKeyboard() }, env);
+      return;
+    }
+
+    if (data === 'ai:study') {
+      const prompt = '📚 <b>Допомога з навчанням:</b>\n\nЯ можу:\n• Пояснити будь-яку складну тему простими словами\n• Допомогти з розв\'язанням задач та вправ\n• Скласти план твору, реферату чи конспекту\n• Перекласти текст або пояснити граматику\n\n<i>Надішли своє запитання прямо сюди! ✍️</i>';
+      await replaceMessage(chatId, messageId, prompt, false, { reply_markup: backHomeKeyboard() }, env);
+      return;
+    }
+
+    if (data === 'ai:choose') {
+      const prompt = '👗🍿🛍️ <b>Допомога з вибором:</b>\n\n• <b>Одяг</b>: підкажу стильний образ під погоду, подію чи настрій.\n• <b>Аніме/Фільми</b>: порекомендую тайтл під твої смаки та жанри.\n• <b>Покупки</b>: зважу всі «за» і «проти», допоможу не витратити зайвого.\n\n<i>Напиши, що саме ти зараз обираєш! 💭</i>';
+      await replaceMessage(chatId, messageId, prompt, false, { reply_markup: backHomeKeyboard() }, env);
+      return;
+    }
+
+    if (data === 'ai:poke') {
+      const pokes = [
+        '🌸 <b>Привітик!</b> Просто хотіла запитати — як твій настрій і як проходить день? Зроби ковток води та усміхнись! ✨',
+        '✨ <b>Хей!</b> Я тут подумала про тебе. Що цікавого сьогодні сталося? Чим займаєшся?',
+        '☕ <b>Привіт!</b> Нагадую зробити маленьку паузу на відпочинок. Потрібна допомога з навчанням, порада чи просто поговоримо?',
+        '💌 <b>Тиць!</b> Я тут і готова підтримати розмову на будь-яку тему. Про що потеревенимо?'
+      ];
+      const greeting = pokes[Math.floor(Math.random() * pokes.length)];
+      await replaceMessage(chatId, messageId, greeting, false, { reply_markup: mainKeyboard() }, env);
+      return;
+    }
+
+    if (data === 'ai:reminders') {
+      const rems = listReminders(chatId);
+      if (!rems.length) {
+        const text = '⏰ <b>У вас немає активних нагадувань.</b>\n\nЩоб створити нагадування, напишіть у чат, наприклад:\n<code>/remind 15m випити води</code>\nабо <code>/remind 18:30 виконати домашку</code>\nабо просто: <i>«нагадай мені через 20 хвилин...»</i>';
+        await replaceMessage(chatId, messageId, text, false, { reply_markup: backHomeKeyboard() }, env);
+        return;
+      }
+      const lines = ['⏰ <b>Ваші активні нагадування:</b>', ''];
+      for (const rem of rems) {
+        const timeStr = formatUsageDate(rem.remindAt);
+        lines.push(`• <b>${timeStr}</b>: ${escapeHtml(rem.text)} (видалити: <code>/delremind ${rem.id}</code>)`);
+      }
+      await replaceMessage(chatId, messageId, lines.join('\n'), false, { reply_markup: backHomeKeyboard() }, env);
       return;
     }
 
@@ -713,7 +1038,7 @@ function contentTypeKeyboard(prefix) {
 }
 
 export function aboutUsText() {
-  return `<b>Про нас — VakDab</b>\n\nVakDab — це сайт і Telegram-бот для зручного пошуку аніме, манґи та ранобе. Тут можна швидко знайти потрібний тайтл, переглянути опис, жанри, статус і перейти до доступного перегляду або читання.\n\n<b>Як користуватися ботом</b>\n\n<b>Популярні</b> — показує популярні аніме та дозволяє відкрити деталі.\n<b>Випадкове</b> — пропонує випадкове аніме, манґу або ранобе.\n<b>Пошук</b> — введіть назву, щоб знайти потрібний тайтл.\n<b>Розклад</b> — відкриває розклад виходу нових епізодів.\n<b>Чат-Рулетка</b> — анонімний пошук співрозмовника для спілкування. Не надсилайте персональні дані та контакти.\n\n<b>Корисні команди</b>\n/start — відкрити головне меню.\n\nСайт VakDab: <a href="${SITE_BASE_URL}">${SITE_BASE_URL}</a>`;
+  return `<b>Про бота — VakDab AI Assistant</b>\n\nVakDab — це багатофункціональний помічник, розумний співрозмовник, психолог, найкраща подруга та каталог аніме, манґи і ранобе.\n\n<b>Що я вмію:</b>\n1. 🧠 <b>Психолог</b> — емпатійна підтримка, зняття тривожності та стресу, дихальні вправи.\n2. 🌸 <b>Подруга</b> — тепле, щире, невимушене спілкування та радість за твої успіхи.\n3. 💬 <b>Співрозмовниця</b> — цікаві бесіди на будь-які теми (життя, аніме, наука, ігри).\n4. 💌 <b>Писати першою</b> — турбота, ранкові вітання, перевірка настрою (команда <code>/poke</code>).\n5. 📚 <b>Допомога з навчанням</b> — пояснення складних тем, домашніх завдань, переклади.\n6. ⏰ <b>Нагадування</b> — планування справ (<code>/remind 15m текст</code> або <code>/remind 18:30 текст</code>).\n7. 👗🍿🛍️ <b>Допомога з вибором</b> — стильні образи під погоду, рекомендації що подивитись та що купити.\n8. ⚡ <b>Виконання завдань</b> — розрахунки, тексти, конспекти, ідеї.\n\n🛡️ <b>У групах:</b>\nАвтоматична модерація спаму й образ, привітання нових учасників, команди <code>/rules</code>, <code>/topic</code>, <code>/quiz</code>, <code>/warn</code>, <code>/mute</code>, <code>/kick</code>.\n\nСайт VakDab: <a href="${SITE_BASE_URL}">${SITE_BASE_URL}</a>`;
 }
 
 function aboutUsKeyboard() {
@@ -722,13 +1047,28 @@ function aboutUsKeyboard() {
 
 function mainKeyboard() {
   return { inline_keyboard: [
-    [{ text: 'Аніме Ефір', web_app: { url: LIVE_WEB_APP_URL } }],
-    [{ text: 'Популярні', callback_data: 'popular:1' }],
-    [{ text: 'Випадкове', callback_data: 'random' }],
-    [{ text: 'Пошук', callback_data: 'search:prompt' }],
-    [{ text: 'Розклад', web_app: { url: SCHEDULE_WEB_APP_URL } }],
-    [{ text: 'Про нас', callback_data: 'about' }],
-    [{ text: 'Чат-Рулетка', callback_data: 'roulette:start' }],
+    [{ text: '🌸 Поговорити (AI Подруга & Психолог)', callback_data: 'ai:talk' }],
+    [
+      { text: '📚 Допомога з навчанням', callback_data: 'ai:study' },
+      { text: '👗🍿🛍️ Допомога з вибором', callback_data: 'ai:choose' }
+    ],
+    [
+      { text: '⏰ Мої нагадування', callback_data: 'ai:reminders' },
+      { text: '💌 Напиши першою', callback_data: 'ai:poke' }
+    ],
+    [
+      { text: 'Аніме Ефір', web_app: { url: LIVE_WEB_APP_URL } },
+      { text: 'Розклад', web_app: { url: SCHEDULE_WEB_APP_URL } }
+    ],
+    [
+      { text: 'Популярні', callback_data: 'popular:1' },
+      { text: 'Випадкове', callback_data: 'random' },
+      { text: 'Пошук', callback_data: 'search:prompt' }
+    ],
+    [
+      { text: 'Чат-Рулетка', callback_data: 'roulette:start' },
+      { text: 'Про бота', callback_data: 'about' }
+    ]
   ] };
 }
 
@@ -1098,16 +1438,17 @@ async function setBotCommands(env) {
     return await telegram('setMyCommands', {
       scope: { type: 'all_private_chats' },
       commands: [
-        { command: 'start', description: 'Відкрити головне меню' },
-        { command: 'clear', description: 'Мовчки очистити чат, зберігши пам’ять' },
-        { command: 'forget', description: 'Забути історію розмови' },
-        { command: 'forgetall', description: 'Забути історію та профіль' },
+        { command: 'start', description: 'Головне меню та огляд функцій' },
+        { command: 'poke', description: 'Напиши першою / перевірка настрою' },
+        { command: 'psychologist', description: 'Підтримка психолога та спокій' },
+        { command: 'friend', description: 'Потеревенити як із подругою' },
+        { command: 'study', description: 'Допомога з навчанням та завданнями' },
+        { command: 'choose', description: 'Допомога з вибором (одяг, аніме, покупки)' },
+        { command: 'reminders', description: 'Переглянути активні нагадування' },
+        { command: 'clear', description: 'Очистити історію розмови' },
+        { command: 'forget', description: 'Забути контекст розмови' },
         { command: 'next', description: 'Наступний співрозмовник у чат-рулетці' },
-        { command: 'report', description: 'Поскаржитися або завершити рулетку' },
-        { command: 'live', description: 'Запустити live-опитування (власник)' },
-        { command: 'livenext', description: 'Ввести наступний діапазон серій (власник)' },
-        { command: 'livestart', description: 'Запустити готову live-трансляцію (власник)' },
-        { command: 'livecancel', description: 'Скасувати live-сесію (власник)' }
+        { command: 'report', description: 'Поскаржитися або завершити рулетку' }
       ]
     }, env);
   } catch (error) {
