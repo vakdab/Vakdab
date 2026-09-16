@@ -1,0 +1,209 @@
+/* Wide-screen shell inspired by the supplied dashboard reference.
+   Mobile/tablet navigation remains unchanged. */
+@media (min-width: 1200px) {
+  :root {
+    --desktop-bg: #f1f0f2;
+    --desktop-card: #ffffff;
+    --desktop-ink: #17171a;
+    --desktop-muted: #77767b;
+    --desktop-line: #e8e7ea;
+    --desktop-sidebar-width: 248px;
+  }
+
+  body.appletv-agnative-topnav {
+    background: var(--desktop-bg);
+    color: var(--desktop-ink);
+  }
+
+  .desktop-sidebar {
+    position: fixed;
+    z-index: 80;
+    inset: 0 auto 0 0;
+    width: var(--desktop-sidebar-width);
+    display: flex;
+    flex-direction: column;
+    gap: 2.25rem;
+    padding: 2rem 1.25rem 1.5rem;
+    background: var(--desktop-card);
+    border-right: 1px solid var(--desktop-line);
+    box-shadow: 8px 0 28px rgba(25, 24, 30, 0.035);
+  }
+
+  .desktop-sidebar__brand {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    padding: 0 .75rem;
+    color: var(--desktop-ink);
+    text-decoration: none;
+  }
+
+  .desktop-sidebar__brand-mark {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+    background: #18181b;
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 800;
+  }
+
+  .desktop-sidebar__brand strong {
+    font-size: 1.08rem;
+    letter-spacing: -.025em;
+  }
+
+  .desktop-sidebar__section-label {
+    padding: 0 .75rem .55rem;
+    color: #aaa9ae;
+    font-size: .66rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  .desktop-sidebar__nav {
+    display: grid;
+    gap: .35rem;
+  }
+
+  .desktop-sidebar__link {
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    min-height: 44px;
+    padding: 0 .85rem;
+    border-radius: 12px;
+    color: #68676d;
+    font-size: .88rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition: background .2s ease, color .2s ease, transform .2s ease;
+  }
+
+  .desktop-sidebar__link i {
+    width: 1.1rem;
+    color: #9b9aa0;
+    text-align: center;
+    font-size: .9rem;
+  }
+
+  .desktop-sidebar__link:hover,
+  .desktop-sidebar__link:focus-visible,
+  .desktop-sidebar__link.is-active {
+    background: #f0eff1;
+    color: var(--desktop-ink);
+  }
+
+  .desktop-sidebar__link.is-active i,
+  .desktop-sidebar__link:hover i {
+    color: var(--desktop-ink);
+  }
+
+  .desktop-sidebar__cta {
+    margin-top: auto;
+    padding: 1.15rem;
+    border-radius: 18px;
+    background: linear-gradient(145deg, #252529, #111113);
+    color: #fff;
+    box-shadow: 0 14px 28px rgba(18, 18, 21, .14);
+  }
+
+  .desktop-sidebar__cta strong {
+    display: block;
+    margin-bottom: .35rem;
+    font-size: .85rem;
+  }
+
+  .desktop-sidebar__cta span {
+    display: block;
+    margin-bottom: .85rem;
+    color: rgba(255,255,255,.64);
+    font-size: .7rem;
+    line-height: 1.45;
+  }
+
+  .desktop-sidebar__cta a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 .85rem;
+    border-radius: 9px;
+    background: #fff;
+    color: #17171a;
+    font-size: .72rem;
+    font-weight: 800;
+    text-decoration: none;
+  }
+
+  .app-container {
+    width: auto;
+    max-width: none;
+    min-height: 100vh;
+    margin-left: var(--desktop-sidebar-width);
+    padding: 0 2.5rem 3.5rem;
+  }
+
+  .header {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    min-height: 82px;
+    padding: 1.15rem 0 .85rem;
+    background: transparent !important;
+    pointer-events: auto;
+  }
+
+  .header .logo {
+    padding: 0;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    color: var(--desktop-ink);
+  }
+
+  .header .logo-text h1,
+  .header .logo-text span,
+  .header .logo-icon {
+    color: var(--desktop-ink) !important;
+    text-shadow: none;
+  }
+
+  .hero-wrapper {
+    width: 100%;
+    height: clamp(360px, 42vw, 520px);
+    margin: 0;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 12px 32px rgba(25, 24, 30, .08);
+  }
+
+  #homeQuickFilterBar,
+  .home-recommendations,
+  #catalogPageContainer,
+  #animeContainer,
+  #searchPageContainer,
+  #profilePageContainer,
+  #ratingPageContainer,
+  #schedulePageContainer,
+  #settingsPageContainer,
+  #genrePageContainer,
+  #genresPageContainer,
+  #mangaPageContainer {
+    border-radius: 18px;
+  }
+
+  .bottom-nav { display: none !important; }
+  .back-to-top { right: 2rem; bottom: 2rem; }
+}
+
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .app-container { padding-inline: 1.75rem; }
+  .desktop-sidebar { width: 224px; }
+  .app-container { margin-left: 224px; }
+}
