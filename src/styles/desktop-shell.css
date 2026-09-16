@@ -1,3 +1,5 @@
+.desktop-sidebar { display: none; }
+
 /* Wide-screen shell inspired by the supplied dashboard reference.
    Mobile/tablet navigation remains unchanged. */
 @media (min-width: 1200px) {

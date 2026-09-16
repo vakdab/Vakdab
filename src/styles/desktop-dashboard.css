@@ -1,3 +1,5 @@
+.desktop-dashboard { display: none; }
+
 /* Desktop dashboard layer. It is intentionally hidden on tablet/mobile. */
 @media (min-width: 1200px) {
   .desktop-dashboard {
