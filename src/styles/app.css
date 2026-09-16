@@ -1,5 +1,3 @@
-@import url('./desktop-shell.css?v=20260916-dashboard-shell-v3');
-@import url('./desktop-dashboard.css?v=20260916-dashboard-v3');
 /* VakDab style entrypoint: existing folders are the single source of truth. */
 @import url('./base/reset.css?v=20260903-feed-simple-append-v1');
 @import url('./base/variables.css');
