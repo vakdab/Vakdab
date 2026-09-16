@@ -1,0 +1,128 @@
+/* Desktop dashboard layer. It is intentionally hidden on tablet/mobile. */
+@media (min-width: 1200px) {
+  .desktop-dashboard {
+    display: grid;
+    gap: 1.15rem;
+    margin: .15rem 0 1.5rem;
+  }
+
+  .desktop-dashboard__heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .desktop-dashboard__eyebrow {
+    margin: 0 0 .2rem;
+    color: #99989d;
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  .desktop-dashboard__heading h2 {
+    margin: 0;
+    color: #17171a;
+    font-size: clamp(1.65rem, 2.3vw, 2.35rem);
+    font-weight: 750;
+    letter-spacing: -.055em;
+    line-height: 1.05;
+  }
+
+  .desktop-dashboard__heading p {
+    margin: .45rem 0 0;
+    color: #85848a;
+    font-size: .82rem;
+  }
+
+  .desktop-dashboard__date {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    min-height: 38px;
+    padding: 0 .85rem;
+    border: 1px solid #e5e4e7;
+    border-radius: 11px;
+    background: #fff;
+    color: #6d6c71;
+    font-size: .73rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .desktop-dashboard__date i { color: #9a999e; }
+
+  .desktop-dashboard__stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .85rem;
+  }
+
+  .desktop-dashboard__stat,
+  .desktop-dashboard__panel {
+    border: 1px solid #e8e7ea;
+    border-radius: 17px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(31, 30, 36, .035);
+  }
+
+  .desktop-dashboard__stat {
+    min-height: 112px;
+    padding: 1rem 1.1rem;
+  }
+
+  .desktop-dashboard__stat--dark {
+    border-color: #232326;
+    background: linear-gradient(145deg, #2a2a2d, #111113);
+    color: #fff;
+  }
+
+  .desktop-dashboard__stat-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    color: #88878c;
+    font-size: .7rem;
+    font-weight: 650;
+  }
+
+  .desktop-dashboard__stat--dark .desktop-dashboard__stat-label { color: rgba(255,255,255,.64); }
+  .desktop-dashboard__stat-label i { font-size: .78rem; }
+  .desktop-dashboard__stat-value { margin-top: .65rem; font-size: 1.55rem; font-weight: 760; letter-spacing: -.04em; }
+  .desktop-dashboard__stat-note { margin-top: .2rem; color: #9d9ca2; font-size: .67rem; }
+  .desktop-dashboard__stat--dark .desktop-dashboard__stat-note { color: rgba(255,255,255,.56); }
+
+  .desktop-dashboard__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(280px, .9fr);
+    gap: .85rem;
+  }
+
+  .desktop-dashboard__panel { min-height: 215px; padding: 1.15rem; }
+  .desktop-dashboard__panel-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
+  .desktop-dashboard__panel-head h3 { margin: 0; color: #242328; font-size: .94rem; font-weight: 750; }
+  .desktop-dashboard__panel-head a { color: #85848a; font-size: .7rem; font-weight: 700; text-decoration: none; }
+  .desktop-dashboard__panel-head a:hover { color: #17171a; }
+
+  .desktop-dashboard__quick-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }
+  .desktop-dashboard__action { display: flex; flex-direction: column; justify-content: space-between; min-height: 126px; padding: .85rem; border-radius: 13px; background: #f5f4f6; color: #2a292e; text-decoration: none; transition: transform .2s ease, background .2s ease; }
+  .desktop-dashboard__action:hover { background: #ecebed; transform: translateY(-2px); }
+  .desktop-dashboard__action i { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 9px; background: #fff; color: #55545a; font-size: .78rem; }
+  .desktop-dashboard__action strong { display: block; font-size: .76rem; }
+  .desktop-dashboard__action span { display: block; margin-top: .2rem; color: #89888d; font-size: .64rem; line-height: 1.3; }
+
+  .desktop-dashboard__calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .35rem; margin-top: .3rem; }
+  .desktop-dashboard__calendar-label { color: #aaa9ae; font-size: .63rem; font-weight: 750; text-align: center; }
+  .desktop-dashboard__calendar-day { display: grid; place-items: center; min-height: 31px; border-radius: 8px; color: #707075; font-size: .7rem; }
+  .desktop-dashboard__calendar-day.is-today { background: #232326; color: #fff; font-weight: 800; box-shadow: 0 5px 12px rgba(25,25,28,.18); }
+  .desktop-dashboard__calendar-day.is-muted { color: #c8c7ca; }
+  .desktop-dashboard__calendar-foot { display: flex; align-items: center; justify-content: space-between; margin-top: .85rem; padding-top: .75rem; border-top: 1px solid #f0eff1; color: #8b8a90; font-size: .68rem; }
+  .desktop-dashboard__calendar-foot strong { color: #323137; font-size: .78rem; }
+}
+
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .desktop-dashboard__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -123,7 +123,56 @@
             <div class="agnative-topnav-clock" id="agnativeTopnavClock">00:00</div>
         </header>
 
+        <section class="desktop-dashboard" id="desktopDashboard" aria-label="Огляд VakDab">
+            <div class="desktop-dashboard__heading">
+                <div>
+                    <p class="desktop-dashboard__eyebrow">VakDab overview</p>
+                    <h2>Огляд</h2>
+                    <p>Твоя аніме-бібліотека в одному місці.</p>
+                </div>
+                <div class="desktop-dashboard__date"><i class="fas fa-calendar-day" aria-hidden="true"></i><span id="desktopDashboardDate">Сьогодні</span></div>
+            </div>
 
+            <div class="desktop-dashboard__stats">
+                <article class="desktop-dashboard__stat desktop-dashboard__stat--dark">
+                    <div class="desktop-dashboard__stat-label"><span>Картки на сторінці</span><i class="fas fa-layer-group" aria-hidden="true"></i></div>
+                    <div class="desktop-dashboard__stat-value" id="dashboardCardCount">—</div>
+                    <div class="desktop-dashboard__stat-note">актуальна добірка</div>
+                </article>
+                <article class="desktop-dashboard__stat">
+                    <div class="desktop-dashboard__stat-label"><span>Розділи каталогу</span><i class="fas fa-th-large" aria-hidden="true"></i></div>
+                    <div class="desktop-dashboard__stat-value" id="dashboardSectionCount">—</div>
+                    <div class="desktop-dashboard__stat-note">доступно зараз</div>
+                </article>
+                <article class="desktop-dashboard__stat">
+                    <div class="desktop-dashboard__stat-label"><span>Режим перегляду</span><i class="fas fa-play-circle" aria-hidden="true"></i></div>
+                    <div class="desktop-dashboard__stat-value">Онлайн</div>
+                    <div class="desktop-dashboard__stat-note">серіали та манґа</div>
+                </article>
+                <article class="desktop-dashboard__stat">
+                    <div class="desktop-dashboard__stat-label"><span>Час у Києві</span><i class="fas fa-clock" aria-hidden="true"></i></div>
+                    <div class="desktop-dashboard__stat-value" id="dashboardClock">—</div>
+                    <div class="desktop-dashboard__stat-note">оновлюється автоматично</div>
+                </article>
+            </div>
+
+            <div class="desktop-dashboard__grid">
+                <article class="desktop-dashboard__panel">
+                    <div class="desktop-dashboard__panel-head"><h3>Швидкий доступ</h3><a href="#catalog">Відкрити каталог <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
+                    <div class="desktop-dashboard__quick-actions">
+                        <a class="desktop-dashboard__action" href="#catalog"><i class="fas fa-compass" aria-hidden="true"></i><span><strong>Каталог</strong>Знайти щось нове</span></a>
+                        <a class="desktop-dashboard__action" href="#rating"><i class="fas fa-star" aria-hidden="true"></i><span><strong>Рейтинг</strong>Популярне у спільноти</span></a>
+                        <a class="desktop-dashboard__action" href="#schedule"><i class="fas fa-calendar-alt" aria-hidden="true"></i><span><strong>Розклад</strong>Нові епізоди</span></a>
+                    </div>
+                </article>
+
+                <article class="desktop-dashboard__panel">
+                    <div class="desktop-dashboard__panel-head"><h3 id="dashboardMonthLabel">Поточний місяць</h3><a href="#schedule">Весь розклад</a></div>
+                    <div class="desktop-dashboard__calendar" id="dashboardCalendar" aria-label="Календар"></div>
+                    <div class="desktop-dashboard__calendar-foot"><span>Сьогодні</span><strong id="dashboardCalendarToday">—</strong></div>
+                </article>
+            </div>
+        </section>
 
         <div class="hero-wrapper" id="heroWrapper">
             <div id="heroSlidesContainer"></div>

@@ -72,6 +72,7 @@ img,video,iframe{max-width:100%}
 .home-catalog-more { display: none !important; }
 @import url('./layout-polish.css?v=20260902-layout-polish-v1');
 @import url('./desktop-shell.css?v=20260916-dashboard-shell-v1');
+@import url('./desktop-dashboard.css?v=20260916-dashboard-v1');
 @import url('./components/mobile-adaptive.css?v=20260906-mobile-adaptive-v1');
 
 /* Keep the hero slide indicator at the bottom of the banner, away from the categories pill. */
