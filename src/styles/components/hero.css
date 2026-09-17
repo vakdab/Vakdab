@@ -845,3 +845,10 @@
         transform: none;
     }
 }
+
+/* Telegram/iOS WebView fallback: hero copy must remain visible if CSS animations are delayed or disabled. */
+.hero-slide-content > * {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+}
