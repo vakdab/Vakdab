@@ -37,41 +37,9 @@
         }
     </script>
 
-    <link rel="stylesheet" href="../src/styles/app.css?v=20260917-hero-webview-fix-v5" />
-    <link rel="stylesheet" href="../src/styles/desktop-shell.css?v=20260916-direct-v1" />
-    <link rel="stylesheet" href="../src/styles/desktop-dashboard.css?v=20260916-direct-v1" />
+    <link rel="stylesheet" href="../src/styles/app.css?v=20260908-community-search-v3" />
 </head>
 <body class="appletv-agnative-topnav">
-
-    <aside class="desktop-sidebar" aria-label="Основна навігація">
-        <a class="desktop-sidebar__brand" href="#main" aria-label="ВакДаб — головна">
-            <span class="desktop-sidebar__brand-mark">V</span>
-            <strong>ВакДаб</strong>
-        </a>
-        <div>
-            <div class="desktop-sidebar__section-label">Навігація</div>
-            <nav class="desktop-sidebar__nav">
-                <a class="desktop-sidebar__link is-active" href="#main"><i class="fas fa-home" aria-hidden="true"></i><span>Головна</span></a>
-                <a class="desktop-sidebar__link" href="#catalog"><i class="fas fa-th-large" aria-hidden="true"></i><span>Каталог</span></a>
-                <a class="desktop-sidebar__link" href="#rating"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Рейтинг</span></a>
-                <a class="desktop-sidebar__link" href="#schedule"><i class="fas fa-calendar-alt" aria-hidden="true"></i><span>Розклад</span></a>
-                <a class="desktop-sidebar__link" href="#profile"><i class="fas fa-user" aria-hidden="true"></i><span>Профіль</span></a>
-            </nav>
-        </div>
-        <div>
-            <div class="desktop-sidebar__section-label">Спільнота</div>
-            <nav class="desktop-sidebar__nav">
-                <a class="desktop-sidebar__link" href="https://t.me/VakCommunity" target="_blank" rel="noopener noreferrer"><i class="fab fa-telegram-plane" aria-hidden="true"></i><span>Telegram</span></a>
-                <a class="desktop-sidebar__link" href="https://discord.gg/zfUuRP7MX" target="_blank" rel="noopener noreferrer"><i class="fab fa-discord" aria-hidden="true"></i><span>Discord</span></a>
-                <a class="desktop-sidebar__link" href="#settings"><i class="fas fa-cog" aria-hidden="true"></i><span>Налаштування</span></a>
-            </nav>
-        </div>
-        <div class="desktop-sidebar__cta">
-            <strong>Приєднуйся до ВакДаб</strong>
-            <span>Нові релізи, обговорення та українська аніме-спільнота.</span>
-            <a href="https://t.me/VakCommunity" target="_blank" rel="noopener noreferrer">Відкрити спільноту</a>
-        </div>
-    </aside>
 
     <main class="app-container" id="appRoot">
 
@@ -93,56 +61,7 @@
             <div class="agnative-topnav-clock" id="agnativeTopnavClock">00:00</div>
         </header>
 
-        <section class="desktop-dashboard" id="desktopDashboard" aria-label="Огляд VakDab">
-            <div class="desktop-dashboard__heading">
-                <div>
-                    <p class="desktop-dashboard__eyebrow">VakDab overview</p>
-                    <h2>Огляд</h2>
-                    <p>Твоя аніме-бібліотека в одному місці.</p>
-                </div>
-                <div class="desktop-dashboard__date"><i class="fas fa-calendar-day" aria-hidden="true"></i><span id="desktopDashboardDate">Сьогодні</span></div>
-            </div>
 
-            <div class="desktop-dashboard__stats">
-                <article class="desktop-dashboard__stat desktop-dashboard__stat--dark">
-                    <div class="desktop-dashboard__stat-label"><span>Картки на сторінці</span><i class="fas fa-layer-group" aria-hidden="true"></i></div>
-                    <div class="desktop-dashboard__stat-value" id="dashboardCardCount">—</div>
-                    <div class="desktop-dashboard__stat-note">актуальна добірка</div>
-                </article>
-                <article class="desktop-dashboard__stat">
-                    <div class="desktop-dashboard__stat-label"><span>Розділи каталогу</span><i class="fas fa-th-large" aria-hidden="true"></i></div>
-                    <div class="desktop-dashboard__stat-value" id="dashboardSectionCount">—</div>
-                    <div class="desktop-dashboard__stat-note">доступно зараз</div>
-                </article>
-                <article class="desktop-dashboard__stat">
-                    <div class="desktop-dashboard__stat-label"><span>Режим перегляду</span><i class="fas fa-play-circle" aria-hidden="true"></i></div>
-                    <div class="desktop-dashboard__stat-value">Онлайн</div>
-                    <div class="desktop-dashboard__stat-note">серіали та манґа</div>
-                </article>
-                <article class="desktop-dashboard__stat">
-                    <div class="desktop-dashboard__stat-label"><span>Час у Києві</span><i class="fas fa-clock" aria-hidden="true"></i></div>
-                    <div class="desktop-dashboard__stat-value" id="dashboardClock">—</div>
-                    <div class="desktop-dashboard__stat-note">оновлюється автоматично</div>
-                </article>
-            </div>
-
-            <div class="desktop-dashboard__grid">
-                <article class="desktop-dashboard__panel">
-                    <div class="desktop-dashboard__panel-head"><h3>Швидкий доступ</h3><a href="#catalog">Відкрити каталог <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
-                    <div class="desktop-dashboard__quick-actions">
-                        <a class="desktop-dashboard__action" href="#catalog"><i class="fas fa-compass" aria-hidden="true"></i><span><strong>Каталог</strong>Знайти щось нове</span></a>
-                        <a class="desktop-dashboard__action" href="#rating"><i class="fas fa-star" aria-hidden="true"></i><span><strong>Рейтинг</strong>Популярне у спільноти</span></a>
-                        <a class="desktop-dashboard__action" href="#schedule"><i class="fas fa-calendar-alt" aria-hidden="true"></i><span><strong>Розклад</strong>Нові епізоди</span></a>
-                    </div>
-                </article>
-
-                <article class="desktop-dashboard__panel">
-                    <div class="desktop-dashboard__panel-head"><h3 id="dashboardMonthLabel">Поточний місяць</h3><a href="#schedule">Весь розклад</a></div>
-                    <div class="desktop-dashboard__calendar" id="dashboardCalendar" aria-label="Календар"></div>
-                    <div class="desktop-dashboard__calendar-foot"><span>Сьогодні</span><strong id="dashboardCalendarToday">—</strong></div>
-                </article>
-            </div>
-        </section>
 
         <div class="hero-wrapper" id="heroWrapper">
             <div id="heroSlidesContainer"></div>
@@ -428,7 +347,7 @@
     </div>
 
 
-    <script type="module" src="../src/js/app.js?v=20260917-startup-v1"></script>
+    <script type="module" src="../src/js/app.js?v=20260917-recovery-v1"></script>
 
     <!-- ===== BOTTOM NAV ===== -->
     <nav class="bottom-nav" id="bottomNav" role="navigation" aria-label="Навігація">
