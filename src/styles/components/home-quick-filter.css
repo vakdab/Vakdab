@@ -731,7 +731,7 @@
     pointer-events: none;
 }
 .hqf-merged-bar .hqf-search-input {
-    flex: 1 1 56%;
+    flex: 1 1 auto;
     width: 0;
     min-width: 0;
     height: 100%;
@@ -758,49 +758,11 @@
     transition: color .18s ease;
 }
 .hqf-merged-bar .hqf-search-clear:hover { color: var(--accent); }
-.hqf-merged-bar.has-query .hqf-merged-divider,
-.hqf-merged-bar.has-query .hqf-categories-toggle {
-    display: none !important;
-}
-.hqf-merged-bar.has-query .hqf-search-input { flex-basis: auto; }
-.hqf-merged-bar .hqf-merged-divider {
-    align-self: center;
-    flex: 0 0 1px;
-    width: 1px;
-    height: 26px;
-    background: rgba(120,120,120,.25);
-}
-.hqf-merged-bar .hqf-categories-toggle {
-    flex: 0 1 44% !important;
-    min-width: 145px !important;
-    width: auto !important;
-    min-width: 0 !important;
-    min-height: 100% !important;
-    height: auto;
-    margin: 0 !important;
-    padding: 0 20px 0 16px !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    background: none !important;
-    box-shadow: none !important;
-}
-.hqf-merged-bar .hqf-categories-toggle:hover,
-.hqf-merged-bar .hqf-categories-toggle:focus-visible {
-    box-shadow: none !important;
-    transform: none !important;
-    background: rgba(120,120,120,.06) !important;
-    border-color: transparent !important;
-}
-.hqf-merged-bar .hqf-categories-toggle:active { transform: none !important; }
-.hqf-merged-bar .hqf-categories-toggle.open { color: var(--accent); }
 @media (max-width: 600px) {
     .hqf-merged-bar .hqf-search-glass { flex: 0 0 44px; width: 44px; font-size: 1rem; }
     .hqf-merged-bar .hqf-search-clear { flex: 0 0 32px; width: 32px; }
     /* iOS Safari zooms focused inputs below 16px. Keep the page at its scale. */
     .hqf-merged-bar .hqf-search-input { font-size: 16px; }
-    .hqf-merged-bar .hqf-search-input { flex-basis: 52%; }
-    .hqf-merged-bar .hqf-categories-toggle { flex-basis: 48% !important; min-width: 0 !important; padding: 0 16px 0 12px !important; }
-    .hqf-merged-bar .hqf-categories-toggle .hqf-label { font-size: .88rem; }
 }
 
 /* Compact merged search bar: keep both controls optically centered on mobile. */
@@ -819,23 +781,4 @@
     -webkit-appearance: none;
     appearance: none;
     line-height: 1.25;
-}
-.hqf-merged-bar .hqf-categories-toggle {
-    flex: 0 0 72px !important;
-    width: 72px !important;
-    min-width: 72px !important;
-    justify-content: center;
-    gap: 13px;
-    padding: 0 !important;
-}
-.hqf-merged-bar .hqf-categories-toggle .hqf-chevron {
-    margin-left: 0;
-}
-@media (max-width: 600px) {
-    .hqf-merged-bar .hqf-categories-toggle {
-        flex-basis: 72px !important;
-        width: 72px !important;
-        min-width: 72px !important;
-        padding: 0 !important;
-    }
 }
