@@ -208,6 +208,15 @@ function wireHomeQuickFilterEvents(container) {
 
     const searchInput = document.getElementById('hqfSearchInput');
     const searchClear = document.getElementById('hqfSearchClear');
+    const mergedBar = document.getElementById('hqfMergedBar');
+
+    const updateSearchMode = () => {
+        const hasQuery = Boolean(searchInput?.value.trim());
+        mergedBar?.classList.toggle('has-query', hasQuery);
+        if (searchClear) searchClear.hidden = !hasQuery;
+    };
+
+    updateSearchMode();
 
     const runInlineSearch = () => {
         setHomeRecommendationSearchQuery(hqfSearchQuery);
@@ -230,7 +239,7 @@ function wireHomeQuickFilterEvents(container) {
 
     searchInput?.addEventListener('input', () => {
         hqfSearchQuery = searchInput.value.trim();
-        searchClear && (searchClear.hidden = !hqfSearchQuery);
+        updateSearchMode();
         clearTimeout(hqfSearchDebounceTimer);
         hqfSearchDebounceTimer = setTimeout(runInlineSearch, 400);
     });
@@ -247,7 +256,7 @@ function wireHomeQuickFilterEvents(container) {
     searchClear?.addEventListener('click', () => {
         searchInput.value = '';
         hqfSearchQuery = '';
-        searchClear.hidden = true;
+        updateSearchMode();
         clearTimeout(hqfSearchDebounceTimer);
         runInlineSearch();
     });

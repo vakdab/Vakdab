@@ -758,6 +758,11 @@
     transition: color .18s ease;
 }
 .hqf-merged-bar .hqf-search-clear:hover { color: var(--accent); }
+.hqf-merged-bar.has-query .hqf-merged-divider,
+.hqf-merged-bar.has-query .hqf-categories-toggle {
+    display: none !important;
+}
+.hqf-merged-bar.has-query .hqf-search-input { flex-basis: auto; }
 .hqf-merged-bar .hqf-merged-divider {
     align-self: center;
     flex: 0 0 1px;
@@ -791,7 +796,8 @@
 @media (max-width: 600px) {
     .hqf-merged-bar .hqf-search-glass { flex: 0 0 44px; width: 44px; font-size: 1rem; }
     .hqf-merged-bar .hqf-search-clear { flex: 0 0 32px; width: 32px; }
-    .hqf-merged-bar .hqf-search-input { font-size: .88rem; }
+    /* iOS Safari zooms focused inputs below 16px. Keep the page at its scale. */
+    .hqf-merged-bar .hqf-search-input { font-size: 16px; }
     .hqf-merged-bar .hqf-search-input { flex-basis: 52%; }
     .hqf-merged-bar .hqf-categories-toggle { flex-basis: 48% !important; min-width: 0 !important; padding: 0 16px 0 12px !important; }
     .hqf-merged-bar .hqf-categories-toggle .hqf-label { font-size: .88rem; }
