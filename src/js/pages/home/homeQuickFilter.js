@@ -56,6 +56,10 @@ function buildHomeQuickFilterHtml() {
           <button type="button" class="hqf-search-clear" id="hqfSearchClear" aria-label="Очистити пошук"${hqfSearchQuery ? '' : ' hidden'}>
             <i class="fas fa-xmark" aria-hidden="true"></i>
           </button>
+          <span class="hqf-merged-divider" aria-hidden="true"></span>
+          <button class="hqf-categories-toggle${quickFilterState.open ? ' open' : ''}" id="hqfCategoriesToggle" type="button" aria-label="Обрати категорії" aria-expanded="${quickFilterState.open ? 'true' : 'false'}">
+            <i class="fas fa-sliders" aria-hidden="true"></i>
+          </button>
         </div>
       </div>
 

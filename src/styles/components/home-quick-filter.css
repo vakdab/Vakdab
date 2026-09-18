@@ -758,9 +758,39 @@
     transition: color .18s ease;
 }
 .hqf-merged-bar .hqf-search-clear:hover { color: var(--accent); }
+.hqf-merged-bar .hqf-merged-divider {
+    align-self: center;
+    flex: 0 0 1px;
+    width: 1px;
+    height: 26px;
+    background: rgba(120,120,120,.25);
+}
+.hqf-merged-bar .hqf-categories-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 54px !important;
+    width: 54px !important;
+    min-width: 54px !important;
+    min-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--text);
+    box-shadow: none !important;
+}
+.hqf-merged-bar .hqf-categories-toggle:hover,
+.hqf-merged-bar .hqf-categories-toggle:focus-visible {
+    background: rgba(120,120,120,.08) !important;
+    transform: none !important;
+}
+.hqf-merged-bar .hqf-categories-toggle.open { color: var(--accent); }
 @media (max-width: 600px) {
     .hqf-merged-bar .hqf-search-glass { flex: 0 0 44px; width: 44px; font-size: 1rem; }
     .hqf-merged-bar .hqf-search-clear { flex: 0 0 32px; width: 32px; }
+    .hqf-merged-bar .hqf-categories-toggle { flex-basis: 48px !important; width: 48px !important; min-width: 48px !important; }
     /* iOS Safari zooms focused inputs below 16px. Keep the page at its scale. */
     .hqf-merged-bar .hqf-search-input { font-size: 16px; }
 }
