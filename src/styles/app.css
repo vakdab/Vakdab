@@ -152,8 +152,16 @@ img,video,iframe{max-width:100%}
 
 /* Wide screens: keep the search/filter row above the feed and use the available width. */
 @media (min-width: 900px) {
-  /* The rail overlays the hero; do not reserve a blank column beside it. */
-  .app-container { padding-left: 0; }
+  /* The desktop nav overlays the hero; the page keeps no side gutter for it. */
+  .app-container {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .hero-wrapper {
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
   .home-quick-filter,
   .home-recommendations { position: relative; z-index: 2; }
   .home-quick-filter {
@@ -163,33 +171,31 @@ img,video,iframe{max-width:100%}
     isolation: isolate;
   }
 
-  /* The bottom nav becomes a fixed vertical rail on the left. */
+  /* On wide screens the nav is a compact horizontal bar above the hero. */
   body > .bottom-nav {
     display: flex !important;
     position: fixed !important;
-    /* Align the rail with the top of the hero instead of centering it over the feed. */
-    top: 5.5rem !important;
+    top: 1rem !important;
     right: auto !important;
     bottom: auto !important;
-    left: 1rem !important;
-    width: 4.75rem !important;
-    max-width: 4.75rem !important;
-    padding: .9rem .45rem;
-    flex-direction: column;
-    justify-content: flex-start;
-    gap: .7rem;
+    left: 50% !important;
+    width: min(calc(100% - 2rem), 30rem) !important;
+    max-width: 30rem !important;
+    padding: .45rem .6rem;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: .25rem;
     border-radius: 24px;
-    transform: none !important;
+    transform: translateX(-50%) !important;
   }
   body > .bottom-nav.hidden-nav {
-    transform: translateX(-140%) !important;
+    transform: translateX(-50%) translateY(-140%) !important;
   }
-  .bn-item { width: 100%; min-height: 3.35rem; flex: 0 0 3.35rem; }
-  .bn-pill { width: 100%; min-height: 3.35rem; padding: .55rem .35rem; flex-direction: column; gap: .3rem; }
-  .bn-item.active .bn-pill { padding: .55rem .35rem; }
-  .bn-label,
-  .bn-item.active .bn-label { display: block; font-size: .62rem; line-height: 1.1; }
-  .bn-pill svg { width: 1.35rem; height: 1.35rem; }
+  .bn-item { width: auto; min-height: 0; flex: 1 1 0; }
+  .bn-pill { width: 100%; min-height: 2.5rem; padding: .5rem .45rem; flex-direction: row; gap: .3rem; }
+  .bn-item.active .bn-pill { padding: .5rem .65rem; }
+  .bn-label { display: inline; font-size: .68rem; line-height: 1; }
+  .bn-pill svg { width: 1.25rem; height: 1.25rem; }
 }
 
 /* TV / wide desktop catalog: exactly eight compact recommendation cards per row. */
@@ -198,7 +204,8 @@ img,video,iframe{max-width:100%}
     grid-template-columns: repeat(8, minmax(0, 1fr));
     column-gap: .75rem;
     row-gap: 4.75rem !important;
-    padding-inline: .25rem;
+    padding: 4.75rem .25rem 1rem !important;
+    margin-top: .75rem;
   }
   .home-recommendations .popular-list--home .popular-card {
     min-width: 0;
