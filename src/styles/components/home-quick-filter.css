@@ -757,6 +757,9 @@
     cursor: pointer;
     transition: color .18s ease;
 }
+.hqf-merged-bar .hqf-search-clear[hidden] {
+    display: none !important;
+}
 .hqf-merged-bar .hqf-search-clear:hover { color: var(--accent); }
 .hqf-merged-bar .hqf-merged-divider {
     align-self: center;
