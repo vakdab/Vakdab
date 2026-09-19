@@ -109,6 +109,8 @@ img,video,iframe{max-width:100%}
   background: var(--surface);
   box-shadow: var(--shadow-sm);
   isolation: isolate;
+  content-visibility: visible;
+  contain: layout style;
 }
 .home-recommendations .popular-list--home .popular-card::before {
   content: '';
