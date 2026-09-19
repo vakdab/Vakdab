@@ -152,7 +152,8 @@ img,video,iframe{max-width:100%}
 
 /* Wide screens: keep the search/filter row above the feed and use the available width. */
 @media (min-width: 900px) {
-  .app-container { padding-left: 7.5rem; }
+  /* The rail overlays the hero; do not reserve a blank column beside it. */
+  .app-container { padding-left: 0; }
   .home-quick-filter,
   .home-recommendations { position: relative; z-index: 2; }
   .home-quick-filter {
@@ -173,19 +174,19 @@ img,video,iframe{max-width:100%}
     left: 1rem !important;
     width: 4.75rem !important;
     max-width: 4.75rem !important;
-    padding: .7rem .45rem;
+    padding: .9rem .45rem;
     flex-direction: column;
-    justify-content: center;
-    gap: .45rem;
+    justify-content: flex-start;
+    gap: .7rem;
     border-radius: 24px;
     transform: none !important;
   }
   body > .bottom-nav.hidden-nav {
     transform: translateX(-140%) !important;
   }
-  .bn-item { width: 100%; flex: 0 0 auto; }
-  .bn-pill { width: 100%; padding: .7rem .35rem; flex-direction: column; gap: .25rem; }
-  .bn-item.active .bn-pill { padding: .7rem .35rem; }
+  .bn-item { width: 100%; min-height: 3.35rem; flex: 0 0 3.35rem; }
+  .bn-pill { width: 100%; min-height: 3.35rem; padding: .55rem .35rem; flex-direction: column; gap: .3rem; }
+  .bn-item.active .bn-pill { padding: .55rem .35rem; }
   .bn-label,
   .bn-item.active .bn-label { display: block; font-size: .62rem; line-height: 1.1; }
   .bn-pill svg { width: 1.35rem; height: 1.35rem; }
