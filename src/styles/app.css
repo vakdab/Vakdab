@@ -166,7 +166,8 @@ img,video,iframe{max-width:100%}
   body > .bottom-nav {
     display: flex !important;
     position: fixed !important;
-    top: 50% !important;
+    /* Align the rail with the top of the hero instead of centering it over the feed. */
+    top: 5.5rem !important;
     right: auto !important;
     bottom: auto !important;
     left: 1rem !important;
@@ -177,10 +178,10 @@ img,video,iframe{max-width:100%}
     justify-content: center;
     gap: .45rem;
     border-radius: 24px;
-    transform: translateY(-50%) !important;
+    transform: none !important;
   }
   body > .bottom-nav.hidden-nav {
-    transform: translateY(-50%) translateX(-140%) !important;
+    transform: translateX(-140%) !important;
   }
   .bn-item { width: 100%; flex: 0 0 auto; }
   .bn-pill { width: 100%; padding: .7rem .35rem; flex-direction: column; gap: .25rem; }
@@ -190,8 +191,8 @@ img,video,iframe{max-width:100%}
   .bn-pill svg { width: 1.35rem; height: 1.35rem; }
 }
 
-/* Wide desktop catalog: eight compact recommendation cards per row. */
-@media (min-width: 1200px) {
+/* TV / wide desktop catalog: exactly eight compact recommendation cards per row. */
+@media (min-width: 900px) {
   .home-recommendations .popular-list--home {
     grid-template-columns: repeat(8, minmax(0, 1fr));
     column-gap: .75rem;
