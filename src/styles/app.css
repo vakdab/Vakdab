@@ -163,22 +163,24 @@ img,video,iframe{max-width:100%}
   }
 
   /* The bottom nav becomes a fixed vertical rail on the left. */
-  .bottom-nav {
+  body > .bottom-nav {
     display: flex !important;
-    top: 50%;
-    bottom: auto;
-    left: 1rem;
-    width: 4.75rem;
-    max-width: none;
+    position: fixed !important;
+    top: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: 1rem !important;
+    width: 4.75rem !important;
+    max-width: 4.75rem !important;
     padding: .7rem .45rem;
     flex-direction: column;
     justify-content: center;
     gap: .45rem;
     border-radius: 24px;
-    transform: translateY(-50%);
+    transform: translateY(-50%) !important;
   }
-  .bottom-nav.hidden-nav {
-    transform: translateY(-50%) translateX(-140%);
+  body > .bottom-nav.hidden-nav {
+    transform: translateY(-50%) translateX(-140%) !important;
   }
   .bn-item { width: 100%; flex: 0 0 auto; }
   .bn-pill { width: 100%; padding: .7rem .35rem; flex-direction: column; gap: .25rem; }
