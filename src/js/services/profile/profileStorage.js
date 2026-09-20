@@ -65,6 +65,7 @@ export function getProfile() {
 
 export function saveProfile(data) {
     Storage._setProfile(data);
+    try { window.dispatchEvent(new CustomEvent('vakdab:profile-changed')); } catch {}
     if (Auth.isAuthenticated()) {
         const syncPromise = Auth.syncUserData({ scope: 'profile' }).catch(error => {
             console.warn('[VakDab] profile sync failed:', error);

@@ -1,11 +1,34 @@
 import { loadFeature } from '../../core/feature-loader.js';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
 import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260912-team-selector-v6';
+import { getProfile, getProfileDisplayName } from '../../services/profile/profileStorage.js';
+import { escapeHtml } from '../../utils/string.js';
+
+function renderProfileAvatar() {
+    const avatarEl = document.getElementById('bnProfileAvatar');
+    if (!avatarEl) return;
+
+    const profile = getProfile();
+    const mediaUrl = profile.avatarVideo || profile.avatar || '';
+    const isVideo = /\.(mp4|webm|mov|m4v|ogv)(?:[?#]|$)/i.test(mediaUrl);
+
+    if (mediaUrl && isVideo) {
+        avatarEl.innerHTML = `<video src="${escapeHtml(mediaUrl)}" autoplay muted loop playsinline aria-label="Аватарка"></video>`;
+    } else if (mediaUrl) {
+        avatarEl.innerHTML = `<img src="${escapeHtml(mediaUrl)}" alt="Аватарка">`;
+    } else {
+        avatarEl.textContent = getProfileDisplayName(profile).charAt(0).toUpperCase();
+    }
+    avatarEl.classList.toggle('has-media', Boolean(mediaUrl));
+}
 
 export function initBottomNav() {
 
             const nav = document.getElementById('bottomNav');
             if (!nav) return;
+
+            renderProfileAvatar();
+            window.addEventListener('vakdab:profile-changed', renderProfileAvatar);
 
             // Кнопка назад
             document.getElementById('bnBack').addEventListener('click', () => {
