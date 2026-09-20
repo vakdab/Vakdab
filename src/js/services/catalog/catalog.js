@@ -320,6 +320,10 @@ import {
                 posterCandidates.find(url => /\/ua_poster\/medium\//i.test(url)) ||
                 posterCandidates.find(url => /\/poster\/big\//i.test(url)) ||
                 posterCandidates.find(url => /\/poster\/medium\//i.test(url)) || '';
+            const mikaiTitle = htmlText.match(/<h1[^>]*>\s*([^<]+?)\s*<\/h1>/i)?.[1]
+                ?.replace(/\s+/g, ' ').trim() ||
+                htmlText.match(/<title>\s*([^<]+?)\s+-\s+аніме українською онлайн/i)?.[1]
+                ?.replace(/\s+/g, ' ').trim() || '';
             const match = htmlText.match(/<script[^>]+id=["']__NUXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
             if (!match) throw new Error('Mikai Nuxt payload не знайдено');
             let payload;
@@ -385,7 +389,8 @@ import {
                 seasons: Object.keys(dubObject).length ? { '1': dubObject } : {},
                 dubLogos,
                 subtitleLogos,
-                mikaiPosterUrl
+                mikaiPosterUrl,
+                mikaiTitle
             };
         }
 
@@ -537,8 +542,8 @@ import {
                 .map(Number).find(n => Number.isInteger(n) && n > 0 && n < 100);
             if (explicit) return String(explicit);
             const text = [
-                data.title_ua, data.title_en, data.title_ja, data.name_ua, data.name_en,
-                data.slug, data.url, ...sources
+                ...sources, data.title_ua, data.title_en, data.title_ja, data.name_ua, data.name_en,
+                data.slug, data.url
             ].filter(Boolean).join(' ');
             const match = String(text).match(/(?:\bseason\s*|\bсезон\s*|\bсезона\s*|\bсезону\s*)(\d{1,2})/i) ||
                 String(text).match(/\b(\d{1,2})(?:st|nd|rd|th|-й|-я|-е)?\s*season\b/i) ||
@@ -572,6 +577,7 @@ import {
             let dubLogos = {};
             let subtitleLogos = {};
             let mikaiPosterUrl = '';
+            let mikaiTitle = '';
             if (mikaiUrl) {
                 try {
                     const mikaiData = await loadMikaiSeasons(mikaiUrl);
@@ -581,6 +587,7 @@ import {
                     dubLogos = mikaiData.dubLogos || {};
                     subtitleLogos = mikaiData.subtitleLogos || {};
                     mikaiPosterUrl = mikaiData.mikaiPosterUrl || '';
+                    mikaiTitle = mikaiData.mikaiTitle || '';
                 } catch (error) { console.warn('[Mikai] Не вдалося завантажити ASHDI:', error); }
             }
             const mikaiAvailable = Object.keys(seasons).length > 0;
@@ -606,7 +613,7 @@ import {
             }
             return {
                 ...item,
-                title: d.title_ua || d.title_en || item.title,
+                title: mikaiTitle || d.title_ua || d.title_en || item.title,
                 originalTitle: d.title_en || d.title_ja || '',
                 year: d.year || '',
                 synopsis: normalizeSynopsisText(d.synopsis_ua || d.synopsis_en || ''),

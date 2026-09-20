@@ -229,6 +229,39 @@ export function hasCharacterData(data) {
     return Array.isArray(data?.characters) && data.characters.some(x => x?.character?.name);
 }
 
+function adaptHikkaMetadata(anime = {}) {
+    const type = anime.type === 'movie' ? 'Movie' : anime.type === 'ova' ? 'ONA' : 'TV';
+    const statusMap = {
+        ongoing: 'Онґоїнг',
+        airing: 'Онґоїнг',
+        finished: 'Завершено',
+        completed: 'Завершено',
+        upcoming: 'Майбутнє',
+        planned: 'Майбутнє',
+        hiatus: 'Призупинено',
+        cancelled: 'Скасовано'
+    };
+    const studios = (Array.isArray(anime.studios) ? anime.studios : anime.studio ? [anime.studio] : [])
+        .map(value => typeof value === 'object' ? value?.name_ua || value?.name_en || value?.name : value)
+        .filter(Boolean)
+        .map(name => ({ name: String(name) }));
+    return {
+        _provider: 'hikka-fallback',
+        title: anime.title || anime.originalTitle || '',
+        type,
+        status: anime.status || '',
+        _statusLabel: statusMap[String(anime.status || '').toLowerCase()] || anime.status || '—',
+        season: anime.season || null,
+        year: anime.year || '',
+        episodes: anime.episodes_released || anime.episodes || null,
+        duration: anime.duration || anime.runtimeMinutes || null,
+        rating: anime.score || anime.rating || null,
+        genres: anime.genres || [],
+        studios,
+        characters: []
+    };
+}
+
 export async function resolveJikanAnime(anime) {
     const stableMalId = Number(anime?.externalIds?.mal_id);
     const stableAnilistId = Number(anime?.externalIds?.anilist_id);
@@ -251,7 +284,7 @@ export async function resolveJikanAnime(anime) {
         } catch (e) { console.warn('AniList ID lookup failed, trying title fallback:', e); }
     }
     const query = anime?.originalTitle || anime?.title;
-    if (!query) return jikanFallback;
+    if (!query) return jikanFallback || adaptHikkaMetadata(anime);
     try {
         const anilistMatch = await withTimeout(resolveAnilistByTitle(query), 8000, 'AniList пошук перевищив час очікування');
         if (anilistMatch) return anilistMatch;
@@ -261,7 +294,7 @@ export async function resolveJikanAnime(anime) {
         if (byTitle && hasCharacterData(byTitle)) return byTitle;
         if (byTitle && !jikanFallback) jikanFallback = byTitle;
     } catch (e) { console.warn('Jikan title search unavailable:', e); }
-    return jikanFallback;
+    return jikanFallback || adaptHikkaMetadata(anime);
 }
 
 export function jikanImage(item) {
@@ -454,4 +487,3 @@ export async function resolveAnimeVideoFrame(anime, episodeNum = null) {
 
     return selectedFrame || null;
 }
-
