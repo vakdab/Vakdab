@@ -473,8 +473,16 @@ import {
             if (el) el.textContent = value;
         }
 
-        function selectDubFromSheet(dub) {
+        function selectDubFromSheet(dub, swipeDirection = 0) {
             if (!dub) return;
+            const teamCard = document.getElementById('playerTeamSelectorTrigger');
+            if (swipeDirection && teamCard) {
+                if (teamCard.classList.contains('is-team-swipe-transitioning')) return;
+                teamCard.classList.remove('team-swipe-enter-left', 'team-swipe-enter-right');
+                teamCard.classList.add('is-team-swipe-transitioning', swipeDirection < 0 ? 'team-swipe-exit-left' : 'team-swipe-exit-right');
+                window.setTimeout(() => selectDubFromSheet(dub, 0), 170);
+                return;
+            }
             playerPageCurrentDub = dub;
             const episodes = getCurrentEpisodes();
             const matchingEp = episodes.find(ep => sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum));
@@ -485,6 +493,14 @@ import {
             }
             buildEpisodeViews();
             updateTeamCard();
+            if (teamCard?.classList.contains('is-team-swipe-transitioning')) {
+                const enteringClass = teamCard.classList.contains('team-swipe-exit-left')
+                    ? 'team-swipe-enter-right'
+                    : 'team-swipe-enter-left';
+                teamCard.classList.remove('team-swipe-exit-left', 'team-swipe-exit-right');
+                teamCard.classList.add(enteringClass);
+                window.setTimeout(() => teamCard.classList.remove('is-team-swipe-transitioning', enteringClass), 430);
+            }
             updateFilterChip();
             buildBottomSheetData();
             showToast(`Озвучка: ${dub}`);
@@ -1978,7 +1994,7 @@ import {
             const nextIndex = dx < 0
                 ? (currentIndex + 1) % dubs.length
                 : (currentIndex - 1 + dubs.length) % dubs.length;
-            selectDubFromSheet(dubs[nextIndex]);
+            selectDubFromSheet(dubs[nextIndex], dx < 0 ? -1 : 1);
         }, { passive: true });
 
         document.addEventListener('keydown', (e) => {
