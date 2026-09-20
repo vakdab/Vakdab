@@ -68,7 +68,7 @@
         }
     </script>
 
-    <link rel="stylesheet" href="./src/styles/app.css?v=20260920-hero-motion-v1" />
+    <link rel="stylesheet" href="./src/styles/app.css?v=20260920-swipe-dub-v1" />
 </head>
 <body class="appletv-agnative-topnav">
 
@@ -203,7 +203,7 @@
                     <div class="player-team-label-row">
                         <span class="player-section-label">Команда</span>
                     </div>
-                    <div class="player-team-card" id="playerTeamSelectorTrigger" role="button" tabindex="0" aria-label="Оберіть команду озвучення" aria-expanded="false" onclick="window.togglePlayerTeamDropdown?.(event)" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.togglePlayerTeamDropdown?.(event); }">
+                    <div class="player-team-card" id="playerTeamSelectorTrigger" role="group" aria-label="Поточна команда озвучення" aria-expanded="false">
                         <div class="player-team-left">
                             <div class="player-team-avatar" id="playerTeamAvatar">
                                 <span id="playerTeamAvatarInitials">РГ</span>
@@ -367,7 +367,7 @@
     </div>
 
 
-    <script type="module" src="./src/js/app.js?v=20260920-hero-motion-v1"></script>
+    <script type="module" src="./src/js/app.js?v=20260920-swipe-dub-v1"></script>
 
     <!-- ===== BOTTOM NAV ===== -->
     <nav class="bottom-nav" id="bottomNav" role="navigation" aria-label="Навігація">

@@ -484,6 +484,7 @@ import {
                 playerPageCurrentEpisodeNum = episodes[0].episode;
             }
             buildEpisodeViews();
+            updateTeamCard();
             updateFilterChip();
             buildBottomSheetData();
             showToast(`Озвучка: ${dub}`);
@@ -1933,7 +1934,7 @@ import {
         document.addEventListener('click', (e) => {
             const trigger = e.target.closest?.('#playerTeamSelectorTrigger');
             if (trigger) {
-                togglePlayerTeamDropdown(e);
+                // Team selection is swipe-only; tapping never opens a dropdown.
                 return;
             }
 
@@ -1953,6 +1954,32 @@ import {
                 closePlayerTeamDropdown();
             }
         });
+
+        let teamSwipeStart = null;
+        document.addEventListener('touchstart', (e) => {
+            const card = e.target.closest?.('#playerTeamSelectorTrigger');
+            if (!card || e.touches.length !== 1) return;
+            const touch = e.touches[0];
+            teamSwipeStart = { x: touch.clientX, y: touch.clientY };
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            if (!teamSwipeStart) return;
+            const touch = e.changedTouches[0];
+            const dx = touch.clientX - teamSwipeStart.x;
+            const dy = touch.clientY - teamSwipeStart.y;
+            teamSwipeStart = null;
+            if (Math.abs(dx) < 42 || Math.abs(dx) <= Math.abs(dy)) return;
+
+            const seasonData = playerPageAnime?.seasons?.[playerPageCurrentSeason] || {};
+            const dubs = Object.keys(seasonData).sort();
+            if (dubs.length < 2) return;
+            const currentIndex = Math.max(0, dubs.indexOf(playerPageCurrentDub));
+            const nextIndex = dx < 0
+                ? (currentIndex + 1) % dubs.length
+                : (currentIndex - 1 + dubs.length) % dubs.length;
+            selectDubFromSheet(dubs[nextIndex]);
+        }, { passive: true });
 
         document.addEventListener('keydown', (e) => {
             const trigger = e.target.closest?.('#playerTeamSelectorTrigger');

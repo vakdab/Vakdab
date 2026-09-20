@@ -1524,3 +1524,42 @@ body.player-page-open > .bottom-sheet-overlay {
     #playerPageModal .player-section { max-width: 720px; margin: 0 auto; }
     #playerPageModal .player-mobile-toolbar { padding-inline: 8px; }
 }
+
+
+/* Team picker is swipe-only: keep the current team card visible and never open a list. */
+#playerPageModal .player-team-card {
+    cursor: default;
+    touch-action: pan-y;
+}
+#playerPageModal .player-team-right,
+#playerPageModal .player-team-dropdown {
+    display: none !important;
+}
+
+/* Light theme team card matches the white player surface. */
+body:not(.dark-mode) #playerPageModal .player-team-card {
+    background: #ffffff;
+    border-color: rgba(24, 24, 27, 0.14);
+    color: #18181b;
+    box-shadow: 0 4px 18px rgba(24, 24, 27, 0.10);
+}
+body:not(.dark-mode) #playerPageModal .player-team-card:hover {
+    border-color: rgba(24, 24, 27, 0.24);
+    box-shadow: 0 6px 22px rgba(24, 24, 27, 0.14);
+}
+body:not(.dark-mode) #playerPageModal .player-team-name {
+    color: #18181b;
+}
+body:not(.dark-mode) #playerPageModal .player-team-badge,
+body:not(.dark-mode) #playerPageModal .player-team-badge--dub,
+body:not(.dark-mode) #playerPageModal .player-team-badge--sub,
+body:not(.dark-mode) #playerPageModal .player-team-badge--ep {
+    background: #f4f4f5;
+    color: #3f3f46;
+    border-color: rgba(24, 24, 27, 0.14);
+}
+body:not(.dark-mode) #playerPageModal .player-team-avatar {
+    background: #f4f4f5;
+    border-color: rgba(24, 24, 27, 0.18);
+    color: #18181b;
+}
