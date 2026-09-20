@@ -424,6 +424,37 @@ body.player-page-open > .bottom-sheet-overlay {
   #playerPageModal .anime-info-row strong { max-width:62%; }
 }
 
+/* Compact information table on phones: keep the player page short without hiding data. */
+@media (max-width:620px) {
+  #playerPageModal .anime-info-grid { border-radius:12px; }
+  #playerPageModal .anime-info-row {
+    min-height:36px;
+    gap:10px;
+    padding:7px 11px;
+  }
+  #playerPageModal .anime-info-row span,
+  #playerPageModal .anime-info-row strong {
+    font-size:12px;
+    line-height:1.25;
+  }
+  #playerPageModal .anime-info-row span { flex:0 0 38%; }
+  #playerPageModal .anime-info-row strong {
+    max-width:62%;
+    overflow-wrap:anywhere;
+  }
+  #playerPageModal .anime-info-badge {
+    padding:2px 6px;
+    border-radius:6px;
+    font-size:11px !important;
+  }
+  #playerPageModal .anime-info-studio-logo {
+    width:22px;
+    height:22px;
+    flex-basis:22px;
+    border-radius:5px;
+  }
+}
+
 
 
 #playerPageModal .player-controls,
