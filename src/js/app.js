@@ -1,4 +1,4 @@
-import { bootstrap } from './core/bootstrap.js?v=20260912-team-selector-v6';
+import { bootstrap } from './core/bootstrap.js?v=20260920-hero-motion-v1';
 
 try {
     if (globalThis.Telegram?.WebApp) {

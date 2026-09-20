@@ -441,6 +441,12 @@ import { fetchHikkaMain, fetchHikkaTop100, loadHikkaDetail } from '../../service
             // Активуємо одразу — постер і заглушка вже в одному шарі, чекати нічого не треба.
             // Старий слайд лишається під новим до завершення fade-переходу, потім прибирається.
             slide.classList.add('active');
+            // Повторний слайд створюється динамічно; reflow гарантує новий animation cycle
+            // навіть у WebView/мобільних браузерах, які кешують стилі однакових елементів.
+            void slide.offsetWidth;
+            slide.classList.remove('active');
+            void slide.offsetWidth;
+            slide.classList.add('active');
             if (previousSlide && previousSlide !== slide) {
                 setTimeout(() => previousSlide.remove(), 550);
             }
