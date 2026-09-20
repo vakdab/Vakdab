@@ -1,6 +1,7 @@
 import { PROXY_URL } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 import { getProxyUrl, isEmbedUrl } from '../../utils/image.js';
 import { normalizePosterUrl, resolveUniversalPlaybackUrl } from '../../services/catalog/catalog.js?v=20260911-moonanime-fallback-v4';
+import { VakdabFullscreenPlayer } from './fullscreenPlayer.js';
 
         // ====================================================================
         //  ПЛЕЄР — ПОВНИЙ КАСТОМНИЙ ПЛЕЄР З КОНТРОЛЯМИ
@@ -168,6 +169,7 @@ export class LampaPlayer {
                 this._lastSourceRequest = null;
                 this._playbackErrorTimer = null;
                 this._onFullscreenChange = null;
+                this._fullscreenPlayer = new VakdabFullscreenPlayer();
                 this._init();
             }
 
@@ -805,6 +807,14 @@ export class LampaPlayer {
             }
 
             toggleFullscreen() {
+                if (this.videoRef) {
+                    if (this._fullscreenPlayer?.root) this._fullscreenPlayer.exitFullscreen();
+                    else this._fullscreenPlayer?.open(this.videoRef, {
+                        title: [this._lastSourceRequest?.animeTitle, this._lastSourceRequest?.episodeTitle].filter(Boolean).join(' · '),
+                        onNext: () => document.getElementById('playerNextEpisode')?.click()
+                    });
+                    return;
+                }
                 const target = (this.containerRef && document.body.contains(this.containerRef))
                     ? this.containerRef : this.container;
                 if (!target) return;
@@ -819,6 +829,8 @@ export class LampaPlayer {
             }
 
             destroy() {
+                this._fullscreenPlayer?.close();
+                this._fullscreenPlayer = null;
                 clearTimeout(this._controlsTimer);
                 clearTimeout(this._playbackErrorTimer);
                 this._playbackErrorTimer = null;
