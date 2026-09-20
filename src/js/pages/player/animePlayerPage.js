@@ -8,7 +8,7 @@ import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, resolveUniversalPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, searchHikkaAllTitles, switchProviderSource
-} from '../../services/catalog/catalog.js?v=20260911-moonanime-fallback-v4';
+} from '../../services/catalog/catalog.js?v=20260920-canonical-metadata-v1';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
 } from '../home/homeLegacy.js?v=20260829-vertical-catalog-28-v1';
@@ -22,7 +22,7 @@ import {
     fetchJikan, normalizeJikanTitle, resolveJikanById, withTimeout, resolveJikanByTitle,
     fetchAnilist, normalizeAnilistTitle, fetchAnilistRelations, fetchAnimeRelations, adaptAnilistMedia,
     resolveAnilistByTitle, hasCharacterData, resolveJikanAnime, jikanImage, resolveAnimeVideoFrame
-} from '../../services/metadata/animeExternal.js';
+} from '../../services/metadata/animeExternal.js?v=20260920-hikka-fallback-v1';
 import {
     getDirectAniSkipMalId, resolveAniSkipMalId, getAniSkipSegments,
     attachAniSkip as serviceAttachAniSkip, cleanupAniSkip
@@ -895,7 +895,7 @@ import {
                 ? data._nextAiringDate : (data?.airing ? nextBroadcastDate(data.broadcast) : null);
             const nextEpisode = data?._nextEpisode || (data?.airing && Number.isFinite(Number(data?.episodes)) ? Number(data.episodes) + 1 : null);
             const next = nextDate ? `${nextEpisode ? `Епізод ${nextEpisode} · ` : ''}${formatNextEpisodeDate(nextDate)}` : (data?.airing ? 'Дата невідома' : '—');
-            const studio = data?.studios?.[0]?.name || details?.production_companies?.[0]?.name || '—';
+            const studio = data?.studios?.[0]?.name || '—';
             const studioLogo = data?.studios?.[0]?.logo || '';
             const rating = data?.rating || '—';
             const rows = [
