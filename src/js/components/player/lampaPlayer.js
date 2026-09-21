@@ -179,6 +179,9 @@ export class LampaPlayer {
                 this._sourceRequestId = 0;
                 this._lastSourceRequest = null;
                 this._playbackErrorTimer = null;
+                this._spinnerHideTimer = null;
+                this._spinnerStartedAt = 0;
+                this._spinnerMinDuration = 5400; // два повні цикли: 1.5s × 1.8 × 2
                 this._onFullscreenChange = null;
                 this._fullscreenPlayer = new VakdabFullscreenPlayer();
                 this._init();
@@ -283,12 +286,12 @@ export class LampaPlayer {
                 });
                 v.addEventListener('playing', () => {
                     this.state.loading = false;
-                    this._spinner.classList.add('hidden');
+                    this._hideSpinnerAfterMinimum();
                     this._clearPlaybackError();
                 });
                 v.addEventListener('canplay', () => {
                     this.state.loading = false;
-                    this._spinner.classList.add('hidden');
+                    this._hideSpinnerAfterMinimum();
                     this._clearPlaybackError();
                 });
                 v.addEventListener('error', () => {
@@ -652,10 +655,12 @@ export class LampaPlayer {
 	                this.state.src = src;
 	                this._clearPlaybackError();
 	                const v = this.videoRef;
-	                this.state.loading = true;
-	                this.state.playing = false;
-	                this._spinner.classList.remove('hidden');
-	                this._updatePlayBtn();
+                this.state.loading = true;
+                this.state.playing = false;
+                clearTimeout(this._spinnerHideTimer);
+                this._spinnerStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+                this._spinner.classList.remove('hidden');
+                this._updatePlayBtn();
 
 	                if (this.hls) { this.hls.destroy(); this.hls = null; }
 	                v.pause();
@@ -672,7 +677,7 @@ export class LampaPlayer {
                 const hideLoading = () => {
                     if (!isCurrentRequest()) return;
                     this.state.loading = false;
-                    this._spinner?.classList.add('hidden');
+                    this._hideSpinnerAfterMinimum();
                     this.containerRef?.classList.remove('is-loading');
                 };
                 const safePlay = () => {
@@ -762,6 +767,18 @@ export class LampaPlayer {
                 this.containerRef?.querySelector('.lp-error')?.remove();
             }
 
+            _hideSpinnerAfterMinimum() {
+                if (!this._spinner) return;
+                clearTimeout(this._spinnerHideTimer);
+                const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+                const elapsed = this._spinnerStartedAt ? now - this._spinnerStartedAt : this._spinnerMinDuration;
+                const remaining = Math.max(0, this._spinnerMinDuration - elapsed);
+                this._spinnerHideTimer = window.setTimeout(() => {
+                    this._spinner?.classList.add('hidden');
+                    this._spinnerHideTimer = null;
+                }, remaining);
+            }
+
             _schedulePlaybackError(message, delay = 6000) {
                 clearTimeout(this._playbackErrorTimer);
                 const requestId = this._sourceRequestId;
@@ -842,6 +859,7 @@ export class LampaPlayer {
             destroy() {
                 this._fullscreenPlayer?.close();
                 this._fullscreenPlayer = null;
+                clearTimeout(this._spinnerHideTimer);
                 clearTimeout(this._controlsTimer);
                 clearTimeout(this._playbackErrorTimer);
                 this._playbackErrorTimer = null;
