@@ -1339,7 +1339,7 @@ import {
             await playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || '', `Серія ${epNum}`);
             hidePlayerFramePoster();
             previewPlayButton?.classList.add('is-hidden');
-            playerPagePlayer.play();
+            playerPagePlayer.play({ showLoader: false });
             playerPageHistoryUpdated = false;
             playerPageWatchStartTime = 0;
             playerPageAccumulatedWatchSeconds = 0;

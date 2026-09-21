@@ -182,6 +182,8 @@ export class LampaPlayer {
                 this._spinnerHideTimer = null;
                 this._spinnerStartedAt = 0;
                 this._spinnerMinDuration = 5400; // два повні цикли: 1.5s × 1.8 × 2
+                this._playLoaderTimer = null;
+                this._playLoaderActive = false;
                 this._onFullscreenChange = null;
                 this._fullscreenPlayer = new VakdabFullscreenPlayer();
                 this._init();
@@ -286,12 +288,10 @@ export class LampaPlayer {
                 });
                 v.addEventListener('playing', () => {
                     this.state.loading = false;
-                    this._hideSpinnerAfterMinimum();
                     this._clearPlaybackError();
                 });
                 v.addEventListener('canplay', () => {
                     this.state.loading = false;
-                    this._hideSpinnerAfterMinimum();
                     this._clearPlaybackError();
                 });
                 v.addEventListener('error', () => {
@@ -658,8 +658,9 @@ export class LampaPlayer {
                 this.state.loading = true;
                 this.state.playing = false;
                 clearTimeout(this._spinnerHideTimer);
-                this._spinnerStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
-                this._spinner.classList.remove('hidden');
+                clearTimeout(this._playLoaderTimer);
+                this._playLoaderActive = false;
+                this._spinner.classList.add('hidden');
                 this._updatePlayBtn();
 
 	                if (this.hls) { this.hls.destroy(); this.hls = null; }
@@ -677,7 +678,6 @@ export class LampaPlayer {
                 const hideLoading = () => {
                     if (!isCurrentRequest()) return;
                     this.state.loading = false;
-                    this._hideSpinnerAfterMinimum();
                     this.containerRef?.classList.remove('is-loading');
                 };
                 const safePlay = () => {
@@ -767,16 +767,18 @@ export class LampaPlayer {
                 this.containerRef?.querySelector('.lp-error')?.remove();
             }
 
-            _hideSpinnerAfterMinimum() {
-                if (!this._spinner) return;
-                clearTimeout(this._spinnerHideTimer);
-                const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-                const elapsed = this._spinnerStartedAt ? now - this._spinnerStartedAt : this._spinnerMinDuration;
-                const remaining = Math.max(0, this._spinnerMinDuration - elapsed);
-                this._spinnerHideTimer = window.setTimeout(() => {
+            _startPlayLoader() {
+                if (!this._spinner || this._playLoaderActive) return;
+                this._playLoaderActive = true;
+                this._spinnerStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+                this._spinner.classList.remove('hidden');
+                clearTimeout(this._playLoaderTimer);
+                this._playLoaderTimer = window.setTimeout(() => {
+                    this._playLoaderActive = false;
                     this._spinner?.classList.add('hidden');
-                    this._spinnerHideTimer = null;
-                }, remaining);
+                    this._playLoaderTimer = null;
+                    this._playNow();
+                }, this._spinnerMinDuration);
             }
 
             _schedulePlaybackError(message, delay = 6000) {
@@ -809,7 +811,7 @@ export class LampaPlayer {
                 this.containerRef.appendChild(error);
             }
 
-            play() {
+            _playNow() {
                 if (!this.videoRef) return;
                 const v = this.videoRef;
                 const p = v.play();
@@ -823,8 +825,23 @@ export class LampaPlayer {
                 }
             }
 
+            play(options = {}) {
+                if (!this.videoRef) return;
+                if (options.showLoader !== false) {
+                    this._startPlayLoader();
+                    return;
+                }
+                this._playNow();
+            }
+
             pause() {
                 if (!this.videoRef) return;
+                if (this._playLoaderActive) {
+                    this._playLoaderActive = false;
+                    clearTimeout(this._playLoaderTimer);
+                    this._spinner?.classList.add('hidden');
+                    this._playLoaderTimer = null;
+                }
                 this.videoRef.pause();
             }
 
