@@ -209,7 +209,7 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                 }
                 if (!Auth._authResolved) {
                     // Firebase ще не перевірив сесію — показуємо заглушку
-                    container.innerHTML = '<div class="loader" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;gap:1rem;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i><p>Перевірка сесії...</p></div>';
+                    container.innerHTML = '<div class="site-loading-skeleton" aria-label="Перевірка сесії"><div class="site-loading-skeleton__wrapper"><div class="site-loading-skeleton__circle site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--1 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--2 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--3 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--4 site-skeleton__block"></div></div><p>Перевірка сесії...</p></div>';
                     // Fallback: якщо Firebase не відповів за 3 секунди — показуємо сторінку
                     setTimeout(() => {
                         if (!Auth._authResolved && Router.currentRoute === 'profile') {

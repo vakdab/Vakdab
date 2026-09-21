@@ -258,7 +258,7 @@ export async function renderPublicProfilePage(uid) {
         if (container) container.innerHTML = '<div class="profile-public-empty">Профіль не знайдено.</div>';
         return;
     }
-    container.innerHTML = '<div class="loader" style="display:flex;align-items:center;justify-content:center;min-height:42vh;"><i class="fas fa-spinner fa-pulse" style="font-size:2rem;"></i></div>';
+    container.innerHTML = '<div class="site-loading-skeleton" aria-label="Завантаження профілю"><div class="site-loading-skeleton__wrapper"><div class="site-loading-skeleton__circle site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--1 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--2 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--3 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--4 site-skeleton__block"></div></div></div>';
     try {
         const { getPublicProfile } = await import('../../services/firebase/publicProfile.js?v=20260905-public-profile-v1');
         const isOwnPublicProfile = Boolean(Auth.isAuthenticated() && Auth._user?.uid && String(Auth._user.uid) === targetUid);

@@ -137,7 +137,7 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
             const cols = 2;
             let html = '';
             for (let i = 0; i < cols * 3; i++) {
-                html += `<div class="anime-card"><div class="anime-poster skeleton" style="padding-top: 140%;"></div></div>`;
+                html += `<div class="site-skeleton-card"><div class="site-skeleton-card__poster skeleton"></div><div class="site-skeleton-card__line skeleton"></div><div class="site-skeleton-card__line site-skeleton-card__line--short skeleton"></div><div class="site-skeleton-card__line site-skeleton-card__line--tiny skeleton"></div></div>`;
             }
             container.innerHTML = html;
         }
@@ -1803,7 +1803,7 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
             if (knownPages && page > knownPages) return;
             homeCatalogLoading = true;
             syncHomeCatalogPagination();
-            grid.innerHTML = '<div class="loader home-catalog-loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження сторінки...</div>';
+            grid.innerHTML = '<div class="loader home-catalog-loader"><div class="site-loading-skeleton" aria-label="Завантаження"><div class="site-loading-skeleton__wrapper"><div class="site-loading-skeleton__circle site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--1 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--2 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--3 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--4 site-skeleton__block"></div></div></div></div>';
             try {
                 if (homeCatalogFilterResultItems) {
                     const start = (page - 1) * pageSize;
@@ -1969,7 +1969,7 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
             homeCatalogHasMore = true;
             document.getElementById('homeCatalogCount')?.replaceChildren(document.createTextNode('Завантаження...'));
             document.getElementById('homeCatalogResultsLabel')?.replaceChildren(document.createTextNode('Завантаження...'));
-            grid.innerHTML = '<div class="loader home-catalog-loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження...</div>';
+            grid.innerHTML = '<div class="loader home-catalog-loader"><div class="site-loading-skeleton" aria-label="Завантаження"><div class="site-loading-skeleton__wrapper"><div class="site-loading-skeleton__circle site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--1 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--2 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--3 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--4 site-skeleton__block"></div></div></div></div>';
             try {
                 let nextItems;
                 if (homeCatalogMode === 'manga' && homeCatalogAge !== 'all') {
@@ -2088,7 +2088,7 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
             // corsproxy request is slow or unavailable.
             container.innerHTML = buildHomeCatalogSectionHtml([]);
             const initialGrid = container.querySelector('#homeCatalogGrid');
-            if (initialGrid) initialGrid.innerHTML = '<div class="loader home-catalog-loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження каталогу...</div>';
+            if (initialGrid) initialGrid.innerHTML = '<div class="loader home-catalog-loader"><div class="site-loading-skeleton" aria-label="Завантаження каталогу"><div class="site-loading-skeleton__wrapper"><div class="site-loading-skeleton__circle site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--1 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--2 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--3 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--4 site-skeleton__block"></div></div></div></div>';
             bindHomeCatalogCards(container);
             bindHomeCatalogMenu(container);
             syncHomeCatalogGenreControl(container);
@@ -2390,7 +2390,7 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
             const requestId = ++homeRecommendationRequestId;
             homeRecommendationLoading = true;
             container.dataset.loading = 'true';
-            container.innerHTML = '<div class="loader home-recommendations-loader"><i class="fas fa-spinner fa-pulse"></i> Завантаження рекомендацій...</div>';
+            container.innerHTML = '<div class="loader home-recommendations-loader"><div class="site-loading-skeleton" aria-label="Завантаження рекомендацій"><div class="site-loading-skeleton__wrapper"><div class="site-loading-skeleton__circle site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--1 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--2 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--3 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--4 site-skeleton__block"></div></div></div></div>';
             try {
                 const items = homeRecommendationSearchQuery
                     ? await searchHikka(homeRecommendationSearchQuery, 1)

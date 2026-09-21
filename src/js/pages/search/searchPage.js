@@ -18,7 +18,7 @@ export function renderSearchPage() {
       <button class="search-page-clear" id="searchPageClearBtn" aria-label="Очистити"><i class="fas fa-times-circle"></i></button>
     </div>
     <div id="searchResultsContainer" class="search-results-grid">
-      ${initialQuery ? '<div class="loader"><i class="fas fa-spinner fa-pulse"></i> Пошук...</div>' : `
+      ${initialQuery ? '<div class="site-loading-skeleton site-loading-skeleton--inline" role="status" aria-label="Пошук"></div>' : `
         <div class="search-empty">
           <i class="fas fa-search"></i>
           <p>Введіть назву аніме для пошуку</p>
@@ -112,7 +112,7 @@ export async function performSearchPage() {
     const query = searchPageState.query.trim();
     if (!query || query.length < 2) return;
     searchPageState.loading = true;
-    results.innerHTML = '<div class="loader" style="grid-column:1/-1;"><i class="fas fa-spinner fa-pulse"></i> Пошук...</div>';
+    results.innerHTML = '<div class="site-loading-skeleton site-loading-skeleton--inline" role="status" aria-label="Пошук"></div>';
     pagination.innerHTML = '';
     try {
         const list = await searchHikka(query, searchPageState.page);
