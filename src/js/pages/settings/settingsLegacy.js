@@ -258,8 +258,6 @@ import {
         }
 
         function buildSiteTabHtml(isDark) {
-            const nextIcon = isDark ? 'fa-sun' : 'fa-moon';
-            const nextLabel = isDark ? 'Світла тема' : 'Темна тема';
             const history = Storage.getHistory();
             const bookmarks = Storage.getBookmarks();
             return `
@@ -271,9 +269,31 @@ import {
                   <div class="desc">${isDark ? 'Темна тема' : 'Світла тема'} — ${isDark ? 'нічний режим' : 'денний режим'}</div>
                 </div>
               </div>
-              <button class="settings-toggle-btn" id="settingsThemeBtn">
-                <i class="fas ${nextIcon}"></i> ${nextLabel}
-              </button>
+              <label class="theme-switch" id="settingsThemeBtn" aria-label="Перемкнути тему">
+                <input id="themeSwitchInput" type="checkbox" ${isDark ? 'checked' : ''} aria-label="Темна тема">
+                <span class="theme-switch-slider round" aria-hidden="true">
+                  <span class="theme-switch-sun-moon">
+                    <svg class="theme-switch-moon-dot moon-dot-1" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+                    <svg class="theme-switch-moon-dot moon-dot-2" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+                    <svg class="theme-switch-moon-dot moon-dot-3" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+                    <svg class="theme-switch-light-ray light-ray-1" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+                    <svg class="theme-switch-light-ray light-ray-2" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+                    <svg class="theme-switch-light-ray light-ray-3" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+                    <svg class="theme-switch-cloud cloud-dark cloud-1" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+                    <svg class="theme-switch-cloud cloud-dark cloud-2" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+                    <svg class="theme-switch-cloud cloud-dark cloud-3" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+                    <svg class="theme-switch-cloud cloud-light cloud-4" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+                    <svg class="theme-switch-cloud cloud-light cloud-5" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+                    <svg class="theme-switch-cloud cloud-light cloud-6" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+                  </span>
+                  <span class="theme-switch-stars">
+                    <svg class="theme-switch-star star-1" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+                    <svg class="theme-switch-star star-2" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+                    <svg class="theme-switch-star star-3" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+                    <svg class="theme-switch-star star-4" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+                  </span>
+                </span>
+              </label>
             </div>
 
             <div class="settings-section-title">Дані</div>
@@ -609,8 +629,8 @@ import {
         }
 
         function wireSiteTab() {
-            const themeBtn = document.getElementById('settingsThemeBtn');
-            if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+            const themeInput = document.getElementById('themeSwitchInput');
+            if (themeInput) themeInput.addEventListener('change', toggleTheme);
 
             document.getElementById('settingsExportDataBtn')?.addEventListener('click', () => {
                 const data = {

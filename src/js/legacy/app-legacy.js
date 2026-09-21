@@ -74,12 +74,8 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
             } else {
                 document.body.classList.remove('dark-mode');
             }
-            const settingsBtn = document.getElementById('settingsThemeBtn');
-            if (settingsBtn) {
-                const icon = theme === 'dark' ? 'fa-moon' : 'fa-sun';
-                const label = theme === 'dark' ? 'Темна тема' : 'Світла тема';
-                settingsBtn.innerHTML = `<i class="fas ${icon}"></i> ${label}`;
-            }
+            const themeInput = document.getElementById('themeSwitchInput');
+            if (themeInput) themeInput.checked = theme === 'dark';
         }
 
         export function toggleTheme() {
