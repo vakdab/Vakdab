@@ -221,8 +221,8 @@
             display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
             animation: floatIn 0.4s ease both;
         }
-        .rg-podium-badge { width: 80px; height: 116px; object-fit: contain; display: block; filter: drop-shadow(0 4px 7px rgba(0,0,0,.16)); transition: transform .25s ease, filter .25s ease; }
-        .rg-podium-item.p1 .rg-podium-badge { width: 96px; height: 136px; }
+        .rg-podium-badge { width: 60px; height: 86px; object-fit: contain; display: block; filter: drop-shadow(0 4px 7px rgba(0,0,0,.16)); transition: transform .25s ease, filter .25s ease; }
+        .rg-podium-item.p1 .rg-podium-badge { width: 72px; height: 102px; }
         .rg-podium-item:hover .rg-podium-badge { transform: translateY(-2px) rotate(2deg); filter: drop-shadow(0 6px 10px rgba(var(--accent-rgb), .26)); }
         .rg-podium-rank-label { margin-top: -2px; font-size: 11px; font-weight: 800; color: var(--text-secondary); letter-spacing: .2px; }
         .rg-podium-avatar {
@@ -263,8 +263,8 @@
         .rg-podium-item.p3 .rg-podium-bar { height: 28px; }
         @media (max-width: 520px) {
             .rg-podium { gap: 0.25rem; padding-left: .35rem; padding-right: .35rem; }
-            .rg-podium-badge { width: 68px; height: 100px; }
-            .rg-podium-item.p1 .rg-podium-badge { width: 84px; height: 120px; }
+            .rg-podium-badge { width: 52px; height: 74px; }
+            .rg-podium-item.p1 .rg-podium-badge { width: 62px; height: 88px; }
             .rg-podium-name { max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         }
 

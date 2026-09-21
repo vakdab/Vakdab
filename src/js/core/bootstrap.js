@@ -24,7 +24,7 @@ export function bootstrap() {
         document.body.classList.remove('android-tv-mode');
     } catch (_) {}
 
-    bootstrapPromise = import('../legacy/app-legacy.js?v=20260920-hero-motion-v1')
+    bootstrapPromise = import('../legacy/app-legacy.js?v=20260921-podium-medals-v2')
         .then(module => {
             window.VakDabLegacy = module;
             // Expose compatibility services only after the legacy module has fully evaluated.
