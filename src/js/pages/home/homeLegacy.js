@@ -1793,6 +1793,41 @@ import { hasHoneyPageResources, isHoneyComicItem, selectHoneyReaderChapter, sort
             }
         }
 
+        export function openHomeCatalogMode(mode = 'anime') {
+            const nextMode = mode === 'manga' ? 'manga' : 'anime';
+            const existingTab = document.querySelector(`#homeCatalogSection [data-catalog-mode="${nextMode}"]`);
+            if (existingTab && existingTab.dataset.catalogMode !== homeCatalogMode) {
+                existingTab.click();
+                document.getElementById('homeCatalogSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return;
+            }
+
+            homeSectionsRequestId++;
+            homeCatalogMode = nextMode;
+            homeCatalogAdult = false;
+            homeCatalogAge = 'all';
+            homeCatalogOrigin = 'all';
+            homeCatalogQuery = '';
+            homeCatalogPreset = 'all';
+            homeCatalogGenre = 'all';
+            homeCatalogStatus = 'all';
+            homeCatalogAvailability = 'all';
+            homeCatalogGenres = new Set();
+            homeCatalogFilterResultItems = null;
+            homeCatalogFilterResultOffset = 0;
+            homeCatalogType = 'all';
+            homeCatalogYearMin = '';
+            homeCatalogYearMax = '';
+            homeCatalogScoreMin = '';
+
+            if (Router.currentRoute === 'catalog') {
+                void loadAndDisplayGenreSections();
+            } else {
+                Router.goTo('catalog');
+            }
+            setTimeout(() => document.getElementById('homeCatalogSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 180);
+        }
+
         export async function loadHomeCatalogPage(targetPage = 1) {
             if (homeCatalogLoading) return;
             const grid = document.getElementById('homeCatalogGrid');
