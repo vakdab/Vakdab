@@ -14,8 +14,8 @@ import {
 } from '../home/homeLegacy.js?v=20260829-vertical-catalog-28-v1';
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove-thought-v1';
 import {
-    detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260912-team-selector-v6';
+    detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres, openHomeCatalogMode
+} from '../../legacy/app-legacy.js?v=20260921-anime-manga-menu-v1';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 import {
     JIKAN_STATUS_LABELS, SEASON_LABELS, ANILIST_STATUS_LABELS, ANILIST_RELATION_LABELS, ANILIST_FORMAT_LABELS,
@@ -1773,7 +1773,9 @@ import {
             btn.addEventListener('click', () => {
                 const action = btn.dataset.action;
                 closeMenuPopover();
-                if (action === 'settings') {
+                if (action === 'anime' || action === 'manga') {
+                    openHomeCatalogMode(action);
+                } else if (action === 'settings') {
                     Router.goTo('settings');
                 } else if (action === 'stickers') {
                     Router.goTo('stickers');
