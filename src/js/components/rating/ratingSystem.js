@@ -341,6 +341,7 @@ function isGifUrl(url) {
                     const podiumProfileAttrs = u.uid ? ` data-profile-uid="${escapeRatingHtml(u.uid)}" role="link" tabindex="0" title="Відкрити профіль"` : '';
                     html += `<div class="rg-podium-item ${cls[i]}"${podiumProfileAttrs} style="animation-delay:${i*0.08}s">
                         <img class="rg-podium-badge" src="${TOP_BADGES[cls[i]]}" alt="" aria-hidden="true" loading="lazy">
+                        <div class="rg-podium-rank-label">Топ ${cls[i].slice(1)}</div>
                         <div class="rg-podium-avatar">${av}</div>
                         <div class="rg-podium-name">${ratingNameMarkup(u)}</div>
                         <div class="rg-podium-score">${cfg.getVal(u)} ${cfg.unit}</div>
