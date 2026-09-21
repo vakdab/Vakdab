@@ -1,4 +1,4 @@
-import { bootstrap } from './core/bootstrap.js?v=20260921-anime-manga-menu-v1';
+import { bootstrap } from './core/bootstrap.js?v=20260921-podium-medals-v2';
 
 try {
     if (globalThis.Telegram?.WebApp) {
