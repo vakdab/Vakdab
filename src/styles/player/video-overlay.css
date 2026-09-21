@@ -457,22 +457,24 @@
 #playerPageModal .lp-center-play-btn:active { transform: translate(-50%, -50%) scale(.94); }
 #playerPageModal .player-preview-play.is-hidden { pointer-events: none; opacity: 0; transform: translate(-50%, -50%) scale(.78); }
 
-/* ============== Loading spinner ============== */
+/* ============== Six-dot loading animation ============== */
 #playerPageModal .lp-spinner {
     position: absolute;
     z-index: 6;
-    top: 50%;
-    left: 50%;
-    width: 34px;
-    height: 34px;
-    border: 3px solid rgba(255, 255, 255, .25);
-    border-top-color: #fff;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    animation: playerSpin .8s linear infinite;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+    transform: none;
+    background: rgba(0, 0, 0, .5);
+    pointer-events: none;
+    animation: none;
 }
 #playerPageModal .lp-spinner.hidden { display: none; }
-@keyframes playerSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
 /* ============== Error state ============== */
 #playerPageModal .lp-error,
