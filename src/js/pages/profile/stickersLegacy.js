@@ -181,46 +181,22 @@ import { uploadBlobToCloudinary } from '../home/homeLegacy.js?v=20260906-remove-
                 `;
             }
 
-            const FILTERS = ['Усі', 'Набори', 'Одиночні', 'Улюблені', 'Користувачі'];
-
-                function matchesSearch(title) {
-                    if (!ui.search.trim()) return true;
-                    return title.toLowerCase().includes(ui.search.trim().toLowerCase());
-                }
-
-                function setStickerItems(st, localData) {
-                    const sourceSingles = [...(localData.singles || []), ...(st._sourceSingles || [])];
-                    const byId = id => sourceSingles.find(s => s.id === id);
-                    return [
-                        ...(st.variants || []).map(v => ({ variant: v, color: st._sourceColors?.['v:' + v] || '' })),
-                        ...(st.images || []).map(id => byId(id)).filter(Boolean)
-                    ];
-                }
+        const FILTERS = ['Усі', 'Одиночні', 'Улюблені', 'Користувачі'];
 
                 function render() {
                 const d = data();
                 const owned = getOwnedStickerVariants(d);
                 const showUsers = ui.activeFilter === 'Користувачі';
-                const showSets = !showUsers && (ui.activeFilter === 'Усі' || ui.activeFilter === 'Набори' || (ui.activeFilter === 'Улюблені'));
                 const showSingles = !showUsers && (ui.activeFilter === 'Усі' || ui.activeFilter === 'Одиночні' || (ui.activeFilter === 'Улюблені'));
 
-                let visibleSets = (ui.activeFilter === 'Одиночні') ? [] : d.sets.filter(st => matchesSearch(st.title));
-                if (ui.activeFilter === 'Улюблені') visibleSets = visibleSets.filter(st => st.favorite);
-
-                let visibleSingles = (ui.activeFilter === 'Набори') ? [] : d.singles.filter(s => matchesSearch('наліпка ' + (s.variant + 1)));
+                let visibleSingles = d.singles.slice();
                 if (ui.activeFilter === 'Улюблені') visibleSingles = visibleSingles.filter(s => s.favorite);
 
                 if (ui.activeFilter === 'Усі') {
                     const everyone = _everyoneStickersCache || { sets: [], singles: [] };
-                    const mySetIds = new Set(d.sets.map(s => s.id));
-                    everyone.sets.forEach(s => {
-                        if (!mySetIds.has(s.id) && matchesSearch(s.title)) {
-                            visibleSets.push(s);
-                        }
-                    });
                     const mySingleIds = new Set(d.singles.map(s => s.id));
                     everyone.singles.forEach(s => {
-                        if (!mySingleIds.has(s.id) && matchesSearch(s.image ? 'власна' : 'наліпка ' + (s.variant + 1))) {
+                        if (!mySingleIds.has(s.id)) {
                             visibleSingles.push(s);
                         }
                     });
@@ -229,7 +205,7 @@ import { uploadBlobToCloudinary } from '../home/homeLegacy.js?v=20260906-remove-
                     }
                 }
 
-                const everyoneUsers = (_everyoneStickersCache?.users || []).filter(u => matchesSearch(u.nickname));
+                const everyoneUsers = _everyoneStickersCache?.users || [];
                 const usersSection = showUsers ? (everyoneUsers.length ? everyoneUsers.map(u => {
                     const us = u.stickers || getDefaultStickers();
                     const userSingles = us.singles || [];
@@ -241,8 +217,8 @@ import { uploadBlobToCloudinary } from '../home/homeLegacy.js?v=20260906-remove-
                     </article>`;
                 }).join('') : '<div class="sticker-empty-note">Інших користувачів із наліпками поки немає.</div>') : '';
                 if (showUsers && !_everyoneStickersCache) fetchEveryoneStickers().then(() => render());
-                const nothingAtAll = !showUsers && d.singles.length === 0 && d.sets.length === 0;
-                const nothingVisible = !showUsers && visibleSets.length === 0 && visibleSingles.length === 0;
+                const nothingAtAll = !showUsers && visibleSingles.length === 0;
+                const nothingVisible = !showUsers && visibleSingles.length === 0;
 
                 container.innerHTML = `
                     <div class="stickers-page" style="max-width:480px;margin:0 auto;color:var(--text);font-family:inherit;">
@@ -254,12 +230,6 @@ import { uploadBlobToCloudinary } from '../home/homeLegacy.js?v=20260906-remove-
                             <button id="stickersToggleView" class="filter-page__back" aria-label="Вигляд">
                                 <i class="fas ${ui.view === 'grid' ? 'fa-list' : 'fa-table-cells'}"></i>
                             </button>
-                        </div>
-
-                        <div style="display:flex;align-items:center;gap:0.6rem;background:var(--tag-bg);border:1px solid var(--border);border-radius:14px;padding:0.7rem 0.9rem;margin-bottom:0.8rem;">
-                            <i class="fas fa-search" style="color:var(--text-muted);"></i>
-                            <input type="text" id="stickersSearchInput" placeholder="Пошук наборів і наліпок..." value="${escapeHtml(ui.search)}"
-                                style="background:none;border:none;outline:none;color:var(--text);font-family:inherit;font-size:0.9rem;width:100%;">
                         </div>
 
                         <div style="display:flex;gap:0.5rem;overflow-x:auto;margin-bottom:1rem;padding-bottom:2px;">
@@ -275,7 +245,7 @@ import { uploadBlobToCloudinary } from '../home/homeLegacy.js?v=20260906-remove-
                                 <i class="fas fa-plus"></i>
                             </div>
                             <span style="font-size:0.88rem;font-weight:700;">Додати наліпку</span>
-                            <span style="font-size:0.75rem;color:var(--text-muted);">Одну наліпку або цілий набір</span>
+                            <span style="font-size:0.75rem;color:var(--text-muted);">Завантажити власну наліпку</span>
                         </button>
 
                         ${showUsers ? `<section class="stickers-users-section"><div class="stickers-section-heading"><h2>Усі наліпки користувачів</h2><span>${everyoneUsers.length}</span></div>${usersSection}</section>` : ''}
@@ -288,34 +258,9 @@ import { uploadBlobToCloudinary } from '../home/homeLegacy.js?v=20260906-remove-
                         ` : nothingVisible ? `
                             <div style="text-align:center;padding:2rem 1rem;color:var(--text-muted);">Нічого не знайдено</div>
                         ` : `
-                            ${showSets && visibleSets.length ? `
-                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.7rem;">
-                                    <h2 style="font-size:0.95rem;font-weight:800;">Набори</h2>
-                                    <span style="font-size:0.72rem;color:var(--text-muted);background:var(--tag-bg);border-radius:999px;padding:0.15rem 0.6rem;">${visibleSets.length}</span>
-                                </div>
-                                <div style="display:flex;flex-direction:column;gap:0.7rem;margin-bottom:1.3rem;">
-                                    ${visibleSets.map(st => `
-                                        <div style="border:1px solid var(--border);border-radius:16px;padding:0.9rem;background:var(--surface);">
-                                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.7rem;">
-                                                <div>
-                                                    <div style="font-size:0.92rem;font-weight:800;">${escapeHtml(st.title)}</div>
-                                                    <div style="font-size:0.75rem;color:var(--text-muted);">${setStickerItems(st, d).length} наліпок${st._public ? ` · ${escapeHtml(st._ownerNickname || 'Користувач')}` : ''}</div>
-                                                </div>
-                                                <button class="sticker-set-actions${st._public ? ' sticker-public-set-add' : ''}" data-set-id="${st.id}" ${st._public ? `data-public-owner="${escapeHtml(st._ownerId || '')}"` : ''} style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--tag-bg);color:var(--text);cursor:pointer;">
-                                                    <i class="fas ${st._public ? 'fa-plus' : (st.favorite ? 'fa-star' : 'fa-ellipsis-vertical')}"></i>
-                                                </button>
-                                            </div>
-                                            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:0.4rem;">
-                                                ${setStickerItems(st, d).slice(0, 6).map(s => `<div style="aspect-ratio:1;border-radius:10px;background:${s.image ? 'transparent' : 'var(--tag-bg)'};border:${s.image ? 'none' : '1px solid var(--border)'};padding:${s.image ? '0' : '0.35rem'};overflow:hidden;">${renderStickerVisual(s, s.color)}</div>`).join('')}
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : ''}
-
                             ${showSingles && visibleSingles.length ? `
                                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.7rem;">
-                                    <h2 style="font-size:0.95rem;font-weight:800;">Одиночні наліпки</h2>
+                                    <h2 style="font-size:0.95rem;font-weight:800;">${ui.activeFilter === 'Усі' ? 'Усі наліпки' : 'Одиночні наліпки'}</h2>
                                     <span style="font-size:0.72rem;color:var(--text-muted);background:var(--tag-bg);border-radius:999px;padding:0.15rem 0.6rem;">${visibleSingles.length}</span>
                                 </div>
                                 <div style="display:grid;grid-template-columns:${ui.view === 'grid' ? 'repeat(4,1fr)' : '1fr'};gap:0.6rem;margin-bottom:1.5rem;">
@@ -371,10 +316,6 @@ import { uploadBlobToCloudinary } from '../home/homeLegacy.js?v=20260906-remove-
                             <button id="stickersChooseSingle" style="display:flex;align-items:center;gap:0.8rem;border:1px solid var(--border);border-radius:16px;padding:0.9rem;background:var(--tag-bg);cursor:pointer;text-align:left;color:var(--text);">
                                 <div style="width:44px;height:44px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-face-smile"></i></div>
                                 <div><div style="font-weight:700;font-size:0.88rem;">Власне фото</div><div style="font-size:0.75rem;color:var(--text-muted);">Завантажити одне фото як наліпку</div></div>
-                            </button>
-                            <button id="stickersChoosePack" style="display:flex;align-items:center;gap:0.8rem;border:1px solid var(--border);border-radius:16px;padding:0.9rem;background:var(--tag-bg);cursor:pointer;text-align:left;color:var(--text);">
-                                <div style="width:44px;height:44px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-layer-group"></i></div>
-                                <div><div style="font-weight:700;font-size:0.88rem;">Набір наліпок</div><div style="font-size:0.75rem;color:var(--text-muted);">Створити іменований набір з кількох наліпок</div></div>
                             </button>
                         </div>
                     `;
@@ -553,10 +494,6 @@ import { uploadBlobToCloudinary } from '../home/homeLegacy.js?v=20260906-remove-
                     ui.view = ui.view === 'grid' ? 'list' : 'grid';
                     render();
                 });
-                document.getElementById('stickersSearchInput')?.addEventListener('input', (e) => {
-                    ui.search = e.target.value;
-                    render();
-                });
                 document.querySelectorAll('.sticker-filter-btn').forEach(btn => {
                     btn.addEventListener('click', () => { ui.activeFilter = btn.dataset.filter; render(); });
                 });
@@ -569,7 +506,6 @@ import { uploadBlobToCloudinary } from '../home/homeLegacy.js?v=20260906-remove-
                     render();
                     document.getElementById('stickerFileInput')?.click();
                 });
-                document.getElementById('stickersChoosePack')?.addEventListener('click', () => { ui.step = 'pack'; render(); });
                 document.getElementById('stickersChooseUpload')?.addEventListener('click', () => {
                     ui.step = null;
                     render();
