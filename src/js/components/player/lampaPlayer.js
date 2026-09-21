@@ -26,11 +26,22 @@ import { VakdabFullscreenPlayer } from './fullscreenPlayer.js';
                     background: rgba(0,0,0,.5); z-index: 10; pointer-events: none; transition: opacity .25s;
                 }
                 .lp-spinner.hidden { opacity: 0; }
-                .lp-spinner-ring {
-                    width: 40px; height: 40px; border: 3px solid rgba(255,255,255,.22); border-top-color: #fff;
-                    border-radius: 50%; animation: lp-spin .8s linear infinite;
+                .lp-spinner-loader {
+                    --uib-size: 40px; --uib-color: #fff; --uib-speed: 1.5s;
+                    --dot-size: calc(var(--uib-size) * .17); position: relative; display: flex;
+                    align-items: center; justify-content: flex-start; height: var(--uib-size);
+                    width: var(--uib-size); animation: lp-smooth-rotate calc(var(--uib-speed) * 1.8) linear infinite;
                 }
-                @keyframes lp-spin { to { transform: rotate(360deg); } }
+                .lp-spinner-dot { position: absolute; inset: 0; display: flex; align-items: flex-start; justify-content: center; height: 100%; width: 100%; animation: lp-dot-rotate var(--uib-speed) ease-in-out infinite; }
+                .lp-spinner-dot::before { content: ''; height: var(--dot-size); width: var(--dot-size); border-radius: 50%; background-color: var(--uib-color); transition: background-color .3s ease; }
+                .lp-spinner-dot:nth-child(2), .lp-spinner-dot:nth-child(2)::before { animation-delay: calc(var(--uib-speed) * -.835 * .5); }
+                .lp-spinner-dot:nth-child(3), .lp-spinner-dot:nth-child(3)::before { animation-delay: calc(var(--uib-speed) * -.668 * .5); }
+                .lp-spinner-dot:nth-child(4), .lp-spinner-dot:nth-child(4)::before { animation-delay: calc(var(--uib-speed) * -.501 * .5); }
+                .lp-spinner-dot:nth-child(5), .lp-spinner-dot:nth-child(5)::before { animation-delay: calc(var(--uib-speed) * -.334 * .5); }
+                .lp-spinner-dot:nth-child(6), .lp-spinner-dot:nth-child(6)::before { animation-delay: calc(var(--uib-speed) * -.167 * .5); }
+                @keyframes lp-dot-rotate { 0% { transform: rotate(0deg); } 65%, 100% { transform: rotate(360deg); } }
+                @keyframes lp-smooth-rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                @media (prefers-reduced-motion: reduce) { .lp-spinner-loader, .lp-spinner-dot { animation-duration: 3s; } }
 
                 .lp-opening-skip {
                     position: absolute; z-index: 40 !important; left: 12px; bottom: 62px;
@@ -192,7 +203,7 @@ export class LampaPlayer {
                 // Spinner
                 const spinner = document.createElement('div');
                 spinner.className = 'lp-spinner';
-                spinner.innerHTML = '<div class="lp-spinner-ring"></div>';
+                spinner.innerHTML = '<div class="lp-spinner-loader" aria-label="Завантаження" role="status">' + '<div class="lp-spinner-dot"></div>'.repeat(6) + '</div>';
                 this._spinner = spinner;
                 wrap.appendChild(spinner);
 
