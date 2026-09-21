@@ -106,9 +106,6 @@ function isGifUrl(url) {
                 <div class="rg-tab-panel active" id="rgPanelRating">
                     <div id="rgMyStats"></div>
                                         <div class="rg-lb-title">Глобальний рейтинг</div>
-                    <div class="rg-sort-tabs" id="rgSortTabs">
-                        <button class="rg-sort-tab active" data-sort="xp">За XP</button>
-                    </div>
                     <div id="rgLeaderboard">
                         <div style="display:flex;justify-content:center;padding:24px;"><svg style="width:22px;height:22px;animation:spin 1s linear infinite;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" opacity=".2"/><path d="M12 3a9 9 0 0 1 9 9"/></svg></div>
                     </div>
