@@ -99,7 +99,7 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
             const content = document.getElementById('scheduleWeekContent');
             if (!content || scheduleState.weekLoading) return;
             scheduleState.weekLoading = true;
-            content.innerHTML = '<div class="site-loading-skeleton site-loading-skeleton--inline" role="status" aria-label="Завантаження розкладу"></div>';
+            content.innerHTML = '<div class="site-loading-skeleton site-loading-skeleton--inline site-loading-skeleton--list" role="status" aria-label="Завантаження розкладу"></div>';
             try {
                 const results = await Promise.allSettled(Array.from({ length: 7 }, (_, i) => fetchScheduleByOffset(i)));
                 // The router can render the same SPA page more than once while the
@@ -220,7 +220,7 @@ const countdownText = date => { const ms = Math.max(0, new Date(date).getTime() 
             const content = document.getElementById('scheduleDayContent');
             if (!content) return;
             scheduleState.loadingOffset = offset;
-            content.innerHTML = '<div class="site-loading-skeleton site-loading-skeleton--inline" role="status" aria-label="Завантаження"></div>';
+            content.innerHTML = '<div class="site-loading-skeleton site-loading-skeleton--inline site-loading-skeleton--list" role="status" aria-label="Завантаження"></div>';
             try {
                 const list = await fetchScheduleByOffset(offset);
                 if (scheduleState.loadingOffset !== offset) return; // користувач вже перемкнув вкладку

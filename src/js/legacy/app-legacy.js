@@ -411,7 +411,7 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
             const content = document.getElementById('genrePageContent');
             const pagination = document.getElementById('genrePagePagination');
             if (!content) return;
-            content.innerHTML = '<div class="site-loading-skeleton site-loading-skeleton--inline" role="status" aria-label="Завантаження"></div>';
+            content.innerHTML = '<div class="site-loading-skeleton site-loading-skeleton--inline site-loading-skeleton--list" role="status" aria-label="Завантаження"></div>';
             try {
                 const list = await fetchHikkaByGenre(genrePageState.slug, genrePageState.page);
                 genrePageState.list = list;

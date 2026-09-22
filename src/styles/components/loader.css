@@ -81,6 +81,52 @@
     box-shadow: 76px 4px 0 -18px var(--skeleton-block), 76px 32px 0 -18px var(--skeleton-block), 0 82px 0 0 var(--skeleton-block), 0 110px 0 -2px var(--skeleton-block);
 }
 
+/* Shape variants: the placeholder follows the component it replaces. */
+.site-loading-skeleton--catalog,
+.site-loading-skeleton--recommendations {
+    width: 100%;
+    min-height: 230px;
+    margin: 0;
+    border-radius: 14px;
+}
+.site-loading-skeleton--catalog .site-loading-skeleton__wrapper,
+.site-loading-skeleton--recommendations .site-loading-skeleton__wrapper { display: none; }
+.site-loading-skeleton--catalog::before,
+.site-loading-skeleton--recommendations::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 18px 18px 58px;
+    border-radius: 11px;
+    background: var(--skeleton-block);
+    box-shadow: 0 calc(100% + 15px) 0 -1px var(--skeleton-block), 0 calc(100% + 31px) 0 -4px var(--skeleton-block);
+}
+.site-loading-skeleton--recommendations {
+    min-height: 270px;
+    border-radius: 999px 999px 16px 16px;
+}
+.site-loading-skeleton--recommendations::before {
+    inset: 18px 50% 58px 18px;
+    border-radius: 50%;
+    box-shadow: 0 calc(100% + 15px) 0 -1px var(--skeleton-block), 0 calc(100% + 31px) 0 -4px var(--skeleton-block), calc(100% + 18px) 34px 0 -5px var(--skeleton-block), calc(100% + 18px) 62px 0 -8px var(--skeleton-block);
+}
+.site-loading-skeleton--profile { max-width: 680px; min-height: 250px; }
+.site-loading-skeleton--manga {
+    width: min(100%, 760px);
+    min-height: min(72vh, 720px);
+    border-radius: 10px;
+}
+.site-loading-skeleton--manga .site-loading-skeleton__wrapper { display: none; }
+.site-loading-skeleton--manga::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 18px;
+    border-radius: 4px;
+    background: var(--skeleton-block);
+}
+.site-loading-skeleton--list { max-width: 700px; }
+
 /* Grid/card placeholders. */
 .site-skeleton-grid {
     display: grid;
@@ -153,4 +199,57 @@
     .home-anime-feed-loader,
     .home-recommendation-feed-loader,
     .home-catalog-feed-loader { animation: none; }
+}
+
+/* Player-shaped loading state: mirrors the real anime detail screen. */
+#playerPageModal .modal-content { position: relative; }
+#playerPageModal .player-loading-skeleton {
+    display: none;
+    position: absolute;
+    z-index: 100;
+    inset: 0;
+    pointer-events: none;
+    overflow-y: auto;
+    padding-bottom: 40px;
+    background: var(--bg);
+}
+#playerPageModal[aria-busy="true"] .player-loading-skeleton { display: block; }
+#playerPageModal .player-loading-skeleton__hero {
+    width: 100%;
+    height: clamp(230px, 34vw, 390px);
+    border-radius: 0 0 22px 22px;
+}
+#playerPageModal .player-loading-skeleton__content { padding: 22px 20px 12px; }
+#playerPageModal .player-loading-skeleton__title { width: min(78%, 480px); height: 28px; border-radius: 7px; }
+#playerPageModal .player-loading-skeleton__meta { width: min(46%, 260px); height: 12px; margin-top: 13px; }
+#playerPageModal .player-loading-skeleton__tags { display: flex; gap: 8px; margin-top: 15px; }
+#playerPageModal .player-loading-skeleton__tags span { width: 66px; height: 24px; border-radius: 999px; }
+#playerPageModal .player-loading-skeleton__tags span:nth-child(2) { width: 82px; }
+#playerPageModal .player-loading-skeleton__tags span:nth-child(3) { width: 54px; }
+#playerPageModal .player-loading-skeleton__ratings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 8px 20px 20px; }
+#playerPageModal .player-loading-skeleton__ratings span { height: 68px; border-radius: 14px; }
+#playerPageModal .player-loading-skeleton__video { width: calc(100% - 40px); aspect-ratio: 16 / 9; margin: 0 20px; border-radius: 14px; }
+#playerPageModal .player-loading-skeleton__episodes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 18px 20px; }
+#playerPageModal .player-loading-skeleton__episodes span { height: 40px; border-radius: 8px; }
+@media (max-width: 600px) {
+    #playerPageModal .player-loading-skeleton__hero { height: 260px; }
+    #playerPageModal .player-loading-skeleton__content { padding-inline: 14px; }
+    #playerPageModal .player-loading-skeleton__ratings { padding-inline: 14px; }
+    #playerPageModal .player-loading-skeleton__video { width: calc(100% - 28px); margin-inline: 14px; }
+    #playerPageModal .player-loading-skeleton__episodes { padding-inline: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.site-loading-skeleton--catalog::before {
+    inset: 18px calc(66.666% + 6px) 58px 18px;
+    box-shadow: calc(100% + 12px) 0 0 -1px var(--skeleton-block), calc(200% + 24px) 0 0 -1px var(--skeleton-block), 0 calc(100% + 15px) 0 -1px var(--skeleton-block), calc(100% + 12px) calc(100% + 15px) 0 -1px var(--skeleton-block), calc(200% + 24px) calc(100% + 15px) 0 -1px var(--skeleton-block);
+}
+.site-loading-skeleton--profile .site-loading-skeleton__wrapper { display: none; }
+.site-loading-skeleton--profile::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 18px 18px 92px;
+    border-radius: 14px;
+    background: var(--skeleton-block);
+    box-shadow: 26px 142px 0 -12px var(--skeleton-block), 124px 135px 0 -24px var(--skeleton-block), 124px 162px 0 -25px var(--skeleton-block);
 }
