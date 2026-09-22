@@ -668,6 +668,64 @@ const PLAYER_CSS = `
             .next-episode-card { right: max(14px, env(safe-area-inset-right)); bottom: 142px; max-width: min(320px, calc(100% - 28px)); }
         }
 
+        /* Final fullscreen contrast pass. These rules live in the shadow
+           root so site-wide button resets cannot turn the player controls
+           into black icons on a black video. */
+        .player-container button {
+            appearance: none;
+            -webkit-appearance: none;
+            font: inherit;
+            color: #fff;
+            text-shadow: 0 1px 8px rgba(0,0,0,.75);
+        }
+        .player-container button svg,
+        .player-container button svg path {
+            fill: currentColor !important;
+            color: currentColor !important;
+        }
+        .controls-left,
+        .controls-right {
+            background: rgba(18,18,18,.82);
+            border: 1px solid rgba(255,255,255,.3);
+            box-shadow: 0 4px 18px rgba(0,0,0,.35);
+        }
+        .control-btn {
+            background: rgba(255,255,255,.14);
+            color: #fff !important;
+        }
+        .control-btn:hover,
+        .control-btn:focus-visible { background: rgba(255,255,255,.3); color: #fff !important; }
+        .play-pause-btn {
+            background: rgba(255,255,255,.94);
+            color: #111 !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,.45);
+        }
+        .play-pause-btn svg,
+        .play-pause-btn svg path { fill: currentColor !important; }
+        .next-episode-card {
+            color: #fff;
+            background: rgba(12,12,12,.92);
+            border-color: rgba(255,255,255,.3);
+            box-shadow: 0 5px 22px rgba(0,0,0,.45);
+        }
+        .next-label { color: rgba(255,255,255,.72); }
+        .next-title { color: #fff; }
+        .progress-block {
+            border: 1px solid rgba(255,255,255,.14);
+            box-shadow: 0 5px 22px rgba(0,0,0,.28);
+        }
+        .progress-track { background: rgba(255,255,255,.38); }
+        .progress-fill { background: #fff; }
+
+        @media (max-width: 600px) {
+            .bottom-bar { padding-inline: 10px; }
+            .controls { padding-inline: 0; }
+            .controls-left, .controls-right { gap: 3px; padding: 3px; }
+            .control-btn { width: 40px; height: 40px; min-width: 40px; min-height: 40px; }
+            .play-pause-btn { width: 50px; height: 50px; min-width: 50px; min-height: 50px; }
+            .next-episode-card { right: 10px; bottom: 134px; max-width: calc(100% - 20px); }
+        }
+
     `;
 const PLAYER_HTML = `
 
