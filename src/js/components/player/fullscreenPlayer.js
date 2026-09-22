@@ -76,9 +76,13 @@ export class VakdabFullscreenPlayer {
             </div>`;
         document.body.appendChild(this.root);
         const shell = this.root.querySelector('.vfp-shell');
-        const fullscreenVideo = this.root.querySelector('video');
         this.root.querySelector('.vfp-title').textContent = options.title || '';
-        fullscreenVideo.remove();
+        // Keep playback inside VakDab's custom UI. Never expose native browser controls.
+        video.controls = false;
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+        video.setAttribute('controlslist', 'nodownload noplaybackrate nofullscreen');
+        video.disablePictureInPicture = true;
         shell.insertBefore(video, shell.firstChild);
         this.video = video;
         const bind = (target, event, fn, opts) => { target.addEventListener(event, fn, opts); this.handlers.push(() => target.removeEventListener(event, fn, opts)); };
