@@ -13,6 +13,7 @@ import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
 } from '../home/homeLegacy.js?v=20260829-vertical-catalog-28-v1';
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove-thought-v1';
+import { renderPlayerInfoSkeleton } from '../../utils/skeleton.js';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
 } from '../../legacy/app-legacy.js?v=20260912-team-selector-v6';
@@ -73,17 +74,44 @@ import {
 
         const QUALITY_OPTIONS = ['Максимальна', '2160p (4K)', '1440p', '1080p', '720p', '480p', '360p'];
 
+        function renderPlayerUnreleasedNotice(message, retryUrl) {
+            const grid = document.getElementById('episodeViewGrid');
+            if (!grid) return;
+            const title = message || 'Аніме очікується в українській озвучці';
+            grid.innerHTML = `<div class="player-unreleased-state" role="status">
+                <div class="player-unreleased-icon" aria-hidden="true">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="player-unreleased-body">
+                    <h4 class="player-unreleased-title">${escapeHtml(title)}</h4>
+                    <p class="player-unreleased-desc">Серії або реліз для цього тайтлу ще готуються. Збережіть у закладки, щоб не пропустити появу нових епізодів!</p>
+                </div>
+                <button class="player-retry-btn" type="button"><i class="fas fa-sync-alt"></i> Перевірити оновлення</button>
+            </div>`;
+            const retry = grid.querySelector('.player-retry-btn');
+            retry?.addEventListener('click', () => {
+                retry.disabled = true;
+                retry.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Оновлюємо...';
+                openPlayerPage(retryUrl || playerPageCurrentAnimeUrl);
+            });
+        }
+
         function renderPlayerEpisodeError(message, diagnostics, retryUrl) {
             const grid = document.getElementById('episodeViewGrid');
             if (!grid) return;
             const device = diagnostics?.device?.type || detectDeviceInfo(navigator.userAgent).type;
             const stage = diagnostics?.failedStage || 'завантаження даних плеєра';
-            const detail = diagnostics?.emptyObject ? `Не знайдено: ${diagnostics.emptyObject}.` : `Етап: ${stage}.`;
-            grid.innerHTML = `<div class="episode-empty player-error-state">
-                <i class="fas fa-triangle-exclamation"></i>
-                <strong>${escapeHtml(message)}</strong>
-                <span>${escapeHtml(detail)} Пристрій: ${escapeHtml(device)}.</span>
-                <button class="btn-outline player-retry-btn" type="button"><i class="fas fa-redo"></i> Спробувати ще раз</button>
+            const detail = diagnostics?.emptyObject ? `Не знайдено: ${diagnostics.emptyObject}` : stage;
+            grid.innerHTML = `<div class="episode-empty player-error-state" role="alert">
+                <div class="player-error-icon" aria-hidden="true">
+                    <i class="fas fa-circle-exclamation"></i>
+                </div>
+                <div class="player-error-body">
+                    <h4 class="player-error-title">${escapeHtml(message || 'Помилка завантаження даних плеєра')}</h4>
+                    <p class="player-error-desc">Не вдалося завантажити список серій. Перевірте з'єднання або спробуйте пізніше.</p>
+                    ${detail ? `<div class="player-error-meta"><small>Діагностика: ${escapeHtml(detail)} (${escapeHtml(device)})</small></div>` : ''}
+                </div>
+                <button class="player-retry-btn" type="button"><i class="fas fa-redo"></i> Спробувати ще раз</button>
             </div>`;
             const retry = grid.querySelector('.player-retry-btn');
             retry?.addEventListener('click', () => {
@@ -131,7 +159,7 @@ import {
             playerMediaExpanded = false;
             if (playerCountdownTimer) { clearInterval(playerCountdownTimer); playerCountdownTimer = null; }
             const infoGridReset = document.getElementById('animeInfoGrid');
-            if (infoGridReset) infoGridReset.innerHTML = '<div class="anime-info-placeholder">Завантаження інформації…</div>';
+            if (infoGridReset) infoGridReset.innerHTML = renderPlayerInfoSkeleton();
             const countdownReset = document.getElementById('animeCountdown');
             if (countdownReset) countdownReset.textContent = '';
             setSectionState('relatedSection', false);
@@ -289,7 +317,7 @@ import {
                 updatePlayFabLabel();
                 document.getElementById('episodePanel').classList.add('visible');
                 if (seasons.length === 0 || Object.keys(anime.seasons || {}).length === 0) {
-                    renderPlayerEpisodeError('Аніме поки що не вийшло в українській озвучці.', anime._diagnostics, anime.url);
+                    renderPlayerUnreleasedNotice('Аніме очікується в українській озвучці', anime.url);
                     console.warn('No episodes found for anime:', anime.url, anime._diagnostics);
                 }
                 buildBottomSheetData();

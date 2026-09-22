@@ -1,4 +1,5 @@
 import { loadGenrePageContent } from '../../legacy/app-legacy.js?v=20260912-team-selector-v6';
+import { renderAnimeCardSkeleton } from '../../utils/skeleton.js';
 
 export let genrePageState = { slug: '', name: '', page: 1, list: [], hasNextPage: false, total: 0 };
 
@@ -15,7 +16,7 @@ export async function renderGenrePage(slug, name) {
       <h2>${genrePageState.name}</h2>
     </div>
     <div id="genrePageContent" class="grid-3cols">
-      <div class="site-loading-skeleton site-loading-skeleton--inline site-loading-skeleton--list" role="status" aria-label="Завантаження"></div>
+      ${renderAnimeCardSkeleton(9)}
     </div>
     <div class="pagination-row" id="genrePagePagination"></div>
   `;

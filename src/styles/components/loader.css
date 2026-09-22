@@ -315,6 +315,122 @@
     .site-page-skeleton__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
+/* =====================================================================
+   Comprehensive Component Skeletons
+   ===================================================================== */
+.skeleton-circle {
+    border-radius: 50% !important;
+}
+
+/* Universal anime card skeleton */
+.anime-card.skeleton-card,
+.site-skeleton-card {
+    pointer-events: none;
+    user-select: none;
+    cursor: default;
+}
+.site-skeleton-card .site-skeleton-card__poster {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 12px;
+}
+.site-skeleton-card__line--title {
+    width: 78%;
+    height: 13px;
+    margin-top: 10px;
+    border-radius: 4px;
+}
+.site-skeleton-card__line--sub {
+    width: 48%;
+    height: 10px;
+    margin-top: 6px;
+    border-radius: 4px;
+}
+
+/* Popular recommendation circular card skeleton */
+.popular-card.skeleton-popular-card {
+    pointer-events: none;
+    user-select: none;
+    cursor: default;
+}
+.popular-card.skeleton-popular-card .popular-card__poster {
+    border-radius: 50%;
+    aspect-ratio: 1 / 1;
+}
+
+/* Schedule item & week skeletons */
+.skeleton-schedule-item {
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.9;
+}
+.skeleton-schedule-item .schedule-item__poster {
+    width: 52px;
+    height: 68px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.skeleton-schedule-week-day {
+    pointer-events: none;
+}
+
+/* Rating / Leaderboard & Podium skeletons */
+.skeleton-leaderboard-wrap {
+    width: 100%;
+    pointer-events: none;
+    user-select: none;
+}
+.skeleton-rg-podium {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 16px;
+    margin: 24px auto 32px;
+    max-width: 440px;
+}
+.skeleton-podium-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.skeleton-rg-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    background: color-mix(in srgb, var(--surface) 60%, transparent);
+    border: 1px solid var(--border);
+}
+
+/* Profile page skeleton */
+.skeleton-profile-wrapper {
+    pointer-events: none;
+    user-select: none;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+}
+.skeleton-profile-banner {
+    height: clamp(140px, 22vw, 220px);
+    width: 100%;
+    border-radius: 20px;
+}
+.skeleton-profile-avatar {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .25);
+}
+
+/* Live stream skeleton */
+.anime-live-page--skeleton {
+    pointer-events: none;
+    user-select: none;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: clamp(12px, 3vw, 24px);
+}
+
 @media (max-width: 600px) {
     .site-loading-skeleton--inline.site-loading-skeleton--list {
         min-height: 344px;
@@ -330,3 +446,13 @@
             0 260px 0 var(--skeleton-block);
     }
 }
+
+/* Player info skeleton */
+.site-loading-skeleton--player-info {
+    width: 100%;
+    padding: 14px 16px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+

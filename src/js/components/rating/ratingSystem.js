@@ -4,6 +4,7 @@ import { Storage } from '../../core/compat/storage.js?v=20260905-stickers-sync-v
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
 import { renderStickerFaceByKey } from '../../pages/profile/stickersLegacy.js?v=20260905-stickers-sync-v1';
+import { renderLeaderboardSkeleton, renderRatingStatsSkeleton } from '../../utils/skeleton.js';
 
 function escapeRatingHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -104,13 +105,12 @@ function isGifUrl(url) {
 
             wrap.innerHTML = `
                 <div class="rg-tab-panel active" id="rgPanelRating">
-                    <div id="rgMyStats"></div>
-                                        <div class="rg-lb-title">Глобальний рейтинг</div>
+                    <div id="rgMyStats">${renderRatingStatsSkeleton()}</div>
+                    <div class="rg-lb-title">Глобальний рейтинг</div>
                     <div id="rgLeaderboard">
-                        <div style="display:flex;justify-content:center;padding:24px;"><svg style="width:22px;height:22px;animation:spin 1s linear infinite;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" opacity=".2"/><path d="M12 3a9 9 0 0 1 9 9"/></svg></div>
+                        ${renderLeaderboardSkeleton()}
                     </div>
                 </div>
-
             `;
 
             wrap.querySelectorAll('.rg-sort-tab').forEach(btn => {
@@ -213,9 +213,8 @@ function isGifUrl(url) {
             const lb = document.getElementById('rgLeaderboard');
             if (!lb) return;
 
-            const spinner = `<div style="display:flex;justify-content:center;padding:24px;"><svg style="width:22px;height:22px;animation:spin 1s linear infinite;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" opacity=".2"/><path d="M12 3a9 9 0 0 1 9 9"/></svg></div>`;
             lb.className = '';
-            lb.innerHTML = spinner;
+            lb.innerHTML = renderLeaderboardSkeleton();
 
             const showFallback = (msg) => {
                 const profile = getProfile();

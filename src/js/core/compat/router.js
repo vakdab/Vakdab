@@ -8,6 +8,7 @@ import {
     renderSettingsPage, showToast, syncLeftdockActive
 } from '../../legacy/app-legacy.js?v=20260920-hero-motion-v1';
 import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=20260827-live-screen-v1';
+import { renderProfileSkeleton, renderStickersSkeleton, renderLiveSkeleton } from '../../utils/skeleton.js';
 
         export const Router = {
             currentRoute: 'main',
@@ -208,9 +209,9 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                     return;
                 }
                 if (!Auth._authResolved) {
-                    // Firebase ще не перевірив сесію — показуємо заглушку
-                    container.innerHTML = '<div class="site-loading-skeleton site-loading-skeleton--profile" aria-label="Перевірка сесії"><div class="site-loading-skeleton__wrapper"><div class="site-loading-skeleton__circle site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--1 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--2 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--3 site-skeleton__block"></div><div class="site-loading-skeleton__line site-loading-skeleton__line--4 site-skeleton__block"></div></div><p>Перевірка сесії...</p></div>';
-                    // Fallback: якщо Firebase не відповів за 3 секунди — показуємо сторінку
+                    // Firebase ще не перевірив сесію — показуємо скелетон профілю
+                    container.innerHTML = renderProfileSkeleton();
+                    // Fallback: якщо Firebase не відповів за 1.5 секунди — показуємо сторінку
                     setTimeout(() => {
                         if (!Auth._authResolved && Router.currentRoute === 'profile') {
                             Auth._authResolved = true;
@@ -247,6 +248,9 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                 if (!container) return;
                 container.style.display = 'block';
                 container.classList.add('active');
+                if (!container.hasChildNodes() || container.querySelector('.loader')) {
+                    container.innerHTML = renderLiveSkeleton();
+                }
                 renderLivePage();
             },
             showStickers() {
@@ -254,6 +258,9 @@ import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=
                 if (container) {
                     container.style.display = 'block';
                     container.classList.add('active');
+                    if (!container.hasChildNodes() || container.querySelector('.loader')) {
+                        container.innerHTML = renderStickersSkeleton();
+                    }
                 }
                 loadFeature('stickers')
                     .then(({ renderStickersPage }) => {

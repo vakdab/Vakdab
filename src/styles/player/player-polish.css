@@ -1333,6 +1333,175 @@ body.player-page-open > .bottom-sheet-overlay {
         gap: 6px;
     }
 }
+
+/* Non-button elements inside player-episode-grid-container must span full width */
+#playerPageModal .player-episode-grid-container > :not(.player-episode-btn),
+#playerPageModal .player-episode-grid-container .episode-empty,
+#playerPageModal .player-episode-grid-container .player-error-state,
+#playerPageModal .player-episode-grid-container .player-unreleased-state,
+#playerPageModal .player-episode-grid-container .player-empty-episodes,
+#playerPageModal .episode-empty,
+#playerPageModal .player-error-state {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    box-sizing: border-box;
+}
+
+/* Unreleased state banner */
+#playerPageModal .player-unreleased-state {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 24px 18px;
+    background: color-mix(in srgb, var(--surface) 92%, var(--accent) 8%);
+    border: 1px solid color-mix(in srgb, var(--border) 80%, var(--accent) 20%);
+    border-radius: 14px;
+    margin: 6px 0 14px;
+    box-sizing: border-box;
+    gap: 12px;
+}
+
+#playerPageModal .player-unreleased-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+#playerPageModal .player-unreleased-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+#playerPageModal .player-unreleased-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.35;
+}
+
+#playerPageModal .player-unreleased-desc {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.45;
+    max-width: 460px;
+}
+
+/* Error state banner */
+#playerPageModal .player-error-state {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 22px 16px;
+    background: color-mix(in srgb, var(--surface) 94%, #ef4444 6%);
+    border: 1px solid color-mix(in srgb, var(--border) 75%, #ef4444 25%);
+    border-radius: 14px;
+    margin: 6px 0 14px;
+    box-sizing: border-box;
+    gap: 12px;
+}
+
+#playerPageModal .player-error-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: color-mix(in srgb, #ef4444 14%, transparent);
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+#playerPageModal .player-error-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+#playerPageModal .player-error-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.35;
+}
+
+#playerPageModal .player-error-desc {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.45;
+    max-width: 460px;
+}
+
+#playerPageModal .player-error-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0.8;
+    margin-top: 2px;
+}
+
+/* Common retry / action button */
+#playerPageModal .player-unreleased-state .player-retry-btn,
+#playerPageModal .player-error-state .player-retry-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 20px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    transition: all 0.15s ease;
+    user-select: none;
+    margin-top: 4px;
+}
+
+#playerPageModal .player-unreleased-state .player-retry-btn:hover,
+#playerPageModal .player-error-state .player-retry-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-1px);
+}
+
+#playerPageModal .player-empty-episodes {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 16px 14px;
+    text-align: center;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 4px 0 10px;
+}
 #playerPageModal .player-episode-btn {
     position: relative;
     height: 38px;

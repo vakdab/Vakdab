@@ -1,6 +1,7 @@
 import { searchHikka } from '../../services/catalog/catalog.js';
 import { openPlayerPage } from '../player/animePlayerPage.js?v=20260913-big-triangle-v5';
 import { syncLeftdockActive } from '../../legacy/app-legacy.js?v=20260913-big-triangle-v5';
+import { renderAnimeCardSkeleton } from '../../utils/skeleton.js';
 
 export let searchPageState = { query: '', page: 1, list: [], loading: false, hasNextPage: false, total: 0 };
 
@@ -18,7 +19,7 @@ export function renderSearchPage() {
       <button class="search-page-clear" id="searchPageClearBtn" aria-label="Очистити"><i class="fas fa-times-circle"></i></button>
     </div>
     <div id="searchResultsContainer" class="search-results-grid">
-      ${initialQuery ? '<div class="site-loading-skeleton site-loading-skeleton--inline site-loading-skeleton--list" role="status" aria-label="Пошук"></div>' : `
+      ${initialQuery ? renderAnimeCardSkeleton(10) : `
         <div class="search-empty">
           <i class="fas fa-search"></i>
           <p>Введіть назву аніме для пошуку</p>
@@ -112,7 +113,7 @@ export async function performSearchPage() {
     const query = searchPageState.query.trim();
     if (!query || query.length < 2) return;
     searchPageState.loading = true;
-    results.innerHTML = '<div class="site-loading-skeleton site-loading-skeleton--inline site-loading-skeleton--list" role="status" aria-label="Пошук"></div>';
+    results.innerHTML = renderAnimeCardSkeleton(10);
     pagination.innerHTML = '';
     try {
         const list = await searchHikka(query, searchPageState.page);

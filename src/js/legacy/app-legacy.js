@@ -4,6 +4,7 @@ import { PROXY_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HIKKA_API, 
 import { safeQuery, safeQueryAll } from '../utils/dom.js';
 import { getProxyUrl, isEmbedUrl } from '../utils/image.js';
 import { loadFeature } from '../core/feature-loader.js?v=20260905-runtime-fix-v2';
+import { renderAnimeCardSkeleton } from '../utils/skeleton.js';
 import '../utils/string.js';
 
 export const loadMangaReader = () => loadFeature('manga');
@@ -411,7 +412,7 @@ export { currentTab, currentPage, currentSearchQuery, currentCategory, setCurren
             const content = document.getElementById('genrePageContent');
             const pagination = document.getElementById('genrePagePagination');
             if (!content) return;
-            content.innerHTML = '<div class="site-loading-skeleton site-loading-skeleton--inline site-loading-skeleton--list" role="status" aria-label="Завантаження"></div>';
+            content.innerHTML = renderAnimeCardSkeleton(9);
             try {
                 const list = await fetchHikkaByGenre(genrePageState.slug, genrePageState.page);
                 genrePageState.list = list;

@@ -1,4 +1,5 @@
 import { loadLiveState } from '../../components/live/liveStream.js?v=20260827-live-screen-v2';
+import { renderLiveSkeleton } from '../../utils/skeleton.js';
 
 let refreshTimer = null;
 let countdownTimer = null;
@@ -54,7 +55,7 @@ function mountVideo(video, source) {
 }
 
 function renderLoading(container) {
-    container.innerHTML = '<section class="anime-live-page anime-live-page--loading"><div class="anime-live-loading">Підключення до Anime Live…</div></section>';
+    container.innerHTML = renderLiveSkeleton();
 }
 
 function renderIdle(container) {

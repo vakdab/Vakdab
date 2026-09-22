@@ -643,6 +643,68 @@
 .home-quick-filter.is-open {
     margin-bottom: -3.5rem !important;
 }
+
+/* ===== Mode Switch (Аніме / Манґа) ===== */
+.hqf-mode-tabs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 0 auto 14px;
+    width: fit-content;
+    padding: 4px;
+    background: rgba(120, 120, 120, 0.12);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(120, 120, 120, 0.15);
+    border-radius: 9999px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.dark-mode .hqf-mode-tabs {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+.hqf-mode-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 22px;
+    border-radius: 9999px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted, #71717a);
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    user-select: none;
+}
+.hqf-mode-tab i {
+    font-size: 0.95rem;
+    transition: transform 0.2s ease;
+}
+.hqf-mode-tab:hover {
+    color: var(--text, #18181b);
+}
+.dark-mode .hqf-mode-tab:hover {
+    color: #f4f4f5;
+}
+.hqf-mode-tab.active {
+    background: var(--surface, #ffffff);
+    color: var(--accent, #e50914);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+.dark-mode .hqf-mode-tab.active {
+    background: color-mix(in srgb, var(--surface, #1e1e24) 85%, #fff 15%);
+    color: var(--accent, #ff4d4d);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+.hqf-mode-tab.active i {
+    transform: scale(1.1);
+}
+
 .hqf-toolbar {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
