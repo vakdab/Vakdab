@@ -428,6 +428,9 @@ export class LampaPlayer {
 
                 this._onFullscreenChange = () => {
                     this.state.fullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+                    if (this.videoRef && !this.videoRef.webkitDisplayingFullscreen) {
+                        this.videoRef.controls = this.state.fullscreen;
+                    }
                     const fullscreenButtons = [
                         document.getElementById('playerFullscreenBtn'),
                         this.containerRef?.querySelector('#lpFullscreenBtn')
@@ -852,41 +855,30 @@ export class LampaPlayer {
             }
 
             toggleFullscreen() {
-                if (this.videoRef) {
-                    if (this._fullscreenPlayer?.root) { this._fullscreenPlayer.exitFullscreen(); return; }
-                    const episodeBtns = Array.from(document.querySelectorAll('#playerPageModal .player-episode-btn'));
-                    const episodes = episodeBtns.map((btn, index) => ({
-                        label: `Серія ${btn.dataset.episode || (index + 1)}`,
-                        file: btn.dataset.file || '',
-                        active: btn.classList.contains('active'),
-                        index
-                    }));
-                    const chipText = (document.getElementById('playerFilterChip')?.textContent || '').trim();
-                    const episodeTitle = this._lastSourceRequest?.episodeTitle || '';
-                    this._fullscreenPlayer?.open(this.videoRef, {
-                        title: this._lastSourceRequest?.animeTitle || 'VAKDAB',
-                        subtitle: [chipText, episodeTitle].filter(Boolean).join(' • '),
-                        poster: this.options?.poster || '',
-                        episodes,
-                        onSelectEpisode: index => { this._fullscreenPlayer?.close(); episodeBtns[index]?.click(); },
-                        onNext: () => document.getElementById('playerNextEpisode')?.click(),
-                        getQualities: () => (this.hls?.levels || []).map((level, index) => ({
-                            index,
-                            label: level.height ? `${level.height}p` : `Рівень ${index + 1}`,
-                            height: Number(level.height) || 0,
-                            bitrate: level.bitrate || 0
-                        })).sort((a, b) => b.height - a.height),
-                        getCurrentQuality: () => (this.hls ? this.hls.currentLevel : -1),
-                        setQuality: index => {
-                            if (!this.hls) return;
-                            this.hls.currentLevel = index;
-                            this._refreshQualityMenu(false);
-                        }
-                    });
+                const video = this.videoRef;
+                if (!video) return;
+                const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || video.webkitDisplayingFullscreen;
+                if (isFullscreen) {
+                    try { document.exitFullscreen?.(); } catch (_) {}
+                    try { video.webkitExitFullscreen?.(); } catch (_) {}
+                    if (!video.webkitDisplayingFullscreen) video.controls = false;
                     return;
                 }
-                // Fullscreen без відео неможливий. Не використовуємо native browser player як fallback.
-                return;
+
+                // Повертаємо стандартний браузерний відеоплеєр. На iOS це
+                // системний AVPlayer, в інших браузерах — native fullscreen UI.
+                video.controls = true;
+                try {
+                    if (typeof video.webkitEnterFullscreen === 'function') {
+                        video.webkitEnterFullscreen();
+                    } else if (typeof video.requestFullscreen === 'function') {
+                        video.requestFullscreen().catch(() => { video.controls = false; });
+                    } else if (typeof this.containerRef?.requestFullscreen === 'function') {
+                        this.containerRef.requestFullscreen().catch(() => { video.controls = false; });
+                    }
+                } catch (_) {
+                    video.controls = false;
+                }
             }
 
             destroy() {
