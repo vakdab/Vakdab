@@ -253,3 +253,118 @@
     background: var(--skeleton-block);
     box-shadow: 26px 142px 0 -12px var(--skeleton-block), 124px 135px 0 -24px var(--skeleton-block), 124px 162px 0 -25px var(--skeleton-block);
 }
+
+/* =====================================================================
+   Unified site skeleton system
+   Shape-specific placeholders keep the page geometry stable while data loads.
+   ===================================================================== */
+.site-loading-skeleton,
+.site-skeleton-card,
+.site-skeleton-grid,
+.home-catalog-loader,
+.home-recommendations-loader {
+    contain: layout paint;
+}
+
+.site-loading-skeleton--inline.site-loading-skeleton--list {
+    width: 100%;
+    max-width: 760px;
+    min-height: 386px;
+    margin: 0 auto;
+    padding: 20px;
+    border: 0;
+    border-radius: 16px;
+    background: transparent;
+    box-shadow: none;
+}
+.site-loading-skeleton--inline.site-loading-skeleton--list .site-loading-skeleton__wrapper {
+    display: none;
+}
+.site-loading-skeleton--inline.site-loading-skeleton--list::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 20px 0 auto;
+    height: 58px;
+    border-radius: 14px;
+    background: var(--skeleton-block);
+    box-shadow:
+        0 72px 0 var(--skeleton-block),
+        0 144px 0 var(--skeleton-block),
+        0 216px 0 var(--skeleton-block),
+        0 288px 0 var(--skeleton-block);
+}
+.site-loading-skeleton--inline.site-loading-skeleton--list::after {
+    z-index: 2;
+    border-radius: 14px;
+}
+
+.site-skeleton-grid {
+    align-items: start;
+}
+.site-skeleton-card {
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid var(--skeleton-border);
+    border-radius: 14px;
+    padding: 8px;
+    background: color-mix(in srgb, var(--skeleton-base) 72%, transparent);
+}
+.site-skeleton-card__poster {
+    border-radius: 10px;
+}
+.site-skeleton-card__line {
+    border-radius: 6px;
+}
+.site-skeleton-card__line--short { margin-right: 14%; }
+.site-skeleton-card__line--tiny { margin-right: 34%; }
+
+/* A reusable full-page shell for routes that are still fetching their first payload. */
+.site-page-skeleton {
+    width: 100%;
+    display: grid;
+    gap: 18px;
+    padding: clamp(14px, 3vw, 28px);
+}
+.site-page-skeleton__hero {
+    min-height: clamp(150px, 26vw, 280px);
+    border-radius: 20px;
+}
+.site-page-skeleton__heading {
+    width: min(42%, 280px);
+    height: 24px;
+    border-radius: 7px;
+}
+.site-page-skeleton__subheading {
+    width: min(62%, 440px);
+    height: 12px;
+    border-radius: 5px;
+}
+.site-page-skeleton__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+.site-page-skeleton__grid > span {
+    aspect-ratio: 2 / 3;
+    border-radius: 12px;
+}
+@media (min-width: 600px) {
+    .site-page-skeleton__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+    .site-loading-skeleton--inline.site-loading-skeleton--list {
+        min-height: 344px;
+        padding-inline: 0;
+    }
+    .site-loading-skeleton--inline.site-loading-skeleton--list::before {
+        inset-inline: 0;
+        height: 52px;
+        box-shadow:
+            0 65px 0 var(--skeleton-block),
+            0 130px 0 var(--skeleton-block),
+            0 195px 0 var(--skeleton-block),
+            0 260px 0 var(--skeleton-block);
+    }
+}
