@@ -1,31 +1,29 @@
 const FULLSCREEN_PLAYER_STYLES = `
-#vakdab-fullscreen-player{position:fixed;inset:0;z-index:2147483000;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#vakdab-fullscreen-player{position:fixed;inset:0;z-index:2147483000;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden;user-select:none;-webkit-tap-highlight-color:transparent}
 #vakdab-fullscreen-player[hidden]{display:none}
-#vakdab-fullscreen-player .vfp-shell{position:relative;width:100%;height:100%;background:#000;overflow:hidden}
-#vakdab-fullscreen-player video{width:100%;height:100%;display:block;object-fit:contain;background:#000}
-#vakdab-fullscreen-player .vfp-top,#vakdab-fullscreen-player .vfp-bottom{position:absolute;left:0;right:0;z-index:3;padding:16px 20px;transition:opacity .25s,transform .25s}
-#vakdab-fullscreen-player .vfp-top{top:0;background:linear-gradient(#000d,transparent)}
-#vakdab-fullscreen-player .vfp-bottom{bottom:0;padding-top:48px;background:linear-gradient(transparent,#000e)}
-#vakdab-fullscreen-player .vfp-controls-hidden .vfp-top,#vakdab-fullscreen-player .vfp-controls-hidden .vfp-bottom{opacity:0;pointer-events:none}
-#vakdab-fullscreen-player .vfp-row{display:flex;align-items:center;gap:12px}
-#vakdab-fullscreen-player .vfp-title{font-size:18px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
-#vakdab-fullscreen-player button{border:0;color:#fff;cursor:pointer;background:transparent;display:inline-flex;align-items:center;justify-content:center}
-#vakdab-fullscreen-player .vfp-icon{width:38px;height:38px;border-radius:50%;background:#ffffff26;font-size:20px}
-#vakdab-fullscreen-player .vfp-progress{height:20px;display:flex;align-items:center;cursor:pointer;margin-bottom:8px}
-#vakdab-fullscreen-player .vfp-track{width:100%;height:4px;background:#ffffff4d;border-radius:3px;overflow:visible}
-#vakdab-fullscreen-player .vfp-fill{height:100%;width:0;background:#fff;border-radius:3px;position:relative}
-#vakdab-fullscreen-player .vfp-fill:after{content:"";position:absolute;right:-6px;top:50%;width:12px;height:12px;border-radius:50%;background:#fff;transform:translateY(-50%);opacity:0}
-#vakdab-fullscreen-player .vfp-progress:hover .vfp-fill:after{opacity:1}
-#vakdab-fullscreen-player .vfp-time{font-size:13px;color:#bbb;white-space:nowrap;font-variant-numeric:tabular-nums}
-#vakdab-fullscreen-player .vfp-spacer{flex:1}
-#vakdab-fullscreen-player .vfp-play{width:56px;height:56px;border-radius:50%;background:#ffffff26;font-size:28px}
-#vakdab-fullscreen-player .vfp-volume{width:90px;accent-color:#fff}
-#vakdab-fullscreen-player .vfp-menu{position:absolute;top:0;right:0;width:min(380px,82%);height:100%;background:#0f0f0f;z-index:5;transform:translateX(100%);transition:transform .25s;box-shadow:-8px 0 20px #0008;padding:24px 16px}
-#vakdab-fullscreen-player .vfp-menu.open{transform:translateX(0)}
-#vakdab-fullscreen-player .vfp-menu h2{font-size:24px;font-weight:400;margin:0 0 18px;padding:0 10px}
-#vakdab-fullscreen-player .vfp-menu button{width:100%;justify-content:flex-start;padding:15px 12px;border-radius:8px;font-size:16px;background:transparent}
-#vakdab-fullscreen-player .vfp-menu button:hover,#vakdab-fullscreen-player .vfp-menu button.active{background:#ffffff12}
-@media(max-width:600px){#vakdab-fullscreen-player .vfp-top,#vakdab-fullscreen-player .vfp-bottom{padding-left:10px;padding-right:10px}#vakdab-fullscreen-player .vfp-title{font-size:14px}.vfp-volume{width:60px!important}.vfp-time{font-size:11px!important}}
+#vakdab-fullscreen-player .vfp-shell{position:relative;width:100%;height:100%;height:100dvh;max-width:1000px;margin:0 auto;background:#000;overflow:hidden;display:flex;flex-direction:column}
+#vakdab-fullscreen-player video{width:100%;height:100%;display:block;object-fit:contain;background:#000;transition:object-fit .3s ease}
+#vakdab-fullscreen-player .vfp-top,#vakdab-fullscreen-player .vfp-bottom{position:absolute;left:0;right:0;z-index:10;transition:opacity .3s,visibility .3s}
+#vakdab-fullscreen-player .vfp-top{top:0;min-height:82px;padding:20px;background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent);display:flex;justify-content:center;align-items:center;pointer-events:none}
+#vakdab-fullscreen-player .vfp-top>*{pointer-events:auto}
+#vakdab-fullscreen-player .vfp-bottom{bottom:0;padding:15px 20px 25px;background:linear-gradient(to top,rgba(0,0,0,.92),transparent);display:flex;flex-direction:column;gap:15px}
+#vakdab-fullscreen-player .vfp-controls-hidden .vfp-top,#vakdab-fullscreen-player .vfp-controls-hidden .vfp-bottom{opacity:0;visibility:hidden;pointer-events:none}
+#vakdab-fullscreen-player button{font:inherit;color:#fff;border:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;background:transparent;-webkit-tap-highlight-color:transparent}
+#vakdab-fullscreen-player .vfp-back,#vakdab-fullscreen-player .vfp-menu-button{position:absolute;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:30px;line-height:1}
+#vakdab-fullscreen-player .vfp-back{left:20px}.vfp-menu-button{right:20px}
+#vakdab-fullscreen-player .vfp-logo{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;max-width:70%;pointer-events:none}
+#vakdab-fullscreen-player .vfp-logo-title{font-size:22px;font-weight:800;letter-spacing:1px;color:#f6ad55;text-shadow:0 2px 4px #0008;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#vakdab-fullscreen-player .vfp-logo-title span{color:#fff}.vfp-season{font-size:14px;color:#ddd;font-weight:400}
+#vakdab-fullscreen-player .vfp-next{position:absolute;right:20px;bottom:190px;z-index:15;background:rgba(0,0,0,.85);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:12px;text-align:left}
+#vakdab-fullscreen-player .vfp-next-thumb{width:60px;height:34px;border-radius:4px;object-fit:cover;background:#333}.vfp-next-label{display:block;font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:.5px;font-weight:700}.vfp-next-title{display:block;font-size:14px;font-weight:600;margin-top:2px}
+#vakdab-fullscreen-player .vfp-progress-block{background:rgba(0,0,0,.6);backdrop-filter:blur(5px);border-radius:12px;padding:12px 15px 10px;display:flex;flex-direction:column;gap:10px}
+#vakdab-fullscreen-player .vfp-time-row{display:flex;justify-content:space-between;font-size:14px;font-weight:600;color:#fff;font-variant-numeric:tabular-nums}
+#vakdab-fullscreen-player .vfp-progress{width:100%;height:28px;display:flex;align-items:center;cursor:pointer}.vfp-track{width:100%;height:8px;background:rgba(255,255,255,.25);border-radius:4px;position:relative}.vfp-fill{height:100%;width:0;background:#fff;border-radius:4px;position:relative}.vfp-fill:after{content:"";position:absolute;right:-11px;top:50%;transform:translateY(-50%);width:22px;height:22px;background:#fff;border-radius:50%;box-shadow:0 2px 6px #0009}
+#vakdab-fullscreen-player .vfp-controls-row{display:flex;justify-content:space-between;align-items:center;margin-top:5px;padding:0 5px}.vfp-controls-left,.vfp-controls-right{display:flex;background:rgba(255,255,255,.15);border-radius:30px;padding:4px 8px;gap:5px}.vfp-controls-right{border-radius:50%;padding:4px}.vfp-icon{width:42px;height:42px;border-radius:50%;font-size:25px}.vfp-play{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.15)!important;font-size:30px}.vfp-icon:active,.vfp-play:active{background:rgba(255,255,255,.3)!important}
+#vakdab-fullscreen-player .vfp-side-menu,#vakdab-fullscreen-player .vfp-options{position:absolute;z-index:30;background:#0f0f0f;box-shadow:-5px 0 15px #0008;transition:transform .3s;overflow-y:auto}.vfp-side-menu{top:0;right:0;width:75%;max-width:400px;height:100%;transform:translateX(100%);padding:25px 15px}.vfp-side-menu.open{transform:translateX(0)}.vfp-side-menu h2{font-size:24px;font-weight:700;padding:0 10px 15px;margin:0}.vfp-side-menu button{width:100%;justify-content:flex-start;padding:15px 12px;border-radius:8px;font-size:16px}.vfp-side-menu button:active{background:#ffffff1a}
+#vakdab-fullscreen-player .vfp-options{left:0;right:0;bottom:0;max-height:80%;border-radius:20px 20px 0 0;transform:translateY(100%);padding:20px 0}.vfp-options.open{transform:translateY(0)}.vfp-options h2{font-size:20px;padding:0 25px 12px}.vfp-option{width:100%;justify-content:space-between;padding:18px 25px;font-size:16px;font-weight:600;text-align:left}.vfp-option:active{background:#ffffff1a}.vfp-option span{color:#aaa;font-weight:500}
+#vakdab-fullscreen-player .vfp-lock{position:absolute;inset:0;z-index:100;background:#000;display:none;align-items:center;justify-content:center}.vfp-lock.active{display:flex}.vfp-lock button{font-size:54px;opacity:.6}
+@media(max-width:600px){#vakdab-fullscreen-player .vfp-top{padding:14px 10px}.vfp-back{left:10px!important}.vfp-menu-button{right:10px!important}.vfp-bottom{padding:10px 10px 20px!important}.vfp-next{right:10px!important;bottom:185px!important}.vfp-logo-title{font-size:18px!important}.vfp-time-row{font-size:12px!important}.vfp-controls-row{padding:0!important}.vfp-icon{width:38px;height:38px}.vfp-play{width:52px;height:52px}}
 `;
 
 let styleInjected = false;
@@ -37,6 +35,7 @@ function ensureStyles() {
     document.head.appendChild(style);
     styleInjected = true;
 }
+
 function formatTime(value) {
     if (!Number.isFinite(value) || value < 0) return '00:00:00';
     const s = Math.floor(value);
@@ -51,93 +50,112 @@ export class VakdabFullscreenPlayer {
         this.home = null;
         this.timer = null;
         this.handlers = [];
-        this._onFullscreenChange = () => {
-            if (this.root && !document.fullscreenElement && !document.webkitFullscreenElement && this.root.style.display !== 'none') this.close();
-        };
-        document.addEventListener('fullscreenchange', this._onFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', this._onFullscreenChange);
     }
 
     open(video, options = {}) {
         if (!video) return;
-        this.close(false);
+        this.close();
         this.video = video;
         this.home = video.parentElement;
         this.wasPlaying = !video.paused;
         this.options = options;
+        video.controls = false;
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+        video.disablePictureInPicture = true;
+
         this.root = document.createElement('div');
         this.root.id = 'vakdab-fullscreen-player';
         this.root.innerHTML = `
             <div class="vfp-shell">
-                <video playsinline></video>
-                <div class="vfp-top"><div class="vfp-row"><button class="vfp-icon" data-action="close" aria-label="Назад">‹</button><div class="vfp-title"></div><button class="vfp-icon" data-action="menu" aria-label="Меню">⋮</button></div></div>
-                <div class="vfp-bottom"><div class="vfp-progress"><div class="vfp-track"><div class="vfp-fill"></div></div></div><div class="vfp-row"><button class="vfp-icon" data-action="playlist" aria-label="Плейлист">☰</button><button class="vfp-icon" data-action="next" aria-label="Наступна серія">›|</button><button class="vfp-play" data-action="play" aria-label="Відтворити">▶</button><span class="vfp-time">00:00:00 / 00:00:00</span><span class="vfp-spacer"></span><button class="vfp-icon" data-action="mute" aria-label="Звук">◖</button><input class="vfp-volume" type="range" min="0" max="1" step=".05" value=".8" aria-label="Гучність"><button class="vfp-icon" data-action="exit" aria-label="Вийти з fullscreen">⛶</button></div></div>
-                <aside class="vfp-menu"><h2>Ще</h2><button data-action="speed">Швидкість: <span>1x</span></button><button data-action="fit">Розмір відео: <span>За замовчуванням</span></button><button data-action="menu-close">Закрити</button></aside>
+                <div class="vfp-top">
+                    <button class="vfp-back" data-action="close" aria-label="Назад">×</button>
+                    <div class="vfp-logo"><div class="vfp-logo-title">VAK<span>DAB</span></div><div class="vfp-season"></div></div>
+                    <button class="vfp-menu-button" data-action="options" aria-label="Налаштування">⋯</button>
+                </div>
+                <button class="vfp-next" data-action="next" aria-label="Наступна серія"><span style="font-size:22px">▶</span><span><small class="vfp-next-label">НАСТУПНА СЕРІЯ</small><strong class="vfp-next-title">Наступна серія</strong></span></button>
+                <div class="vfp-bottom">
+                    <div class="vfp-progress-block"><div class="vfp-time-row"><span class="vfp-current">00:00:00</span><span class="vfp-remaining">00:00:00</span></div><div class="vfp-progress"><div class="vfp-track"><div class="vfp-fill"></div></div></div></div>
+                    <div class="vfp-controls-row"><div class="vfp-controls-left"><button class="vfp-icon" data-action="playlist" aria-label="Плейлист">☰</button><button class="vfp-icon" data-action="back10" aria-label="Назад 10 секунд">↶</button></div><button class="vfp-play" data-action="play" aria-label="Відтворити">▶</button><div class="vfp-controls-right"><button class="vfp-icon" data-action="forward10" aria-label="Вперед 10 секунд">↷</button><button class="vfp-icon" data-action="mute" aria-label="Звук">◖</button></div></div>
+                </div>
+                <aside class="vfp-side-menu"><h2>Плейлист</h2><button data-action="next">Наступна серія</button><button data-action="menu-close">Закрити</button></aside>
+                <section class="vfp-options"><h2>Налаштування</h2><button class="vfp-option" data-action="speed">Швидкість <span>1x</span></button><button class="vfp-option" data-action="fit">Розмір відео <span>За замовчуванням</span></button><button class="vfp-option" data-action="loop">Повторювати відео <span>Вимкнено</span></button><button class="vfp-option" data-action="lock">Заблокувати екран</button><button class="vfp-option" data-action="options-close">Закрити</button></section>
+                <div class="vfp-lock"><button data-action="unlock" aria-label="Розблокувати">♙</button></div>
             </div>`;
         document.body.appendChild(this.root);
         const shell = this.root.querySelector('.vfp-shell');
-        this.root.querySelector('.vfp-title').textContent = options.title || '';
-        // Keep playback inside VakDab's custom UI. Never expose native browser controls.
-        video.controls = false;
-        video.setAttribute('playsinline', '');
-        video.setAttribute('webkit-playsinline', '');
-        video.setAttribute('controlslist', 'nodownload noplaybackrate nofullscreen');
-        video.disablePictureInPicture = true;
         shell.insertBefore(video, shell.firstChild);
-        this.video = video;
+        this.root.querySelector('.vfp-logo-title').append(document.createTextNode(''));
+        this.root.querySelector('.vfp-season').textContent = options.episodeTitle || '';
+        this.root.querySelector('.vfp-next-title').textContent = options.nextTitle || 'Наступна серія';
+
         const bind = (target, event, fn, opts) => { target.addEventListener(event, fn, opts); this.handlers.push(() => target.removeEventListener(event, fn, opts)); };
-        bind(this.root, 'click', e => { const action = e.target.closest('[data-action]')?.dataset.action; if (action) this.action(action); else this.showControls(); });
-        bind(this.video, 'timeupdate', () => this.sync());
-        bind(this.video, 'loadedmetadata', () => this.sync());
-        bind(this.video, 'play', () => this.sync());
-        bind(this.video, 'pause', () => this.sync());
-        bind(this.video, 'mousemove', () => this.showControls());
-        bind(this.video, 'dblclick', () => this.action('exit'));
+        bind(this.root, 'click', event => {
+            const action = event.target.closest('[data-action]')?.dataset.action;
+            if (action) this.action(action);
+        });
+        bind(video, 'click', () => { this.togglePlay(); this.showControls(); });
+        bind(video, 'dblclick', () => this.showControls());
+        bind(video, 'timeupdate', () => this.sync());
+        bind(video, 'loadedmetadata', () => this.sync());
+        bind(video, 'play', () => this.sync());
+        bind(video, 'pause', () => this.sync());
+        bind(video, 'mousemove', () => this.showControls());
+        bind(video, 'touchstart', () => this.showControls(), { passive: true });
         const progress = this.root.querySelector('.vfp-progress');
-        bind(progress, 'click', e => { if (!this.video.duration) return; const r = progress.getBoundingClientRect(); this.video.currentTime = ((e.clientX - r.left) / r.width) * this.video.duration; });
-        bind(this.root.querySelector('.vfp-volume'), 'input', e => { this.video.volume = Number(e.target.value); this.video.muted = this.video.volume === 0; });
-        bind(document, 'keydown', e => { if (e.key === 'Escape') this.action('exit'); if (e.code === 'Space') { e.preventDefault(); this.action('play'); } });
+        bind(progress, 'click', event => { if (!this.video.duration) return; const rect = progress.getBoundingClientRect(); this.video.currentTime = Math.max(0, Math.min(this.video.duration, ((event.clientX - rect.left) / rect.width) * this.video.duration)); });
+        bind(document, 'keydown', event => { if (event.key === 'Escape') this.action('close'); if (event.code === 'Space') { event.preventDefault(); this.action('play'); } });
         this.showControls();
+        this.sync();
         if (this.wasPlaying) this.video.play().catch(() => {});
-        const request = shell.requestFullscreen || shell.webkitRequestFullscreen;
-        if (request) Promise.resolve(request.call(shell)).catch(() => {});
+    }
+
+    togglePlay() { if (!this.video) return; this.video.paused ? this.video.play().catch(() => {}) : this.video.pause(); }
+    action(action) {
+        if (!this.video) return;
+        if (action === 'play') this.togglePlay();
+        else if (action === 'mute') this.video.muted = !this.video.muted;
+        else if (action === 'back10') this.video.currentTime = Math.max(0, this.video.currentTime - 10);
+        else if (action === 'forward10') this.video.currentTime = Math.min(this.video.duration || Infinity, this.video.currentTime + 10);
+        else if (action === 'next') this.options.onNext?.();
+        else if (action === 'playlist') this.root.querySelector('.vfp-side-menu').classList.add('open');
+        else if (action === 'menu-close') this.root.querySelector('.vfp-side-menu').classList.remove('open');
+        else if (action === 'options') this.root.querySelector('.vfp-options').classList.add('open');
+        else if (action === 'options-close') this.root.querySelector('.vfp-options').classList.remove('open');
+        else if (action === 'speed') { const values = [1, 1.25, 1.5, 2, .75, .5]; const next = values[(values.indexOf(this.video.playbackRate) + 1) % values.length]; this.video.playbackRate = next; this.root.querySelector('[data-action="speed"] span').textContent = `${next}x`; }
+        else if (action === 'fit') { const fit = this.video.style.objectFit === 'contain' ? 'cover' : this.video.style.objectFit === 'cover' ? 'fill' : 'contain'; this.video.style.objectFit = fit; this.root.querySelector('[data-action="fit"] span').textContent = fit === 'contain' ? 'За замовчуванням' : fit === 'cover' ? 'Розширити' : 'Заповнити'; }
+        else if (action === 'loop') { this.video.loop = !this.video.loop; this.root.querySelector('[data-action="loop"] span').textContent = this.video.loop ? 'Увімкнено' : 'Вимкнено'; }
+        else if (action === 'lock') { this.root.querySelector('.vfp-options').classList.remove('open'); this.root.querySelector('.vfp-lock').classList.add('active'); this.video.pause(); }
+        else if (action === 'unlock') this.root.querySelector('.vfp-lock').classList.remove('active');
+        else if (action === 'close') this.close();
         this.sync();
     }
 
-    action(action) {
-        if (!this.video) return;
-        if (action === 'play') this.video.paused ? this.video.play().catch(() => {}) : this.video.pause();
-        else if (action === 'mute') this.video.muted = !this.video.muted;
-        else if (action === 'next') this.options.onNext?.();
-        else if (action === 'menu' || action === 'playlist') this.root.querySelector('.vfp-menu').classList.add('open');
-        else if (action === 'menu-close' || action === 'close') this.exitFullscreen();
-        else if (action === 'exit') this.exitFullscreen();
-        else if (action === 'speed') { const speeds = [1, 1.25, 1.5, 2, .75, .5]; const next = speeds[(speeds.indexOf(this.video.playbackRate) + 1) % speeds.length]; this.video.playbackRate = next; this.root.querySelector('[data-action="speed"] span').textContent = `${next}x`; }
-        else if (action === 'fit') { const fit = this.video.style.objectFit === 'contain' ? 'cover' : this.video.style.objectFit === 'cover' ? 'fill' : 'contain'; this.video.style.objectFit = fit; this.root.querySelector('[data-action="fit"] span').textContent = fit === 'contain' ? 'За замовчуванням' : fit === 'cover' ? 'Розширити' : 'Заповнити'; }
-        this.sync();
-    }
     sync() {
         if (!this.root || !this.video) return;
-        this.root.querySelector('.vfp-fill').style.width = this.video.duration ? `${this.video.currentTime / this.video.duration * 100}%` : '0%';
-        this.root.querySelector('.vfp-time').textContent = `${formatTime(this.video.currentTime)} / ${formatTime(this.video.duration)}`;
+        const duration = Number.isFinite(this.video.duration) ? this.video.duration : 0;
+        const current = Number.isFinite(this.video.currentTime) ? this.video.currentTime : 0;
+        this.root.querySelector('.vfp-fill').style.width = duration ? `${Math.min(100, current / duration * 100)}%` : '0%';
+        this.root.querySelector('.vfp-current').textContent = formatTime(current);
+        this.root.querySelector('.vfp-remaining').textContent = `-${formatTime(Math.max(0, duration - current))}`;
         this.root.querySelector('.vfp-play').textContent = this.video.paused ? '▶' : 'Ⅱ';
-        this.root.querySelector('.vfp-volume').value = String(this.video.volume);
     }
-    showControls() { this.root?.classList.remove('vfp-controls-hidden'); clearTimeout(this.timer); this.timer = setTimeout(() => { if (this.video && !this.video.paused) this.root?.classList.add('vfp-controls-hidden'); }, 3200); }
-    exitFullscreen() { if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document); else this.close(); }
-    close(exitBrowserFullscreen = true) {
+
+    exitFullscreen() { this.close(); }
+
+    showControls() { this.root?.classList.remove('vfp-controls-hidden'); clearTimeout(this.timer); this.timer = setTimeout(() => { if (this.video && !this.video.paused) this.root?.classList.add('vfp-controls-hidden'); }, 3500); }
+
+    close() {
         if (!this.root || !this.video) return;
         clearTimeout(this.timer);
         const video = this.video;
         const target = this.home || document.getElementById('playerPageVideo');
-        const shouldResume = this.wasPlaying;
         video.pause();
         if (target) target.appendChild(video);
         this.handlers.splice(0).forEach(remove => remove());
         this.root.remove();
         this.root = null;
         this.video = null;
-        if (shouldResume) video.play().catch(() => {});
-        if (exitBrowserFullscreen && (document.fullscreenElement || document.webkitFullscreenElement)) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+        if (this.wasPlaying) video.play().catch(() => {});
     }
 }
