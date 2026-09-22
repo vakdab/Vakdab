@@ -1559,6 +1559,135 @@ body.player-page-open > .bottom-sheet-overlay {
     #playerPageModal .player-mobile-toolbar { padding-inline: 8px; }
 }
 
+/* ========================================================================
+   Player controls hardening
+   The player is also used in iOS Safari landscape (small CSS viewport,
+   large device-pixel screenshot). Keep controls within the video, make all
+   targets tappable, and avoid the almost-black-on-black buttons that appeared
+   after the compact mobile refresh overrides.
+========================================================================= */
+#playerPageModal .player-section {
+    width: 100%;
+    max-width: 1100px;
+    margin-inline: auto;
+    box-sizing: border-box;
+}
+
+#playerPageModal .player-video-container,
+#playerPageModal .lampa-player-container {
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+    aspect-ratio: 16 / 9;
+}
+
+#playerPageModal .video-overlay-topbar .icon-btn,
+#playerPageModal .player-preview-play,
+#playerPageModal .lp-btn,
+#playerPageModal .player-compact-option,
+#playerPageModal .player-accordion-trigger {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+/* Make the injected Lampa controls reliable even when a site-wide button
+   reset removes their native dimensions. */
+#playerPageModal .lampa-player-container .lp-controls {
+    display: flex;
+    visibility: visible;
+    min-height: 70px;
+    padding: 10px 14px 12px;
+    gap: 8px;
+}
+#playerPageModal .lampa-player-container .lp-progress-wrap {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.32);
+}
+#playerPageModal .lampa-player-container .lp-progress-wrap:hover,
+#playerPageModal .lampa-player-container .lp-progress-wrap:focus-visible { height: 8px; }
+#playerPageModal .lampa-player-container .lp-progress-fill { border-radius: inherit; }
+#playerPageModal .lampa-player-container .lp-bottom-row {
+    min-height: 42px;
+    gap: 6px;
+}
+#playerPageModal .lampa-player-container .lp-btn {
+    display: inline-flex;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    min-height: 42px;
+    padding: 0;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 12px;
+    background: rgba(0,0,0,.42);
+    color: #fff;
+    opacity: 1;
+}
+#playerPageModal .lampa-player-container .lp-btn:hover,
+#playerPageModal .lampa-player-container .lp-btn:focus-visible {
+    border-color: rgba(255,255,255,.58);
+    background: rgba(255,255,255,.16);
+    outline: none;
+    transform: translateY(-1px);
+}
+#playerPageModal .lampa-player-container .lp-btn:active { transform: scale(.94); }
+#playerPageModal .lampa-player-container .lp-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+#playerPageModal .lampa-player-container .lp-main-btn {
+    background: rgba(255,255,255,.94);
+    color: #111;
+    border-color: rgba(255,255,255,.94);
+}
+#playerPageModal .lampa-player-container .lp-main-btn svg { width: 22px; height: 22px; }
+#playerPageModal .lampa-player-container .lp-time {
+    padding-inline: 3px;
+    font-size: clamp(11px, 1.5vw, 13px);
+    text-shadow: 0 1px 8px rgba(0,0,0,.8);
+}
+#playerPageModal .lampa-player-container .lp-volume-group { display: flex; align-items: center; gap: 5px; }
+#playerPageModal .lampa-player-container .lp-volume {
+    width: 72px;
+    accent-color: #fff;
+    cursor: pointer;
+}
+
+@media (max-width: 899px) and (orientation: landscape) {
+    #playerPageModal .player-section { padding: 10px 14px 16px; }
+    #playerPageModal .player-compact-controls {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    #playerPageModal .player-compact-controls::before,
+    #playerPageModal .player-dub-select-wrap::before { display: none; }
+    #playerPageModal .player-dub-select-wrap { margin-top: 0; }
+    #playerPageModal .player-compact-accordion,
+    #playerPageModal .player-compact-trigger { min-height: 46px; }
+    #playerPageModal .player-compact-trigger {
+        padding: 8px 36px 8px 12px;
+    }
+    #playerPageModal .player-dub-select-wrap .player-compact-trigger { padding-left: 44px; }
+    #playerPageModal .player-compact-trigger strong { font-size: 14px; }
+    #playerPageModal .player-video-container { border-radius: 14px; }
+    #playerPageModal .video-overlay-topbar { min-height: 48px; padding: 8px 10px 16px; }
+    #playerPageModal .video-overlay-topbar .icon-btn { width: 40px; height: 40px; }
+    #playerPageModal .lampa-player-container .lp-controls { min-height: 64px; padding: 7px 10px 9px; }
+    #playerPageModal .lampa-player-container .lp-btn { width: 38px; height: 38px; min-width: 38px; min-height: 38px; border-radius: 10px; }
+    #playerPageModal .lampa-player-container .lp-bottom-row { min-height: 38px; }
+    #playerPageModal .lampa-player-container .lp-volume { width: 58px; }
+}
+
+@media (max-width: 560px) {
+    #playerPageModal .player-section { padding-inline: 10px; }
+    #playerPageModal .lampa-player-container .lp-volume { display: none; }
+    #playerPageModal .lampa-player-container .lp-time { font-size: 10px; }
+    #playerPageModal .lampa-player-container .lp-btn { width: 40px; height: 40px; min-width: 40px; min-height: 40px; }
+}
+
 
 /* Team picker is swipe-only: keep the current team card visible and never open a list. */
 #playerPageModal .player-team-card {
