@@ -35,7 +35,9 @@ const PLAYER_CSS = `
             position: relative;
             width: 100%;
             height: 100%;
-            max-width: 1000px;
+            max-width: none;
+            min-width: 0;
+            min-height: 0;
             background: #000;
             overflow: hidden;
             display: flex;
@@ -43,10 +45,13 @@ const PLAYER_CSS = `
         }
 
         video {
+            position: absolute;
+            inset: 0;
             width: 100%;
             height: 100%;
             object-fit: contain;
             transition: transform 0.3s ease;
+            background: #000;
         }
 
         /* ====== ВЕРХНЯ ПАНЕЛЬ ====== */
@@ -136,7 +141,7 @@ const PLAYER_CSS = `
         .next-episode-card {
             position: absolute;
             right: 20px;
-            bottom: 200px;
+            bottom: 190px;
             background: rgba(0, 0, 0, 0.85);
             border-radius: 8px;
             padding: 8px 12px;
@@ -258,27 +263,35 @@ const PLAYER_CSS = `
         }
 
         .control-btn {
-            background: none;
-            border: none;
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            min-height: 44px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.24);
             color: var(--text-color);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 8px;
-            border-radius: 50%;
-            transition: background 0.2s;
+            border-radius: 12px;
+            transition: background 0.2s, border-color 0.2s, transform 0.15s;
         }
 
-        .control-btn:active { background: rgba(255, 255, 255, 0.1); }
+        .control-btn:hover,
+        .control-btn:focus-visible { background: rgba(255, 255, 255, 0.26); border-color: rgba(255, 255, 255, 0.6); outline: none; }
+        .control-btn:active { background: rgba(255, 255, 255, 0.32); transform: scale(.94); }
         .control-btn svg { width: 24px; height: 24px; fill: currentColor; }
 
         .controls-left {
             display: flex;
-            background: var(--btn-bg);
-            border-radius: 30px;
-            padding: 4px 8px;
-            gap: 5px;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.58);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 4px;
+            gap: 6px;
         }
 
         .play-pause-btn {
@@ -287,22 +300,28 @@ const PLAYER_CSS = `
             padding: 12px;
             width: 56px;
             height: 56px;
-            border: none;
+            min-width: 56px;
+            min-height: 56px;
+            border: 1px solid rgba(255, 255, 255, 0.72);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: background 0.2s, transform 0.15s;
         }
 
-        .play-pause-btn:active { background: var(--btn-hover); }
+        .play-pause-btn:hover,
+        .play-pause-btn:focus-visible { background: rgba(255, 255, 255, 0.28); outline: none; }
+        .play-pause-btn:active { background: var(--btn-hover); transform: scale(.94); }
         .play-pause-btn svg { width: 30px; height: 30px; fill: currentColor; }
 
         .controls-right {
             display: flex;
-            background: var(--btn-bg);
-            border-radius: 50%;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.58);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
             padding: 4px;
         }
 
@@ -624,6 +643,29 @@ const PLAYER_CSS = `
             .sub-view-header {
                 padding-top: 10px;
             }
+
+            /* Fullscreen on iPhone/iPad landscape: controls stay inside the
+               safe area and remain visible over bright video frames. */
+            .top-bar {
+                padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 16px max(14px, env(safe-area-inset-left));
+            }
+            .back-btn { left: max(14px, env(safe-area-inset-left)); width: 42px; height: 42px; }
+            .bottom-bar {
+                padding: 10px max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+                gap: 8px;
+            }
+            .progress-block { padding: 9px 12px 7px; gap: 7px; border-radius: 12px; }
+            .time-info { font-size: 12px; }
+            .progress-container { height: 24px; }
+            .progress-track { height: 6px; }
+            .progress-thumb { width: 18px; height: 18px; right: -9px; }
+            .controls { margin-top: 0; padding: 0 2px; }
+            .control-btn { width: 40px; height: 40px; min-width: 40px; min-height: 40px; border-radius: 11px; }
+            .control-btn svg { width: 21px; height: 21px; }
+            .play-pause-btn { width: 48px; height: 48px; min-width: 48px; min-height: 48px; padding: 9px; }
+            .play-pause-btn svg { width: 25px; height: 25px; }
+            .controls-left, .controls-right { border-radius: 13px; padding: 3px; gap: 4px; }
+            .next-episode-card { right: max(14px, env(safe-area-inset-right)); bottom: 142px; max-width: min(320px, calc(100% - 28px)); }
         }
 
     `;
