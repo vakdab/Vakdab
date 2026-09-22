@@ -885,17 +885,8 @@ export class LampaPlayer {
                     });
                     return;
                 }
-                const target = (this.containerRef && document.body.contains(this.containerRef))
-                    ? this.containerRef : this.container;
-                if (!target) return;
-                if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                    const request = target.requestFullscreen || target.webkitRequestFullscreen || target.msRequestFullscreen;
-                    if (request) Promise.resolve(request.call(target)).catch(() => {});
-                    else if (this.videoRef?.webkitEnterFullscreen) this.videoRef.webkitEnterFullscreen();
-                } else {
-                    if (document.exitFullscreen) document.exitFullscreen();
-                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-                }
+                // Fullscreen без відео неможливий. Не використовуємо native browser player як fallback.
+                return;
             }
 
             destroy() {

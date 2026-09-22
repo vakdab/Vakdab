@@ -921,5 +921,23 @@ export class VakdabFullscreenPlayer {
     sync(){if(!this.root||!this.video)return;const v=this.video,d=Number.isFinite(v.duration)?v.duration:0,c=Number.isFinite(v.currentTime)?v.currentTime:0;const fill=this.q('#progressFill');if(fill)fill.style.width=`${d?c/d*100:0}%`;const now=this.q('#currentTime');if(now)now.textContent=fmtTime(c);const dur=this.q('#durationTime');if(dur)dur.textContent=d?`${fmtTime(d)} - Залишилось ${fmtTime(Math.max(0,d-c))}`:'00:00:00';const play=this.q('#playIcon'),pause=this.q('#pauseIcon');if(play&&pause){play.style.display=v.paused?'block':'none';pause.style.display=v.paused?'none':'block';}}
     showControls(ms=3500){if(!this.root)return;this.q('#topBar')?.classList.remove('hidden');this.q('#bottomBar')?.classList.remove('hidden');clearTimeout(this.hideTimer);if(ms>0)this.hideTimer=setTimeout(()=>{if(this.video&&!this.video.paused&&!this.q('#sideMenu')?.classList.contains('open')&&!this.q('#optionsSheet')?.classList.contains('open')){this.q('#topBar')?.classList.add('hidden');this.q('#bottomBar')?.classList.add('hidden');}},ms);}
     exitFullscreen(){this.close();}
-    close(restore=true){clearTimeout(this.hideTimer);clearTimeout(this.sleepTimer);if(!this.root)return;const v=this.video;this.cleanups.splice(0).forEach(fn=>fn());if(v&&restore){v.style.filter='';if(this.home&&!this.home.contains(v))this.home.appendChild(v);if(this.wasPlaying)v.play().catch(()=>{});}this.root.remove();this.root=null;this.shadow=null;this.video=null;this.home=null;this.options={};}
+    _exitNativeVideoFullscreen(){
+        const v=this.video;
+        try { if(v?.webkitDisplayingFullscreen && typeof v.webkitExitFullscreen === 'function') v.webkitExitFullscreen(); } catch (_) {}
+        try { if(document.fullscreenElement && typeof document.exitFullscreen === 'function') document.exitFullscreen(); } catch (_) {}
+    }
+    close(restore=true){
+        clearTimeout(this.hideTimer); clearTimeout(this.sleepTimer);
+        if(!this.root)return;
+        const v=this.video;
+        // iOS can keep AVPlayer alive after pause. Exit WebKit fullscreen before reparenting.
+        this._exitNativeVideoFullscreen();
+        this.cleanups.splice(0).forEach(fn=>fn());
+        if(v&&restore){
+            v.pause(); v.controls=false; v.style.filter='';
+            if(this.home&&!this.home.contains(v))this.home.appendChild(v);
+            if(this.wasPlaying)v.play().catch(()=>{});
+        }
+        this.root.remove(); this.root=null; this.shadow=null; this.video=null; this.home=null; this.options={};
+    }
 }

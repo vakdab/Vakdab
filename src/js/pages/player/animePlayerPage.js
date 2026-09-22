@@ -1825,10 +1825,8 @@ import {
                     (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen)?.call(document);
                     return;
                 }
-                const target = container.querySelector('.lampa-player-container') || container;
-                const request = target.requestFullscreen || target.webkitRequestFullscreen || target.msRequestFullscreen;
-                if (request) Promise.resolve(request.call(target)).catch(() => {});
-                else if (target.querySelector('video')?.webkitEnterFullscreen) target.querySelector('video').webkitEnterFullscreen();
+                // Якщо LampaPlayer ще не створений, не відкриваємо native browser player.
+                return;
             });
         }
 
