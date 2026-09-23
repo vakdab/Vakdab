@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260923-manga-singletons-v1';
+} from '../../legacy/app-legacy.js?v=20260923-manga-scroll-restore-v1';
 import {
     normalizeNickname,
     stripNicknamePrefix,

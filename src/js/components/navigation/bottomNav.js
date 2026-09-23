@@ -1,6 +1,6 @@
 import { loadFeature } from '../../core/feature-loader.js';
 import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
-import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260923-manga-singletons-v1';
+import { openPlayerPage, closePlayerPage } from '../../legacy/app-legacy.js?v=20260923-manga-scroll-restore-v1';
 import { getProfile, getProfileDisplayName } from '../../services/profile/profileStorage.js';
 import { escapeHtml } from '../../utils/string.js';
 

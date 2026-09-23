@@ -11,12 +11,12 @@ import {
 } from '../../services/catalog/catalog.js?v=20260920-canonical-metadata-v1';
 import {
     ANIME_CARD_PLACEHOLDER, openRandomAnime, showTop100, statusLabelUa
-} from '../home/homeLegacy.js?v=20260923-manga-singletons-v1';
+} from '../home/homeLegacy.js?v=20260923-manga-scroll-restore-v1';
 import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove-thought-v1';
 import { renderPlayerInfoSkeleton } from '../../utils/skeleton.js';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260923-manga-singletons-v1';
+} from '../../legacy/app-legacy.js?v=20260923-manga-scroll-restore-v1';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 import {
     JIKAN_STATUS_LABELS, SEASON_LABELS, ANILIST_STATUS_LABELS, ANILIST_RELATION_LABELS, ANILIST_FORMAT_LABELS,

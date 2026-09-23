@@ -1,5 +1,5 @@
 import { Auth } from './auth.js';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260923-manga-singletons-v1';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260923-manga-scroll-restore-v1';
         export const Storage = {
             _syncTimer: null,
             _pendingSyncScope: null,

@@ -3,7 +3,7 @@ import {
     Auth, Router, Storage, escapeHtml,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260923-manga-singletons-v1';
+} from '../../legacy/app-legacy.js?v=20260923-manga-scroll-restore-v1';
 import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
 import { debugLog } from '../../utils/debug.js';
 import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260824-settings-redesign-v1';
@@ -2267,7 +2267,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
         }
 
         export function handleHomeRecommendationScroll() {
-            if (homeRecommendationMode === 'manga' || !homeRecommendationHasMore || homeRecommendationLoading) return;
+            if (!homeRecommendationHasMore || homeRecommendationLoading) return;
             const remaining = document.documentElement.scrollHeight - (getPageScrollY() + window.innerHeight);
             if (remaining < Math.max(700, window.innerHeight * 1.25)) void loadMoreHomeRecommendations();
         }
@@ -2283,23 +2283,9 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                 sentinel.innerHTML = '<span class="home-recommendation-feed-loader" hidden><i class="fas fa-spinner fa-pulse"></i> Завантажуємо ще...</span>';
                 container.append(sentinel);
             }
+            sentinel.querySelector('[data-more-manga]')?.remove();
             sentinel.hidden = !homeRecommendationHasMore;
             homeRecommendationObserver?.disconnect();
-            if (homeRecommendationMode === 'manga') {
-                let more = sentinel.querySelector('[data-more-manga]');
-                if (!more) {
-                    more = document.createElement('button');
-                    more.type = 'button';
-                    more.className = 'btn-outline';
-                    more.dataset.moreManga = '1';
-                    more.textContent = 'Завантажити ще манґу';
-                    more.addEventListener('click', () => void loadMoreHomeRecommendations());
-                    sentinel.append(more);
-                }
-                more.hidden = sentinel.hidden;
-                return;
-            }
-            sentinel.querySelector('[data-more-manga]')?.remove();
             if (sentinel.hidden || typeof IntersectionObserver === 'undefined') return;
             homeRecommendationObserver = new IntersectionObserver(entries => {
                 if (entries.some(entry => entry.isIntersecting)) void loadMoreHomeRecommendations();

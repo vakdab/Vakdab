@@ -1,7 +1,7 @@
 import {
     Auth, Router, Storage, PROFILE_STICKER_SLOTS,
     renderProfilePage, renderSettingsPage, showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260923-manga-singletons-v1';
+} from '../../legacy/app-legacy.js?v=20260923-manga-scroll-restore-v1';
 import { escapeHtml } from '../../utils/string.js';
 import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../../services/profile/profileStorage.js';
 import {
