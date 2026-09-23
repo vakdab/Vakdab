@@ -1,6 +1,6 @@
 import { searchHikka } from '../../services/catalog/catalog.js';
 import { openPlayerPage } from '../player/animePlayerPage.js?v=20260913-big-triangle-v5';
-import { syncLeftdockActive } from '../../legacy/app-legacy.js?v=20260923-manga-scroll-restore-v1';
+import { syncLeftdockActive } from '../../legacy/app-legacy.js?v=20260923-catalog-declutter-v1';
 import { renderAnimeCardSkeleton } from '../../utils/skeleton.js';
 
 export let searchPageState = { query: '', page: 1, list: [], loading: false, hasNextPage: false, total: 0 };

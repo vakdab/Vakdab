@@ -3,7 +3,7 @@ import {
     Auth, Router, Storage, escapeHtml,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260923-manga-scroll-restore-v1';
+} from '../../legacy/app-legacy.js?v=20260923-catalog-declutter-v1';
 import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../settings/settingsLegacy.js?v=20260824-settings-redesign-v1';
 import { debugLog } from '../../utils/debug.js';
 import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260824-settings-redesign-v1';
@@ -1461,21 +1461,16 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
 
         export function buildHomeCatalogSectionHtml(items) {
             const visibleItems = getHomeCatalogVisibleItems();
-            const catalogTitle = homeCatalogMode === 'manga' ? 'Каталог манґи' : 'Каталог аніме';
             return `<section class="home-catalog-section" id="homeCatalogSection">
-                <div class="home-catalog-heading">
-                    <div><h2>${escapeHtml(catalogTitle)}</h2></div>
-                    <span class="home-catalog-count" id="homeCatalogCount">${homeCatalogCountText(visibleItems.length)}</span>
-                </div>
                 <div class="home-catalog-search-row">
                     <label class="home-catalog-search"><i class="fas fa-search"></i><input id="homeCatalogSearch" type="search" value="${escapeHtml(homeCatalogQuery)}" placeholder="Введіть назву аніме..." autocomplete="off"></label>
                 </div>
                 <div class="home-catalog-controls">
                     <label class="home-catalog-sort"><select id="homeCatalogSort" aria-label="Сортування"><option value="score"${homeCatalogSort === 'score' ? ' selected' : ''}>За оцінкою</option><option value="newest"${homeCatalogSort === 'newest' ? ' selected' : ''}>Новіші</option><option value="title"${homeCatalogSort === 'title' ? ' selected' : ''}>За назвою</option></select><i class="fas fa-arrow-up-wide-short"></i></label>
                     <div class="home-catalog-view-toggle" role="group" aria-label="Вигляд каталогу"><button type="button" class="home-catalog-view${homeCatalogView === 'grid' ? ' active' : ''}" data-catalog-view="grid" aria-label="Сітка"><i class="fas fa-grip"></i></button><button type="button" class="home-catalog-view${homeCatalogView === 'list' ? ' active' : ''}" data-catalog-view="list" aria-label="Список"><i class="fas fa-list"></i></button></div>
-                    <div class="home-catalog-quick-actions home-catalog-quick-actions--genres" role="group" aria-label="Швидкі дії каталогу">
-                        <button class="home-catalog-filter-btn home-catalog-schedule-btn" id="homeCatalogScheduleBtn" type="button"><i class="fas fa-calendar-days"></i><span>Розклад виходу</span></button>
-                        <div class="home-catalog-genre-rail home-catalog-genre-rail--inline" id="homeCatalogGenreRailHost" role="list" aria-label="Жанри каталогу"></div>
+                    <div class="home-catalog-quick-actions" role="group" aria-label="Швидкі дії каталогу">
+                        <button class="home-catalog-filter-btn home-catalog-filters-trigger" id="homeCatalogFiltersBtn" type="button" aria-label="Фільтри та жанри"><i class="fas fa-sliders"></i><span>Фільтри</span></button>
+                        <div class="home-catalog-genre-rail home-catalog-genre-rail--inline" id="homeCatalogGenreRailHost" role="list" aria-label="Жанри каталогу" hidden></div>
                     </div>
                 </div>
 
@@ -1752,8 +1747,8 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                 homeCatalogQuery = event.target.value.trim();
                 searchTimer = setTimeout(() => reloadHomeCatalog(), 450);
             });
-            root.querySelector('#homeCatalogScheduleBtn')?.addEventListener('click', () => {
-                Router.goTo('schedule');
+            root.querySelector('#homeCatalogFiltersBtn')?.addEventListener('click', () => {
+                openHomeCatalogFilters(root.ownerDocument || document);
             });
             root.querySelectorAll('[data-catalog-page]').forEach(button => button.addEventListener('click', () => {
                 const delta = button.dataset.catalogPage === 'prev' ? -1 : 1;

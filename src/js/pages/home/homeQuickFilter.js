@@ -12,7 +12,7 @@ import {
     setCurrentSearchQuery,
     setCurrentCategory,
     setQuickFilterParams
-} from './homeLegacy.js?v=20260923-manga-scroll-restore-v1';
+} from './homeLegacy.js?v=20260923-catalog-declutter-v1';
 
 const YEAR_OPTIONS = [
     { key: '', label: 'Будь-який' },
