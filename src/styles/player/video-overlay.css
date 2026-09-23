@@ -432,30 +432,39 @@
 }
 #playerPageModal .lp-center-play-btn {
     display: grid;
-    width: 62px;
-    height: 62px;
+    width: 112px;
+    height: 112px;
     place-items: center;
-    border: 1px solid rgba(255, 255, 255, .52);
-    border-radius: 50%;
-    background: rgba(0, 0, 0, .68);
-    color: #fff;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, .86);
     cursor: pointer;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .38), 0 0 0 5px rgba(255, 255, 255, .08);
+    box-shadow: none;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
-    backdrop-filter: blur(12px);
-    transition: opacity .22s ease, transform .22s cubic-bezier(.23, 1, .32, 1), box-shadow .22s ease, filter .22s ease;
+    transition: opacity .22s ease, transform .22s cubic-bezier(.23, 1, .32, 1), filter .22s ease;
 }
-#playerPageModal .lp-center-play-btn svg { width: 27%; height: 27%; margin-left: 4%; fill: #fff; }
+#playerPageModal .lp-center-play-btn svg { width: 62%; height: 62%; margin-left: 4%; fill: currentColor; filter: drop-shadow(0 3px 10px rgba(0, 0, 0, .48)); }
 #playerPageModal .lp-center-play-btn:hover {
-    background: rgba(0, 0, 0, .82);
-    border-color: rgba(255, 255, 255, .82);
-    filter: none;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, .45), 0 0 0 7px rgba(255, 255, 255, .1);
-    transform: translate(-50%, -50%) scale(1.08);
+    background: transparent;
+    color: #fff;
+    filter: brightness(1.12);
+    transform: scale(1.08);
 }
-#playerPageModal .lp-center-play-btn:active { transform: translate(-50%, -50%) scale(.94); }
+#playerPageModal .lp-center-play-btn:active { transform: scale(.94); }
 #playerPageModal .player-preview-play.is-hidden { pointer-events: none; opacity: 0; transform: translate(-50%, -50%) scale(.78); }
+
+#playerPageModal .lp-time {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, .7);
+}
+
+@media (max-width: 600px) {
+    #playerPageModal .lp-center-play-btn { width: 96px; height: 96px; }
+}
 
 /* ============== Six-dot loading animation ============== */
 #playerPageModal .lp-spinner {

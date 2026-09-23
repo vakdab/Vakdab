@@ -233,8 +233,6 @@ export class LampaPlayer {
                     </div>
                     <div class="lp-bottom-row">
                         <button class="lp-btn lp-main-btn" id="lpPlayBtn" title="Відтворити / Пауза" aria-label="Відтворити">${LP_ICONS.play}</button>
-                        <button class="lp-btn lp-skip-btn" id="lpSkipBackBtn" title="Назад на 10 секунд" aria-label="Назад на 10 секунд">${LP_ICONS.skipBack}</button>
-                        <button class="lp-btn lp-skip-btn" id="lpSkipForwardBtn" title="Вперед на 10 секунд" aria-label="Вперед на 10 секунд">${LP_ICONS.skipForward}</button>
                         <span class="lp-time" id="lpTime">0:00 / 0:00</span>
                         <div class="lp-spacer"></div>
                         <div class="lp-volume-group">
@@ -359,15 +357,6 @@ export class LampaPlayer {
                     this._updateVolBtn();
                 });
                 v.addEventListener('volumechange', () => this._updateVolBtn());
-                const skipBy = seconds => {
-                    if (!Number.isFinite(v.duration)) return;
-                    v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + seconds));
-                    this._showControls();
-                };
-                const skipBackBtn = wrap.querySelector('#lpSkipBackBtn');
-                const skipForwardBtn = wrap.querySelector('#lpSkipForwardBtn');
-                skipBackBtn?.addEventListener('click', e => { e.stopPropagation(); skipBy(-10); });
-                skipForwardBtn?.addEventListener('click', e => { e.stopPropagation(); skipBy(10); });
 
                 // Quality menu support remains available for HLS sources.
                 const qualityBtn = wrap.querySelector('#lpQualityBtn');
