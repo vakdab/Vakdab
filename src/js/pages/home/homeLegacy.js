@@ -1710,7 +1710,6 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                     </div>
                 </div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ' is-swipe'}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map((item, index) => homeCatalogCardHtml(item, index)).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
-                <div class="home-catalog-feed-sentinel" id="homeCatalogFeedSentinel" aria-hidden="true" hidden><div class="loader home-catalog-loader" id="homeCatalogFeedLoader" hidden><i class="fas fa-spinner fa-pulse"></i> Завантажуємо ще...</div><button type="button" class="home-catalog-feed-retry" data-catalog-feed-retry hidden>Повторити завантаження</button></div>
                 <div class="home-catalog-pagination" id="homeCatalogPagination" hidden aria-label="Навігація сторінками каталогу">
                     <button type="button" class="home-catalog-page-btn" data-catalog-page="prev"><i class="fas fa-chevron-left"></i><span>Назад</span></button>
                     <span class="home-catalog-page-label" data-catalog-page-label>Сторінка 1</span>
@@ -2028,11 +2027,6 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                 const delta = button.dataset.catalogPage === 'prev' ? -1 : 1;
                 void loadHomeCatalogPage(homeCatalogPage + delta);
             }));
-            root.querySelector('[data-catalog-feed-retry]')?.addEventListener('click', () => {
-                homeCatalogFeedError = false;
-                ensureHomeCatalogFeedObserver();
-                void loadHomeCatalogFeedBatch();
-            });
         }
 
         export function updateHomeCatalogModeLabels() {
