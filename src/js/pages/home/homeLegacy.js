@@ -1335,7 +1335,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             return true;
         }
 
-        export function homeCatalogCardHtml(a) {
+        export function homeCatalogCardHtml(a, index = 0) {
             const poster = cardPoster(a);
             const title = a.title || 'Без назви';
             const type = a.typeLabel || animeTypeLabel(a.type);
@@ -1343,13 +1343,15 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             const meta = [type, a.year, status].filter(Boolean).join(' · ');
             const honeyId = a.honeyId || a.honeyTitleId || (homeCatalogMode === 'manga' ? String(a.url || '').split('/').filter(Boolean).pop() : '');
             const isMangaCard = homeCatalogMode === 'manga' && Boolean(honeyId);
+            const readerCard = isMangaCard || (homeCatalogMode === 'manga' && Boolean(a.readerUrl || a.readerAvailable));
             const url = String(a.url || '');
             const score = Number(a.score || a.native_score || 0);
             const ratingHtml = score > 0 ? `<span class="home-catalog-card__rating"><i class="fas fa-star"></i>${score.toFixed(1)}</span>` : '';
             const bookmarked = isCatalogUrlBookmarked(url);
-            return `<article class="home-catalog-card${a.readerUrl || a.readerAvailable || isMangaCard ? ' home-catalog-card--reader' : ''}" data-url="${escapeHtml(url)}"${a.readerUrl ? ` data-reader-url="${escapeHtml(a.readerUrl)}"` : ''}${isMangaCard && !a.readerUrl ? ` data-reader-pending="1" data-honey-id="${escapeHtml(String(honeyId))}"` : ''} data-reader-title="${escapeHtml(title)}" tabindex="0" role="button" aria-label="${escapeHtml(title)}">
+            const loading = index < 6 ? 'eager' : 'lazy';
+            return `<article class="home-catalog-card${readerCard ? ' home-catalog-card--reader' : ''}" data-catalog-mode="${homeCatalogMode}" data-url="${escapeHtml(url)}"${readerCard && a.readerUrl ? ` data-reader-url="${escapeHtml(a.readerUrl)}"` : ''}${isMangaCard && !a.readerUrl ? ` data-reader-pending="1" data-honey-id="${escapeHtml(String(honeyId))}"` : ''} data-reader-title="${escapeHtml(title)}" tabindex="0" role="button" aria-label="${escapeHtml(title)}">
                 <div class="home-catalog-card__poster">
-                    <img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" onload="this.classList.add('img--loaded')" onerror="this.onerror=null;this.src='${ANIME_CARD_PLACEHOLDER}'">
+                    <img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="${loading}" decoding="async" onload="this.classList.add('img--loaded')" onerror="this.onerror=null;this.src='${ANIME_CARD_PLACEHOLDER}'">
                     ${status ? `<span class="home-catalog-card__status">${escapeHtml(status)}</span>` : ''}
                     ${ratingHtml}
                 </div>
@@ -1365,11 +1367,11 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                 const open = async () => {
                     if (!card.dataset.url || card.dataset.opening === '1') return;
                     const cardTitle = card.dataset.readerTitle || card.getAttribute('aria-label') || 'Манґа';
-                    if (card.dataset.readerUrl) {
+                    if (card.dataset.catalogMode === 'manga' && card.dataset.readerUrl) {
                         Router.goTo('manga', { url: card.dataset.readerUrl, title: cardTitle });
                         return;
                     }
-                    if (homeCatalogMode === 'manga' && card.dataset.honeyId) {
+                    if (card.dataset.catalogMode === 'manga' && card.dataset.honeyId) {
                         card.dataset.opening = '1';
                         card.setAttribute('aria-busy', 'true');
                         try {
@@ -1387,7 +1389,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                         showToast('Розділи цього тайтлу ще не готові');
                         return;
                     }
-                    if (homeCatalogMode !== 'anime') { showToast('Розділи цього тайтлу ще не готові'); return; }
+                    if (card.dataset.catalogMode !== 'anime') { showToast('Розділи цього тайтлу ще не готові'); return; }
                     openPlayerPage(card.dataset.url);
                 };
                 // On iOS Safari, a non-native clickable card with :hover styles can
@@ -1458,7 +1460,6 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
         }
 
         export function buildHomeCatalogSectionHtml(items) {
-            homeCatalogMode = 'anime';
             const visibleItems = getHomeCatalogVisibleItems();
             const catalogTitle = 'Каталог аніме';
             return `<section class="home-catalog-section" id="homeCatalogSection">
@@ -1480,7 +1481,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
 
                 ${homeCatalogModeFilterHtml()}
                 <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
-                <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ' is-swipe'}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
+                <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ' is-swipe'}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map((item, index) => homeCatalogCardHtml(item, index)).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
                 <div class="home-catalog-feed-sentinel" id="homeCatalogFeedSentinel" aria-hidden="true" hidden><div class="loader home-catalog-loader" id="homeCatalogFeedLoader" hidden><i class="fas fa-spinner fa-pulse"></i> Завантажуємо ще...</div></div>
                 <div class="home-catalog-pagination" id="homeCatalogPagination" hidden aria-label="Навігація сторінками каталогу">
                     <button type="button" class="home-catalog-page-btn" data-catalog-page="prev"><i class="fas fa-chevron-left"></i><span>Назад</span></button>
@@ -1520,7 +1521,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             const visibleItems = getHomeCatalogVisibleItems();
             grid.classList.toggle('is-list', homeCatalogView === 'list');
             grid.classList.toggle('is-swipe', homeCatalogView === 'grid');
-            grid.innerHTML = visibleItems.length ? visibleItems.map(homeCatalogCardHtml).join('') : '<div class="home-catalog-empty">Нічого не знайдено за цими параметрами.</div>';
+            grid.innerHTML = visibleItems.length ? visibleItems.map((item, index) => homeCatalogCardHtml(item, index)).join('') : '<div class="home-catalog-empty">Нічого не знайдено за цими параметрами.</div>';
             bindHomeCatalogCards(grid);
             if (!homeCatalogHasMore) {
                 document.getElementById('homeCatalogMoreBtn')?.remove();
@@ -1699,7 +1700,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             root.querySelector('#catalogRandomBtn')?.addEventListener('click', () => openRandomAnime());
             const tabs = root.querySelectorAll('[data-catalog-mode]');
             tabs.forEach(tab => tab.addEventListener('click', async () => {
-                if (tab.dataset.catalogMode === homeCatalogMode || homeCatalogLoading) return;
+                if (tab.dataset.catalogMode === homeCatalogMode) return;
                 // Invalidate a still-pending initial anime request. Without this,
                 // a late Hikka response could overwrite a freshly selected manga tab.
                 homeSectionsRequestId++;
@@ -1880,7 +1881,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
         function appendHomeCatalogFeedCards(newItems) {
             const grid = document.getElementById('homeCatalogGrid');
             if (!grid || !newItems.length) { syncHomeCatalogFeedUi(); return; }
-            grid.insertAdjacentHTML('beforeend', newItems.map(homeCatalogCardHtml).join(''));
+            grid.insertAdjacentHTML('beforeend', newItems.map((item, index) => homeCatalogCardHtml(item, index)).join(''));
             bindHomeCatalogCards(grid);
             syncHomeCatalogFeedUi();
         }
@@ -1936,9 +1937,8 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
         }
 
         export async function reloadHomeCatalog() {
-            homeCatalogMode = 'anime';
             const grid = document.getElementById('homeCatalogGrid');
-            if (!grid || homeCatalogLoading) return;
+            if (!grid) return;
             const requestId = ++homeCatalogRequestId;
             updateHomeCatalogModeLabels();
             syncHomeCatalogModeControls();
