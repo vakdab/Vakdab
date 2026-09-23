@@ -17,6 +17,7 @@ import {
 } from '../../services/profile/profileStorage.js';
 
         let settingsState = { tab: 'profile', previewOpen: true };
+        let settingsCalendarOutsideHandler = null;
 
         const PROFILE_EFFECTS = [
             { id: 'none', label: 'Немає', icon: 'fa-ban' },
@@ -461,11 +462,7 @@ import {
                 const updateNicknameCounter = () => {
                     if (nickCount) nickCount.textContent = `${nickInput.value.length}/25 · починається з @`;
                 };
-                nickInput.addEventListener('input', () => {
-                    const typed = nickInput.value.trim();
-                    nickInput.value = typed ? normalizeNickname(typed, '@') : '@';
-                    updateNicknameCounter();
-                });
+                nickInput.addEventListener('input', updateNicknameCounter);
                 nickInput.addEventListener('change', () => {
                     const p = getProfile();
                     const typed = nickInput.value.trim();
@@ -565,9 +562,12 @@ import {
                     saveProfile(p);
                     renderCalendar();
                 });
-                document.addEventListener('click', event => {
+                if (settingsCalendarOutsideHandler) document.removeEventListener('click', settingsCalendarOutsideHandler);
+                const outsideCalendarClick = event => {
                     if (!birthPicker.contains(event.target)) closeCalendar();
-                });
+                };
+                settingsCalendarOutsideHandler = outsideCalendarClick;
+                document.addEventListener('click', outsideCalendarClick);
                 renderCalendar();
             }
 

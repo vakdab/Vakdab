@@ -597,6 +597,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
         let homeCatalogFeedObserver = null;
         let homeCatalogFeedBusy = false;
         let homeCatalogFeedCooldownUntil = 0;
+        let homeCatalogFeedError = false;
         // Total reported by Honey Manga, independent from loaded card count.
         export let homeCatalogTotal = 0;
         export let homeCatalogAvailableTotal = 0;
@@ -1709,7 +1710,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                     </div>
                 </div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ' is-swipe'}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map((item, index) => homeCatalogCardHtml(item, index)).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
-                <div class="home-catalog-feed-sentinel" id="homeCatalogFeedSentinel" aria-hidden="true" hidden><div class="loader home-catalog-loader" id="homeCatalogFeedLoader" hidden><i class="fas fa-spinner fa-pulse"></i> Завантажуємо ще...</div></div>
+                <div class="home-catalog-feed-sentinel" id="homeCatalogFeedSentinel" aria-hidden="true" hidden><div class="loader home-catalog-loader" id="homeCatalogFeedLoader" hidden><i class="fas fa-spinner fa-pulse"></i> Завантажуємо ще...</div><button type="button" class="home-catalog-feed-retry" data-catalog-feed-retry hidden>Повторити завантаження</button></div>
                 <div class="home-catalog-pagination" id="homeCatalogPagination" hidden aria-label="Навігація сторінками каталогу">
                     <button type="button" class="home-catalog-page-btn" data-catalog-page="prev"><i class="fas fa-chevron-left"></i><span>Назад</span></button>
                     <span class="home-catalog-page-label" data-catalog-page-label>Сторінка 1</span>
@@ -2027,6 +2028,11 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                 const delta = button.dataset.catalogPage === 'prev' ? -1 : 1;
                 void loadHomeCatalogPage(homeCatalogPage + delta);
             }));
+            root.querySelector('[data-catalog-feed-retry]')?.addEventListener('click', () => {
+                homeCatalogFeedError = false;
+                ensureHomeCatalogFeedObserver();
+                void loadHomeCatalogFeedBatch();
+            });
         }
 
         export function updateHomeCatalogModeLabels() {
@@ -2185,8 +2191,10 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                 return;
             }
             const reachedCap = homeCatalogItems.length >= HOME_CATALOG_FEED_MAX_ITEMS;
-            sentinel.hidden = !homeCatalogHasMore || reachedCap;
-            if (!homeCatalogHasMore || reachedCap || Date.now() < homeCatalogFeedCooldownUntil) return;
+            sentinel.hidden = !homeCatalogHasMore || reachedCap || homeCatalogFeedError;
+            const retry = sentinel.querySelector('[data-catalog-feed-retry]');
+            if (retry) retry.hidden = !homeCatalogFeedError;
+            if (!homeCatalogHasMore || reachedCap || homeCatalogFeedError || Date.now() < homeCatalogFeedCooldownUntil) return;
             if (typeof IntersectionObserver === 'undefined') return;
             homeCatalogFeedObserver = new IntersectionObserver(entries => {
                 if (entries.some(entry => entry.isIntersecting)) void loadHomeCatalogFeedBatch();
@@ -2200,22 +2208,23 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             if (Router.currentRoute !== 'main') return;
             if (homeCatalogItems.length >= HOME_CATALOG_FEED_MAX_ITEMS) return;
             homeCatalogFeedBusy = true;
+            homeCatalogFeedError = false;
             const loader = document.getElementById('homeCatalogFeedLoader');
             if (loader) loader.hidden = false;
             try {
                 await loadHomeCatalogNextPage();
                 homeCatalogFeedCooldownUntil = 0;
             } catch (error) {
-                // Пауза перед автоповтором, щоб сезонна помилка мережі не зациклилась.
-                homeCatalogFeedCooldownUntil = Date.now() + 4000;
+                // Не запускаємо нескінченний цикл запитів, якщо проксі завис або API недоступний.
+                homeCatalogFeedError = true;
+                homeCatalogFeedCooldownUntil = 0;
+                const retry = document.querySelector('[data-catalog-feed-retry]');
+                if (retry) retry.hidden = false;
                 showToast('Не вдалося завантажити ще аніме');
             } finally {
                 homeCatalogFeedBusy = false;
                 if (loader) loader.hidden = true;
                 ensureHomeCatalogFeedObserver();
-                if (homeCatalogFeedCooldownUntil && Date.now() < homeCatalogFeedCooldownUntil) {
-                    setTimeout(ensureHomeCatalogFeedObserver, 4200);
-                }
             }
         }
 
@@ -2234,6 +2243,8 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             homeCatalogTotal = 0;
             homeCatalogAvailableTotal = 0;
             homeCatalogHasMore = true;
+            homeCatalogFeedError = false;
+            homeCatalogFeedCooldownUntil = 0;
             document.getElementById('homeCatalogCount')?.replaceChildren(document.createTextNode('Завантаження...'));
             document.getElementById('homeCatalogResultsLabel')?.replaceChildren(document.createTextNode('Завантаження...'));
             grid.innerHTML = renderAnimeCardSkeleton(12);
