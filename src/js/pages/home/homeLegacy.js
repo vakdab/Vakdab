@@ -1356,7 +1356,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                     ${ratingHtml}
                 </div>
                 <div class="home-catalog-card__title">${escapeHtml(title)}</div>
-                <div class="home-catalog-card__meta">${escapeHtml(meta || 'Аніме')}</div>
+                <div class="home-catalog-card__meta">${escapeHtml(meta || (homeCatalogMode === 'manga' ? 'Манґа' : 'Аніме'))}</div>
             </article>`;
         }
 
@@ -1461,7 +1461,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
 
         export function buildHomeCatalogSectionHtml(items) {
             const visibleItems = getHomeCatalogVisibleItems();
-            const catalogTitle = 'Каталог аніме';
+            const catalogTitle = homeCatalogMode === 'manga' ? 'Каталог манґи' : 'Каталог аніме';
             return `<section class="home-catalog-section" id="homeCatalogSection">
                 <div class="home-catalog-heading">
                     <div><h2>${escapeHtml(catalogTitle)}</h2></div>
