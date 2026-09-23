@@ -1,4 +1,4 @@
-import { showToast } from '../../legacy/app-legacy.js?v=20260912-team-selector-v6';
+import { showToast } from '../../legacy/app-legacy.js?v=20260923-manga-singletons-v1';
 
 const aniSkipCache = new Map();
 const aniSkipMalIdCache = new Map();

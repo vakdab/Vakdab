@@ -12,7 +12,7 @@ import {
     setCurrentSearchQuery,
     setCurrentCategory,
     setQuickFilterParams
-} from './homeLegacy.js?v=20260908-inline-search-v1';
+} from './homeLegacy.js?v=20260923-manga-singletons-v1';
 
 const YEAR_OPTIONS = [
     { key: '', label: 'Будь-який' },

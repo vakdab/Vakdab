@@ -1,4 +1,4 @@
-import { openScheduleItemInPlayer } from '../home/homeLegacy.js?v=20260906-remove-ranobe-v1';
+import { openScheduleItemInPlayer } from '../home/homeLegacy.js?v=20260923-manga-singletons-v1';
 import { renderScheduleSkeleton } from '../../utils/skeleton.js';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
