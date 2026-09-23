@@ -1902,6 +1902,13 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             const sentinel = document.getElementById('homeCatalogFeedSentinel');
             if (!sentinel) return;
             if (homeCatalogFeedObserver) { homeCatalogFeedObserver.disconnect(); homeCatalogFeedObserver = null; }
+            // Manga cards are heavier and the source is paginated. Do not
+            // silently append hundreds of cards while scrolling. Manga uses
+            // the existing pagination controls instead, keeping the page fast.
+            if (homeCatalogMode === 'manga') {
+                sentinel.hidden = true;
+                return;
+            }
             const reachedCap = homeCatalogItems.length >= HOME_CATALOG_FEED_MAX_ITEMS;
             sentinel.hidden = !homeCatalogHasMore || reachedCap;
             if (!homeCatalogHasMore || reachedCap || Date.now() < homeCatalogFeedCooldownUntil) return;
@@ -1913,6 +1920,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
         }
 
         export async function loadHomeCatalogFeedBatch() {
+            if (homeCatalogMode === 'manga') return;
             if (homeCatalogFeedBusy || homeCatalogLoading || !homeCatalogHasMore) return;
             if (Router.currentRoute !== 'main') return;
             if (homeCatalogItems.length >= HOME_CATALOG_FEED_MAX_ITEMS) return;
