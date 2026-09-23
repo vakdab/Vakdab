@@ -23,9 +23,9 @@ import { VakdabFullscreenPlayer } from './fullscreenPlayer.js';
 
                 .lp-spinner {
                     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-                    background: rgba(0,0,0,.5); z-index: 10; pointer-events: none; transition: opacity .25s;
+                    background: rgba(0,0,0,.5); z-index: 10; pointer-events: none; transition: opacity .25s, visibility .25s;
                 }
-                .lp-spinner.hidden { opacity: 0; }
+                .lp-spinner.hidden { opacity: 0; visibility: hidden; }
                 .lp-spinner-loader {
                     --uib-size: 40px; --uib-color: #fff; --uib-speed: 1.5s;
                     --dot-size: calc(var(--uib-size) * .17); position: relative; display: flex;
@@ -41,7 +41,7 @@ import { VakdabFullscreenPlayer } from './fullscreenPlayer.js';
                 .lp-spinner-dot:nth-child(6), .lp-spinner-dot:nth-child(6)::before { animation-delay: calc(var(--uib-speed) * -.167 * .5); }
                 @keyframes lp-dot-rotate { 0% { transform: rotate(0deg); } 65%, 100% { transform: rotate(360deg); } }
                 @keyframes lp-smooth-rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                @media (prefers-reduced-motion: reduce) { .lp-spinner-loader, .lp-spinner-dot { animation-duration: 3s; } }
+                @media (prefers-reduced-motion: reduce) { .lp-spinner-loader, .lp-spinner-dot { animation: none !important; } }
 
                 .lp-opening-skip {
                     position: absolute; z-index: 40 !important; left: 12px; bottom: 62px;
@@ -181,9 +181,10 @@ export class LampaPlayer {
                 this._playbackErrorTimer = null;
                 this._spinnerHideTimer = null;
                 this._spinnerStartedAt = 0;
-                this._spinnerMinDuration = 5400; // два повні цикли: 1.5s × 1.8 × 2
                 this._playLoaderTimer = null;
                 this._playLoaderActive = false;
+                this._progressMoveHandler = null;
+                this._progressUpHandler = null;
                 this._onFullscreenChange = null;
                 this._fullscreenPlayer = new VakdabFullscreenPlayer();
                 this._init();
@@ -286,10 +287,12 @@ export class LampaPlayer {
                 });
                 v.addEventListener('playing', () => {
                     this.state.loading = false;
+                    this._spinner?.classList.add('hidden');
                     this._clearPlaybackError();
                 });
                 v.addEventListener('canplay', () => {
                     this.state.loading = false;
+                    this._spinner?.classList.add('hidden');
                     this._clearPlaybackError();
                 });
                 v.addEventListener('error', () => {
@@ -331,8 +334,10 @@ export class LampaPlayer {
                     };
                     let dragging = false;
                     progress.addEventListener('mousedown', e => { dragging = true; seek(e); e.preventDefault(); });
-                    document.addEventListener('mousemove', e => { if (dragging) seek(e); });
-                    document.addEventListener('mouseup', () => { dragging = false; });
+                    this._progressMoveHandler = e => { if (dragging) seek(e); };
+                    this._progressUpHandler = () => { dragging = false; };
+                    document.addEventListener('mousemove', this._progressMoveHandler);
+                    document.addEventListener('mouseup', this._progressUpHandler);
                     progress.addEventListener('touchstart', e => { seek(e.touches[0]); }, { passive: true });
                     progress.addEventListener('touchmove', e => { seek(e.touches[0]); }, { passive: true });
                 }
@@ -416,7 +421,11 @@ export class LampaPlayer {
                 // the custom player and iframe-based sources).
 
                 this._onFullscreenChange = () => {
-                    this.state.fullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+                    this.state.fullscreen = !!(
+                        document.fullscreenElement
+                        || document.webkitFullscreenElement
+                        || this.videoRef?.webkitDisplayingFullscreen
+                    );
                     if (this.videoRef && !this.videoRef.webkitDisplayingFullscreen) {
                         this.videoRef.controls = this.state.fullscreen;
                     }
@@ -670,6 +679,7 @@ export class LampaPlayer {
                 const hideLoading = () => {
                     if (!isCurrentRequest()) return;
                     this.state.loading = false;
+                    this._spinner?.classList.add('hidden');
                     this.containerRef?.classList.remove('is-loading');
                 };
                 const safePlay = () => {
@@ -773,14 +783,14 @@ export class LampaPlayer {
                 }, this._spinnerMinDuration);
             }
 
-            _schedulePlaybackError(message, delay = 6000) {
+            _schedulePlaybackError(message, delay = 4500) {
                 clearTimeout(this._playbackErrorTimer);
                 const requestId = this._sourceRequestId;
                 const video = this.videoRef;
                 this._playbackErrorTimer = window.setTimeout(() => {
                     this._playbackErrorTimer = null;
                     if (requestId !== this._sourceRequestId || video !== this.videoRef) return;
-                    if (video && (video.readyState >= 2 || !video.error)) {
+                    if (video && video.readyState >= 2 && !video.error) {
                         this._clearPlaybackError();
                         return;
                     }
@@ -819,10 +829,8 @@ export class LampaPlayer {
 
             play(options = {}) {
                 if (!this.videoRef) return;
-                if (options.showLoader !== false) {
-                    this._startPlayLoader();
-                    return;
-                }
+                // Play must react immediately to a user gesture. Loading feedback
+                // is driven by the media `waiting` event, not an artificial delay.
                 this._playNow();
             }
 
@@ -876,7 +884,13 @@ export class LampaPlayer {
                 clearTimeout(this._spinnerHideTimer);
                 clearTimeout(this._controlsTimer);
                 clearTimeout(this._playbackErrorTimer);
+                clearTimeout(this._playLoaderTimer);
                 this._playbackErrorTimer = null;
+                this._playLoaderTimer = null;
+                if (this._progressMoveHandler) document.removeEventListener('mousemove', this._progressMoveHandler);
+                if (this._progressUpHandler) document.removeEventListener('mouseup', this._progressUpHandler);
+                this._progressMoveHandler = null;
+                this._progressUpHandler = null;
                 this._sourceRequestId += 1;
                 if (this._onKeyDown) document.removeEventListener('keydown', this._onKeyDown);
                 if (this._onFullscreenChange) {
