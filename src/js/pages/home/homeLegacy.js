@@ -2224,6 +2224,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             homeRecommendationMode = mode === 'manga' ? 'manga' : 'anime';
         }
         export let homeRecommendationItems = [];
+        let homeRecommendationFilteredItems = null;
         export let homeRecommendationPage = 1;
         export let homeRecommendationHasMore = false;
         export let homeRecommendationLoading = false;
@@ -2266,7 +2267,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
         }
 
         export function handleHomeRecommendationScroll() {
-            if (!homeRecommendationHasMore || homeRecommendationLoading) return;
+            if (homeRecommendationMode === 'manga' || !homeRecommendationHasMore || homeRecommendationLoading) return;
             const remaining = document.documentElement.scrollHeight - (getPageScrollY() + window.innerHeight);
             if (remaining < Math.max(700, window.innerHeight * 1.25)) void loadMoreHomeRecommendations();
         }
@@ -2284,6 +2285,21 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             }
             sentinel.hidden = !homeRecommendationHasMore;
             homeRecommendationObserver?.disconnect();
+            if (homeRecommendationMode === 'manga') {
+                let more = sentinel.querySelector('[data-more-manga]');
+                if (!more) {
+                    more = document.createElement('button');
+                    more.type = 'button';
+                    more.className = 'btn-outline';
+                    more.dataset.moreManga = '1';
+                    more.textContent = 'Завантажити ще манґу';
+                    more.addEventListener('click', () => void loadMoreHomeRecommendations());
+                    sentinel.append(more);
+                }
+                more.hidden = sentinel.hidden;
+                return;
+            }
+            sentinel.querySelector('[data-more-manga]')?.remove();
             if (sentinel.hidden || typeof IntersectionObserver === 'undefined') return;
             homeRecommendationObserver = new IntersectionObserver(entries => {
                 if (entries.some(entry => entry.isIntersecting)) void loadMoreHomeRecommendations();
@@ -2367,7 +2383,9 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
         // лишались «Серій: …»). Кеш у homeRecommendationEpisodesMap, тому
         // повторна поява картки (напр. після ре-фільтрації) показує серії одразу.
         function hydrateHomeFeedEpisodes(list) {
-            if (!list) return;
+            // Manga cards already have chapter counts. Do not fetch anime details
+            // for their Honey book URLs on every scroll event.
+            if (!list || homeRecommendationMode === 'manga') return;
             const viewTop = getPageScrollY();
             const viewBottom = viewTop + window.innerHeight;
             let queued = 0;
@@ -2434,6 +2452,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             const forceReload = options?.reload === true;
             if (!container || (homeRecommendationLoading && !forceReload)) return;
             const requestId = ++homeRecommendationRequestId;
+            homeRecommendationFilteredItems = null;
             homeRecommendationLoading = true;
             container.dataset.loading = 'true';
             container.innerHTML = renderPopularCardSkeleton(6);
@@ -2441,13 +2460,12 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                 let items;
                 if (homeRecommendationMode === 'manga') {
                     if (homeRecommendationSearchQuery) {
-                        const fullCatalog = await loadHoneyMangaFullCatalog(false);
-                        const q = normalizeHoneyMatch(homeRecommendationSearchQuery);
-                        items = fullCatalog.filter(item => {
-                            const title = normalizeHoneyMatch(item.title || '');
-                            const orig = normalizeHoneyMatch(item.originalTitle || '');
-                            return title.includes(q) || orig.includes(q);
-                        });
+                        // The Honey search endpoint is indexed; do not crawl every
+                        // catalog page for each keystroke on the homepage.
+                        const searched = await searchHoneyTitles(homeRecommendationSearchQuery);
+                        items = searched.filter(item => !isHoneyPromoItemRaw(item))
+                            .map(honeyCatalogItem).filter(item => !isHoneyPromoItem(item))
+                            .filter(isHoneyComicItem).filter(item => !isAdultHoneyManga(item));
                     } else if (homeRecommendationFilterParams) {
                         const filterAdult = homeRecommendationFilterParams.age === 'adult';
                         const fullCatalog = await loadHoneyMangaFullCatalog(filterAdult);
@@ -2461,9 +2479,9 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                                 if (!item.readerAvailable && !item.readerUrl && Number(item.chapters || 0) <= 0) return false;
                             }
                             if (homeRecommendationFilterParams.age && homeRecommendationFilterParams.age !== 'all') {
-                                if (homeRecommendationFilterParams.age === 'adult' && !isHoneyAdultItem(item)) return false;
-                                if (homeRecommendationFilterParams.age === 'teen' && !isHoneyTeenItem(item)) return false;
-                                if (homeRecommendationFilterParams.age === 'children' && !isHoneyChildrenItem(item)) return false;
+                                if (homeRecommendationFilterParams.age === 'adult' && honeyAgeCategory(item) !== 'adult') return false;
+                                if (homeRecommendationFilterParams.age === 'teen' && honeyAgeCategory(item) !== 'teen') return false;
+                                if (homeRecommendationFilterParams.age === 'children' && honeyAgeCategory(item) !== 'children') return false;
                             }
                             return true;
                         });
@@ -2482,10 +2500,16 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                 }
                 if (requestId !== homeRecommendationRequestId || Router.currentRoute !== 'main') return;
                 if (!items?.length) throw new Error('Порожній список рекомендацій');
+                if (homeRecommendationMode === 'manga' && (homeRecommendationSearchQuery || homeRecommendationFilterParams)) {
+                    // A filtered result can contain thousands of titles. Keep its
+                    // index in memory, but mount only the first page of cards.
+                    homeRecommendationFilteredItems = items;
+                    items = items.slice(0, 28);
+                }
                 homeRecommendationItems = [...items];
                 homeRecommendationPage = 1;
                 homeRecommendationHasMore = homeRecommendationMode === 'manga'
-                    ? (Boolean(items.hasNextPage) && !homeRecommendationSearchQuery && !homeRecommendationFilterParams)
+                    ? (homeRecommendationFilteredItems ? homeRecommendationFilteredItems.length > items.length : Boolean(items.hasNextPage))
                     : (items.hasNextPage !== false && items.length > 0);
                 container.innerHTML = buildPopularVerticalSectionHtml(homeRecommendationItems);
                 container.style.display = 'block';
@@ -2528,11 +2552,9 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                 const nextPage = homeRecommendationPage + 1;
                 let nextItems;
                 if (homeRecommendationMode === 'manga') {
-                    if (homeRecommendationSearchQuery || homeRecommendationFilterParams) {
-                        nextItems = [];
-                    } else {
-                        nextItems = await fetchHoneyCatalogPage(nextPage);
-                    }
+                    nextItems = homeRecommendationFilteredItems
+                        ? homeRecommendationFilteredItems.slice(homeRecommendationItems.length, homeRecommendationItems.length + 28)
+                        : await fetchHoneyCatalogPage(nextPage);
                 } else {
                     nextItems = homeRecommendationSearchQuery
                         ? await searchHikka(homeRecommendationSearchQuery, nextPage)
@@ -2547,7 +2569,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                 homeRecommendationItems.push(...uniqueItems);
                 homeRecommendationPage = nextPage;
                 homeRecommendationHasMore = homeRecommendationMode === 'manga'
-                    ? (Boolean(nextItems.hasNextPage) && uniqueItems.length > 0)
+                    ? (homeRecommendationFilteredItems ? homeRecommendationItems.length < homeRecommendationFilteredItems.length : Boolean(nextItems.hasNextPage) && uniqueItems.length > 0)
                     : (nextItems.hasNextPage !== false && uniqueItems.length > 0);
                 const list = container.querySelector('.popular-list--home');
                 if (list) list.insertAdjacentHTML('beforeend', buildPopularVerticalCardsHtml(uniqueItems, offset));
@@ -2567,26 +2589,9 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             const container = document.getElementById('homeRecommendationsContainer');
             const detailItems = list.slice(0, 8);
             let cursor = 0;
-            if (homeRecommendationMode === 'manga') {
-                const worker = async () => {
-                    while (cursor < detailItems.length) {
-                        if (requestId !== homeRecommendationRequestId || Router.currentRoute !== 'main') return;
-                        const index = cursor++;
-                        const item = detailItems[index];
-                        const honeyId = item?.honeyId || item?.honeyTitleId;
-                        if (!honeyId) continue;
-                        try {
-                            const resolved = await resolveHoneyReader({ ...item, honeyTitleId: honeyId, chapters: Math.max(1, Number(item.chapters || 1)) });
-                            if (resolved?.readerUrl) {
-                                const card = container?.querySelector(`.popular-card[data-idx="${indexOffset + index}"]`);
-                                if (card) card.dataset.readerUrl = resolved.readerUrl;
-                            }
-                        } catch {}
-                    }
-                };
-                void Promise.all(Array.from({ length: Math.min(2, detailItems.length) }, worker));
-                return;
-            }
+            // Reader links are resolved only when a manga card is opened. Probing
+            // frames for eight titles up front triggers dozens of needless requests.
+            if (homeRecommendationMode === 'manga') return;
             async function worker() {
                 while (cursor < detailItems.length) {
                     if (requestId !== homeRecommendationRequestId || Router.currentRoute !== 'main') return;

@@ -238,8 +238,15 @@ function applyQuickFilter({ keepOpen = false } = {}) {
     setCurrentPage(1);
     setCurrentSearchQuery('');
     setCurrentCategory('');
-    setQuickFilterParams(params);
-    setHomeRecommendationFilter(params);
+    // Switching to manga with default options is not a filter. Fetch the
+    // first Honey page, not the entire multi-page manga index.
+    const mangaHasFilters = quickFilterState.genres.size > 0
+        || (quickFilterState.mangaAge && quickFilterState.mangaAge !== 'all')
+        || (quickFilterState.mangaAvailability && quickFilterState.mangaAvailability !== 'all')
+        || quickFilterState.sort === 'alpha';
+    const recommendationFilter = quickFilterState.mode === 'manga' && !mangaHasFilters ? null : params;
+    setQuickFilterParams(recommendationFilter);
+    setHomeRecommendationFilter(recommendationFilter);
     setHomeRecommendationSearchQuery(hqfSearchQuery);
 
     const genreSections = document.getElementById('genreSectionsContainer');
