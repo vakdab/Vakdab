@@ -1,5 +1,5 @@
 import { Auth } from './auth.js';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260923-catalog-declutter-v1';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260923-catalog-declutter-v2';
         export const Storage = {
             _syncTimer: null,
             _pendingSyncScope: null,

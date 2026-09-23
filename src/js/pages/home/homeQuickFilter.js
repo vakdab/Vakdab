@@ -12,7 +12,7 @@ import {
     setCurrentSearchQuery,
     setCurrentCategory,
     setQuickFilterParams
-} from './homeLegacy.js?v=20260923-catalog-declutter-v1';
+} from './homeLegacy.js?v=20260923-catalog-declutter-v2';
 
 const YEAR_OPTIONS = [
     { key: '', label: 'Будь-який' },

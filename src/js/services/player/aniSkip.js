@@ -1,4 +1,4 @@
-import { showToast } from '../../legacy/app-legacy.js?v=20260923-catalog-declutter-v1';
+import { showToast } from '../../legacy/app-legacy.js?v=20260923-catalog-declutter-v2';
 
 const aniSkipCache = new Map();
 const aniSkipMalIdCache = new Map();
