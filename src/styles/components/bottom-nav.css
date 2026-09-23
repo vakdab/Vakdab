@@ -119,7 +119,6 @@
                 bottom: calc(12px + env(safe-area-inset-bottom));
             }
         }
-        .app-container { padding-bottom: 90px !important; }
         /* Коли суспільне активне — прибираємо padding, чат займає весь екран */
         body.community-active .app-container { padding-bottom: 0 !important; }
         body.community-active #ratingPageContainer { padding: 0 !important; }

@@ -1,86 +1,163 @@
 /* Dedicated search styles. */
+#searchPageContainer {
+    display: none;
+    animation: fadeInUp .3s var(--ui-ease);
+    margin-top: 0.5rem;
+    width: 100%;
+}
+#searchPageContainer.active {
+    display: block;
+}
+
 .search-page-header {
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-            margin-bottom: 1.2rem;
-            flex-wrap: wrap;
-        }
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1.2rem;
+    flex-wrap: wrap;
+}
 
-        .search-page-header h2 {
-            font-size: 1.4rem;
-            font-weight: 800;
-            color: var(--text);
-        }
+.search-page-header h2 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text);
+}
 
-            .search-page-header h2 { font-size: 1.6rem; }
+@media (min-width: 480px) {
+    .search-page-header h2 { font-size: 1.6rem; }
+}
 
-            .search-page-header h2 { font-size: 1.8rem; }
+@media (min-width: 768px) {
+    .search-page-header h2 { font-size: 1.8rem; }
+}
 
-        .search-page-input-wrap {
-            position: relative;
-            display: flex;
-            align-items: center;
-            background: var(--surface);
-            border: 2px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 0.5rem 0.9rem;
-            transition: border-color 160ms var(--ui-ease), box-shadow 160ms var(--ui-ease), transform 160ms var(--ui-ease);
-            box-shadow: var(--shadow-sm);
-            flex: 1 1 100%;
-            max-width: 600px;
-        }
+.search-page-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 0.5rem 0.9rem;
+    transition: border-color 160ms var(--ui-ease), box-shadow 160ms var(--ui-ease), transform 160ms var(--ui-ease);
+    box-shadow: var(--shadow-sm);
+    flex: 1 1 100%;
+    max-width: 600px;
+}
 
-        .search-page-input-wrap:focus-within {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 4px var(--accent-light), var(--shadow-md);
-            transform: translateY(-2px);
-        }
+.search-page-input-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-light), var(--shadow-md);
+    transform: translateY(-2px);
+}
 
-        .search-page-input-wrap i {
-            color: var(--text-secondary);
-            font-size: 1rem;
-            margin-right: 0.6rem;
-            transition: color var(--transition);
-            flex-shrink: 0;
-        }
+.search-page-input-wrap i {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin-right: 0.6rem;
+    transition: color var(--transition);
+    flex-shrink: 0;
+}
 
-        .search-page-input-wrap:focus-within i {
-            color: var(--accent);
-        }
+.search-page-input-wrap:focus-within i {
+    color: var(--accent);
+}
 
-        .search-page-clear {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 0.9rem;
-            padding: 0.2rem;
-            margin-left: 0.2rem;
-            border-radius: 50%;
-            width: 32px;
-            min-width: 32px;
-            height: 32px;
-            min-height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 160ms var(--ui-ease), visibility 160ms var(--ui-ease), background 160ms var(--ui-ease), color 160ms var(--ui-ease), transform 160ms var(--ui-ease);
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-            flex-shrink: 0;
-        }
+#searchPageInput {
+    border: none;
+    outline: none;
+    font-size: 0.95rem;
+    background: transparent;
+    width: 100%;
+    font-weight: 500;
+    color: var(--text);
+    font-family: inherit;
+    padding: 0;
+    min-height: 40px;
+}
+@media (min-width: 480px) {
+    #searchPageInput { font-size: 1rem; }
+}
+#searchPageInput::placeholder {
+    color: var(--text-muted);
+    font-weight: 400;
+}
 
-        .search-page-clear.visible {
-            opacity: 0.7;
-            visibility: visible;
-            pointer-events: auto;
-        }
+.search-page-clear {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0.2rem;
+    margin-left: 0.2rem;
+    border-radius: 50%;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 160ms var(--ui-ease), visibility 160ms var(--ui-ease), background 160ms var(--ui-ease), color 160ms var(--ui-ease), transform 160ms var(--ui-ease);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    flex-shrink: 0;
+}
 
-        .search-page-clear:hover {
-            opacity: 1;
-            color: var(--accent);
-            background: var(--hover);
-            transform: scale(1.1);
-        }
+.search-page-clear.visible {
+    opacity: 0.7;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.search-page-clear:hover {
+    opacity: 1;
+    color: var(--accent);
+    background: var(--hover);
+    transform: scale(1.1);
+}
+
+.search-results-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.8rem;
+    margin-top: 1rem;
+}
+@media (min-width: 480px) {
+    .search-results-grid { gap: 1rem; }
+}
+@media (min-width: 600px) {
+    .search-results-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.2rem;
+    }
+}
+@media (min-width: 1024px) {
+    .search-results-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.6rem;
+    }
+}
+
+.search-empty {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 2rem 0.5rem;
+    color: var(--text-muted);
+}
+.search-empty i {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 0.8rem;
+    opacity: 0.5;
+}
+.search-empty p {
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+}
+.search-empty .sub {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}

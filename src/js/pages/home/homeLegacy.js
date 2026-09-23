@@ -653,13 +653,23 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             const body = {};
             if (homeCatalogMode === 'anime') body.only_translated = true;
             if (homeCatalogQuery) body.query = homeCatalogQuery;
-            if (homeCatalogSort === 'score') body.sort = ['score:desc', 'scored_by:desc'];
-            if (homeCatalogSort === 'newest') body.sort = ['start_date:desc'];
-            if (homeCatalogSort === 'title') body.sort = ['title_ua:asc'];
-            if (homeCatalogMode === 'anime' && homeCatalogGenre !== 'all') {
-                const genreSlug = String(homeCatalogGenre || '').trim();
-                if (genreSlug.startsWith('format:')) body.media_type = [genreSlug.slice(7)];
-                else if (genreSlug) body.genres = [genreSlug];
+            if (homeCatalogSort === 'score' || homeCatalogSort === 'rating') body.sort = ['score:desc', 'scored_by:desc'];
+            else if (homeCatalogSort === 'newest' || homeCatalogSort === 'year') body.sort = ['start_date:desc'];
+            else if (homeCatalogSort === 'title' || homeCatalogSort === 'alpha') body.sort = ['title_ua:asc'];
+            if (homeCatalogMode === 'anime' && homeCatalogType && homeCatalogType !== 'all') {
+                body.media_type = [homeCatalogType];
+            }
+            if (homeCatalogMode === 'anime') {
+                if (homeCatalogGenres.size > 0) {
+                    body.genres = [...homeCatalogGenres].map(slugOrName => {
+                        const found = Object.entries(GENRE_MAP).find(([name, slug]) => slug === slugOrName || normalizeHoneyMatch(name) === slugOrName);
+                        return found ? found[1] : slugOrName;
+                    });
+                } else if (homeCatalogGenre !== 'all') {
+                    const genreSlug = String(homeCatalogGenre || '').trim();
+                    if (genreSlug.startsWith('format:')) body.media_type = [genreSlug.slice(7)];
+                    else if (genreSlug) body.genres = [genreSlug];
+                }
             }
             if (homeCatalogMode === 'anime' && homeCatalogAge !== 'all') {
                 body.rating = homeCatalogAge === 'adult' ? ['rx', 'r_plus'] : homeCatalogAge === 'teen' ? ['r', 'pg_13'] : ['g', 'pg'];
@@ -1459,22 +1469,245 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             });
         }
 
-        export function buildHomeCatalogSectionHtml(items) {
-            const visibleItems = getHomeCatalogVisibleItems();
-            return `<section class="home-catalog-section" id="homeCatalogSection">
-                <div class="home-catalog-search-row">
-                    <label class="home-catalog-search"><i class="fas fa-search"></i><input id="homeCatalogSearch" type="search" value="${escapeHtml(homeCatalogQuery)}" placeholder="Введіть назву аніме..." autocomplete="off"></label>
+        let homeCatalogFilterOpen = false;
+
+        const CATALOG_YEAR_OPTIONS = [
+            { key: '', label: 'Будь-який' },
+            { key: 'ongoing', label: 'Онгоінг' },
+            { key: '2026', label: '2026' },
+            { key: '2025', label: '2025' },
+            { key: '2024', label: '2024' },
+            { key: '2015-2023', label: '2015-2023' },
+            { key: '2008-2014', label: '2008-2014' },
+            { key: '2000-2007', label: '2000-2007' },
+            { key: 'before2000', label: 'до 2000' }
+        ];
+
+        const CATALOG_YEAR_RANGES = {
+            '2026': [2026, 2026],
+            '2025': [2025, 2025],
+            '2024': [2024, 2024],
+            '2015-2023': [2015, 2023],
+            '2008-2014': [2008, 2014],
+            '2000-2007': [2000, 2007],
+            'before2000': [1970, 1999]
+        };
+
+        const CATALOG_TYPE_OPTIONS = [
+            { key: '', label: 'Будь-який' },
+            { key: 'tv', label: 'Серіал' },
+            { key: 'movie', label: 'Фільм' },
+            { key: 'ova', label: 'OVA' },
+            { key: 'ona', label: 'ONA' },
+            { key: 'special', label: 'Спешл' }
+        ];
+
+        const CATALOG_SORT_OPTIONS = [
+            { key: 'rating', label: 'За рейтингом' },
+            { key: 'alpha', label: 'За алфавітом' },
+            { key: 'newest', label: 'Новіші' }
+        ];
+
+        const CATALOG_MANGA_GENRES = [
+            'Романтика', 'Фентезі', 'Комедія', 'Драма', 'Пригоди',
+            'Буденність', 'Містика', 'Психологія', 'Сьонен', 'Сьодзьо',
+            'Жахи', 'Детектив', 'Фантастика', 'Бойовик', 'Ісекай', 'Школа'
+        ];
+
+        const CATALOG_MANGA_AVAILABILITY_OPTIONS = [
+            { key: 'all', label: 'Усі тайтли' },
+            { key: 'available', label: 'Є що читати' }
+        ];
+
+        const CATALOG_MANGA_AGE_OPTIONS = [
+            { key: 'all', label: 'Усі' },
+            { key: 'general', label: 'Для всіх' },
+            { key: 'teen', label: '16+' },
+            { key: 'adult', label: '18+' }
+        ];
+
+        function getActiveCatalogYearKey() {
+            if (homeCatalogStatus === 'ongoing') return 'ongoing';
+            if (!homeCatalogYearMin && !homeCatalogYearMax) return '';
+            for (const [key, [min, max]] of Object.entries(CATALOG_YEAR_RANGES)) {
+                if (Number(homeCatalogYearMin) === min && Number(homeCatalogYearMax) === max) return key;
+            }
+            return '';
+        }
+
+        export function buildHomeCatalogQuickFilterHtml() {
+            const isManga = homeCatalogMode === 'manga';
+            const activeYear = getActiveCatalogYearKey();
+            const activeSort = (homeCatalogSort === 'title' || homeCatalogSort === 'alpha') ? 'alpha' : (homeCatalogSort === 'newest' || homeCatalogSort === 'year') ? 'newest' : 'rating';
+            const activeType = homeCatalogType && homeCatalogType !== 'all' ? homeCatalogType : '';
+            const hasActiveQuery = Boolean(homeCatalogQuery);
+            const placeholder = isManga ? 'Пошук манґи...' : 'Пошук аніме...';
+
+            const animeGenresMarkup = Object.entries(GENRE_MAP)
+                .map(([name, slug]) => {
+                    const isChecked = homeCatalogGenres.has(normalizeHoneyMatch(name)) || homeCatalogGenres.has(normalizeHoneyMatch(slug));
+                    return `<label class="hqf-option">
+                        <input type="checkbox" data-catalog-genre="${escapeHtml(slug)}" data-catalog-genre-name="${escapeHtml(name)}"${isChecked ? ' checked' : ''} />
+                        <span class="hqf-option-bullet"></span>
+                        <span>${escapeHtml(name)}</span>
+                    </label>`;
+                }).join('');
+
+            const typeMarkup = CATALOG_TYPE_OPTIONS.map(opt => `
+                <label class="hqf-option">
+                    <input type="radio" name="catalog_type" value="${opt.key}" data-catalog-type="${opt.key}"${activeType === opt.key ? ' checked' : ''} />
+                    <span class="hqf-option-bullet hqf-option-bullet--radio"></span>
+                    <span>${opt.label}</span>
+                </label>
+            `).join('');
+
+            const yearMarkup = CATALOG_YEAR_OPTIONS.map(opt => `
+                <label class="hqf-option">
+                    <input type="radio" name="catalog_year" value="${opt.key}" data-catalog-year="${opt.key}"${activeYear === opt.key ? ' checked' : ''} />
+                    <span class="hqf-option-bullet hqf-option-bullet--radio"></span>
+                    <span>${opt.label}</span>
+                </label>
+            `).join('');
+
+            const sortMarkup = CATALOG_SORT_OPTIONS.map(opt => `
+                <label class="hqf-option">
+                    <input type="radio" name="catalog_sort" value="${opt.key}" data-catalog-sort="${opt.key}"${activeSort === opt.key ? ' checked' : ''} />
+                    <span class="hqf-option-bullet hqf-option-bullet--radio"></span>
+                    <span>${opt.label}</span>
+                </label>
+            `).join('');
+
+            const mangaGenresMarkup = CATALOG_MANGA_GENRES.map(genre => {
+                const isChecked = homeCatalogGenres.has(normalizeHoneyMatch(genre));
+                return `<label class="hqf-option">
+                    <input type="checkbox" data-catalog-manga-genre="${escapeHtml(genre)}"${isChecked ? ' checked' : ''} />
+                    <span class="hqf-option-bullet"></span>
+                    <span>${escapeHtml(genre)}</span>
+                </label>`;
+            }).join('');
+
+            const mangaAvailMarkup = CATALOG_MANGA_AVAILABILITY_OPTIONS.map(opt => `
+                <label class="hqf-option">
+                    <input type="radio" name="catalog_manga_avail" value="${opt.key}" data-catalog-manga-avail="${opt.key}"${(homeCatalogAvailability || 'all') === opt.key ? ' checked' : ''} />
+                    <span class="hqf-option-bullet hqf-option-bullet--radio"></span>
+                    <span>${opt.label}</span>
+                </label>
+            `).join('');
+
+            const mangaAgeMarkup = CATALOG_MANGA_AGE_OPTIONS.map(opt => `
+                <label class="hqf-option">
+                    <input type="radio" name="catalog_manga_age" value="${opt.key}" data-catalog-manga-age="${opt.key}"${(homeCatalogAge || 'all') === opt.key ? ' checked' : ''} />
+                    <span class="hqf-option-bullet hqf-option-bullet--radio"></span>
+                    <span>${opt.label}</span>
+                </label>
+            `).join('');
+
+            const mangaSortMarkup = CATALOG_SORT_OPTIONS.map(opt => `
+                <label class="hqf-option">
+                    <input type="radio" name="catalog_manga_sort" value="${opt.key}" data-catalog-manga-sort="${opt.key}"${activeSort === opt.key ? ' checked' : ''} />
+                    <span class="hqf-option-bullet hqf-option-bullet--radio"></span>
+                    <span>${opt.label}</span>
+                </label>
+            `).join('');
+
+            const isOpen = homeCatalogFilterOpen;
+
+            return `
+            <div class="home-quick-filter${isOpen ? ' is-open' : ''}" id="homeCatalogQuickFilter">
+                <div class="hqf-mode-tabs" role="tablist" aria-label="Вибір розділу">
+                    <button type="button" class="hqf-mode-tab${!isManga ? ' active' : ''}" data-catalog-mode="anime" role="tab" aria-selected="${!isManga}">
+                        <i class="fas fa-photo-film" aria-hidden="true"></i>
+                        <span>Аніме</span>
+                    </button>
+                    <button type="button" class="hqf-mode-tab${isManga ? ' active' : ''}" data-catalog-mode="manga" role="tab" aria-selected="${isManga}">
+                        <i class="fas fa-book-open" aria-hidden="true"></i>
+                        <span>Манґа</span>
+                    </button>
                 </div>
-                <div class="home-catalog-controls">
-                    <label class="home-catalog-sort"><select id="homeCatalogSort" aria-label="Сортування"><option value="score"${homeCatalogSort === 'score' ? ' selected' : ''}>За оцінкою</option><option value="newest"${homeCatalogSort === 'newest' ? ' selected' : ''}>Новіші</option><option value="title"${homeCatalogSort === 'title' ? ' selected' : ''}>За назвою</option></select><i class="fas fa-arrow-up-wide-short"></i></label>
-                    <div class="home-catalog-view-toggle" role="group" aria-label="Вигляд каталогу"><button type="button" class="home-catalog-view${homeCatalogView === 'grid' ? ' active' : ''}" data-catalog-view="grid" aria-label="Сітка"><i class="fas fa-grip"></i></button><button type="button" class="home-catalog-view${homeCatalogView === 'list' ? ' active' : ''}" data-catalog-view="list" aria-label="Список"><i class="fas fa-list"></i></button></div>
-                    <div class="home-catalog-quick-actions" role="group" aria-label="Швидкі дії каталогу">
-                        <button class="home-catalog-filter-btn home-catalog-filters-trigger" id="homeCatalogFiltersBtn" type="button" aria-label="Фільтри та жанри"><i class="fas fa-sliders"></i><span>Фільтри</span></button>
+
+                <div class="hqf-toolbar hqf-toolbar--merged">
+                    <div class="hqf-merged-bar" id="homeCatalogMergedBar">
+                        <i class="fas fa-search hqf-search-glass" aria-hidden="true"></i>
+                        <input type="text" inputmode="search" id="homeCatalogSearchInput" class="hqf-search-input" placeholder="${placeholder}" value="${escapeHtml(homeCatalogQuery)}" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" aria-label="${placeholder}">
+                        <button type="button" class="hqf-search-clear" id="homeCatalogSearchClear" aria-label="Очистити пошук"${homeCatalogQuery ? '' : ' hidden'}>
+                            <i class="fas fa-xmark" aria-hidden="true"></i>
+                        </button>
+                        <span class="hqf-merged-divider" aria-hidden="true"></span>
+                        <button class="hqf-categories-toggle${isOpen ? ' open' : ''}" id="homeCatalogCategoriesToggle" type="button" aria-label="Категорії та фільтри" aria-expanded="${isOpen ? 'true' : 'false'}">
+                            <i class="fas fa-sliders" aria-hidden="true"></i>
+                        </button>
                     </div>
                 </div>
 
-                ${homeCatalogModeFilterHtml()}
-                <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
+                <div class="hqf-panel${isOpen ? ' open' : ''}" id="homeCatalogFilterPanel" role="region" aria-label="Фільтри">
+                    <div class="hqf-panel-inner">
+                        ${!isManga ? `
+                        <div class="hqf-col">
+                            <div class="hqf-col-title">Жанр</div>
+                            <div class="hqf-option-list" id="homeCatalogGenreList">
+                                ${animeGenresMarkup}
+                            </div>
+                        </div>
+                        <div class="hqf-col">
+                            <div class="hqf-col-title">Тип</div>
+                            <div class="hqf-option-list">
+                                ${typeMarkup}
+                            </div>
+                            <div class="hqf-col-title hqf-col-title--spaced">Рік виходу</div>
+                            <div class="hqf-option-list">
+                                ${yearMarkup}
+                            </div>
+                            <div class="hqf-col-title hqf-col-title--spaced">Сортування</div>
+                            <div class="hqf-option-list">
+                                ${sortMarkup}
+                            </div>
+                        </div>
+                        ` : `
+                        <div class="hqf-col">
+                            <div class="hqf-col-title">Жанр манґи</div>
+                            <div class="hqf-option-list" id="homeCatalogMangaGenreList">
+                                ${mangaGenresMarkup}
+                            </div>
+                        </div>
+                        <div class="hqf-col">
+                            <div class="hqf-col-title">Доступність</div>
+                            <div class="hqf-option-list">
+                                ${mangaAvailMarkup}
+                            </div>
+                            <div class="hqf-col-title hqf-col-title--spaced">Вікова категорія</div>
+                            <div class="hqf-option-list">
+                                ${mangaAgeMarkup}
+                            </div>
+                            <div class="hqf-col-title hqf-col-title--spaced">Сортування</div>
+                            <div class="hqf-option-list">
+                                ${mangaSortMarkup}
+                            </div>
+                        </div>
+                        `}
+                    </div>
+                    <div class="hqf-panel-footer">
+                        <button type="button" class="hqf-reset-btn" id="homeCatalogFilterReset">
+                            <i class="fas fa-rotate-left"></i><span>Скинути</span>
+                        </button>
+                        <button type="button" class="hqf-ok-btn" id="homeCatalogFilterClose">
+                            Готово
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        export function buildHomeCatalogSectionHtml(items) {
+            const visibleItems = getHomeCatalogVisibleItems();
+            return `<section class="home-catalog-section" id="homeCatalogSection">
+                ${buildHomeCatalogQuickFilterHtml()}
+                <div class="home-catalog-header-row">
+                    <div class="home-catalog-results-label" id="homeCatalogResultsLabel">${homeCatalogCountText(visibleItems.length)}</div>
+                    <div class="home-catalog-view-toggle" role="group" aria-label="Вигляд каталогу">
+                        <button type="button" class="home-catalog-view${homeCatalogView === 'grid' ? ' active' : ''}" data-catalog-view="grid" aria-label="Сітка"><i class="fas fa-grip"></i></button>
+                        <button type="button" class="home-catalog-view${homeCatalogView === 'list' ? ' active' : ''}" data-catalog-view="list" aria-label="Список"><i class="fas fa-list"></i></button>
+                    </div>
+                </div>
                 <div class="home-catalog-grid${homeCatalogView === 'list' ? ' is-list' : ' is-swipe'}" id="homeCatalogGrid">${visibleItems.length ? visibleItems.map((item, index) => homeCatalogCardHtml(item, index)).join('') : '<div class="home-catalog-empty">Каталог тимчасово недоступний.</div>'}</div>
                 <div class="home-catalog-feed-sentinel" id="homeCatalogFeedSentinel" aria-hidden="true" hidden><div class="loader home-catalog-loader" id="homeCatalogFeedLoader" hidden><i class="fas fa-spinner fa-pulse"></i> Завантажуємо ще...</div></div>
                 <div class="home-catalog-pagination" id="homeCatalogPagination" hidden aria-label="Навігація сторінками каталогу">
@@ -1529,172 +1762,23 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
         }
 
         export function openHomeCatalogFilters(root = document) {
-            document.querySelector('#homeCatalogFilterDialog')?.remove();
-            const initialGenres = catalogFilterGenres(homeCatalogItems);
-            const dialog = document.createElement('div');
-            dialog.id = 'homeCatalogFilterDialog';
-            dialog.className = 'home-catalog-filter-dialog';
-            const genreMarkup = genres => genres.length
-                ? genres.map(genre => `<label><input type="checkbox" value="${escapeHtml(genre)}"${homeCatalogGenres.has(normalizeHoneyMatch(genre)) ? ' checked' : ''}><span>${escapeHtml(genre)}</span></label>`).join('')
-                : `<small>Жанри для цього каталогу ще не надані джерелом.</small>`;
-            const selected = (value, expected) => value === expected ? ' selected' : '';
-            const modeFilterMarkup = homeCatalogMode === 'anime' ? `<label>Статус<select id="homeFilterStatus"><option value="all">Усі статуси</option><option value="ongoing"${selected(homeCatalogStatus, 'ongoing')}>Онґоїнг</option><option value="finished"${selected(homeCatalogStatus, 'finished')}>Завершені</option></select></label><label>Формат<select id="homeFilterType"><option value="all">Усі формати</option><option value="tv"${selected(homeCatalogType, 'tv')}>Серіал</option><option value="movie"${selected(homeCatalogType, 'movie')}>Фільм</option><option value="ova"${selected(homeCatalogType, 'ova')}>OVA / ONA</option></select></label><div class="home-catalog-filter-dialog__row"><label>Рік від<input id="homeFilterYearMin" type="number" min="1960" max="2030" value="${escapeHtml(homeCatalogYearMin)}" placeholder="від"></label><label>Рік до<input id="homeFilterYearMax" type="number" min="1960" max="2030" value="${escapeHtml(homeCatalogYearMax)}" placeholder="до"></label></div><label>Мінімальна оцінка<input id="homeFilterScoreMin" type="number" min="0" max="10" step="0.1" value="${escapeHtml(homeCatalogScoreMin)}" placeholder="0–10"></label>` : homeCatalogMode === 'manga' ? `<label>Доступність<select id="homeFilterAvailability"><option value="all">Усі тайтли</option><option value="available"${selected(homeCatalogAvailability, 'available')}>Є що читати</option></select></label><label>Вікова категорія<select id="homeFilterAge"><option value="all">Усі вікові категорії</option>${HOME_MANGA_AGE_OPTIONS.filter(x => x.key !== 'all').map(x => `<option value="${x.key}"${selected(homeCatalogAge, x.key)}>${x.label}</option>`).join('')}</select></label>` : '';
-            dialog.innerHTML = `<div class="home-catalog-filter-dialog__backdrop" data-filter-close></div><section class="home-catalog-filter-dialog__panel" role="dialog" aria-modal="true" aria-labelledby="homeCatalogFilterTitle"><div class="home-catalog-filter-dialog__head"><div><span class="home-catalog-filter-dialog__eyebrow">Налаштування каталогу</span><h3 id="homeCatalogFilterTitle">Фільтри · ${escapeHtml((HOME_CATALOG_MODES.find(x => x.key === homeCatalogMode) || HOME_CATALOG_MODES[0]).label)}</h3></div><button type="button" data-filter-close aria-label="Закрити"><i class="fas fa-xmark"></i></button></div><p id="homeFilterDataStatus" class="home-catalog-filter-dialog__status">${homeCatalogMode === 'manga' ? 'Завантажуємо повний каталог для точного фільтра…' : 'Оберіть потрібні параметри каталогу.'}</p>${modeFilterMarkup}<fieldset><legend>Жанри</legend><div class="home-catalog-filter-dialog__genres">${genreMarkup(initialGenres)}</div></fieldset><div class="home-catalog-filter-dialog__actions"><button type="button" class="btn-outline" data-filter-reset>Скинути</button><button type="button" class="btn-primary" data-filter-apply>Застосувати</button></div></section>`;
-            document.body.appendChild(dialog);
-            const close = () => dialog.remove();
-            dialog.querySelectorAll('[data-filter-close]').forEach(button => button.addEventListener('click', close));
-            const status = dialog.querySelector('#homeFilterDataStatus');
-            if (homeCatalogMode === 'manga') {
-                loadHoneyMangaFullCatalog().then(items => {
-                    if (!dialog.isConnected) return;
-                    dialog.querySelector('.home-catalog-filter-dialog__genres').innerHTML = genreMarkup(mangaFilterGenres(items));
-                    if (status) status.textContent = `Повний каталог завантажено: ${formatHomeCatalogNumber(items.length)} тайтлів`;
-                }).catch(() => { if (status) status.textContent = 'Не вдалося завантажити повний каталог; спробуйте ще раз.'; });
-            }
-            dialog.querySelector('[data-filter-reset]')?.addEventListener('click', async () => {
-                homeCatalogStatus = 'all'; homeCatalogAvailability = 'all'; homeCatalogGenre = 'all'; homeCatalogAge = 'all'; homeCatalogOrigin = 'all'; homeCatalogAdult = false; homeCatalogType = 'all'; homeCatalogYearMin = ''; homeCatalogYearMax = ''; homeCatalogScoreMin = ''; homeCatalogGenres = new Set(); homeCatalogFilterResultItems = null; homeCatalogFilterResultOffset = 0;
-                close();
-                await reloadHomeCatalog();
-            });
-            dialog.querySelector('[data-filter-apply]')?.addEventListener('click', async event => {
-                const button = event.currentTarget;
-                button.disabled = true;
-                button.textContent = 'Завантаження…';
-                homeCatalogStatus = dialog.querySelector('#homeFilterStatus')?.value || 'all';
-                homeCatalogAvailability = dialog.querySelector('#homeFilterAvailability')?.value || 'all';
-                homeCatalogAge = dialog.querySelector('#homeFilterAge')?.value || 'all';
-                homeCatalogOrigin = dialog.querySelector('#homeFilterOrigin')?.value || 'all';
-                homeCatalogAdult = homeCatalogMode === 'manga' && homeCatalogAge === 'adult';
-                homeCatalogGenre = 'all';
-                homeCatalogType = dialog.querySelector('#homeFilterType')?.value || 'all';
-                homeCatalogYearMin = dialog.querySelector('#homeFilterYearMin')?.value || '';
-                homeCatalogYearMax = dialog.querySelector('#homeFilterYearMax')?.value || '';
-                homeCatalogScoreMin = dialog.querySelector('#homeFilterScoreMin')?.value || '';
-                homeCatalogGenres = new Set([...dialog.querySelectorAll('.home-catalog-filter-dialog__genres input:checked')].map(input => normalizeHoneyMatch(input.value)));
-                if (homeCatalogMode === 'manga') {
-                    const source = await loadHoneyMangaFullCatalog();
-                    const result = filterMangaCatalogItems(source);
-                    homeCatalogFilterResultItems = result;
-                    homeCatalogFilterIndexReady = true;
-                    homeCatalogFilterResultOffset = Math.min(24, result.length);
-                    homeCatalogItems = result.slice(0, homeCatalogFilterResultOffset);
-                    homeCatalogPage = 0;
-                    homeCatalogHasMore = homeCatalogFilterResultOffset < result.length;
-                    homeCatalogTotal = result.length;
-                    homeCatalogAvailableTotal = result.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
-                    close();
-                    renderHomeCatalogGrid();
-                    syncHomeCatalogMoreButton();
-                    return;
-                }
-                close();
-                renderHomeCatalogGrid();
-            });
+            const toggle = (root || document).querySelector('#homeCatalogCategoriesToggle');
+            toggle?.click();
         }
 
-        function bindHomeCatalogModeFilters(root) {
-            root.querySelectorAll('[data-home-catalog-filter-card][data-home-catalog-filter-group="all"]').forEach(control => control.addEventListener('click', async () => {
-                resetHomeCatalogModeFilters();
-                await reloadHomeCatalog();
-            }));
-        }
-
-        function syncHomeCatalogModeControls(root = document) {
-            const section = root.querySelector('#homeCatalogSection');
-            const resultsLabel = section?.querySelector('#homeCatalogResultsLabel');
-            if (!section || !resultsLabel) return;
-            const panel = section.querySelector('.home-catalog-mode-filter-panel');
-            const genreBrowser = section.querySelector('.home-catalog-genre-browser:not(.home-catalog-mode-filter-panel)');
-            const quickActions = section.querySelector('.home-catalog-quick-actions');
-            const ageHost = section.querySelector('#homeCatalogAgeRailHost');
-            const genreHost = section.querySelector('#homeCatalogGenreRailHost');
-            if (homeCatalogMode === 'anime') {
-                panel?.remove();
-                ageHost?.remove();
-                genreHost?.remove();
-                genreBrowser?.remove();
-                return;
-            }
-            if (homeCatalogMode === 'manga') {
-                genreBrowser?.remove();
-                genreHost?.remove();
-                panel?.remove();
-                if (!ageHost && quickActions) quickActions.insertAdjacentHTML('beforeend', homeCatalogAgeHtml());
-                syncHomeCatalogAgeControl(section);
-                return;
-            }
-            ageHost?.remove();
-            genreHost?.remove();
-            genreBrowser?.remove();
-            const markup = homeCatalogModeFilterHtml();
-            if (panel) panel.outerHTML = markup;
-            else resultsLabel.insertAdjacentHTML('beforebegin', markup);
-            bindHomeCatalogModeFilters(section);
-        }
-
-        async function applyHomeCatalogModeFilters(root) {
-            const read = key => root.querySelector(`[data-home-catalog-filter-card][data-home-catalog-filter-group="${key}"].active`)?.dataset.homeCatalogFilterValue || root.querySelector(`[data-home-catalog-filter="${key}"]`)?.value || 'all';
-            if (homeCatalogMode === 'manga') {
-                homeCatalogAvailability = read('availability');
-                homeCatalogAge = read('age');
-                homeCatalogAdult = homeCatalogAge === 'adult';
-                homeCatalogStatus = 'all';
-                homeCatalogOrigin = 'all';
-                const source = await loadHoneyMangaFullCatalog();
-                const result = filterMangaCatalogItems(source);
-                homeCatalogFilterResultItems = result;
-                homeCatalogFilterIndexReady = true;
-                homeCatalogFilterResultOffset = Math.min(homeCatalogPageSize(), result.length);
-                homeCatalogItems = result.slice(0, homeCatalogFilterResultOffset);
-                homeCatalogPage = 1;
-                homeCatalogHasMore = homeCatalogFilterResultOffset < result.length;
-                homeCatalogTotal = result.length;
-                homeCatalogAvailableTotal = result.filter(item => item.readerAvailable || item.readerUrl || Number(item.chapters) > 0).length;
-                renderHomeCatalogGrid();
-                syncHomeCatalogMoreButton();
-                return;
-            }
-            homeCatalogStatus = read('status');
-            homeCatalogAvailability = read('availability');
-            homeCatalogAge = read('age');
-            homeCatalogOrigin = read('origin');
-            homeCatalogAdult = false;
-            homeCatalogFilterResultItems = null;
-            homeCatalogFilterResultOffset = 0;
-            homeCatalogFilterIndexReady = false;
-            renderHomeCatalogGrid();
-        }
-
-        function resetHomeCatalogModeFilters() {
-            homeCatalogStatus = 'all';
-            homeCatalogAvailability = 'all';
-            homeCatalogAge = 'all';
-            homeCatalogOrigin = 'all';
-            homeCatalogAdult = false;
-            homeCatalogYearMin = '';
-            homeCatalogYearMax = '';
-            homeCatalogScoreMin = '';
-            homeCatalogGenres = new Set();
-            homeCatalogFilterResultItems = null;
-            homeCatalogFilterResultOffset = 0;
-            homeCatalogFilterIndexReady = false;
-        }
+        function bindHomeCatalogModeFilters() {}
+        function syncHomeCatalogModeControls() {}
+        async function applyHomeCatalogModeFilters() {}
+        function resetHomeCatalogModeFilters() {}
 
         export function bindHomeCatalogMenu(root) {
-            root.querySelector('#catalogPopularBtn')?.addEventListener('click', () => {
-                homeCatalogSort = 'score';
-                homeCatalogPreset = 'all';
-                reloadHomeCatalog();
-                showToast('Популярне аніме');
-            });
-            root.querySelector('#catalogRandomBtn')?.addEventListener('click', () => openRandomAnime());
+            // Mode switcher tabs (Anime / Manga)
             const tabs = root.querySelectorAll('[data-catalog-mode]');
             tabs.forEach(tab => tab.addEventListener('click', async () => {
-                if (tab.dataset.catalogMode === homeCatalogMode) return;
-                // Invalidate a still-pending initial anime request. Without this,
-                // a late Hikka response could overwrite a freshly selected manga tab.
+                const nextMode = tab.dataset.catalogMode;
+                if (nextMode === homeCatalogMode) return;
                 homeSectionsRequestId++;
-                homeCatalogMode = tab.dataset.catalogMode;
+                homeCatalogMode = nextMode;
                 homeCatalogAdult = false;
                 homeCatalogAge = 'all';
                 homeCatalogOrigin = 'all';
@@ -1704,52 +1788,245 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
                 homeCatalogStatus = 'all';
                 homeCatalogAvailability = 'all';
                 homeCatalogGenres = new Set();
-                homeCatalogFilterResultItems = null; homeCatalogFilterResultOffset = 0;
-                homeCatalogType = 'all'; homeCatalogYearMin = ''; homeCatalogYearMax = ''; homeCatalogScoreMin = '';
+                homeCatalogFilterResultItems = null;
+                homeCatalogFilterResultOffset = 0;
+                homeCatalogType = 'all';
+                homeCatalogYearMin = '';
+                homeCatalogYearMax = '';
+                homeCatalogScoreMin = '';
+                homeCatalogPage = 1;
+
+                const container = document.getElementById('genreSectionsContainer');
+                if (container) {
+                    container.innerHTML = buildHomeCatalogSectionHtml([]);
+                    bindHomeCatalogCards(container);
+                    bindHomeCatalogMenu(container);
+                }
                 await reloadHomeCatalog();
             }));
-            root.querySelector('#homeCatalogSort')?.addEventListener('change', async event => {
-                homeCatalogSort = event.target.value;
-                homeCatalogFilterResultItems = null; homeCatalogFilterResultOffset = 0;
+
+            // Categories toggle
+            const toggle = root.querySelector('#homeCatalogCategoriesToggle');
+            const panel = root.querySelector('#homeCatalogFilterPanel');
+            const qfContainer = root.querySelector('#homeCatalogQuickFilter');
+            toggle?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                homeCatalogFilterOpen = !homeCatalogFilterOpen;
+                toggle.classList.toggle('open', homeCatalogFilterOpen);
+                toggle.setAttribute('aria-expanded', String(homeCatalogFilterOpen));
+                panel?.classList.toggle('open', homeCatalogFilterOpen);
+                qfContainer?.classList.toggle('is-open', homeCatalogFilterOpen);
+            });
+
+            panel?.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+
+            // Close button
+            root.querySelector('#homeCatalogFilterClose')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                homeCatalogFilterOpen = false;
+                toggle?.classList.remove('open');
+                toggle?.setAttribute('aria-expanded', 'false');
+                panel?.classList.remove('open');
+                qfContainer?.classList.remove('is-open');
+            });
+
+            const onDocClick = (e) => {
+                if (!homeCatalogFilterOpen) return;
+                const quickFilter = document.getElementById('homeCatalogQuickFilter');
+                if (quickFilter && !quickFilter.contains(e.target)) {
+                    homeCatalogFilterOpen = false;
+                    toggle?.classList.remove('open');
+                    toggle?.setAttribute('aria-expanded', 'false');
+                    panel?.classList.remove('open');
+                    qfContainer?.classList.remove('is-open');
+                }
+            };
+            document.removeEventListener('click', onDocClick);
+            document.addEventListener('click', onDocClick);
+
+            // Reset button
+            root.querySelector('#homeCatalogFilterReset')?.addEventListener('click', async () => {
+                homeCatalogStatus = 'all';
+                homeCatalogAvailability = 'all';
+                homeCatalogAge = 'all';
+                homeCatalogOrigin = 'all';
+                homeCatalogAdult = false;
+                homeCatalogType = 'all';
+                homeCatalogYearMin = '';
+                homeCatalogYearMax = '';
+                homeCatalogScoreMin = '';
+                homeCatalogSort = 'score';
+                homeCatalogGenres = new Set();
+                homeCatalogQuery = '';
+                homeCatalogFilterResultItems = null;
+                homeCatalogFilterResultOffset = 0;
+                homeCatalogPage = 1;
+
+                const container = document.getElementById('genreSectionsContainer');
+                if (container) {
+                    container.innerHTML = buildHomeCatalogSectionHtml([]);
+                    bindHomeCatalogCards(container);
+                    bindHomeCatalogMenu(container);
+                }
                 await reloadHomeCatalog();
             });
+
+            // Search input & clear
+            const searchInput = root.querySelector('#homeCatalogSearchInput');
+            const searchClear = root.querySelector('#homeCatalogSearchClear');
+            const mergedBar = root.querySelector('#homeCatalogMergedBar');
+            let searchTimer = null;
+            searchInput?.addEventListener('input', event => {
+                clearTimeout(searchTimer);
+                homeCatalogQuery = event.target.value.trim();
+                if (searchClear) searchClear.hidden = !homeCatalogQuery;
+                searchTimer = setTimeout(async () => {
+                    homeCatalogPage = 1;
+                    homeCatalogFilterResultItems = null;
+                    homeCatalogFilterResultOffset = 0;
+                    await reloadHomeCatalog();
+                }, 400);
+            });
+            searchClear?.addEventListener('click', async () => {
+                if (!searchInput) return;
+                searchInput.value = '';
+                homeCatalogQuery = '';
+                searchClear.hidden = true;
+                homeCatalogPage = 1;
+                homeCatalogFilterResultItems = null;
+                homeCatalogFilterResultOffset = 0;
+                await reloadHomeCatalog();
+                searchInput.focus();
+            });
+
+            // Anime Genres
+            root.querySelectorAll('[data-catalog-genre]').forEach(cb => {
+                cb.addEventListener('change', async () => {
+                    const slug = cb.dataset.catalogGenre;
+                    const name = cb.dataset.catalogGenreName;
+                    const key = normalizeHoneyMatch(name || slug);
+                    if (cb.checked) {
+                        homeCatalogGenres.add(key);
+                    } else {
+                        homeCatalogGenres.delete(key);
+                    }
+                    homeCatalogPage = 1;
+                    await reloadHomeCatalog();
+                });
+            });
+
+            // Manga Genres
+            root.querySelectorAll('[data-catalog-manga-genre]').forEach(cb => {
+                cb.addEventListener('change', async () => {
+                    const genre = cb.dataset.catalogMangaGenre;
+                    const key = normalizeHoneyMatch(genre);
+                    if (cb.checked) {
+                        homeCatalogGenres.add(key);
+                    } else {
+                        homeCatalogGenres.delete(key);
+                    }
+                    homeCatalogPage = 1;
+                    homeCatalogFilterResultItems = null;
+                    homeCatalogFilterResultOffset = 0;
+                    await reloadHomeCatalog();
+                });
+            });
+
+            // Anime Type
+            root.querySelectorAll('[data-catalog-type]').forEach(radio => {
+                radio.addEventListener('change', async () => {
+                    if (!radio.checked) return;
+                    homeCatalogType = radio.dataset.catalogType || 'all';
+                    homeCatalogPage = 1;
+                    await reloadHomeCatalog();
+                });
+            });
+
+            // Anime Year
+            root.querySelectorAll('[data-catalog-year]').forEach(radio => {
+                radio.addEventListener('change', async () => {
+                    if (!radio.checked) return;
+                    const yearKey = radio.dataset.catalogYear;
+                    if (yearKey === 'ongoing') {
+                        homeCatalogStatus = 'ongoing';
+                        homeCatalogYearMin = '';
+                        homeCatalogYearMax = '';
+                    } else if (CATALOG_YEAR_RANGES[yearKey]) {
+                        const [min, max] = CATALOG_YEAR_RANGES[yearKey];
+                        homeCatalogYearMin = String(min);
+                        homeCatalogYearMax = String(max);
+                        homeCatalogStatus = 'all';
+                    } else {
+                        homeCatalogYearMin = '';
+                        homeCatalogYearMax = '';
+                        homeCatalogStatus = 'all';
+                    }
+                    homeCatalogPage = 1;
+                    await reloadHomeCatalog();
+                });
+            });
+
+            // Anime Sort
+            root.querySelectorAll('[data-catalog-sort]').forEach(radio => {
+                radio.addEventListener('change', async () => {
+                    if (!radio.checked) return;
+                    homeCatalogSort = radio.dataset.catalogSort === 'alpha' ? 'title' : radio.dataset.catalogSort;
+                    homeCatalogPage = 1;
+                    await reloadHomeCatalog();
+                });
+            });
+
+            // Manga Availability
+            root.querySelectorAll('[data-catalog-manga-avail]').forEach(radio => {
+                radio.addEventListener('change', async () => {
+                    if (!radio.checked) return;
+                    homeCatalogAvailability = radio.dataset.catalogMangaAvail || 'all';
+                    homeCatalogPage = 1;
+                    homeCatalogFilterResultItems = null;
+                    homeCatalogFilterResultOffset = 0;
+                    await reloadHomeCatalog();
+                });
+            });
+
+            // Manga Age
+            root.querySelectorAll('[data-catalog-manga-age]').forEach(radio => {
+                radio.addEventListener('change', async () => {
+                    if (!radio.checked) return;
+                    homeCatalogAge = radio.dataset.catalogMangaAge || 'all';
+                    homeCatalogAdult = homeCatalogAge === 'adult';
+                    homeCatalogPage = 1;
+                    homeCatalogFilterResultItems = null;
+                    homeCatalogFilterResultOffset = 0;
+                    await reloadHomeCatalog();
+                });
+            });
+
+            // Manga Sort
+            root.querySelectorAll('[data-catalog-manga-sort]').forEach(radio => {
+                radio.addEventListener('change', async () => {
+                    if (!radio.checked) return;
+                    homeCatalogSort = radio.dataset.catalogMangaSort === 'alpha' ? 'title' : radio.dataset.catalogMangaSort;
+                    homeCatalogPage = 1;
+                    homeCatalogFilterResultItems = null;
+                    homeCatalogFilterResultOffset = 0;
+                    await reloadHomeCatalog();
+                });
+            });
+
+            // View toggle (Grid / List)
             root.querySelectorAll('[data-catalog-view]').forEach(button => button.addEventListener('click', () => {
                 homeCatalogView = button.dataset.catalogView;
                 root.querySelectorAll('[data-catalog-view]').forEach(item => item.classList.toggle('active', item === button));
                 renderHomeCatalogGrid();
             }));
-            bindHomeCatalogModeFilters(root);
-            syncHomeCatalogAgeControl(root);
-            root.querySelector('#homeCatalogAdultBtn')?.addEventListener('click', async () => {
-                if (homeCatalogLoading) return;
-                homeCatalogAdult = !homeCatalogAdult;
-                homeCatalogMode = 'manga';
-                homeCatalogAge = homeCatalogAdult ? 'adult' : 'all';
-                homeCatalogOrigin = 'all';
-                homeCatalogQuery = '';
-                homeCatalogPreset = 'all';
-                homeCatalogGenre = 'all';
-                homeCatalogStatus = 'all';
-                homeCatalogAvailability = 'all';
-                homeCatalogGenres = new Set();
-                homeCatalogFilterResultItems = null; homeCatalogFilterResultOffset = 0;
-                homeCatalogType = 'all'; homeCatalogYearMin = ''; homeCatalogYearMax = ''; homeCatalogScoreMin = '';
-                await reloadHomeCatalog();
-            });
-            let searchTimer = null;
-            root.querySelector('#homeCatalogSearch')?.addEventListener('input', event => {
-                clearTimeout(searchTimer);
-                homeCatalogQuery = event.target.value.trim();
-                searchTimer = setTimeout(() => reloadHomeCatalog(), 450);
-            });
-            root.querySelector('#homeCatalogFiltersBtn')?.addEventListener('click', () => {
-                openHomeCatalogFilters(root.ownerDocument || document);
-            });
+
+            // Pagination
             root.querySelectorAll('[data-catalog-page]').forEach(button => button.addEventListener('click', () => {
                 const delta = button.dataset.catalogPage === 'prev' ? -1 : 1;
                 void loadHomeCatalogPage(homeCatalogPage + delta);
             }));
-
         }
 
         export function updateHomeCatalogModeLabels() {
@@ -1824,7 +2101,15 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             homeCatalogLoading = true;
             const before = homeCatalogItems.length;
             try {
-                if (homeCatalogMode === 'manga' && homeCatalogAge !== 'all' && !homeCatalogFilterResultItems) {
+                const hasMangaFilters = homeCatalogMode === 'manga' && (
+                    homeCatalogAge !== 'all' ||
+                    homeCatalogAdult ||
+                    homeCatalogAvailability !== 'all' ||
+                    homeCatalogGenres.size > 0 ||
+                    homeCatalogSort === 'title' ||
+                    homeCatalogSort === 'alpha'
+                );
+                if (hasMangaFilters && !homeCatalogFilterResultItems) {
                     const fullCatalog = await loadHoneyMangaFullCatalog();
                     homeCatalogFilterResultItems = filterMangaCatalogItems(fullCatalog);
                     homeCatalogFilterIndexReady = true;
@@ -1954,15 +2239,23 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             grid.innerHTML = renderAnimeCardSkeleton(12);
             try {
                 let nextItems;
-                if (homeCatalogMode === 'manga' && homeCatalogAge !== 'all') {
+                const hasMangaFilters = homeCatalogMode === 'manga' && (
+                    homeCatalogAge !== 'all' ||
+                    homeCatalogAdult ||
+                    homeCatalogAvailability !== 'all' ||
+                    homeCatalogGenres.size > 0 ||
+                    homeCatalogSort === 'title' ||
+                    homeCatalogSort === 'alpha'
+                );
+                if (hasMangaFilters) {
                     const firstItems = await fetchHomeCatalogPage(1);
                     nextItems = filterMangaCatalogItems(firstItems);
                     homeCatalogPage = 1;
                     homeCatalogHasMore = true;
                     // Do not block first paint on all manga pages. The same full
-                    // pagination loader completes the exact 18+ result in background.
+                    // pagination loader completes the exact result in background.
                     loadHoneyMangaFullCatalog().then(fullCatalog => {
-                        if (requestId !== homeCatalogRequestId || homeCatalogMode !== 'manga' || homeCatalogAge === 'all') return;
+                        if (requestId !== homeCatalogRequestId || homeCatalogMode !== 'manga') return;
                         homeCatalogFilterResultItems = filterMangaCatalogItems(fullCatalog);
                         homeCatalogFilterIndexReady = true;
                         homeCatalogFilterResultOffset = Math.min(homeCatalogPageSize(), homeCatalogFilterResultItems.length);
