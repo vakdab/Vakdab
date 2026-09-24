@@ -352,3 +352,17 @@ export function hideSkeleton(target) {
         el.removeAttribute('aria-busy');
     }
 }
+
+export function renderCommentsSkeleton(count = 4) {
+    const cards = [];
+    for (let i = 0; i < count; i++) {
+        cards.push(`
+        <div class="site-loading-skeleton site-loading-skeleton--comments" role="status" aria-label="Завантаження коментарів">
+            <div class="site-skeleton__block" style="height: 52px; width: 52px; border-radius: 50%; margin-bottom: 10px;"></div>
+            <div class="site-skeleton__block" style="height: 14px; width: 30%; margin-bottom: 8px;"></div>
+            <div class="site-skeleton__block" style="height: 14px; width: 85%; margin-bottom: 8px;"></div>
+            <div class="site-skeleton__block" style="height: 14px; width: 65%;"></div>
+        </div>`);
+    }
+    return cards.join('');
+}

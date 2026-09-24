@@ -18,6 +18,7 @@ import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
 } from '../../legacy/app-legacy.js?v=20260923-catalog-declutter-v2';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
+import { renderPlayerCommentsSection, resetPlayerCommentsSection } from './commentsSection.js?v=20260924-discussions-v1';
 import {
     JIKAN_STATUS_LABELS, SEASON_LABELS, ANILIST_STATUS_LABELS, ANILIST_RELATION_LABELS, ANILIST_FORMAT_LABELS,
     fetchJikan, normalizeJikanTitle, resolveJikanById, withTimeout, resolveJikanByTitle,
@@ -199,6 +200,7 @@ import {
             const _resetLogoImg = document.getElementById('playerTitleLogo');
             if (_resetLogoImg) { _resetLogoImg.style.display = 'none'; _resetLogoImg.src = ''; }
             document.getElementById('castSection').style.display = 'none';
+            resetPlayerCommentsSection();
             document.getElementById('castList').innerHTML = '';
             const resetCastTitle = document.querySelector('#castSection .section-title');
             if (resetCastTitle) resetCastTitle.textContent = 'Актори';
@@ -298,6 +300,12 @@ import {
                 }
                 updateSourceChip();
                 loadAnimeRatingAggregate(url);
+                setTimeout(() => {
+                    renderPlayerCommentsSection(url, {
+                        title: anime?.title || anime?.originalTitle || '',
+                        poster: anime?.images?.jpg?.large_image_url || anime?.image?.original || anime?.image?.preview || anime?.poster || document.getElementById('playerHeroPoster')?.src || ''
+                    });
+                }, 400);
                 const seasons = Object.keys(anime.seasons || {}).sort((a, b) => parseInt(a) - parseInt(b));
                 playerPageCurrentSeason = seasons[0] || '1';
                 const liveSeasonData = anime.seasons?.[playerPageCurrentSeason] || {};
@@ -1542,6 +1550,7 @@ import {
             Storage._flushSync('history,watchTime');
             playerPageIsOpen = false;
             playerPagePlaybackRequest += 1;
+            resetPlayerCommentsSection();
             modal.setAttribute('aria-busy', 'false');
             modal.setAttribute('aria-hidden', 'true');
             modal.classList.remove('is-open');
@@ -1807,6 +1816,8 @@ import {
                     Router.goTo('stickers');
                 } else if (action === 'schedule') {
                     Router.goTo('schedule');
+                } else if (action === 'discussions') {
+                    Router.goTo('discussions');
                 } else if (action === 'live') {
                     document.getElementById('liveStreamContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 } else if (action === 'catalog') {
