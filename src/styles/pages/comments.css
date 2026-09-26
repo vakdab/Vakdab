@@ -759,3 +759,24 @@ img.dsc-card__poster { display: block; }
         font-size: 16px;
     }
 }
+
+
+/* Final compactness fix: never stretch a comment card or its flex body vertically. */
+#commentsSection .cmt-card {
+    height: auto !important;
+    min-height: 0 !important;
+    align-items: flex-start !important;
+}
+#commentsSection .cmt-card__body {
+    height: auto !important;
+    min-height: 0 !important;
+    align-self: flex-start !important;
+    justify-content: flex-start !important;
+}
+#commentsSection .cmt-card__actions {
+    height: auto !important;
+    min-height: 0 !important;
+    margin-top: 0 !important;
+    align-self: stretch;
+}
+#commentsSection .cmt-card__text { height: auto !important; min-height: 0 !important; }
