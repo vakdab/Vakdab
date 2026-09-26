@@ -1,12 +1,12 @@
-import { openPlayerPage } from '../player/animePlayerPage.js?v=20260926-comments-auth-v1';
-import { escapeHtml, showToast } from '../../legacy/app-legacy.js?v=20260926-comments-auth-v1';
+import { openPlayerPage } from '../player/animePlayerPage.js?v=20260926-comment-send-v1';
+import { escapeHtml, showToast } from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
 import { renderCommentsSkeleton } from '../../utils/skeleton.js';
-import { Router } from '../../core/compat/router.js?v=20260926-comments-auth-v1';
+import { Router } from '../../core/compat/router.js?v=20260926-comment-send-v1';
 import { auth } from '../../services/firebase/client.js';
 import {
     fetchRecentComments, fetchPopularComments, toggleCommentLike,
     timeAgoUk, countReplies, isSignedInUser
-} from '../../services/comments/commentService.js?v=20260926-comments-auth-v1';
+} from '../../services/comments/commentService.js?v=20260926-comment-send-v1';
 
         // ====================================================================
         //  ОБГОВОРЕННЯ І КОМЕНТАРІ (стрічка останніх коментарів спільноти)

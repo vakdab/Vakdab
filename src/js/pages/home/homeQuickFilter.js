@@ -12,7 +12,7 @@ import {
     setCurrentSearchQuery,
     setCurrentCategory,
     setQuickFilterParams
-} from './homeLegacy.js?v=20260926-comments-auth-v1';
+} from './homeLegacy.js?v=20260926-comment-send-v1';
 
 const YEAR_OPTIONS = [
     { key: '', label: 'Будь-який' },

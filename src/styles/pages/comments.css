@@ -347,6 +347,13 @@
     gap: 10px;
 }
 .cmt-composer__counter { margin-right: auto; font-size: 11.5px; color: var(--text-muted, #a8a8a8); }
+.cmt-send-status {
+    margin: 0;
+    color: var(--text-muted, #a8a8a8);
+    font-size: 12px;
+    line-height: 1.4;
+}
+.cmt-send-status:empty { display: none; }
 .cmt-composer__send {
     display: inline-flex;
     align-items: center;

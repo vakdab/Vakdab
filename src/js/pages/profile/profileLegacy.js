@@ -4,7 +4,7 @@ import {
     profileMediaMarkup, renderAuthPage,
     renderBookmarksPanel, renderHistoryPanel,
     setCurrentTab, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260926-comments-auth-v1';
+} from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
 import { Storage } from '../../core/compat/storage.js?v=20260905-stickers-sync-v1';
 import { renderStickerFaceByKey } from './stickersLegacy.js?v=20260905-stickers-sync-v1';
 import { getProfile, saveProfile, getProfileStats, getProfileDisplayName, getProfileHandle } from '../settings/settingsLegacy.js?v=20260905-no-achievements-v1';

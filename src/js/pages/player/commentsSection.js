@@ -1,11 +1,11 @@
-import { escapeHtml, showToast } from '../../legacy/app-legacy.js?v=20260926-comments-auth-v1';
-import { Router } from '../../core/compat/router.js?v=20260926-comments-auth-v1';
+import { escapeHtml, showToast } from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
+import { Router } from '../../core/compat/router.js?v=20260926-comment-send-v1';
 import { auth } from '../../services/firebase/client.js';
 import { getProfile, getProfileDisplayName } from '../../services/profile/profileStorage.js';
 import {
     subscribeAnimeComments, postComment, toggleCommentLike, deleteComment,
     timeAgoUk, groupComments, isSignedInUser, COMMENTS_MAX_LENGTH
-} from '../../services/comments/commentService.js?v=20260926-comments-auth-v1';
+} from '../../services/comments/commentService.js?v=20260926-comment-send-v1';
 
         // ====================================================================
         //  ОБГОВОРЕННЯ І КОМЕНТАРІ (секція на сторінці аніме)
@@ -44,7 +44,8 @@ import {
             unsubscribe: null,
             replyTo: null,          // id коментаря, на який пишемо відповідь
             likeBusy: new Set(),
-            composerDirty: false
+            composerDirty: false,
+            commentBusy: false
         };
 
         function avatarHtml(comment) {
@@ -72,6 +73,7 @@ import {
                                 <i class="fas fa-paper-plane" aria-hidden="true"></i> Надіслати
                             </button>
                         </div>
+                        <p class="cmt-send-status" id="cmtSendStatus" role="status" aria-live="polite"></p>
                     </div>
                 </div>`;
             }
@@ -169,6 +171,8 @@ import {
                 input.addEventListener('input', () => {
                     counter.textContent = `${input.value.length} / ${COMMENTS_MAX_LENGTH}`;
                     sectionState.composerDirty = input.value.trim().length > 0;
+                    const status = document.getElementById('cmtSendStatus');
+                    if (status) status.textContent = '';
                 });
                 input.addEventListener('keydown', e => {
                     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') submitComment();
@@ -187,6 +191,8 @@ import {
         }
 
         async function submitComment(parentId = '') {
+            if (sectionState.commentBusy) return;
+            await refreshComposerFromAuth();
             if (!isSignedInUser()) {
                 showToast('Увійдіть, щоб залишити коментар');
                 Router.goTo('profile');
@@ -198,35 +204,79 @@ import {
             if (!input) return;
             const text = input.value.trim();
             if (!text) {
+                const status = document.getElementById('cmtSendStatus');
+                if (status) status.textContent = 'Спочатку введіть текст коментаря.';
+                input.focus();
                 showToast('Коментар не може бути порожнім');
                 return;
             }
             const btn = parentId
                 ? document.querySelector(`[data-send-reply="${parentId}"]`)
                 : document.getElementById('cmtSendBtn');
-            if (btn) btn.disabled = true;
-            const res = await postComment({
-                animeUrl: sectionState.animeUrl,
-                animeTitle: sectionState.animeTitle,
-                animePoster: sectionState.animePoster,
-                text,
-                parentId
-            });
-            if (btn) btn.disabled = false;
-            if (res.ok) {
-                input.value = '';
-                if (!parentId) {
-                    const counter = document.getElementById('cmtCounter');
-                    if (counter) counter.textContent = `0 / ${COMMENTS_MAX_LENGTH}`;
+            const originalButtonContent = btn?.innerHTML;
+            sectionState.commentBusy = true;
+            const status = document.getElementById('cmtSendStatus');
+            if (status) status.textContent = 'Надсилаємо коментар…';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Надсилаємо…';
+            }
+            try {
+                const res = await postComment({
+                    animeUrl: sectionState.animeUrl,
+                    animeTitle: sectionState.animeTitle,
+                    animePoster: sectionState.animePoster,
+                    text,
+                    parentId
+                });
+                if (res.ok) {
+                    input.value = '';
+                    if (!parentId) {
+                        sectionState.composerDirty = false;
+                        const counter = document.getElementById('cmtCounter');
+                        if (counter) counter.textContent = `0 / ${COMMENTS_MAX_LENGTH}`;
+                    } else {
+                        sectionState.replyTo = null;
+                    }
+                    showToast('Коментар надіслано');
+                    if (status) status.textContent = 'Коментар надіслано.';
+                    // renderCommentsList() спрацює автоматично через onSnapshot.
+                } else if (res.error === 'auth' || res.error === 'unauthenticated') {
+                    await refreshComposerFromAuth();
+                    if (!isSignedInUser()) {
+                        showToast('Сесія завершилася. Увійдіть, щоб надіслати коментар');
+                        if (status) status.textContent = 'Сесія завершилася — увійдіть і спробуйте ще раз.';
+                        Router.goTo('profile');
+                    } else {
+                        showToast('Не вдалося підтвердити вхід. Оновіть сторінку й спробуйте ще раз');
+                        if (status) status.textContent = 'Не вдалося підтвердити вхід. Оновіть сторінку.';
+                    }
                 } else {
-                    sectionState.replyTo = null;
+                    const code = String(res.error || '').split('/').pop();
+                    if (['unavailable', 'deadline-exceeded', 'network-request-failed'].includes(code)) {
+                        showToast('Немає зв’язку з сервером. Перевірте інтернет і спробуйте ще раз');
+                        if (status) status.textContent = 'Немає зв’язку із сервером. Перевірте інтернет і спробуйте ще раз.';
+                    } else if (code === 'permission-denied') {
+                        showToast('Сервер відхилив коментар. Оновіть сторінку та увійдіть знову');
+                        if (status) status.textContent = 'Сервер відхилив коментар. Оновіть сторінку й увійдіть знову.';
+                    } else if (code === 'db') {
+                        showToast('Сховище коментарів тимчасово недоступне');
+                        if (status) status.textContent = 'Сховище коментарів тимчасово недоступне.';
+                    } else {
+                        showToast('Не вдалося надіслати коментар. Спробуйте ще раз пізніше');
+                        if (status) status.textContent = `Не вдалося надіслати коментар${code ? ` (${code})` : ''}. Спробуйте ще раз.`;
+                    }
                 }
-                // renderCommentsList() спрацює автоматично через onSnapshot.
-            } else if (res.error === 'auth') {
-                showToast('Увійдіть, щоб залишити коментар');
-                Router.goTo('profile');
-            } else {
-                showToast('Не вдалося надіслати коментар. Спробуйте пізніше.');
+            } catch (error) {
+                console.error('[comments] submit failed:', error?.code || error);
+                showToast('Не вдалося надіслати коментар. Перевірте з’єднання й спробуйте ще раз');
+                if (status) status.textContent = 'Не вдалося надіслати коментар. Перевірте з’єднання й спробуйте ще раз.';
+            } finally {
+                sectionState.commentBusy = false;
+                if (btn?.isConnected) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalButtonContent || 'Надіслати';
+                }
             }
         }
 
