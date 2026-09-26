@@ -1354,6 +1354,9 @@ import {
             const previewPlayButton = document.getElementById('playerPreviewPlay');
             previewPlayButton?.classList.add('is-hidden');
             hidePlayerFramePoster();
+            // Switch out of preview immediately on the user's Play gesture.
+            videoContainer.classList.add('has-played');
+            videoContainer.classList.remove('is-preview');
             videoContainer.classList.add('active');
             videoContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const videoTitleEl = document.getElementById('playerTopbarTitle');
@@ -1449,6 +1452,9 @@ import {
                     syncPlaybackClock();
                     playerPageIsPlaying = false;
                     playerPageLastVideoTime = Number(video.currentTime) || 0;
+                    // Paused playback should expose the title overlay again.
+                    const container = document.getElementById('playerVideoContainer');
+                    container?.classList.remove('has-played');
                 };
                 const onSeeking = () => { playerPageLastVideoTime = null; };
                 const onSeeked = () => { playerPageLastVideoTime = Number(video.currentTime) || 0; };
