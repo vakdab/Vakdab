@@ -65,9 +65,14 @@ import {
             }
             return `
             <div class="cmt-signin">
-                <i class="fas fa-user-plus" aria-hidden="true"></i>
-                <p>Увійдіть, щоб залишати коментарі та відповідати глядачам</p>
-                <button type="button" class="cmt-signin__btn" id="cmtSigninBtn">Увійти</button>
+                <span class="cmt-signin__icon" aria-hidden="true"><i class="fas fa-comments"></i></span>
+                <div class="cmt-signin__copy">
+                    <strong>Долучайтеся до обговорення</strong>
+                    <p>Увійдіть, щоб залишати коментарі та відповідати глядачам.</p>
+                </div>
+                <button type="button" class="cmt-signin__btn" id="cmtSigninBtn">
+                    Увійти <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                </button>
             </div>`;
         }
 
@@ -304,7 +309,10 @@ import {
             section.style.display = '';
             section.innerHTML = `
                 <div class="section-heading-row">
-                    <div class="section-title"><i class="fas fa-comments" aria-hidden="true"></i> Обговорення</div>
+                    <div class="cmt-heading-copy">
+                        <div class="section-title"><i class="fas fa-comments" aria-hidden="true"></i> Обговорення</div>
+                        <p class="cmt-heading-note">Діліться враженнями про це аніме</p>
+                    </div>
                     <span class="cmt-count-badge" id="cmtCountBadge"></span>
                 </div>
                 <div id="cmtComposerWrap">${composerHtml()}</div>
@@ -318,7 +326,8 @@ import {
             sectionState.unsubscribe = subscribeAnimeComments(animeUrl, comments => {
                 if (comments === null) {
                     const el = document.getElementById('cmtList');
-                    if (el) el.innerHTML = '<div class="cmt-empty"><p>Не вдалося завантажити коментарі. Спробуйте пізніше.</p></div>';
+                    // Приховуємо невдале завантаження без окремої порожньої картки-помилки.
+                    if (el) el.innerHTML = '';
                     return;
                 }
                 sectionState.comments = comments;

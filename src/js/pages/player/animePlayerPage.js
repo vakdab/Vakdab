@@ -18,7 +18,7 @@ import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
 } from '../../legacy/app-legacy.js?v=20260923-catalog-declutter-v2';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
-import { renderPlayerCommentsSection, resetPlayerCommentsSection } from './commentsSection.js?v=20260924-discussions-v1';
+import { renderPlayerCommentsSection, resetPlayerCommentsSection } from './commentsSection.js?v=20260926-discussions-modern-v1';
 import {
     JIKAN_STATUS_LABELS, SEASON_LABELS, ANILIST_STATUS_LABELS, ANILIST_RELATION_LABELS, ANILIST_FORMAT_LABELS,
     fetchJikan, normalizeJikanTitle, resolveJikanById, withTimeout, resolveJikanByTitle,
