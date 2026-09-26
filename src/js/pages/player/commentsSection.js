@@ -10,6 +10,20 @@ import {
         // ====================================================================
         //  ОБГОВОРЕННЯ І КОМЕНТАРІ (секція на сторінці аніме)
         // ====================================================================
+        let authUiListenerBound = false;
+
+        function bindAuthUiRefresh() {
+            if (authUiListenerBound) return;
+            authUiListenerBound = true;
+            window.addEventListener('vakdab:auth-changed', () => {
+                const wrap = document.getElementById('cmtComposerWrap');
+                if (!wrap) return;
+                wrap.innerHTML = composerHtml();
+                bindComposer();
+                renderCommentsList();
+            });
+        }
+
         const sectionState = {
             animeUrl: '',
             animeTitle: '',
@@ -276,6 +290,7 @@ import {
                 try { sectionState.unsubscribe(); } catch {}
                 sectionState.unsubscribe = null;
             }
+            bindAuthUiRefresh();
             sectionState.animeUrl = animeUrl;
             sectionState.animeTitle = String(anime.title || anime.originalTitle || '');
             sectionState.animePoster = anime.image?.original

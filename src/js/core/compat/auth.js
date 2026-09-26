@@ -17,6 +17,8 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
             _loadingData: false,
             _lastProfileSync: null,
             _authResolved: false,
+            _authReadyPromise: null,
+            _resolveAuthReady: null,
             _syncQueue: Promise.resolve(),
 
             init() {
@@ -26,6 +28,7 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                 }
                 if (this._initialized) return;
                 this._initialized = true;
+                this._authReadyPromise = new Promise(resolve => { this._resolveAuthReady = resolve; });
                 // Відновити guest стан з localStorage
                 this._isGuest = localStorage.getItem('vakdab_guest') === '1';
                 this._googleProvider = new GoogleAuthProvider();
@@ -41,6 +44,7 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                     if (user && !user.isAnonymous) this._isGuest = false;
                     this._user = user;
                     this._authResolved = true;
+                    if (this._resolveAuthReady) { this._resolveAuthReady(user); this._resolveAuthReady = null; }
                     this._notifyListeners();
                     if (user) {
                         // РЕНДЕРИМО ПРОФІЛЬ ОДРАЗУ з поточними localStorage даними
@@ -82,12 +86,25 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
             },
 
             _notifyListeners() {
-                this._listeners.forEach(fn => fn(this._user));
+                this._listeners.forEach(fn => {
+                    try { fn(this._user); } catch (e) { console.warn('[Auth] listener failed:', e); }
+                });
+                try { window.dispatchEvent(new CustomEvent('vakdab:auth-changed', { detail: { user: this._user } })); } catch (_) {}
             },
 
             onAuthStateChanged(fn) {
                 this._listeners.push(fn);
-                if (this._user !== null) fn(this._user);
+                if (this._authResolved) fn(this._user);
+                return () => { this._listeners = this._listeners.filter(listener => listener !== fn); };
+            },
+
+            async waitForResolution(timeoutMs = 5000) {
+                if (this._authResolved) return this._user;
+                if (!this._authReadyPromise) return null;
+                return Promise.race([
+                    this._authReadyPromise,
+                    new Promise(resolve => setTimeout(() => resolve(this._user), timeoutMs))
+                ]);
             },
 
             isAuthenticated() {
@@ -330,6 +347,8 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                     // onAuthStateChanged() є єдиним власником завантаження профілю.
                     // Не викликаємо _loadUserData та renderProfilePage вдруге після email login.
                     this._user = cred.user;
+                    this._authResolved = true;
+                    this._notifyListeners();
                     showToast('Успішний вхід');
                     return { success: true };
                 } catch (e) {
@@ -404,6 +423,7 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                 try {
                     const result = await signInWithPopup(auth, this._googleProvider);
                     this._user = result.user;
+                    this._authResolved = true;
                     this._notifyListeners();
                     showToast('Вхід через Google успішний');
                     // _loadUserData викличеться через onAuthStateChanged — не дублюємо

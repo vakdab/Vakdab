@@ -86,6 +86,7 @@ export function renderAuthPage() {
         if (!result.success) {
             errorEl.textContent = result.error || 'Помилка входу';
         } else {
+            await Auth.waitForResolution();
             renderProfilePage();
         }
     });
@@ -104,6 +105,7 @@ export function renderAuthPage() {
             if (!result.success) {
                 errorEl.textContent = result.error || 'Помилка входу через Telegram';
             } else {
+                await Auth.waitForResolution();
                 renderProfilePage();
             }
         });
@@ -121,6 +123,7 @@ export function renderAuthPage() {
         if (!result.success) {
             errorEl.textContent = result.error || 'Помилка Google входу';
         } else {
+            await Auth.waitForResolution();
             renderProfilePage();
         }
     });
