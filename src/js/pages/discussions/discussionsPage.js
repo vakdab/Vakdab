@@ -119,13 +119,7 @@ import {
                 return;
             }
             container.innerHTML = `
-            <section class="discussions-page" aria-labelledby="discussionsPageTitle">
-                <div class="discussions-hero" aria-hidden="true"><div class="discussions-hero__ambient"></div></div>
-                <header class="discussions-hero__copy">
-                    <span class="discussions-kicker"><i class="fas fa-comments" aria-hidden="true"></i> Спільнота ВакДаб</span>
-                    <h2 id="discussionsPageTitle">Обговорення і коментарі</h2>
-                    <p class="discussions-hint">Останні відгуки глядачів про аніме. Приєднуйтесь до обговорення своїх улюблених тайтлів.</p>
-                </header>
+            <section class="discussions-page" aria-label="Обговорення">
                 <div class="discussions-toolbar">
                     <div class="discussions-tabs" role="tablist" aria-label="Сортування">
                         <button type="button" class="discussions-tab is-active" data-discussions-mode="recent" role="tab" aria-selected="true">Останні</button>

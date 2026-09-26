@@ -70,55 +70,6 @@
     margin: 0 auto;
     padding: 22px 14px calc(34px + env(safe-area-inset-bottom));
 }
-.discussions-hero {
-    position: absolute;
-    inset: -40px -20px auto -20px;
-    height: 260px;
-    pointer-events: none;
-    z-index: 0;
-}
-.discussions-hero__ambient {
-    position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(60% 90% at 22% 0%, rgba(var(--accent-rgb, 247, 247, 247), 0.16), transparent 65%),
-        radial-gradient(45% 70% at 88% 12%, rgba(var(--accent-rgb, 247, 247, 247), 0.09), transparent 60%);
-    filter: blur(2px);
-}
-.discussions-hero__copy {
-    position: relative;
-    z-index: 1;
-    margin-bottom: 18px;
-}
-.discussions-kicker {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    border-radius: 999px;
-    border: 1px solid rgba(var(--accent-rgb, 247, 247, 247), 0.28);
-    background: rgba(var(--accent-rgb, 247, 247, 247), 0.08);
-    color: var(--text-secondary, #cfcfcf);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-.discussions-hero__copy h2 {
-    margin: 12px 0 8px;
-    font-size: clamp(26px, 6vw, 38px);
-    letter-spacing: -0.03em;
-    line-height: 1.05;
-    color: var(--text, #f7f7f7);
-}
-.discussions-hint {
-    margin: 0;
-    max-width: 560px;
-    color: var(--text-muted, #a8a8a8);
-    font-size: 14px;
-    line-height: 1.5;
-}
-
 .discussions-toolbar {
     position: relative;
     z-index: 1;
@@ -552,29 +503,8 @@ img.dsc-card__poster { display: block; }
 /* ---------- Сучасне оформлення стрічки й обговорення в плеєрі ---------- */
 .discussions-page {
     max-width: 920px;
-    padding: clamp(24px, 5vw, 44px) 16px calc(42px + env(safe-area-inset-bottom));
+    padding: 14px 16px calc(42px + env(safe-area-inset-bottom));
 }
-.discussions-hero { inset: -24px -24px auto; height: 300px; }
-.discussions-hero__ambient {
-    background:
-        radial-gradient(58% 85% at 14% 0%, rgba(var(--accent-rgb, 247, 247, 247), .13), transparent 72%),
-        radial-gradient(42% 75% at 90% 6%, rgba(135, 110, 255, .12), transparent 70%);
-}
-.discussions-hero__copy { margin-bottom: 26px; }
-.discussions-kicker {
-    min-height: 30px;
-    padding: 5px 11px;
-    border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
-    background: color-mix(in srgb, var(--accent) 7%, var(--surface));
-    letter-spacing: .04em;
-}
-.discussions-hero__copy h2 {
-    margin-top: 16px;
-    font-size: clamp(30px, 6vw, 44px);
-    letter-spacing: -.045em;
-    line-height: 1.04;
-}
-.discussions-hint { max-width: 620px; font-size: 15px; line-height: 1.65; }
 .discussions-toolbar { gap: 12px; margin-bottom: 18px; }
 .discussions-tabs {
     padding: 4px;
@@ -711,11 +641,7 @@ img.dsc-card__poster { display: block; }
 .cmt-empty p { font-size: 14px; }
 
 @media (max-width: 560px) {
-    .discussions-page { padding: 22px 12px calc(34px + env(safe-area-inset-bottom)); }
-    .discussions-hero { inset-inline: -12px; height: 250px; }
-    .discussions-hero__copy { margin-bottom: 20px; }
-    .discussions-hero__copy h2 { margin-top: 13px; font-size: clamp(28px, 8vw, 36px); }
-    .discussions-hint { font-size: 13px; }
+    .discussions-page { padding: 12px 12px calc(34px + env(safe-area-inset-bottom)); }
     .discussions-toolbar { gap: 10px; }
     .discussions-tabs { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
     .discussions-tab { padding-inline: 8px; }
