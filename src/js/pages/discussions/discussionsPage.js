@@ -102,7 +102,8 @@ import {
                 renderFeedList();
             } catch (e) {
                 console.warn('[discussions] load error:', e);
-                if (listEl) listEl.innerHTML = '<div class="dsc-empty"><p>Не вдалося завантажити коментарі. Спробуйте пізніше.</p></div>';
+                if (listEl) listEl.innerHTML = '';
+                showToast('Обговорення тимчасово недоступне');
             } finally {
                 discussionsState.loading = false;
             }
