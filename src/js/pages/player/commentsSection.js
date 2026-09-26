@@ -100,7 +100,6 @@ import {
                 <div class="cmt-card__body">
                     <header class="cmt-card__head">
                         <span class="cmt-card__nickname">${escapeHtml(comment.nickname || 'Користувач')}</span>
-                        <span class="cmt-card__role"><i class="fas fa-star" aria-hidden="true"></i> Глядач</span>
                         <span class="cmt-card__dot" aria-hidden="true">•</span>
                         <span class="cmt-card__time">${escapeHtml(timeAgoUk(comment.createdAt))}</span>
                     </header>
@@ -111,8 +110,8 @@ import {
                             <span class="cmt-like__count">${comment.likes || 0}</span>
                         </button>
                         ${!options.isReply ? `
-                        <button type="button" class="cmt-action-btn cmt-action-btn--discussion" data-reply-id="${escapeHtml(comment.id)}">
-                            До обговорення <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                        <button type="button" class="cmt-action-btn" data-reply-id="${escapeHtml(comment.id)}">
+                            <i class="fas fa-reply" aria-hidden="true"></i> Відповісти
                         </button>` : ''}
                         ${isOwn ? `
                         <button type="button" class="cmt-action-btn cmt-action-btn--danger" data-delete-id="${escapeHtml(comment.id)}">
