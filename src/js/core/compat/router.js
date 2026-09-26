@@ -6,7 +6,7 @@ import {
     openPlayerPage, closePlayerPage, renderAuthPage, renderGenrePage,
     renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260926-comments-auth-v1';
+} from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
 import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=20260827-live-screen-v1';
 import { renderProfileSkeleton, renderStickersSkeleton, renderLiveSkeleton } from '../../utils/skeleton.js';
 import { renderDiscussionsPage } from '../../pages/discussions/discussionsPage.js?v=20260926-discussions-no-intro-v1';

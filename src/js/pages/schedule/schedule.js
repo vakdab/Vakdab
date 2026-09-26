@@ -1,4 +1,4 @@
-import { openScheduleItemInPlayer } from '../home/homeLegacy.js?v=20260926-comments-auth-v1';
+import { openScheduleItemInPlayer } from '../home/homeLegacy.js?v=20260926-comment-send-v1';
 import { renderScheduleSkeleton } from '../../utils/skeleton.js';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));

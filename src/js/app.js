@@ -1,4 +1,4 @@
-import { bootstrap } from './core/bootstrap.js?v=20260926-comments-auth-v1';
+import { bootstrap } from './core/bootstrap.js?v=20260926-comment-send-v1';
 
 try {
     if (globalThis.Telegram?.WebApp) {
