@@ -48,6 +48,22 @@ export function isSignedInUser() {
     return Boolean(user && !user.isAnonymous);
 }
 
+// Ensure Firestore receives a fresh token before a protected write.
+async function ensureSignedInSession() {
+    if (!auth) return false;
+    try {
+        if (typeof auth.authStateReady === 'function') await auth.authStateReady();
+        else if (Auth.waitForResolution) await Auth.waitForResolution(5000);
+        const user = auth.currentUser;
+        if (!user || user.isAnonymous) return false;
+        await user.getIdToken(true);
+        return true;
+    } catch (e) {
+        console.warn('[comments] auth token refresh failed:', e?.code || e);
+        return false;
+    }
+}
+
 function snapshotToComment(docSnap) {
     const data = docSnap.data() || {};
     return {
@@ -130,7 +146,7 @@ export async function fetchPopularComments(limitCount = 30) {
 }
 
 export async function postComment({ animeUrl, animeTitle, animePoster, text, parentId = '' }) {
-    if (!isSignedInUser()) {
+    if (!await ensureSignedInSession() || !isSignedInUser()) {
         return { ok: false, error: 'auth' };
     }
     const clean = String(text || '').trim().slice(0, COMMENTS_MAX_LENGTH);
