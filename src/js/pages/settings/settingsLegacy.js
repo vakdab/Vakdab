@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260923-catalog-declutter-v2';
+} from '../../legacy/app-legacy.js?v=20260926-comments-auth-v1';
 import {
     normalizeNickname,
     stripNicknamePrefix,

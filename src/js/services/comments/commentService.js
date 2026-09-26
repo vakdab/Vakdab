@@ -20,6 +20,10 @@ export function commentsAnimeId(animeUrl) {
 export async function ensureCommentsGuestAuth() {
     try {
         if (!auth) return false;
+        // Do not create an anonymous session while Firebase is still restoring a
+        // persisted account; doing so can race with and replace that user session.
+        if (typeof auth.authStateReady === 'function') await auth.authStateReady();
+        else if (Auth.waitForResolution) await Auth.waitForResolution(5000);
         if ((Auth.isAuthenticated && Auth.isAuthenticated()) || auth.currentUser) return true;
         await signInAnonymously(auth);
         return true;
@@ -40,7 +44,8 @@ export function commentsAuthorData() {
 }
 
 export function isSignedInUser() {
-    return Boolean(Auth.isAuthenticated && Auth.isAuthenticated() && auth?.currentUser && !auth.currentUser.isAnonymous);
+    const user = auth?.currentUser;
+    return Boolean(user && !user.isAnonymous);
 }
 
 function snapshotToComment(docSnap) {

@@ -3,10 +3,10 @@ import { loadFeature } from '../feature-loader.js?v=20260905-deadcode-v1';
 import {
     Auth, setCurrentCategory, setCurrentPage, setCurrentSearchQuery, setCurrentTab,
     initRatingPage, loadAndDisplayGenreSections, loadHomeRecommendations, loadMangaReader,
-    openPlayerPage, renderAuthPage, renderGenrePage,
+    openPlayerPage, closePlayerPage, renderAuthPage, renderGenrePage,
     renderProfilePage, renderPublicProfilePage, renderSchedulePage, renderSearchPage,
     renderSettingsPage, showToast, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260923-catalog-declutter-v2';
+} from '../../legacy/app-legacy.js?v=20260926-comments-auth-v1';
 import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=20260827-live-screen-v1';
 import { renderProfileSkeleton, renderStickersSkeleton, renderLiveSkeleton } from '../../utils/skeleton.js';
 import { renderDiscussionsPage } from '../../pages/discussions/discussionsPage.js?v=20260926-discussions-no-intro-v1';
@@ -34,9 +34,13 @@ import { renderDiscussionsPage } from '../../pages/discussions/discussionsPage.j
             navigate(route, params) {
                 const playerModal = document.getElementById('playerPageModal');
                 if (playerModal && route !== 'anime') {
+                    // Leaving a scroll-locked player must run its normal cleanup;
+                    // hiding only the modal leaves the page locked at the old scroll offset.
+                    if (playerModal.classList.contains('is-open')) closePlayerPage();
                     playerModal.classList.remove('active', 'show', 'open');
                     playerModal.style.display = 'none';
                     playerModal.setAttribute('aria-hidden', 'true');
+                    window.scrollTo(0, 0);
                 }
                 document.getElementById('genreSectionsContainer').style.display = 'none';
                 const catalogPage = document.getElementById('catalogPageContainer');
