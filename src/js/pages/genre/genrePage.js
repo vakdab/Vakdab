@@ -1,4 +1,4 @@
-import { loadGenrePageContent } from '../../legacy/app-legacy.js?v=20260923-catalog-declutter-v2';
+import { loadGenrePageContent } from '../../legacy/app-legacy.js?v=20260926-comments-auth-v1';
 import { renderAnimeCardSkeleton } from '../../utils/skeleton.js';
 
 export let genrePageState = { slug: '', name: '', page: 1, list: [], hasNextPage: false, total: 0 };

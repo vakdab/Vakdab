@@ -1,11 +1,11 @@
-import { escapeHtml, showToast } from '../../legacy/app-legacy.js?v=20260923-catalog-declutter-v2';
-import { Router } from '../../core/compat/router.js?v=20260901-home-recs-v3';
+import { escapeHtml, showToast } from '../../legacy/app-legacy.js?v=20260926-comments-auth-v1';
+import { Router } from '../../core/compat/router.js?v=20260926-comments-auth-v1';
 import { auth } from '../../services/firebase/client.js';
 import { getProfile, getProfileDisplayName } from '../../services/profile/profileStorage.js';
 import {
     subscribeAnimeComments, postComment, toggleCommentLike, deleteComment,
     timeAgoUk, groupComments, isSignedInUser, COMMENTS_MAX_LENGTH
-} from '../../services/comments/commentService.js?v=20260924-discussions-v1';
+} from '../../services/comments/commentService.js?v=20260926-comments-auth-v1';
 
         // ====================================================================
         //  ОБГОВОРЕННЯ І КОМЕНТАРІ (секція на сторінці аніме)
@@ -16,12 +16,24 @@ import {
             if (authUiListenerBound) return;
             authUiListenerBound = true;
             window.addEventListener('vakdab:auth-changed', () => {
-                const wrap = document.getElementById('cmtComposerWrap');
-                if (!wrap) return;
-                wrap.innerHTML = composerHtml();
-                bindComposer();
+                refreshComposerFromAuth();
                 renderCommentsList();
             });
+        }
+
+        async function refreshComposerFromAuth() {
+            try {
+                if (typeof auth?.authStateReady === 'function') await auth.authStateReady();
+            } catch (error) {
+                console.warn('[comments] auth state restore failed:', error?.code || error);
+            }
+            const wrap = document.getElementById('cmtComposerWrap');
+            if (!wrap) return;
+            const shouldShowComposer = isSignedInUser();
+            const hasComposer = Boolean(wrap.querySelector('.cmt-composer'));
+            if (shouldShowComposer === hasComposer) return;
+            wrap.innerHTML = composerHtml();
+            bindComposer();
         }
 
         const sectionState = {
@@ -164,7 +176,14 @@ import {
             }
             if (sendBtn) sendBtn.addEventListener('click', () => submitComment());
             const signinBtn = document.getElementById('cmtSigninBtn');
-            if (signinBtn) signinBtn.addEventListener('click', () => Router.goTo('profile'));
+            if (signinBtn) signinBtn.addEventListener('click', async () => {
+                await refreshComposerFromAuth();
+                if (isSignedInUser()) {
+                    showToast('Ви вже увійшли — можете залишити коментар');
+                    return;
+                }
+                Router.goTo('profile');
+            });
         }
 
         async function submitComment(parentId = '') {
@@ -319,6 +338,9 @@ import {
                 <div id="cmtList" class="cmt-list">${renderCommentsList()}</div>`;
 
             bindComposer();
+            // The persisted-user callback may have fired before this player section
+            // existed; re-check after Firebase finishes its initial restore.
+            refreshComposerFromAuth();
             const listEl = document.getElementById('cmtList');
             if (listEl) listEl.innerHTML = '<div class="cmt-loading"><i class="fas fa-spinner fa-pulse" aria-hidden="true"></i> Завантаження коментарів...</div>';
             bindList(listEl);
