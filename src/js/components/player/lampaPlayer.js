@@ -269,6 +269,9 @@ export class LampaPlayer {
                 v.addEventListener('pause', () => {
                     this.state.playing = false;
                     this._updatePlayBtn();
+                    // Paused state must always expose the transport controls and
+                    // the title overlay again, including after the auto-hide timer.
+                    this._showControls();
                 });
                 const syncTimeState = () => {
                     this.state.currentTime = Number.isFinite(v.currentTime) ? v.currentTime : 0;

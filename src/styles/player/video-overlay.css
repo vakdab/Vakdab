@@ -119,7 +119,7 @@
     pointer-events: none;
     transform: none !important;
 }
-#playerPageModal .player-video-container.has-played.controls-hidden .video-overlay-topbar {
+#playerPageModal .player-video-container:has(.lampa-player-container.controls-hidden) .video-overlay-topbar {
     opacity: 0;
     pointer-events: none;
     transform: translateY(-6px);
