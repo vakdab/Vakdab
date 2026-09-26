@@ -179,6 +179,7 @@ import {
             const playerVideoContainer = document.getElementById('playerVideoContainer');
             playerVideoContainer.classList.add('active');
             playerVideoContainer.classList.remove('has-played');
+            playerVideoContainer.classList.add('is-preview');
             const posterTargets = [document.getElementById('playerPosterImg'), document.getElementById('playerHeroPoster')];
             posterTargets.forEach(img => { if (img) { img.src = ''; img.alt = ''; } });
             const playerHero = document.getElementById('playerBlurBg');
@@ -1440,7 +1441,9 @@ import {
                 const onPlaying = () => {
                     playerPageIsPlaying = true;
                     playerPageLastVideoTime = Number(video.currentTime) || 0;
-                    document.getElementById('playerVideoContainer')?.classList.add('has-played');
+                    const container = document.getElementById('playerVideoContainer');
+                    container?.classList.add('has-played');
+                    container?.classList.remove('is-preview');
                 };
                 const onPause = () => {
                     syncPlaybackClock();

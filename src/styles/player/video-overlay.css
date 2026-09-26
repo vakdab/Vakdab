@@ -113,6 +113,12 @@
     opacity: 1;
     transition: opacity .25s ease, transform .25s ease;
 }
+#playerPageModal .player-video-container.is-preview .video-overlay-topbar {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: none;
+    transform: none !important;
+}
 #playerPageModal .player-video-container.has-played.controls-hidden .video-overlay-topbar {
     opacity: 0;
     pointer-events: none;
