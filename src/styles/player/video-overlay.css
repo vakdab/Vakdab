@@ -134,37 +134,43 @@
 #playerPageModal .player-preview-dock {
     position: absolute;
     z-index: 14;
-    right: 18px;
+    right: 22px;
     bottom: 18px;
-    left: 106px;
+    left: 22px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 58px;
-    padding: 15px 17px 10px;
+    height: 88px;
+    min-height: 0;
+    padding: 0 14px 0 108px;
     pointer-events: none;
-    background: linear-gradient(90deg, rgba(0, 0, 0, .56), rgba(0, 0, 0, .42) 72%, rgba(0, 0, 0, .12));
+    background: rgba(0, 0, 0, .56);
     color: #fff;
     opacity: 1;
     transition: opacity .25s ease, transform .25s ease, visibility .25s ease;
     text-shadow: 0 2px 8px rgba(0, 0, 0, .75);
 }
 #playerPageModal .player-preview-time {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     color: rgba(255, 255, 255, .92);
-    font-size: clamp(14px, 2vw, 18px);
+    font-size: clamp(15px, 2.3vw, 20px);
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     letter-spacing: .02em;
+    white-space: nowrap;
 }
 #playerPageModal .player-preview-volume {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 54px;
-    height: 54px;
-    border: 1px solid rgba(255, 255, 255, .18);
-    border-radius: 18px;
-    background: rgba(0, 0, 0, .42);
+    width: 58px;
+    height: 58px;
+    border: 0;
+    border-radius: 19px;
+    background: rgba(0, 0, 0, .34);
     color: #fff;
 }
 #playerPageModal .player-preview-volume svg { width: 28px; height: 28px; fill: currentColor; }
@@ -512,10 +518,10 @@
 #playerPageModal .player-preview-play {
     top: auto;
     right: auto;
-    bottom: 20px;
-    left: 22px;
-    width: 112px;
-    height: 112px;
+    bottom: 22px;
+    left: 34px;
+    width: 76px;
+    height: 76px;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -703,6 +709,22 @@
 
     #playerPageModal .lp-quality-rail { right: 8px; gap: 3px; }
     #playerPageModal .lp-quality-rail button { min-width: 38px; min-height: 25px; padding-inline: 5px; font-size: 9px; }
+    #playerPageModal .player-preview-dock {
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        height: 78px;
+        padding-left: 84px;
+    }
+    #playerPageModal .player-preview-play {
+        bottom: 18px;
+        left: 22px;
+        width: 64px;
+        height: 64px;
+    }
+    #playerPageModal .player-preview-play .player-play-triangle { width: 50px; height: 50px; }
+    #playerPageModal .player-preview-volume { width: 52px; height: 52px; border-radius: 17px; }
+    #playerPageModal .player-preview-volume svg { width: 27px; height: 27px; }
 }
 
 @media (max-width: 430px) {
