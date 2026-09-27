@@ -1376,7 +1376,16 @@ import {
             if (playerPagePlayer) { playerPagePlayer.destroy();
                 playerPagePlayer = null; }
             if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
-            playerPagePlayer = new LampaPlayer(videoDiv, { poster: playerPageAnime?.images?.jpg?.large_image_url });
+            const episodeOptions = getCurrentEpisodes().filter(ep => ep?.file).map(ep => ({
+                episode: ep.episode,
+                file: ep.file
+            }));
+            playerPagePlayer = new LampaPlayer(videoDiv, {
+                poster: playerPageAnime?.images?.jpg?.large_image_url,
+                episode: epNum,
+                episodeOptions,
+                onEpisodeSelect: item => playEpisode(item.file, item.episode)
+            });
             await playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || '', `Серія ${epNum}`);
             hidePlayerFramePoster();
             previewPlayButton?.classList.add('is-hidden');

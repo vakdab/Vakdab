@@ -233,12 +233,22 @@ export class LampaPlayer {
                         <div class="lp-progress-fill" id="lpProgressFill" style="width:0%"></div>
                     </div>
                     <div class="lp-bottom-row">
-                        <button class="lp-btn lp-main-btn" id="lpPlayBtn" title="Відтворити / Пауза" aria-label="Відтворити">${LP_ICONS.play}</button>
+                        <button class="lp-btn lp-main-btn" id="lpPlayBtn" title="Відтворити / Пауза" aria-label="Відтворити / Пауза">${LP_ICONS.play}</button>
                         <span class="lp-time" id="lpTime">0:00 / 0:00</span>
                         <div class="lp-spacer"></div>
-                        <div class="lp-volume-group">
-                            <button class="lp-btn" id="lpVolBtn" title="Вимкнути звук" aria-label="Вимкнути звук">${LP_ICONS.volOn}</button>
-                            <input class="lp-volume" id="lpVolume" type="range" min="0" max="1" step="0.05" value="0.8" aria-label="Гучність">
+                        <div class="lp-settings-wrap">
+                            <div class="lp-menu-wrap">
+                                <button type="button" class="lp-control-pill" id="lpEpisodeBtn" aria-expanded="false" aria-label="Вибрати серію"><span id="lpEpisodeLabel">Серія</span><span class="lp-chevron">⌃</span></button>
+                                <div class="lp-popover lp-episode-menu" id="lpEpisodeMenu" role="menu" aria-hidden="true"></div>
+                            </div>
+                            <div class="lp-menu-wrap">
+                                <button type="button" class="lp-control-pill lp-quality-pill" id="lpQualityBtn" aria-expanded="false" aria-label="Вибрати якість"><span id="lpQualityLabel">Авто</span><span class="lp-chevron">⌃</span></button>
+                                <div class="lp-popover" id="lpQualityMenu" role="menu" aria-hidden="true"></div>
+                            </div>
+                            <div class="lp-volume-group">
+                                <button class="lp-btn" id="lpVolBtn" title="Вимкнути звук" aria-label="Вимкнути звук">${LP_ICONS.volOn}</button>
+                                <input class="lp-volume" id="lpVolume" type="range" min="0" max="1" step="0.05" value="0.8" aria-label="Гучність">
+                            </div>
                         </div>
                     </div>
                 `;
@@ -366,6 +376,40 @@ export class LampaPlayer {
                 });
                 v.addEventListener('volumechange', () => this._updateVolBtn());
 
+                // Episode and quality selectors live inside the bottom overlay.
+                const episodeBtn = wrap.querySelector('#lpEpisodeBtn');
+                const episodeMenu = wrap.querySelector('#lpEpisodeMenu');
+                const episodeLabel = wrap.querySelector('#lpEpisodeLabel');
+                const renderEpisodeMenu = () => {
+                    if (!episodeMenu) return;
+                    const items = Array.isArray(this.options.episodeOptions) ? this.options.episodeOptions : [];
+                    episodeMenu.innerHTML = '<div class="lp-popover-label">Серії</div>' + (items.length
+                        ? items.map(item => `<button type="button" data-episode-value="${String(item.episode)}" role="menuitem"><span>Серія ${String(item.episode)}</span></button>`).join('')
+                        : '<div class="lp-popover-label">Серії недоступні</div>');
+                };
+                renderEpisodeMenu();
+                const updateEpisodeLabel = value => { if (episodeLabel) episodeLabel.textContent = `Серія ${value || this.options.episode || ''}`.trim(); };
+                updateEpisodeLabel(this.options.episode);
+                const setEpisodeMenuOpen = open => {
+                    episodeMenu?.classList.toggle('is-open', open);
+                    episodeBtn?.classList.toggle('is-open', open);
+                    episodeMenu?.setAttribute('aria-hidden', String(!open));
+                    episodeBtn?.setAttribute('aria-expanded', String(open));
+                };
+                episodeBtn?.addEventListener('click', e => {
+                    e.stopPropagation();
+                    setEpisodeMenuOpen(!episodeMenu?.classList.contains('is-open'));
+                });
+                episodeMenu?.addEventListener('click', e => {
+                    const option = e.target.closest('[data-episode-value]');
+                    if (!option) return;
+                    e.stopPropagation();
+                    const item = (this.options.episodeOptions || []).find(entry => String(entry.episode) === option.dataset.episodeValue);
+                    updateEpisodeLabel(item?.episode);
+                    setEpisodeMenuOpen(false);
+                    if (item && typeof this.options.onEpisodeSelect === 'function') this.options.onEpisodeSelect(item);
+                });
+
                 // Quality menu support remains available for HLS sources.
                 const qualityBtn = wrap.querySelector('#lpQualityBtn');
                 const qualityMenu = wrap.querySelector('#lpQualityMenu');
@@ -379,7 +423,7 @@ export class LampaPlayer {
                     btn.classList.toggle('is-open', open);
                 };
                 const isMenuOpen = menu => menu && menu.classList.contains('is-open');
-                const closePlayerMenus = () => setMenuOpen(qualityMenu, qualityBtn, false);
+                const closePlayerMenus = () => { setMenuOpen(qualityMenu, qualityBtn, false); setEpisodeMenuOpen(false); };
                 if (qualityBtn && qualityMenu) qualityBtn.addEventListener('click', e => {
                     e.stopPropagation();
                     const willOpen = !isMenuOpen(qualityMenu);
