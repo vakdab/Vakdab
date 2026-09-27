@@ -69,7 +69,7 @@ import {
             if (!panel) return;
             const bannerEffectClass = (profile.bannerEffect && profile.bannerEffect !== 'none') ? ` banner-effect-${profile.bannerEffect}` : '';
             const decorationClass = (profile.avatarDecoration && profile.avatarDecoration !== 'none') ? ` avatar-decoration-${profile.avatarDecoration}` : '';
-            const avatarMarkup = profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, '', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, '', 'avatar') : `<span class="settings-preview-avatar-fallback">${escapeHtml((getProfileDisplayName(profile) || 'К').charAt(0).toUpperCase())}</span>`);
+            const avatarMarkup = profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, 'settings-preview-avatar-media', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, 'settings-preview-avatar-media', 'avatar') : `<span class="settings-preview-avatar-fallback">${escapeHtml((getProfileDisplayName(profile) || 'К').charAt(0).toUpperCase())}</span>`);
             const previewAvatarMarkup = avatarMarkup.replace('loading="lazy"', 'loading="eager"');
             panel.innerHTML = `
               <div class="settings-preview-profile">
@@ -379,7 +379,7 @@ import {
                 ${bannerVideoSrc ? profileMediaMarkup(bannerVideoSrc, '', 'video banner', profile.bannerVideoSettings) : (bannerSrc ? profileMediaMarkup(bannerSrc, '', 'banner') : '')}
               </div>
               <div class="settings-media-actions" aria-label="Керування банером">
-                <button class="settings-media-btn settings-media-btn--replace" id="settingsBannerUploadBtn"><i class="fas fa-pen"></i> Редагувати</button>
+                <button class="settings-media-btn settings-media-btn--replace" id="settingsBannerUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
                 ${bannerVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsBannerEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : (bannerSrc ? (isGifUrl(bannerSrc) ? `<button class="settings-media-btn settings-media-edit-video" id="settingsBannerEditGifBtn"><i class="fas fa-sliders"></i> Редагувати GIF</button>` : `<button class="settings-media-btn settings-media-edit-image" id="settingsBannerEditImageBtn"><i class="fas fa-crop-simple"></i> Редагувати банер</button>`) : '')}
               </div>
             </div>
@@ -390,7 +390,7 @@ import {
             <div class="settings-media-card settings-media-card--avatar">
               <div class="settings-media-preview--avatar${(!avatarSrc && !avatarVideoSrc) ? ' is-empty' : ''}" id="settingsAvatarPreview">${avatarVideoSrc ? profileMediaMarkup(avatarVideoSrc, '', 'video avatar', profile.avatarVideoSettings) : (avatarSrc ? profileMediaMarkup(avatarSrc, '', 'avatar') : '<i class="fas fa-user"></i>')}</div>
               <div class="settings-media-actions">
-                <button class="settings-media-btn settings-media-btn--replace" id="settingsAvatarUploadBtn"><i class="fas fa-pen"></i> Редагувати</button>
+                <button class="settings-media-btn settings-media-btn--replace" id="settingsAvatarUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
                 ${avatarVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsAvatarEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : (avatarSrc ? (isGifUrl(avatarSrc) ? `<button class="settings-media-btn settings-media-edit-video" id="settingsAvatarEditGifBtn"><i class="fas fa-sliders"></i> Редагувати GIF</button>` : `<button class="settings-media-btn settings-media-edit-image" id="settingsAvatarEditImageBtn"><i class="fas fa-crop-simple"></i> Редагувати аватарку</button>`) : '')}
               </div>
             </div>
