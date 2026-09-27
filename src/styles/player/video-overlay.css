@@ -113,16 +113,15 @@
     opacity: 1;
     transition: opacity .25s ease, transform .25s ease;
 }
-#playerPageModal .player-video-container.is-preview .video-overlay-topbar {
+/* Keep the title/fullscreen overlay permanently above the poster and video.
+   Playback controls may hide, but this overlay must remain visible. */
+#playerPageModal .player-video-container.is-preview .video-overlay-topbar,
+#playerPageModal .player-video-container.controls-hidden .video-overlay-topbar,
+#playerPageModal .player-video-container:has(.lampa-player-container.controls-hidden) .video-overlay-topbar {
     opacity: 1 !important;
     visibility: visible !important;
     pointer-events: none;
     transform: none !important;
-}
-#playerPageModal .player-video-container:has(.lampa-player-container.controls-hidden) .video-overlay-topbar {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(-6px);
 }
 
 #playerPageModal .video-overlay-left {
