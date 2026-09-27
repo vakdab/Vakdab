@@ -300,6 +300,54 @@
 #playerPageModal .lp-btn:focus-visible { background: rgba(255, 255, 255, .14); outline: none; }
 #playerPageModal .lp-btn:active { transform: scale(.94); }
 
+/* Opening skip: keep it compact, readable and anchored to the transport area. */
+#playerPageModal .lampa-player-container .lp-opening-skip {
+    position: absolute !important;
+    z-index: 40 !important;
+    right: 14px !important;
+    bottom: 68px !important;
+    left: auto !important;
+    display: inline-flex !important;
+    width: auto !important;
+    max-width: calc(100% - 28px) !important;
+    min-width: 0 !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    padding: 0 13px !important;
+    border: 1px solid rgba(255, 255, 255, .38) !important;
+    border-radius: 9px !important;
+    background: rgba(8, 8, 8, .78) !important;
+    color: #fff !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .38) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    font: 700 12px/1 inherit !important;
+    letter-spacing: 0 !important;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, .7);
+    transform: translate3d(0, 6px, 0) !important;
+}
+#playerPageModal .lampa-player-container .lp-opening-skip.is-visible {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    transform: translate3d(0, 0, 0) !important;
+}
+#playerPageModal .lampa-player-container .lp-opening-skip:hover,
+#playerPageModal .lampa-player-container .lp-opening-skip:focus-visible {
+    border-color: rgba(255, 255, 255, .78) !important;
+    background: rgba(28, 28, 28, .92) !important;
+    outline: none;
+}
+#playerPageModal .lampa-player-container .lp-opening-skip svg {
+    width: 15px !important;
+    height: 15px !important;
+    flex: 0 0 15px !important;
+    fill: currentColor !important;
+}
+
 #playerPageModal .lp-main-btn {
     width: 30px;
     height: 30px;
@@ -431,7 +479,7 @@
 #playerPageModal .lp-volume-group { display: flex; align-items: center; gap: 0; }
 #playerPageModal .lp-volume { display: none; }
 
-/* ============== Center / preview play (dark glass) ============== */
+/* ============== Center play/pause flash ============== */
 #playerPageModal .lp-center-play {
     position: absolute;
     z-index: 15;
@@ -442,18 +490,18 @@
 }
 #playerPageModal .lp-center-play-btn {
     display: flex;
-    width: 68px;
-    height: 68px;
+    width: 94px;
+    height: 94px;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(255, 255, 255, .3);
-    border-radius: 50%;
-    background: rgba(0, 0, 0, .6);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     color: #fff;
     pointer-events: none;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+    box-shadow: none;
     opacity: 0;
     transform: scale(.7);
     -webkit-tap-highlight-color: transparent;
@@ -464,7 +512,12 @@
     opacity: 1;
     transform: scale(1);
 }
-#playerPageModal .lp-center-play-btn svg { width: 30px; height: 30px; fill: #fff; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .6)); }
+#playerPageModal .lp-center-play-btn svg {
+    width: 58px;
+    height: 58px;
+    fill: #fff;
+    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, .9));
+}
 
 #playerPageModal .lp-time {
     color: #fff;
@@ -474,8 +527,17 @@
 }
 
 @media (max-width: 600px) {
-    #playerPageModal .lp-center-play-btn { width: 56px; height: 56px; }
-    #playerPageModal .lp-center-play-btn svg { width: 24px; height: 24px; }
+    #playerPageModal .lampa-player-container .lp-opening-skip {
+        right: 10px !important;
+        bottom: 58px !important;
+        min-height: 32px !important;
+        height: 32px !important;
+        padding-inline: 11px !important;
+        font-size: 11px !important;
+    }
+    #playerPageModal .lampa-player-container .lp-opening-skip svg { width: 14px !important; height: 14px !important; flex-basis: 14px !important; }
+    #playerPageModal .lp-center-play-btn { width: 108px; height: 108px; }
+    #playerPageModal .lp-center-play-btn svg { width: 68px; height: 68px; }
 }
 
 /* ============== Six-dot loading animation ============== */
