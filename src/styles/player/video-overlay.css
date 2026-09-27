@@ -134,17 +134,17 @@
 #playerPageModal .player-preview-dock {
     position: absolute;
     z-index: 14;
-    right: 0;
-    bottom: 0;
-    left: 0;
+    right: 22px;
+    bottom: 18px;
+    left: 22px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 154px;
+    height: 88px;
     min-height: 0;
-    padding: 34px 24px 18px 176px;
+    padding: 0 14px 0 108px;
     pointer-events: none;
-    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, .48) 22%, rgba(0, 0, 0, .94) 100%);
+    background: rgba(0, 0, 0, .56);
     color: #fff;
     opacity: 1;
     transition: opacity .25s ease, transform .25s ease, visibility .25s ease;
@@ -153,41 +153,24 @@
 #playerPageModal .player-preview-time {
     position: absolute;
     top: 50%;
-    left: 176px;
-    transform: translateY(-50%);
+    left: 50%;
+    transform: translate(-50%, -50%);
     color: rgba(255, 255, 255, .92);
-    font-size: clamp(16px, 2.2vw, 22px);
+    font-size: clamp(15px, 2.3vw, 20px);
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     letter-spacing: .02em;
     white-space: nowrap;
 }
-#playerPageModal .player-preview-progress {
-    position: absolute;
-    top: 17px;
-    right: 24px;
-    left: 24px;
-    height: 6px;
-    overflow: hidden;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, .38);
-}
-#playerPageModal .player-preview-progress span {
-    display: block;
-    width: 6%;
-    height: 100%;
-    border-radius: inherit;
-    background: rgba(255, 255, 255, .92);
-}
 #playerPageModal .player-preview-volume {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 74px;
-    height: 74px;
-    border: 1px solid rgba(255, 255, 255, .18);
-    border-radius: 22px;
-    background: rgba(0, 0, 0, .25);
+    width: 58px;
+    height: 58px;
+    border: 0;
+    border-radius: 19px;
+    background: rgba(0, 0, 0, .34);
     color: #fff;
 }
 #playerPageModal .player-preview-volume svg { width: 28px; height: 28px; fill: currentColor; }
@@ -535,15 +518,15 @@
 #playerPageModal .player-preview-play {
     top: auto;
     right: auto;
-    bottom: 26px;
-    left: 24px;
-    width: 120px;
-    height: 120px;
-    border: 1px solid rgba(255, 255, 255, .25);
-    border-radius: 28px;
-    background: linear-gradient(145deg, rgba(255, 255, 255, .88), rgba(184, 184, 184, .76));
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .24);
-    color: #080808;
+    bottom: 22px;
+    left: 34px;
+    width: 76px;
+    height: 76px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: rgba(255, 255, 255, .86);
     backdrop-filter: none;
 }
 #playerPageModal .player-preview-play .player-play-triangle {
@@ -727,23 +710,20 @@
     #playerPageModal .lp-quality-rail { right: 8px; gap: 3px; }
     #playerPageModal .lp-quality-rail button { min-width: 38px; min-height: 25px; padding-inline: 5px; font-size: 9px; }
     #playerPageModal .player-preview-dock {
-        right: 0;
-        bottom: 0;
-        left: 0;
-        height: 112px;
-        padding: 28px 12px 10px 98px;
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        height: 78px;
+        padding-left: 84px;
     }
     #playerPageModal .player-preview-play {
-        bottom: 14px;
-        left: 12px;
-        width: 76px;
-        height: 76px;
-        border-radius: 22px;
+        bottom: 18px;
+        left: 22px;
+        width: 64px;
+        height: 64px;
     }
-    #playerPageModal .player-preview-play .player-play-triangle { width: 48px; height: 48px; }
-    #playerPageModal .player-preview-time { left: 98px; font-size: 16px; }
-    #playerPageModal .player-preview-progress { top: 12px; right: 12px; left: 12px; height: 5px; }
-    #playerPageModal .player-preview-volume { width: 58px; height: 58px; border-radius: 17px; }
+    #playerPageModal .player-preview-play .player-play-triangle { width: 50px; height: 50px; }
+    #playerPageModal .player-preview-volume { width: 52px; height: 52px; border-radius: 17px; }
     #playerPageModal .player-preview-volume svg { width: 27px; height: 27px; }
 }
 
