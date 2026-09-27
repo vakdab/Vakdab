@@ -85,7 +85,7 @@ import {
                     <p>Увійдіть, щоб залишати коментарі та відповідати глядачам.</p>
                 </div>
                 <button type="button" class="cmt-signin__btn" id="cmtSigninBtn">
-                    Увійти <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    Увійти
                 </button>
             </div>`;
         }
