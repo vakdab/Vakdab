@@ -132,6 +132,34 @@
 #playerPageModal .player-preview-volume svg { width: 22px; height: 22px; fill: currentColor; }
 #playerPageModal .player-preview-time { font-size: 12px; font-weight: 800; white-space: nowrap; }
 #playerPageModal .player-preview-spacer { flex: 1; }
+#playerPageModal .player-preview-settings { display: flex; align-items: center; gap: 6px; }
+#playerPageModal .player-preview-menu-wrap { position: relative; }
+#playerPageModal .player-preview-pill {
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    min-width: 48px; height: 28px; padding: 0 8px; border: 1px solid rgba(255,255,255,.3);
+    border-radius: 3px; color: #fff; background: rgba(0,0,0,.52); font-size: 11px;
+    font-weight: 700; cursor: pointer; pointer-events: auto;
+}
+#playerPageModal .player-preview-pill:active { transform: scale(.95); }
+#playerPageModal .player-preview-pill span { opacity: .7; }
+#playerPageModal .player-preview-menu {
+    position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 90;
+    min-width: 100px; max-height: 180px; overflow: auto; padding: 4px;
+    border: 1px solid rgba(255,255,255,.2); border-radius: 4px; background: rgba(0,0,0,.94);
+    box-shadow: 0 8px 26px rgba(0,0,0,.5); pointer-events: auto;
+}
+#playerPageModal .player-preview-menu[hidden] { display: none; }
+#playerPageModal .player-preview-menu button {
+    display: block; width: 100%; min-height: 30px; padding: 0 8px; border: 0;
+    border-radius: 3px; color: rgba(255,255,255,.85); background: transparent;
+    text-align: left; font-size: 11px; cursor: pointer;
+}
+#playerPageModal .player-preview-menu button:hover,
+#playerPageModal .player-preview-menu button.is-active { color: #fff; background: rgba(255,255,255,.16); }
+@media (max-width: 600px) {
+    #playerPageModal .player-preview-settings { gap: 3px; }
+    #playerPageModal .player-preview-pill { min-width: 42px; padding: 0 5px; font-size: 10px; }
+}
 
 #playerPageModal #playerPageVideo,
 #playerPageModal .lampa-player-container {

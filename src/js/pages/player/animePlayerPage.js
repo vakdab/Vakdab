@@ -3,7 +3,7 @@ import { auth, db } from '../../services/firebase/client.js';
 import { GENRE_MAP } from '../../config/constants.js?v=20260910-anime4k-v1';
 import { Router } from '../../core/compat/router.js?v=20260926-comment-send-v1';
 import { Storage } from '../../core/compat/storage.js?v=20260910-anime4k-v1';
-import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260910-anime4k-v1';
+import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260927-player-controls-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, resolveUniversalPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -243,6 +243,7 @@ import {
                 }
                 document.getElementById('playerPreviewPlay')?.classList.remove('is-hidden');
                 document.getElementById('playerPreviewBottomOverlay')?.classList.remove('is-hidden');
+                refreshPreviewEpisodeMenu();
                 updatePlayerVideoFrame(anime, playerPageCurrentEpisodeNum);
 
                 const heroPoster = document.getElementById('playerHeroPoster');
@@ -1894,7 +1895,38 @@ import {
             showToast('Оберіть озвучку в картці — перехід у Telegram вимкнено');
         }, true);
 
-        function startPlaybackAction() {
+        function refreshPreviewEpisodeMenu() {
+            const menu = document.getElementById('playerPreviewEpisodeMenu');
+            const button = document.getElementById('playerPreviewEpisodeBtn');
+            if (!menu || !button) return;
+            const episodes = getCurrentEpisodes().filter(ep => ep?.file);
+            menu.innerHTML = episodes.map(ep => `<button type="button" data-preview-episode="${escapeHtml(String(ep.episode))}" class="${sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum) ? 'is-active' : ''}">Серія ${escapeHtml(String(ep.episode))}</button>`).join('') || '<span style="display:block;padding:8px;color:#fff;font-size:11px">Серії недоступні</span>';
+            button.firstChild.textContent = `Серія ${playerPageCurrentEpisodeNum || '1'} `;
+        }
+        document.getElementById('playerPreviewEpisodeBtn')?.addEventListener('click', event => {
+            event.stopPropagation();
+            const menu = document.getElementById('playerPreviewEpisodeMenu');
+            if (!menu) return;
+            refreshPreviewEpisodeMenu();
+            menu.hidden = !menu.hidden;
+            event.currentTarget.setAttribute('aria-expanded', String(!menu.hidden));
+        });
+        document.getElementById('playerPreviewEpisodeMenu')?.addEventListener('click', event => {
+            const item = event.target.closest?.('[data-preview-episode]');
+            if (!item) return;
+            const ep = getCurrentEpisodes().find(entry => String(entry.episode) === item.dataset.previewEpisode && entry.file);
+            if (!ep) return;
+            document.getElementById('playerPreviewEpisodeMenu').hidden = true;
+            startPlaybackAction(ep);
+        });
+        document.getElementById('playerPreviewQualityBtn')?.addEventListener('click', event => {
+            event.stopPropagation();
+            const qualityButton = playerPagePlayer?.containerRef?.querySelector('#lpQualityBtn');
+            if (qualityButton) qualityButton.click();
+            else showToast('Якість буде доступна після запуску відео');
+        });
+
+        function startPlaybackAction(selectedEpisode = null) {
             const previewPlayButton = document.getElementById('playerPreviewPlay');
             previewPlayButton?.classList.add('is-hidden');
             hidePlayerFramePoster();
@@ -1905,7 +1937,8 @@ import {
                 showToast('Серії ще не завантажені або недоступні');
                 return;
             }
-            const targetEp = episodes.find(ep => sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum) && ep.file)
+            const targetEp = selectedEpisode?.file ? selectedEpisode
+                : episodes.find(ep => sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum) && ep.file)
                 || episodes.find(ep => ep.file)
                 || episodes[0];
             if (targetEp && targetEp.file) {
