@@ -444,6 +444,7 @@ export class LampaPlayer {
 
                 // Episode and quality selectors are now floated in the video overlay.
                 const episodeBtn = wrap.querySelector('#lpEpisodeBtn');
+                const episodeMenu = wrap.querySelector('#lpEpisodeMenu');
                 const episodeLabel = wrap.querySelector('#lpEpisodeLabel');
                 const renderEpisodeMenu = () => {
                     if (!episodeMenu) return;
@@ -486,6 +487,7 @@ export class LampaPlayer {
 
                 // Quality menu support remains available for HLS sources.
                 const qualityBtn = wrap.querySelector('#lpQualityBtn');
+                const qualityMenu = wrap.querySelector('#lpQualityMenu');
                 const qualityLabel = wrap.querySelector('#lpQualityLabel');
                 const qualityRail = this._qualityRail;
                 const setMenuOpen = (menu, btn, open) => {
