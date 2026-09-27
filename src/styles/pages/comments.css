@@ -677,3 +677,88 @@ img.dsc-card__poster { display: block; }
 @media (prefers-reduced-motion: reduce) {
     .dsc-card, .discussions-search, .cmt-signin__btn { transition: none; }
 }
+
+/* ---------- Обговорення всередині плеєра: mobile-first UX ---------- */
+#playerPageModal #commentsSection {
+    width: 100%;
+    min-width: 0;
+    margin-top: 22px;
+    padding: 20px 16px calc(28px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+}
+#playerPageModal #commentsSection .section-heading-row {
+    align-items: flex-start;
+    padding: 0 0 14px;
+    border-bottom: 0;
+}
+#playerPageModal #commentsSection .section-title {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.2;
+}
+#playerPageModal #commentsSection .section-title i { margin-right: 7px; font-size: .9em; }
+#playerPageModal #commentsSection .cmt-heading-note { margin: 6px 0 0; font-size: 13px; line-height: 1.45; }
+#playerPageModal #commentsSection .cmt-count-badge { min-width: 28px; height: 24px; margin-top: 1px; }
+#playerPageModal #commentsSection .cmt-composer,
+#playerPageModal #commentsSection .cmt-signin {
+    border-radius: 16px;
+    box-shadow: none;
+}
+#playerPageModal #commentsSection .cmt-composer {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 10px;
+    padding: 11px;
+}
+#playerPageModal #commentsSection .cmt-composer > .cmt-avatar {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    font-size: 14px;
+}
+#playerPageModal #commentsSection .cmt-composer__main { gap: 8px; }
+#playerPageModal #commentsSection .cmt-composer__input,
+#playerPageModal #commentsSection .cmt-reply-input {
+    min-height: 82px;
+    padding: 11px 12px;
+    border-radius: 12px;
+    background: var(--bg, var(--surface));
+    font-size: 15px;
+    line-height: 1.5;
+    resize: none;
+}
+#playerPageModal #commentsSection .cmt-composer__input:focus,
+#playerPageModal #commentsSection .cmt-reply-input:focus {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+#playerPageModal #commentsSection .cmt-composer__bar { min-height: 40px; gap: 8px; }
+#playerPageModal #commentsSection .cmt-composer__counter { font-variant-numeric: tabular-nums; font-size: 11px; }
+#playerPageModal #commentsSection .cmt-composer__send {
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 12px;
+    font-size: 13px;
+}
+#playerPageModal #commentsSection .cmt-list { gap: 9px; margin-top: 12px; }
+#playerPageModal #commentsSection .cmt-card { gap: 10px; padding: 12px; border-radius: 15px; }
+#playerPageModal #commentsSection .cmt-card > .cmt-avatar { width: 34px; height: 34px; min-width: 34px; font-size: 14px; }
+#playerPageModal #commentsSection .cmt-card__body { gap: 7px; }
+#playerPageModal #commentsSection .cmt-card__text { font-size: 14px; line-height: 1.55; }
+#playerPageModal #commentsSection .cmt-card__actions { gap: 5px; }
+#playerPageModal #commentsSection .cmt-like,
+#playerPageModal #commentsSection .cmt-action-btn,
+#playerPageModal #commentsSection .cmt-reply-cancel { min-height: 36px; padding: 6px 10px; }
+#playerPageModal #commentsSection .cmt-reply-composer { gap: 8px; padding: 10px; border-radius: 13px; }
+
+@media (min-width: 561px) {
+    #playerPageModal #commentsSection { padding-inline: 20px; }
+}
+
+@media (max-width: 380px) {
+    #playerPageModal #commentsSection { padding-inline: 12px; }
+    #playerPageModal #commentsSection .cmt-composer { grid-template-columns: 30px minmax(0, 1fr); gap: 8px; }
+    #playerPageModal #commentsSection .cmt-composer > .cmt-avatar { width: 30px; height: 30px; min-width: 30px; }
+    #playerPageModal #commentsSection .cmt-composer__send { padding-inline: 11px; }
+}

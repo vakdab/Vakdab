@@ -58,6 +58,12 @@ import {
             return `<span class="cmt-avatar__letter">${escapeHtml((comment?.nickname || '?').charAt(0).toUpperCase())}</span>`;
         }
 
+        function autoResizeCommentInput(input) {
+            if (!input) return;
+            input.style.height = 'auto';
+            input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
+        }
+
         function composerHtml() {
             if (isSignedInUser()) {
                 const profile = getProfile();
@@ -169,6 +175,7 @@ import {
             const sendBtn = document.getElementById('cmtSendBtn');
             if (input && counter) {
                 input.addEventListener('input', () => {
+                    autoResizeCommentInput(input);
                     counter.textContent = `${input.value.length} / ${COMMENTS_MAX_LENGTH}`;
                     sectionState.composerDirty = input.value.trim().length > 0;
                     const status = document.getElementById('cmtSendStatus');
@@ -231,6 +238,7 @@ import {
                 });
                 if (res.ok) {
                     input.value = '';
+                    autoResizeCommentInput(input);
                     if (!parentId) {
                         sectionState.composerDirty = false;
                         const counter = document.getElementById('cmtCounter');
@@ -316,7 +324,11 @@ import {
                     sectionState.replyTo = sectionState.replyTo === replyBtn.dataset.replyId ? null : replyBtn.dataset.replyId;
                     renderCommentsList();
                     const textarea = document.querySelector(`[data-reply-composer-for="${sectionState.replyTo}"] .cmt-reply-input`);
-                    if (textarea) textarea.focus();
+                    if (textarea) {
+                        textarea.addEventListener('input', () => autoResizeCommentInput(textarea));
+                        autoResizeCommentInput(textarea);
+                        textarea.focus();
+                    }
                     return;
                 }
                 const cancelBtn = e.target.closest?.('[data-cancel-reply]');
