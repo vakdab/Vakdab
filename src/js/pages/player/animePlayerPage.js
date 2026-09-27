@@ -895,7 +895,7 @@ import {
 
         function cleanPlayerSynopsis(value) {
             return String(value || '')
-                .replace(/\s*(?:\(|\[)?\s*(?:Джерело|Источник|Source)\s*(?::|—|-)?.*$/iu, '')
+                .replace(/\s*(?:\(|\[)?\s*(?:Джерело|Источник|Source)\s*(?::|—|-)?\s*[^.!?\n\]]*(?:[.!?]|\])?/giu, ' ')
                 .replace(/\s+/g, ' ')
                 .trim();
         }
