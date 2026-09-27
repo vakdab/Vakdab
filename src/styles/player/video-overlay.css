@@ -125,49 +125,6 @@
     pointer-events: none;
     transform: translateY(-6px);
 }
-#playerPageModal .player-video-container.has-played .player-preview-dock {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transform: translateY(10px);
-}
-#playerPageModal .player-preview-dock {
-    position: absolute;
-    z-index: 14;
-    right: 18px;
-    bottom: 18px;
-    left: 106px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 58px;
-    padding: 15px 17px 10px;
-    pointer-events: none;
-    background: linear-gradient(90deg, rgba(0, 0, 0, .56), rgba(0, 0, 0, .42) 72%, rgba(0, 0, 0, .12));
-    color: #fff;
-    opacity: 1;
-    transition: opacity .25s ease, transform .25s ease, visibility .25s ease;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, .75);
-}
-#playerPageModal .player-preview-time {
-    color: rgba(255, 255, 255, .92);
-    font-size: clamp(14px, 2vw, 18px);
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: .02em;
-}
-#playerPageModal .player-preview-volume {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 54px;
-    height: 54px;
-    border: 1px solid rgba(255, 255, 255, .18);
-    border-radius: 18px;
-    background: rgba(0, 0, 0, .42);
-    color: #fff;
-}
-#playerPageModal .player-preview-volume svg { width: 28px; height: 28px; fill: currentColor; }
 #playerPageModal .player-video-container:has(.lampa-player-container.controls-hidden) .video-overlay-topbar {
     opacity: 0;
     pointer-events: none;
@@ -510,10 +467,6 @@
 #playerPageModal .lp-center-play-btn:active { transform: scale(.94); }
 #playerPageModal .player-preview-play.is-hidden { pointer-events: none; opacity: 0; transform: translate(-50%, -50%) scale(.78); }
 #playerPageModal .player-preview-play {
-    top: auto;
-    right: auto;
-    bottom: 20px;
-    left: 22px;
     width: 112px;
     height: 112px;
     border: 0;
@@ -529,8 +482,6 @@
     fill: currentColor;
     filter: drop-shadow(0 3px 10px rgba(0, 0, 0, .48));
 }
-#playerPageModal .player-video-container.is-preview .player-preview-play { transform: none; }
-#playerPageModal .player-video-container.is-preview .player-preview-dock { visibility: visible; }
 
 #playerPageModal .lp-time {
     color: #fff;
