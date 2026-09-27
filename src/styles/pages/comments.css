@@ -391,6 +391,13 @@
     font-weight: 800;
     cursor: pointer;
 }
+.cmt-signin__btn::before,
+.cmt-signin__btn::after,
+.cmt-signin__btn i,
+.cmt-signin__btn svg {
+    display: none !important;
+    content: none !important;
+}
 .cmt-signin__btn:hover { opacity: 0.9; }
 
 .cmt-list { display: flex; flex-direction: column; gap: 12px; }
