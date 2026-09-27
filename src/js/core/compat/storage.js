@@ -1,5 +1,5 @@
 import { Auth } from './auth.js?v=20260927-persistence-v2';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260927-senplayer-v2';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260927-senplayer-auto-v1';
         export const Storage = {
             _syncTimer: null,
             _pendingSyncScope: null,

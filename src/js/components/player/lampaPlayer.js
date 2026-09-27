@@ -982,6 +982,10 @@ export class LampaPlayer {
 
             play(options = {}) {
                 if (!this.videoRef) return;
+                if (options.userInitiated && this.options.onBeforeUserPlay?.(this) === true) {
+                    this._centerTogglePending = false;
+                    return;
+                }
                 this._userInteractedPlay = true;
                 this._playNow();
             }
@@ -1000,7 +1004,7 @@ export class LampaPlayer {
             togglePlay() {
                 if (!this.videoRef) return;
                 const v = this.videoRef;
-                if (v.paused) this.play(); else this.pause();
+                if (v.paused) this.play({ userInitiated: true }); else this.pause();
             }
 
             toggleFullscreen() {

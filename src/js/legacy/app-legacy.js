@@ -23,7 +23,7 @@ export const PROFILE_STICKER_SLOTS = 8;
 import { Auth } from '../core/compat/auth.js?v=20260927-persistence-v2';
 import { Storage } from '../core/compat/storage.js?v=20260927-persistence-v2';
 import { Router } from '../core/compat/router.js?v=20260926-comment-send-v1';
-import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260927-player-controls-v2';
+import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260927-senplayer-auto-v1';
 import { initBottomNav } from '../components/navigation/bottomNav.js';
 import { renderSchedulePage } from '../pages/schedule/schedule.js?v=20260904-schedule-fix-v2';
 import { buildHeroBanner } from '../components/home/heroBanner.js?v=20260920-hero-motion-v1';
@@ -35,9 +35,9 @@ import {
     setPlayerPageAnimeuaSeasons, setPlayerPageAnime, setPlayerPageCurrentSeason, setPlayerPageCurrentDub, setPlayerPageCurrentSource,
     openPlayerPage, closePlayerPage, buildSeasonRow, updateFilterChip, updateSourceChip, buildEpisodeViews,
     buildBottomSheetData, openBottomSheet, closeBottomSheet, closeMenuPopover, toggleLike, toggleDislike, showViewMode
-} from '../pages/player/animePlayerPage.js?v=20260927-senplayer-v2';
+} from '../pages/player/animePlayerPage.js?v=20260927-senplayer-auto-v1';
 
-import { getProfile, renderSettingsPage } from '../pages/settings/settingsLegacy.js?v=20260927-senplayer-v2';
+import { getProfile, renderSettingsPage } from '../pages/settings/settingsLegacy.js?v=20260927-senplayer-auto-v1';
 import {
     currentTab, currentPage, currentSearchQuery, currentCategory, setCurrentTab, setCurrentPage, setCurrentSearchQuery, setCurrentCategory, fetchContent, showSkeleton, loadContent, popularRenderGen, renderPopularCards, loadPopularCardDetails, ANIME_CARD_PLACEHOLDER, animeCardDataMap, registerAnimeCardData, TMDB_ENRICH_CONCURRENCY, tmdbEnrichActive, tmdbEnrichQueue, queueTmdbEnrich, pumpTmdbEnrichQueue, runTmdbEnrichJob, animeCardObserver, getAnimeCardObserver, observeAnimeCardsForTmdb, renderCards, renderPagination, showTop100, openRandomAnime, genreList, homeSectionsRequestId, homeCatalogRequestId, preloadHomepageTmdbGroups, homeCatalogPage, homeCatalogItems, homeCatalogLoading, homeCatalogTotal, homeCatalogMode, homeCatalogQuery, homeCatalogSort, homeCatalogView, homeCatalogPreset, homeCatalogGenre, HOME_MANGA_AGE_OPTIONS, honeyCatalogPageCache, HOME_CATALOG_MODES, HOME_CATALOG_PRESETS, homeCatalogRequestBody, HONEY_API, HONEY_SEARCH_API, HONEY_WEB, HONEY_IMAGE, honeySearchCache, honeyReaderCache, honeyAvailabilityMap, honeyAvailabilityMapPromise, loadHoneyAvailabilityMap, normalizeHoneyMatch, fetchHoneyJson, honeyNamesMatch, searchHoneyTitles, resolveHoneyReader, attachHoneyReaders, getHoneyGenreOptions, honeyAgeCategory, homeCatalogGenreHtml, syncHomeCatalogGenreControl, honeyCatalogItem, isHoneyPromoItemRaw, isHoneyPromoItem, fetchHoneyCatalogPage, fetchHomeCatalogPage, getHomeCatalogVisibleItems, formatHomeCatalogNumber, homeCatalogCountText, homeCatalogCardHtml, bindHomeCatalogCards, buildHomeCatalogSectionHtml, renderHomeCatalogGrid, bindHomeCatalogMenu, updateHomeCatalogModeLabels, reloadHomeCatalog, loadHomeCatalogMore, loadAndDisplayGenreSections, statusLabelUa, buildAnimeCarouselSectionHtml, buildPopularVerticalSectionHtml, setHomeRecommendationFilter, loadHomeRecommendations, buildHistoryCarouselSectionHtml, openScheduleItemInPlayer, searchPageState, renderSearchPage, performSearchPage, uploadToCloudinary, isGifUrl, applyGifClass, uploadRawToCloudinary, uploadVideoToCloudinary, isVideoFile, isVideoUrl, profileMediaTransformStyle, profileMediaMarkup, uploadBlobToCloudinary, _imgeditClamp, openImageEditor, editExistingProfileImage, editExistingProfileVideo, compressImage, renderAuthPage, renderHistoryPanel, renderBookmarksPanel, profileEditNick, profileEditBio, removeFlatStickerBackground, stickerBackgroundRemoverPromise, removeStickerBackground, genrePageState, renderGenrePage
 } from '../pages/home/homeLegacy.js?v=20260927-persistence-v1';

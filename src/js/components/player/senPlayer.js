@@ -1,17 +1,28 @@
-const SENPLAYER_SETTING_KEY = 'vakdab_senplayer_button_enabled';
+const SENPLAYER_AUTO_LAUNCH_KEY = 'vakdab_senplayer_auto_launch_enabled';
+const LEGACY_SENPLAYER_BUTTON_KEY = 'vakdab_senplayer_button_enabled';
 const PLAYABLE_MEDIA_EXTENSION = /\.(?:m3u8|mp4|m4v|mov|mkv|webm|avi|ts)$/i;
 
-export function isSenPlayerButtonEnabled() {
+export function isSenPlayerAutoLaunchEnabled() {
     try {
-        return globalThis.localStorage?.getItem(SENPLAYER_SETTING_KEY) === '1';
+        const storage = globalThis.localStorage;
+        const saved = storage?.getItem(SENPLAYER_AUTO_LAUNCH_KEY);
+        if (saved !== null && saved !== undefined) return saved === '1';
+
+        // Preserve the previous opt-in if the user enabled the first version's button.
+        const legacy = storage?.getItem(LEGACY_SENPLAYER_BUTTON_KEY);
+        if (legacy === null || legacy === undefined) return false;
+        storage?.setItem(SENPLAYER_AUTO_LAUNCH_KEY, legacy === '1' ? '1' : '0');
+        return legacy === '1';
     } catch {
         return false;
     }
 }
 
-export function setSenPlayerButtonEnabled(enabled) {
+export function setSenPlayerAutoLaunchEnabled(enabled) {
     try {
-        globalThis.localStorage?.setItem(SENPLAYER_SETTING_KEY, enabled ? '1' : '0');
+        const storage = globalThis.localStorage;
+        storage?.setItem(SENPLAYER_AUTO_LAUNCH_KEY, enabled ? '1' : '0');
+        storage?.removeItem(LEGACY_SENPLAYER_BUTTON_KEY);
     } catch {
         // Storage can be unavailable in private browsing; the setting is device-local.
     }
@@ -43,6 +54,14 @@ export function isDirectMediaUrl(candidate, depth = 0) {
         if (nested && nested !== candidate && isDirectMediaUrl(nested, depth + 1)) return true;
     }
     return false;
+}
+
+export function shouldAutoLaunchSenPlayer(mediaUrl, {
+    autoplay = true,
+    enabled = isSenPlayerAutoLaunchEnabled(),
+    supportedDevice = isSenPlayerAvailableOnThisDevice()
+} = {}) {
+    return Boolean(autoplay && enabled && supportedDevice && isDirectMediaUrl(mediaUrl));
 }
 
 export function buildSenPlayerUrl(mediaUrl) {
