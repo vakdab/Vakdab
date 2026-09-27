@@ -383,7 +383,7 @@ export class LampaPlayer {
                         this.togglePlay();
                         const isPlayingNow = this.videoRef ? !this.videoRef.paused : this.state.playing;
                         this._flashCenter(isPlayingNow ? LP_ICONS.play : LP_ICONS.pause);
-                        this._showControls();
+                        // Центральний клік керує тільки play/pause і не відкриває нижній оверлей.
                     }
                 });
                 wrap.addEventListener('dblclick', e => {

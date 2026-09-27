@@ -490,15 +490,15 @@
 }
 #playerPageModal .lp-center-play-btn {
     display: flex;
-    width: 72px;
-    height: 72px;
+    width: 58px;
+    height: 58px;
     align-items: center;
     justify-content: center;
     border: 1px solid rgba(255, 255, 255, .24);
     border-radius: 50%;
-    background: rgba(0, 0, 0, .38);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, .42);
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
     color: #fff;
     pointer-events: none;
     box-shadow: 0 5px 18px rgba(0, 0, 0, .34);
@@ -513,8 +513,8 @@
     transform: scale(1);
 }
 #playerPageModal .lp-center-play-btn svg {
-    width: 42px;
-    height: 42px;
+    width: 30px;
+    height: 30px;
     fill: #fff;
     filter: drop-shadow(0 3px 10px rgba(0, 0, 0, .9));
 }
@@ -536,8 +536,8 @@
         font-size: 11px !important;
     }
     #playerPageModal .lampa-player-container .lp-opening-skip svg { width: 14px !important; height: 14px !important; flex-basis: 14px !important; }
-    #playerPageModal .lp-center-play-btn { width: 64px; height: 64px; }
-    #playerPageModal .lp-center-play-btn svg { width: 36px; height: 36px; }
+    #playerPageModal .lp-center-play-btn { width: 54px !important; height: 54px !important; }
+    #playerPageModal .lp-center-play-btn svg { width: 28px !important; height: 28px !important; }
 }
 
 /* ============== Six-dot loading animation ============== */
@@ -718,7 +718,7 @@
     #playerPageModal .lp-quality-pill { min-width: 42px; }
     #playerPageModal .lp-popover { min-width: 96px; }
 
-    #playerPageModal .lp-center-play-btn { width: 96px; height: 96px; }
+    #playerPageModal .lp-center-play-btn { width: 54px !important; height: 54px !important; }
 
     #playerPageModal .lp-quality-rail { right: 8px; gap: 3px; }
     #playerPageModal .lp-quality-rail button { min-width: 38px; min-height: 25px; padding-inline: 5px; font-size: 9px; }
