@@ -1900,8 +1900,19 @@ import {
             const button = document.getElementById('playerPreviewEpisodeBtn');
             if (!menu || !button) return;
             const episodes = getCurrentEpisodes().filter(ep => ep?.file);
-            menu.innerHTML = '<div class="player-preview-menu-label">Оберіть серію</div>' + (episodes.map(ep => `<button type="button" data-preview-episode="${escapeHtml(String(ep.episode))}" class="${sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum) ? 'is-active' : ''}">${escapeHtml(String(ep.episode))}</button>`).join('') || '<span style="grid-column:1/-1;display:block;padding:8px;color:#fff;font-size:11px">Серії недоступні</span>');
+            menu.innerHTML = `<div class="player-preview-menu-label">Оберіть серію <span>${episodes.length ? `${episodes.length} доступно` : 'немає доступних'}</span></div>` + (episodes.map(ep => {
+                const episode = String(ep.episode);
+                const active = sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum);
+                return `<button type="button" role="menuitem" data-preview-episode="${escapeHtml(episode)}" class="${active ? 'is-active' : ''}" aria-current="${active ? 'true' : 'false'}">${escapeHtml(episode)}${active ? '<span class="player-preview-menu-check" aria-hidden="true">✓</span>' : ''}</button>`;
+            }).join('') || '<span class="player-preview-menu-empty">Серії недоступні</span>');
             button.firstChild.textContent = `Серія ${playerPageCurrentEpisodeNum || '1'} `;
+        }
+        function closePreviewEpisodeMenu() {
+            const menu = document.getElementById('playerPreviewEpisodeMenu');
+            const button = document.getElementById('playerPreviewEpisodeBtn');
+            if (!menu || !button) return;
+            menu.hidden = true;
+            button.setAttribute('aria-expanded', 'false');
         }
         document.getElementById('playerPreviewEpisodeBtn')?.addEventListener('click', event => {
             event.stopPropagation();
@@ -1910,14 +1921,30 @@ import {
             refreshPreviewEpisodeMenu();
             menu.hidden = !menu.hidden;
             event.currentTarget.setAttribute('aria-expanded', String(!menu.hidden));
+            if (!menu.hidden) {
+                requestAnimationFrame(() => menu.querySelector('.is-active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
+            }
         });
         document.getElementById('playerPreviewEpisodeMenu')?.addEventListener('click', event => {
             const item = event.target.closest?.('[data-preview-episode]');
             if (!item) return;
             const ep = getCurrentEpisodes().find(entry => String(entry.episode) === item.dataset.previewEpisode && entry.file);
             if (!ep) return;
-            document.getElementById('playerPreviewEpisodeMenu').hidden = true;
+            closePreviewEpisodeMenu();
             startPlaybackAction(ep);
+        });
+        document.addEventListener('click', event => {
+            const menu = document.getElementById('playerPreviewEpisodeMenu');
+            const button = document.getElementById('playerPreviewEpisodeBtn');
+            if (!menu || menu.hidden || menu.contains(event.target) || button?.contains(event.target)) return;
+            closePreviewEpisodeMenu();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key !== 'Escape') return;
+            const menu = document.getElementById('playerPreviewEpisodeMenu');
+            if (!menu || menu.hidden) return;
+            closePreviewEpisodeMenu();
+            document.getElementById('playerPreviewEpisodeBtn')?.focus();
         });
         document.getElementById('playerPreviewQualityBtn')?.addEventListener('click', event => {
             event.stopPropagation();
