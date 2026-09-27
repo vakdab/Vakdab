@@ -28,7 +28,7 @@ import { initBottomNav } from '../components/navigation/bottomNav.js';
 import { renderSchedulePage } from '../pages/schedule/schedule.js?v=20260904-schedule-fix-v2';
 import { buildHeroBanner } from '../components/home/heroBanner.js?v=20260920-hero-motion-v1';
 import { renderHomeQuickFilterBar } from '../pages/home/homeQuickFilter.js?v=20260926-comment-send-v1';
-import { renderProfilePage, renderPublicProfilePage } from '../pages/profile/profileLegacy.js?v=20260906-remove-thought-v1';
+import { renderProfilePage, renderPublicProfilePage } from '../pages/profile/profileLegacy.js?v=20260927-profile-editor-v1';
 import { calcTotalXP, getLevel, getUserRankInfo, initRatingPage, calculateBaseXP, getXPForLevel, getXPProgress, loadRatingPage, loadRatingList } from '../components/rating/ratingSystem.js?v=20260921-podium-medals-v2';
 import {
     playerPageAnime, playerPageAnimeuaSeasons, externalSourceCache, playerPageCurrentSeason, playerPageCurrentDub, playerPageCurrentSource, playerPageIsOpen,

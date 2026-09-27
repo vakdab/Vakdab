@@ -1322,6 +1322,39 @@
     color: var(--text);
 }
 
+/* One-tap access to the complete profile editor from the profile page. */
+.profile-edit-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 38px;
+    margin: 0 0 9px auto;
+    padding: 0 13px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: border-color .18s ease, color .18s ease, background .18s ease, transform .18s ease;
+}
+.profile-edit-trigger:hover,
+.profile-edit-trigger:focus-visible {
+    border-color: var(--border-hover);
+    background: var(--hover);
+    color: var(--text);
+}
+.profile-edit-trigger:active { transform: scale(.97); }
+.profile-edit-trigger i { font-size: 11px; }
+@media (max-width: 420px) {
+    .profile-edit-trigger { min-height: 36px; padding-inline: 11px; font-size: 11px; }
+    .profile-edit-trigger span { display: none; }
+}
+
 
 /* ════════════════════════════════════════════════════════════════════
    Rescued: profile avatar/banner/effects core styles.

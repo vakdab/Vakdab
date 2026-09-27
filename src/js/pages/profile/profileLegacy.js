@@ -87,6 +87,10 @@ export function renderProfilePage() {
                       <span class="avatar-placeholder" style="display:${profile.avatarVideo || profile.avatar ? 'none' : 'flex'};">${escapeHtml(getProfileDisplayName(profile).charAt(0).toUpperCase())}</span>
                     </div>
                   </div>
+                  <button type="button" class="profile-edit-trigger" id="profileEditTrigger" aria-label="Редагувати профіль">
+                    <i class="fas fa-pen" aria-hidden="true"></i>
+                    <span>Редагувати</span>
+                  </button>
                 </div>
                 <div class="profile-nick-row">
                   <span class="profile-nick" id="profileNickText">${profileNickname}</span>
@@ -121,6 +125,9 @@ export function renderProfilePage() {
             </div>
           `;
             primeProfileMediaPlayback(container);
+            document.getElementById('profileEditTrigger')?.addEventListener('click', () => {
+                Router.goTo('settings', { tab: 'appearance' });
+            });
             document.querySelectorAll('#profilePageContainer .profile-avatar-media').forEach(media => {
                 media.addEventListener('error', () => {
                     media.style.display = 'none';
