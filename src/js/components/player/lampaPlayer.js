@@ -260,6 +260,15 @@ export class LampaPlayer {
                 this._controls = controls;
                 wrap.appendChild(controls);
 
+                // Pickers belong to the video overlay rather than the transport
+                // dock. Reparent them so the dock can disappear independently.
+                const episodeMenu = controls.querySelector('#lpEpisodeMenu');
+                const qualityMenu = controls.querySelector('#lpQualityMenu');
+                episodeMenu?.classList.add('lp-floating-menu', 'lp-floating-episode-menu');
+                qualityMenu?.classList.add('lp-floating-menu', 'lp-floating-quality-menu');
+                if (episodeMenu) wrap.appendChild(episodeMenu);
+                if (qualityMenu) wrap.appendChild(qualityMenu);
+
                 const qualityRail = document.createElement('div');
                 qualityRail.className = 'lp-quality-rail';
                 qualityRail.hidden = true;
@@ -433,9 +442,8 @@ export class LampaPlayer {
                 });
                 v.addEventListener('volumechange', () => this._updateVolBtn());
 
-                // Episode and quality selectors live inside the bottom overlay.
+                // Episode and quality selectors are now floated in the video overlay.
                 const episodeBtn = wrap.querySelector('#lpEpisodeBtn');
-                const episodeMenu = wrap.querySelector('#lpEpisodeMenu');
                 const episodeLabel = wrap.querySelector('#lpEpisodeLabel');
                 const renderEpisodeMenu = () => {
                     if (!episodeMenu) return;
@@ -456,6 +464,7 @@ export class LampaPlayer {
                     episodeBtn?.classList.toggle('is-open', open);
                     episodeMenu?.setAttribute('aria-hidden', String(!open));
                     episodeBtn?.setAttribute('aria-expanded', String(open));
+                    syncMenuOverlayState();
                 };
                 episodeBtn?.addEventListener('click', e => {
                     e.stopPropagation();
@@ -477,7 +486,6 @@ export class LampaPlayer {
 
                 // Quality menu support remains available for HLS sources.
                 const qualityBtn = wrap.querySelector('#lpQualityBtn');
-                const qualityMenu = wrap.querySelector('#lpQualityMenu');
                 const qualityLabel = wrap.querySelector('#lpQualityLabel');
                 const qualityRail = this._qualityRail;
                 const setMenuOpen = (menu, btn, open) => {
@@ -488,6 +496,11 @@ export class LampaPlayer {
                     btn.classList.toggle('is-open', open);
                 };
                 const isMenuOpen = menu => menu && menu.classList.contains('is-open');
+                const syncMenuOverlayState = () => {
+                    const open = isMenuOpen(qualityMenu) || episodeMenu?.classList.contains('is-open');
+                    this._controls?.classList.toggle('menu-overlay-open', open);
+                    wrap.classList.toggle('menu-overlay-open', open);
+                };
                 const closePlayerMenus = () => { setMenuOpen(qualityMenu, qualityBtn, false); setEpisodeMenuOpen(false); };
                 if (qualityBtn && qualityMenu) qualityBtn.addEventListener('click', e => {
                     e.stopPropagation();

@@ -596,7 +596,31 @@
     background: #fff;
     color: #000;
 }
-
+/* Pickers float above the video top overlay while the lower transport dock hides. */
+#playerPageModal .lampa-player-container .lp-controls.menu-overlay-open {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateY(12px) scale(.985) !important;
+}
+#playerPageModal .lampa-player-container .lp-floating-menu {
+    position: absolute;
+    z-index: 90;
+    top: 56px;
+    bottom: auto;
+    width: min(220px, calc(100% - 24px));
+    max-height: min(52%, 260px);
+    overflow-y: auto;
+    padding: 5px;
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 12px;
+    background: rgba(8,8,8,.96);
+    box-shadow: 0 12px 34px rgba(0,0,0,.52);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+#playerPageModal .lampa-player-container .lp-floating-episode-menu { left: 12px; right: auto; }
+#playerPageModal .lampa-player-container .lp-floating-quality-menu { right: 12px; left: auto; }
+#playerPageModal .lampa-player-container .lp-floating-menu button { min-height: 34px; }
 /* ============== Selectors row consolidated elsewhere; deprecated markup hidden here ============== */
 #playerPageModal #playerFormatRow,
 #playerPageModal #playerVideoDubRow,
@@ -636,6 +660,13 @@
 
     #playerPageModal .lp-quality-rail { right: 8px; gap: 3px; }
     #playerPageModal .lp-quality-rail button { min-width: 38px; min-height: 25px; padding-inline: 5px; font-size: 9px; }
+    #playerPageModal .lampa-player-container .lp-floating-menu {
+        top: 48px;
+        width: min(210px, calc(100% - 20px));
+        max-height: min(58%, 240px);
+    }
+    #playerPageModal .lampa-player-container .lp-floating-episode-menu { left: 10px; }
+    #playerPageModal .lampa-player-container .lp-floating-quality-menu { right: 10px; }
 }
 
 @media (max-width: 430px) {
