@@ -103,20 +103,26 @@ export async function fetchAnilistRelations(anilistId) {
 export async function fetchAnimeRelations(anime, existingData = null) {
     const malId = Number(anime?.externalIds?.mal_id || anime?.mal_id || existingData?.mal_id);
     const title = anime?.originalTitle || anime?.title_orig || anime?.title_en || anime?.title || existingData?.title || '';
+    const normalizeRelationTitle = value => String(value || '').toLocaleLowerCase()
+        .replace(/[^a-z0-9а-яіїєґ]+/gi, ' ').replace(/\s+/g, ' ').trim();
+    const wantedTitle = normalizeRelationTitle(title);
 
     // 1. Try Shikimori Related API (fast, provides covers and clean relations without heavy rate-limits)
     try {
         let shikimoriId = malId;
         if (!shikimoriId && title) {
             const searchRes = await withTimeout(
-                fetch(`https://shikimori.one/api/animes?search=${encodeURIComponent(title)}&limit=1`),
+                fetch(`https://shikimori.one/api/animes?search=${encodeURIComponent(title)}&limit=5`),
                 3500,
                 'Shikimori search timeout'
             );
             if (searchRes?.ok) {
                 const searchList = await searchRes.json();
                 if (Array.isArray(searchList) && searchList.length > 0) {
-                    shikimoriId = searchList[0].id;
+                    const exact = searchList.find(item => [item.name, item.russian, item.english, item.japanese]
+                        .map(normalizeRelationTitle)
+                        .some(candidate => candidate && (candidate === wantedTitle || candidate.includes(wantedTitle) || wantedTitle.includes(candidate))));
+                    shikimoriId = exact?.id || 0;
                 }
             }
         }
