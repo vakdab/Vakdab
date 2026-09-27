@@ -183,6 +183,7 @@
     backdrop-filter: blur(10px);
     transition: transform .18s cubic-bezier(.34, 1.56, .64, 1), background-color .15s ease, border-color .15s ease;
 }
+#playerPageModal #playerSenPlayerBtn[hidden] { display: none !important; }
 #playerPageModal .video-overlay-topbar .icon-btn:hover,
 #playerPageModal .video-overlay-topbar .icon-btn:focus-visible {
     border-color: #fff;

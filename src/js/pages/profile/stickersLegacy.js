@@ -1,7 +1,7 @@
 import { Storage } from '../../core/compat/storage.js?v=20260927-persistence-v2';
 import { db } from '../../services/firebase/client.js';
 import { Router } from '../../core/compat/router.js?v=20260926-comment-send-v1';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers, showToast, showToastProgress, escapeHtml, removeStickerBackground } from '../../legacy/app-legacy.js?v=20260927-senplayer-v1';
 import { uploadBlobToCloudinary } from '../home/homeLegacy.js?v=20260926-comment-send-v1';
 
         function stickerFaceSvg(variant) {

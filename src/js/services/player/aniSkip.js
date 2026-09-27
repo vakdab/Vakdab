@@ -1,4 +1,4 @@
-import { showToast } from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
+import { showToast } from '../../legacy/app-legacy.js?v=20260927-senplayer-v1';
 
 const aniSkipCache = new Map();
 const aniSkipMalIdCache = new Map();

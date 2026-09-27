@@ -1,6 +1,6 @@
 import { searchHikka } from '../../services/catalog/catalog.js';
-import { openPlayerPage } from '../player/animePlayerPage.js?v=20260927-player-comments-v1';
-import { syncLeftdockActive } from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
+import { openPlayerPage } from '../player/animePlayerPage.js?v=20260927-senplayer-v1';
+import { syncLeftdockActive } from '../../legacy/app-legacy.js?v=20260927-senplayer-v1';
 import { renderAnimeCardSkeleton } from '../../utils/skeleton.js';
 
 export let searchPageState = { query: '', page: 1, list: [], loading: false, hasNextPage: false, total: 0 };
