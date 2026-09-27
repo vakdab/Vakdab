@@ -431,7 +431,7 @@
 #playerPageModal .lp-volume-group { display: flex; align-items: center; gap: 0; }
 #playerPageModal .lp-volume { display: none; }
 
-/* ============== Center / preview play (clean large floating icon, NO CIRCLE) ============== */
+/* ============== Center / preview play (dark glass) ============== */
 #playerPageModal .lp-center-play {
     position: absolute;
     z-index: 15;
@@ -442,33 +442,29 @@
 }
 #playerPageModal .lp-center-play-btn {
     display: flex;
+    width: 68px;
+    height: 68px;
     align-items: center;
     justify-content: center;
-    width: auto !important;
-    height: auto !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
-    border: none !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    box-shadow: none !important;
-    opacity: 0;
-    transform: scale(.72);
+    border: 1px solid rgba(255, 255, 255, .3);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, .6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #fff;
     pointer-events: none;
-    transition: opacity .2s ease-out, transform .22s cubic-bezier(.18, .89, .32, 1.28);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+    opacity: 0;
+    transform: scale(.7);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: opacity .22s ease, transform .22s cubic-bezier(.23, 1, .32, 1);
 }
 #playerPageModal .lp-center-play-btn.show {
-    opacity: 1 !important;
-    transform: scale(1) !important;
+    opacity: 1;
+    transform: scale(1);
 }
-#playerPageModal .lp-center-play-btn svg {
-    width: 92px !important;
-    height: 92px !important;
-    fill: #ffffff !important;
-    filter: drop-shadow(0 4px 28px rgba(0, 0, 0, .95)) drop-shadow(0 2px 10px rgba(0, 0, 0, .85)) !important;
-}
+#playerPageModal .lp-center-play-btn svg { width: 30px; height: 30px; fill: #fff; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .6)); }
 
 #playerPageModal .lp-time {
     color: #fff;
@@ -478,7 +474,8 @@
 }
 
 @media (max-width: 600px) {
-    #playerPageModal .lp-center-play-btn svg { width: 80px !important; height: 80px !important; }
+    #playerPageModal .lp-center-play-btn { width: 56px; height: 56px; }
+    #playerPageModal .lp-center-play-btn svg { width: 24px; height: 24px; }
 }
 
 /* ============== Six-dot loading animation ============== */
@@ -619,25 +616,23 @@
     #playerPageModal .video-overlay-title { font-size: 12px; }
     #playerPageModal .video-overlay-topbar .icon-btn { width: 34px; height: 34px; flex-basis: 34px; border-radius: 10px; }
 
-    /* The player is embedded inside the page, not pinned to the device edge. */
+    /* The player is embedded inside the page, not pinned to the device edge.
+       Do not apply iOS safe-area padding here: it lifts the controls visibly upward
+       in the installed/web-app shell while the browser version looks correct. */
     #playerPageModal .lampa-player-container:not(:fullscreen) .lp-controls {
         bottom: 0 !important;
-        padding: 6px 10px 10px !important;
+        padding: 6px 8px 8px !important;
     }
-    #playerPageModal .lp-bottom-row { gap: 6px; }
+    #playerPageModal .lp-bottom-row { gap: 3px; }
     #playerPageModal .lp-btn,
-    #playerPageModal .lp-main-btn { width: 34px; height: 34px; flex-shrink: 0; }
-    #playerPageModal .lp-time { font-size: 11.5px; font-weight: 700; white-space: nowrap; }
-    #playerPageModal .lp-settings-wrap { gap: 6px; display: flex; align-items: center; }
-    #playerPageModal .lp-control-pill {
-        min-width: 48px;
-        height: 32px;
-        padding: 0 10px;
-        font-size: 11.5px;
-        font-weight: 700;
-        border-radius: 999px !important;
-    }
-    #playerPageModal .lp-quality-pill { min-width: 52px; }
+    #playerPageModal .lp-main-btn { width: 28px; height: 28px; }
+    #playerPageModal .lp-time { font-size: 10px; }
+    #playerPageModal .lp-settings-wrap { gap: 3px; }
+    #playerPageModal .lp-control-pill { min-width: 36px; height: 26px; padding-inline: 6px; font-size: 10px; }
+    #playerPageModal .lp-quality-pill { min-width: 42px; }
+    #playerPageModal .lp-popover { min-width: 96px; }
+
+    #playerPageModal .lp-center-play-btn { width: 96px; height: 96px; }
 
     #playerPageModal .lp-quality-rail { right: 8px; gap: 3px; }
     #playerPageModal .lp-quality-rail button { min-width: 38px; min-height: 25px; padding-inline: 5px; font-size: 9px; }
@@ -645,12 +640,10 @@
 
 @media (max-width: 430px) {
     #playerPageModal .player-video-container { min-height: 160px; }
-    #playerPageModal .lp-bottom-row { gap: 4px; }
-    #playerPageModal .lp-settings-wrap { gap: 4px; }
-    #playerPageModal .lp-btn,
-    #playerPageModal .lp-main-btn { width: 32px; height: 32px; }
-    #playerPageModal .lp-control-pill { min-width: 42px; height: 29px; padding: 0 8px; font-size: 11px; }
-    #playerPageModal .lp-time { font-size: 10.5px; font-weight: 800; color: #fff; }
+    #playerPageModal .lp-bottom-row { gap: 2px; }
+    #playerPageModal .lp-settings-wrap { gap: 2px; }
+    #playerPageModal .lp-control-pill { min-width: 34px; padding: 0 6px; }
+    #playerPageModal .lp-time { font-size: 11px; font-weight: 800; color: #fff; }
 }
 
 /* ============== Accessibility ============== */
@@ -666,411 +659,57 @@
     #playerPageModal .player-frame-poster { transition: none; animation-duration: .01ms !important; }
 }
 
-/* Hide legacy accordion/grid only */
-#playerPageModal #playerCompactControls { display: none !important; }
-
-/* Phone-adapted on-page episode section below player */
-#playerPageModal #playerEpisodesSection {
-    display: block !important;
-    margin: 12px 14px 18px !important;
-    padding: 14px 14px 16px !important;
-    background: rgba(255, 255, 255, .04) !important;
-    border: 1px solid rgba(255, 255, 255, .08) !important;
-    border-radius: 18px !important;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+/* White, compact selector theme. The old accordion/grid is intentionally removed. */
+#playerPageModal #playerCompactControls,
+#playerPageModal #playerEpisodesSection { display: none !important; }
+#playerPageModal .lp-popover {
+    color: #161616 !important;
+    background: #fff !important;
+    border-color: #d7d7d7 !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .2) !important;
+    text-shadow: none;
 }
-@media (max-width: 480px) {
-    #playerPageModal #playerEpisodesSection {
-        margin: 10px 10px 16px !important;
-        padding: 12px 10px 14px !important;
-        border-radius: 16px !important;
-    }
+#playerPageModal .lp-popover-label { color: #757575 !important; }
+#playerPageModal .lp-popover button {
+    color: #242424 !important;
+    background: transparent !important;
 }
-
+#playerPageModal .lp-popover button:hover,
+#playerPageModal .lp-popover button:focus-visible,
+#playerPageModal .lp-popover button.is-active {
+    color: #111 !important;
+    background: #f0f0f0 !important;
+}
 #playerPageModal .lp-control-pill {
-    color: #fff !important;
-    background: rgba(255, 255, 255, .15) !important;
-    border: 1px solid rgba(255, 255, 255, .25) !important;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, .6);
-    border-radius: 999px !important;
-    transition: background .15s ease, border-color .15s ease, transform .1s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    touch-action: manipulation;
+    color: #202020 !important;
+    background: #fff !important;
+    border-color: #d0d0d0 !important;
+    text-shadow: none;
 }
-#playerPageModal .lp-control-pill:hover {
-    background: rgba(255, 255, 255, .24) !important;
-    border-color: rgba(255, 255, 255, .4) !important;
-}
-#playerPageModal .lp-control-pill:active,
-#playerPageModal .lp-control-pill.is-open {
-    background: rgba(255, 255, 255, .32) !important;
-    border-color: #fff !important;
-    transform: scale(.97);
-}
-#playerPageModal .lp-chevron { color: rgba(255, 255, 255, .8) !important; }
+#playerPageModal .lp-chevron { color: #666 !important; }
 
-/* ============== Phone-adapted Bottom Sheets for Episodes & Quality ============== */
-.lp-sheet-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 998;
-    background: rgba(0, 0, 0, .68);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity .24s ease, visibility .24s ease;
-    pointer-events: none;
-}
-.lp-sheet-backdrop.is-open {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-}
-
-.lp-sheet {
-    position: fixed;
-    z-index: 999;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    max-height: min(72vh, 520px);
-    display: flex;
-    flex-direction: column;
-    background: rgba(18, 18, 24, .97);
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
-    border-top: 1px solid rgba(255, 255, 255, .15);
-    border-top-left-radius: 24px;
-    border-top-right-radius: 24px;
-    box-shadow: 0 -12px 48px rgba(0, 0, 0, .85);
-    padding: 10px 16px env(safe-area-inset-bottom, 22px);
-    transform: translateY(100%);
-    opacity: 0;
-    visibility: hidden;
-    transition: transform .28s cubic-bezier(.2, .9, .3, 1), opacity .2s ease, visibility .28s ease;
-    pointer-events: none;
-    box-sizing: border-box;
-}
-.lp-sheet.is-open {
-    transform: translateY(0);
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-}
-
-@media (min-width: 769px) {
-    .lp-sheet {
-        left: 50%;
-        right: auto;
-        bottom: 24px;
-        width: 440px;
-        max-width: 90vw;
-        border-radius: 22px;
-        border: 1px solid rgba(255, 255, 255, .16);
-        transform: translate(-50%, 120%);
-    }
-    .lp-sheet.is-open {
-        transform: translate(-50%, 0);
-    }
-}
-
-.lp-sheet-handle {
-    width: 38px;
-    height: 4px;
-    background: rgba(255, 255, 255, .28);
-    border-radius: 999px;
-    margin: 2px auto 14px;
-    flex-shrink: 0;
-}
-
-.lp-sheet-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    flex-shrink: 0;
-    padding-inline: 2px;
-}
-.lp-sheet-title-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.lp-sheet-title {
-    font-size: 17px;
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: -.01em;
-}
-.lp-sheet-badge {
-    background: rgba(255, 255, 255, .12);
-    color: rgba(255, 255, 255, .85);
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 999px;
-}
-.lp-sheet-close {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, .1);
-    border: none;
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    transition: background .15s ease, transform .1s ease;
-    -webkit-tap-highlight-color: transparent;
-}
-.lp-sheet-close:hover { background: rgba(255, 255, 255, .2); }
-.lp-sheet-close:active { transform: scale(.92); }
-
-.lp-sheet-nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 6px 10px;
-    background: rgba(255, 255, 255, .06);
-    border: 1px solid rgba(255, 255, 255, .08);
-    border-radius: 12px;
-    margin-bottom: 12px;
-    flex-shrink: 0;
-}
-.lp-sheet-nav-btn {
-    background: rgba(255, 255, 255, .1);
-    border: none;
-    color: #fff;
-    padding: 5px 10px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background .15s ease, opacity .15s ease;
-    -webkit-tap-highlight-color: transparent;
-}
-.lp-sheet-nav-btn:disabled {
-    opacity: .35;
-    cursor: default;
-    pointer-events: none;
-}
-.lp-sheet-nav-btn:not(:disabled):hover {
-    background: rgba(255, 255, 255, .2);
-}
-.lp-sheet-nav-current {
-    font-size: 12.5px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, .85);
-}
-
-.lp-sheet-body {
-    flex: 1;
-    min-height: 0;
+/* Comfortable episode picking on touch screens: larger hit targets, a clear
+   count, and a menu that remains usable when a title has many episodes. */
+#playerPageModal .lp-episode-menu {
+    width: min(200px, calc(100vw - 48px));
+    max-height: min(46vh, 330px);
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    padding-bottom: 6px;
-}
-.lp-sheet-body::-webkit-scrollbar { width: 4px; }
-.lp-sheet-body::-webkit-scrollbar-track { background: transparent; }
-.lp-sheet-body::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .2); border-radius: 4px; }
-
-.lp-sheet-tabs {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 2px 2px 10px;
-    margin-bottom: 8px;
-    scrollbar-width: none;
-    flex-shrink: 0;
 }
-.lp-sheet-tabs::-webkit-scrollbar { display: none; }
-.lp-sheet-tab {
-    flex-shrink: 0;
-    min-height: 32px;
+#playerPageModal .lp-episode-menu button {
+    justify-content: flex-start;
+    min-height: 40px;
     padding: 0 12px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, .08);
-    border: 1px solid rgba(255, 255, 255, .12);
-    color: rgba(255, 255, 255, .75);
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all .15s ease;
-    touch-action: manipulation;
-}
-.lp-sheet-tab:hover {
-    background: rgba(255, 255, 255, .15);
-    color: #fff;
-}
-.lp-sheet-tab.is-active {
-    background: #ffffff !important;
-    color: #111111 !important;
-    border-color: #ffffff !important;
-    box-shadow: 0 2px 10px rgba(255, 255, 255, .25);
-}
-
-.lp-episode-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-    gap: 8px;
-}
-@media (max-width: 480px) {
-    .lp-episode-grid {
-        grid-template-columns: repeat(5, 1fr);
-        gap: 6px;
-    }
-}
-@media (max-width: 360px) {
-    .lp-episode-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-}
-
-.lp-episode-tile {
-    min-height: 48px;
-    border-radius: 13px;
-    border: 1px solid rgba(255, 255, 255, .12);
-    background: rgba(255, 255, 255, .07);
-    color: rgba(255, 255, 255, .92);
+    border: 0;
+    border-radius: 4px;
     font-size: 15px;
-    font-weight: 700;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    position: relative;
-    transition: transform .1s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-}
-.lp-episode-tile:hover {
-    background: rgba(255, 255, 255, .14);
-    border-color: rgba(255, 255, 255, .25);
-}
-.lp-episode-tile:active {
-    transform: scale(.93);
-}
-.lp-episode-tile.is-active {
-    background: #ffffff !important;
-    color: #111111 !important;
-    font-weight: 800 !important;
-    border-color: #ffffff !important;
-    box-shadow: 0 4px 16px rgba(255, 255, 255, .32) !important;
-}
-.lp-tile-dot {
-    position: absolute;
-    bottom: 5px;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: #111;
-}
-
-.lp-quality-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-.lp-quality-item {
-    min-height: 52px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, .1);
-    background: rgba(255, 255, 255, .05);
-    color: rgba(255, 255, 255, .9);
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    transition: background .15s ease, border-color .15s ease, transform .1s ease;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-}
-.lp-quality-item:hover {
-    background: rgba(255, 255, 255, .1);
-    border-color: rgba(255, 255, 255, .2);
-}
-.lp-quality-item:active {
-    transform: scale(.98);
-}
-.lp-quality-item.is-active {
-    background: rgba(255, 255, 255, .14) !important;
-    border-color: rgba(255, 255, 255, .4) !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, .4);
-}
-.lp-quality-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.lp-quality-badge {
-    padding: 3px 8px;
-    border-radius: 7px;
-    font-size: 11px;
-    font-weight: 700;
-    background: rgba(255, 255, 255, .12);
-    color: #fff;
-    flex-shrink: 0;
-    min-width: 44px;
-    text-align: center;
-}
-.lp-quality-item.is-active .lp-quality-badge {
-    background: #ffffff;
-    color: #111111;
-}
-.lp-quality-texts {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+    font-weight: 500;
     text-align: left;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
-.lp-quality-name {
-    font-size: 14px;
+#playerPageModal .lp-episode-menu button.is-active {
+    background: #e6e6e6 !important;
     font-weight: 700;
-    color: #fff;
-}
-.lp-quality-desc {
-    font-size: 11px;
-    color: rgba(255, 255, 255, .55);
-}
-.lp-quality-radio {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, .3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: all .15s ease;
-}
-.lp-quality-item.is-active .lp-quality-radio {
-    border-color: #ffffff;
-    background: #ffffff;
-}
-.lp-quality-item .lp-check {
-    width: 14px;
-    height: 14px;
-    color: #111111;
-    opacity: 0;
-    transform: scale(.6);
-    transition: opacity .15s ease, transform .15s ease;
-}
-.lp-quality-item.is-active .lp-check {
-    opacity: 1;
-    transform: scale(1);
 }

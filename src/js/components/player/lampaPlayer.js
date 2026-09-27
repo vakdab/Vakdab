@@ -109,20 +109,14 @@ import { VakdabFullscreenPlayer } from './fullscreenPlayer.js';
                     z-index: 15; pointer-events: none;
                 }
                 .lp-center-play-btn {
-                    width: auto; height: auto; min-width: 0; min-height: 0;
-                    background: transparent; border: none; border-radius: 0;
-                    display: flex; align-items: center; justify-content: center;
-                    opacity: 0; transform: scale(.65); transition: opacity .2s ease-out, transform .22s cubic-bezier(.18, .89, .32, 1.28);
-                    pointer-events: none; box-shadow: none;
+                    width: 64px; height: 64px; background: rgba(0,0,0,.6); border: 1.5px solid rgba(255,255,255,.4);
+                    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                    opacity: 0; transform: scale(.6); transition: opacity .2s ease-out, transform .2s ease-out;
+                    pointer-events: none;
+                    box-shadow: 0 4px 20px rgba(0,0,0,.5);
                 }
                 .lp-center-play-btn.show { opacity: 1; transform: scale(1); }
-                .lp-center-play-btn svg {
-                    width: 82px; height: 82px; fill: #fff;
-                    filter: drop-shadow(0 4px 22px rgba(0,0,0,.95)) drop-shadow(0 2px 8px rgba(0,0,0,.85));
-                }
-                @media (max-width: 600px) {
-                    .lp-center-play-btn svg { width: 70px; height: 70px; }
-                }
+                .lp-center-play-btn svg { width: 28px; height: 28px; fill: #fff; }
 
                 .lp-error {
                     position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column;
@@ -250,9 +244,11 @@ export class LampaPlayer {
                         <div class="lp-settings-wrap">
                             <div class="lp-menu-wrap">
                                 <button type="button" class="lp-control-pill" id="lpEpisodeBtn" aria-expanded="false" aria-label="Вибрати серію"><span id="lpEpisodeLabel">Серія</span><span class="lp-chevron">⌃</span></button>
+                                <div class="lp-popover lp-episode-menu" id="lpEpisodeMenu" role="menu" aria-hidden="true"></div>
                             </div>
                             <div class="lp-menu-wrap">
                                 <button type="button" class="lp-control-pill lp-quality-pill" id="lpQualityBtn" aria-expanded="false" aria-label="Вибрати якість"><span id="lpQualityLabel">Авто</span><span class="lp-chevron">⌃</span></button>
+                                <div class="lp-popover" id="lpQualityMenu" role="menu" aria-hidden="true"></div>
                             </div>
                             <div class="lp-volume-group">
                                 <button class="lp-btn" id="lpVolBtn" title="Вимкнути звук" aria-label="Вимкнути звук">${LP_ICONS.volOn}</button>
@@ -271,31 +267,6 @@ export class LampaPlayer {
                 wrap.appendChild(qualityRail);
                 this._qualityRail = qualityRail;
                 wrap.classList.add('is-native');
-
-                // Phone-adapted Bottom Sheets for Episodes and Quality
-                const rootContainer = document.getElementById('playerPageModal') || document.body;
-                const sheetBackdrop = document.createElement('div');
-                sheetBackdrop.className = 'lp-sheet-backdrop';
-                rootContainer.appendChild(sheetBackdrop);
-                this._sheetBackdrop = sheetBackdrop;
-
-                const episodeSheet = document.createElement('div');
-                episodeSheet.className = 'lp-sheet lp-episode-sheet';
-                episodeSheet.id = 'lpEpisodeMenu';
-                episodeSheet.setAttribute('role', 'dialog');
-                episodeSheet.setAttribute('aria-modal', 'true');
-                episodeSheet.setAttribute('aria-hidden', 'true');
-                rootContainer.appendChild(episodeSheet);
-                this._episodeSheet = episodeSheet;
-
-                const qualitySheet = document.createElement('div');
-                qualitySheet.className = 'lp-sheet lp-quality-sheet';
-                qualitySheet.id = 'lpQualityMenu';
-                qualitySheet.setAttribute('role', 'dialog');
-                qualitySheet.setAttribute('aria-modal', 'true');
-                qualitySheet.setAttribute('aria-hidden', 'true');
-                rootContainer.appendChild(qualitySheet);
-                this._qualitySheet = qualitySheet;
 
                 this.container.appendChild(wrap);
                 this._bindEvents();
@@ -382,7 +353,7 @@ export class LampaPlayer {
 
                 // Click on wrap — zone based: left/right reveals/toggles overlay, middle toggles play/pause
                 wrap.addEventListener('click', e => {
-                    if (e.target.closest('.lp-controls, .lp-quality-rail, .lp-opening-skip, .video-overlay-topbar, .lp-sheet, .lp-sheet-backdrop')) return;
+                    if (e.target.closest('.lp-controls, .lp-quality-rail, .lp-opening-skip, .video-overlay-topbar, .lp-popover')) return;
                     const rect = wrap.getBoundingClientRect();
                     const clickX = e.clientX - rect.left;
                     const ratio = rect.width > 0 ? clickX / rect.width : 0.5;
@@ -464,212 +435,98 @@ export class LampaPlayer {
 
                 // Episode and quality selectors live inside the bottom overlay.
                 const episodeBtn = wrap.querySelector('#lpEpisodeBtn');
+                const episodeMenu = wrap.querySelector('#lpEpisodeMenu');
                 const episodeLabel = wrap.querySelector('#lpEpisodeLabel');
-                const qualityBtn = wrap.querySelector('#lpQualityBtn');
-                const qualityLabel = wrap.querySelector('#lpQualityLabel');
-                const qualityRail = this._qualityRail;
-
-                const closeSheets = () => {
-                    this._sheetBackdrop?.classList.remove('is-open');
-                    this._episodeSheet?.classList.remove('is-open');
-                    this._qualitySheet?.classList.remove('is-open');
-                    episodeBtn?.classList.remove('is-open');
-                    qualityBtn?.classList.remove('is-open');
-                    this._episodeSheet?.setAttribute('aria-hidden', 'true');
-                    this._qualitySheet?.setAttribute('aria-hidden', 'true');
-                    episodeBtn?.setAttribute('aria-expanded', 'false');
-                    qualityBtn?.setAttribute('aria-expanded', 'false');
-                };
-                this._sheetBackdrop?.addEventListener('click', closeSheets);
-                this._closePlayerMenus = closeSheets;
-
-                const escapeHtmlHelper = str => String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-                const updateEpisodeLabel = value => {
-                    if (episodeLabel) episodeLabel.textContent = `Серія ${value || this.options.episode || ''}`.trim();
-                };
-                updateEpisodeLabel(this.options.episode);
-
-                const renderEpisodeSheet = () => {
-                    if (!this._episodeSheet) return;
+                const renderEpisodeMenu = () => {
+                    if (!episodeMenu) return;
                     const items = Array.isArray(this.options.episodeOptions) ? this.options.episodeOptions : [];
                     const currentEp = String(this.options.episode || '1');
-                    const currentIndex = items.findIndex(item => String(item.episode) === currentEp);
-                    const prevItem = currentIndex > 0 ? items[currentIndex - 1] : null;
-                    const nextItem = (currentIndex >= 0 && currentIndex < items.length - 1) ? items[currentIndex + 1] : null;
-
-                    let html = `
-                        <div class="lp-sheet-handle"></div>
-                        <div class="lp-sheet-header">
-                            <div class="lp-sheet-title-group">
-                                <span class="lp-sheet-title">Вибір серії</span>
-                                <span class="lp-sheet-badge">${items.length} ${items.length === 1 ? 'серія' : (items.length >= 2 && items.length <= 4 ? 'серії' : 'серій')}</span>
-                            </div>
-                            <button type="button" class="lp-sheet-close" id="lpEpisodeClose" aria-label="Закрити">✕</button>
-                        </div>
-                    `;
-
-                    if (items.length > 1) {
-                        html += `
-                            <div class="lp-sheet-nav">
-                                <button type="button" class="lp-sheet-nav-btn" data-nav="prev" ${!prevItem ? 'disabled' : ''}>◀ Попередня</button>
-                                <span class="lp-sheet-nav-current">Зараз: Серія ${escapeHtmlHelper(currentEp)}</span>
-                                <button type="button" class="lp-sheet-nav-btn" data-nav="next" ${!nextItem ? 'disabled' : ''}>Наступна ▶</button>
-                            </div>
-                        `;
-                    }
-
-                    html += `<div class="lp-sheet-body"><div class="lp-episode-grid">`;
-                    if (items.length) {
-                        html += items.map(item => {
+                    episodeMenu.innerHTML = '<div class="lp-popover-label">Серії</div>' + (items.length
+                        ? items.map(item => {
                             const isAct = String(item.episode) === currentEp;
-                            const epStr = String(item.episode);
-                            return `<button type="button" data-episode-value="${escapeHtmlHelper(epStr)}" class="lp-episode-tile ${isAct ? 'is-active' : ''}"><span>${escapeHtmlHelper(epStr)}</span></button>`;
-                        }).join('');
-                    } else {
-                        html += '<div style="grid-column: 1 / -1; text-align: center; color: rgba(255,255,255,.5); padding: 24px;">Серії недоступні</div>';
-                    }
-                    html += `</div></div>`;
-
-                    this._episodeSheet.innerHTML = html;
-                    this._episodeSheet.querySelector('#lpEpisodeClose')?.addEventListener('click', closeSheets);
-
-                    this._episodeSheet.querySelectorAll('.lp-sheet-nav-btn').forEach(btn => {
-                        btn.addEventListener('click', e => {
-                            e.stopPropagation();
-                            const nav = btn.dataset.nav;
-                            const target = nav === 'prev' ? prevItem : nextItem;
-                            if (target) {
-                                this.options.episode = target.episode;
-                                updateEpisodeLabel(target.episode);
-                                closeSheets();
-                                if (typeof this.options.onEpisodeSelect === 'function') {
-                                    this.options.onEpisodeSelect(target);
-                                }
-                            }
-                        });
-                    });
-
-                    this._episodeSheet.querySelectorAll('.lp-episode-tile').forEach(tile => {
-                        tile.addEventListener('click', e => {
-                            e.stopPropagation();
-                            const val = tile.dataset.episodeValue;
-                            const item = items.find(entry => String(entry.episode) === val);
-                            if (item) {
-                                this.options.episode = item.episode;
-                                updateEpisodeLabel(item.episode);
-                                closeSheets();
-                                if (typeof this.options.onEpisodeSelect === 'function') {
-                                    this.options.onEpisodeSelect(item);
-                                }
-                            }
-                        });
-                    });
+                            return `<button type="button" data-episode-value="${String(item.episode)}" class="${isAct ? 'is-active' : ''}" role="menuitem"><span>Серія ${String(item.episode)}</span></button>`;
+                        }).join('')
+                        : '<div class="lp-popover-label">Серії недоступні</div>');
                 };
-
-                const openEpisodeSheet = () => {
-                    closeSheets();
-                    renderEpisodeSheet();
-                    this._sheetBackdrop?.classList.add('is-open');
-                    this._episodeSheet?.classList.add('is-open');
-                    episodeBtn?.classList.add('is-open');
-                    this._episodeSheet?.setAttribute('aria-hidden', 'false');
-                    episodeBtn?.setAttribute('aria-expanded', 'true');
-                    requestAnimationFrame(() => {
-                        this._episodeSheet?.querySelector('.is-active')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-                    });
+                renderEpisodeMenu();
+                const updateEpisodeLabel = value => { if (episodeLabel) episodeLabel.textContent = `Серія ${value || this.options.episode || ''}`.trim(); };
+                updateEpisodeLabel(this.options.episode);
+                const setEpisodeMenuOpen = open => {
+                    episodeMenu?.classList.toggle('is-open', open);
+                    episodeBtn?.classList.toggle('is-open', open);
+                    episodeMenu?.setAttribute('aria-hidden', String(!open));
+                    episodeBtn?.setAttribute('aria-expanded', String(open));
                 };
                 episodeBtn?.addEventListener('click', e => {
                     e.stopPropagation();
-                    const isOpen = this._episodeSheet?.classList.contains('is-open');
-                    if (isOpen) closeSheets(); else openEpisodeSheet();
+                    const willOpen = !episodeMenu?.classList.contains('is-open');
+                    setEpisodeMenuOpen(willOpen);
+                    if (willOpen) {
+                        requestAnimationFrame(() => episodeMenu?.querySelector('.is-active')?.scrollIntoView({ block: 'nearest' }));
+                    }
                 });
-
-                // Quality sheet support
-                const renderQualitySheet = () => {
-                    if (!this._qualitySheet) return;
-                    const levels = this.hls?.levels || [];
-                    const unique = [];
-                    levels.forEach((level, index) => {
-                        const label = level.height ? `${level.height}p` : `Рівень ${index + 1}`;
-                        if (!unique.some(item => item.label === label)) {
-                            unique.push({ label, index, height: level.height || 0 });
-                        }
-                    });
-                    unique.sort((a, b) => (b.height || 0) - (a.height || 0));
-
-                    let currentIdx = this.hls ? this.hls.currentLevel : -1;
-                    const checkSvg = '<svg class="lp-check" viewBox="0 0 24 24" width="16" height="16"><path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-                    let html = `
-                        <div class="lp-sheet-handle"></div>
-                        <div class="lp-sheet-header">
-                            <div class="lp-sheet-title-group">
-                                <span class="lp-sheet-title">Якість відео</span>
-                                <span class="lp-sheet-badge">HLS</span>
-                            </div>
-                            <button type="button" class="lp-sheet-close" id="lpQualityClose" aria-label="Закрити">✕</button>
-                        </div>
-                        <div class="lp-sheet-body">
-                            <div class="lp-quality-list">
-                                <button type="button" class="lp-quality-item ${currentIdx === -1 ? 'is-active' : ''}" data-quality-index="-1" data-quality-label="Авто">
-                                    <span>Авто (рекомендовано)</span>
-                                    ${checkSvg}
-                                </button>
-                    `;
-
-                    unique.forEach(item => {
-                        const isAct = item.index === currentIdx;
-                        const sub = item.height >= 1080 ? 'Full HD' : (item.height >= 720 ? 'HD' : '');
-                        const labelText = sub ? `${item.label} · ${sub}` : item.label;
-                        html += `
-                            <button type="button" class="lp-quality-item ${isAct ? 'is-active' : ''}" data-quality-index="${item.index}" data-quality-label="${item.label}">
-                                <span>${labelText}</span>
-                                ${checkSvg}
-                            </button>
-                        `;
-                    });
-
-                    html += `</div></div>`;
-                    this._qualitySheet.innerHTML = html;
-
-                    this._qualitySheet.querySelector('#lpQualityClose')?.addEventListener('click', closeSheets);
-
-                    this._qualitySheet.querySelectorAll('.lp-quality-item').forEach(item => {
-                        item.addEventListener('click', e => {
-                            e.stopPropagation();
-                            const idx = Number(item.dataset.qualityIndex);
-                            if (this.hls) this.hls.currentLevel = idx;
-                            const label = item.dataset.qualityLabel || 'Авто';
-                            if (qualityLabel) qualityLabel.textContent = label;
-                            qualityRail?.querySelectorAll('[data-quality-index]').forEach(railItem => {
-                                const active = Number(railItem.dataset.qualityIndex) === idx;
-                                railItem.classList.toggle('is-active', active);
-                            });
-                            closeSheets();
-                        });
-                    });
-                };
-
-                const openQualitySheet = () => {
-                    closeSheets();
-                    renderQualitySheet();
-                    this._sheetBackdrop?.classList.add('is-open');
-                    this._qualitySheet?.classList.add('is-open');
-                    qualityBtn?.classList.add('is-open');
-                    this._qualitySheet?.setAttribute('aria-hidden', 'false');
-                    qualityBtn?.setAttribute('aria-expanded', 'true');
-                };
-                qualityBtn?.addEventListener('click', e => {
+                episodeMenu?.addEventListener('click', e => {
+                    const option = e.target.closest('[data-episode-value]');
+                    if (!option) return;
                     e.stopPropagation();
-                    const isOpen = this._qualitySheet?.classList.contains('is-open');
-                    if (isOpen) closeSheets(); else openQualitySheet();
+                    const item = (this.options.episodeOptions || []).find(entry => String(entry.episode) === option.dataset.episodeValue);
+                    updateEpisodeLabel(item?.episode);
+                    setEpisodeMenuOpen(false);
+                    if (item && typeof this.options.onEpisodeSelect === 'function') this.options.onEpisodeSelect(item);
                 });
 
-                const onEscSheet = e => { if (e.key === 'Escape') closeSheets(); };
-                document.addEventListener('keydown', onEscSheet);
-                this._onEscSheet = onEscSheet;
-
+                // Quality menu support remains available for HLS sources.
+                const qualityBtn = wrap.querySelector('#lpQualityBtn');
+                const qualityMenu = wrap.querySelector('#lpQualityMenu');
+                const qualityLabel = wrap.querySelector('#lpQualityLabel');
+                const qualityRail = this._qualityRail;
+                const setMenuOpen = (menu, btn, open) => {
+                    if (!menu || !btn) return;
+                    menu.classList.toggle('is-open', open);
+                    menu.setAttribute('aria-hidden', String(!open));
+                    btn.setAttribute('aria-expanded', String(open));
+                    btn.classList.toggle('is-open', open);
+                };
+                const isMenuOpen = menu => menu && menu.classList.contains('is-open');
+                const closePlayerMenus = () => { setMenuOpen(qualityMenu, qualityBtn, false); setEpisodeMenuOpen(false); };
+                if (qualityBtn && qualityMenu) qualityBtn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    const willOpen = !isMenuOpen(qualityMenu);
+                    this._refreshQualityMenu();
+                    setMenuOpen(qualityMenu, qualityBtn, willOpen);
+                });
+                const applyQuality = option => {
+                    if (!option) return;
+                    const idx = Number(option.dataset.qualityIndex);
+                    if (this.hls) this.hls.currentLevel = idx;
+                    const label = option.dataset.qualityLabel || 'Авто';
+                    if (qualityLabel) qualityLabel.textContent = label;
+                    qualityMenu?.querySelectorAll('[data-quality-index]').forEach(item => {
+                        const active = item === option || Number(item.dataset.qualityIndex) === idx;
+                        item.classList.toggle('is-active', active);
+                        item.setAttribute('aria-checked', String(active));
+                    });
+                    qualityRail?.querySelectorAll('[data-quality-index]').forEach(item => {
+                        const active = item === option || (idx >= 0 && Number(item.dataset.qualityIndex) === idx);
+                        item.classList.toggle('is-active', active);
+                        item.setAttribute('aria-checked', String(active));
+                    });
+                    closePlayerMenus();
+                };
+                qualityMenu?.addEventListener('click', e => {
+                    const option = e.target.closest('[data-quality-index]');
+                    if (!option) return;
+                    e.stopPropagation();
+                    applyQuality(option);
+                });
+                qualityRail?.addEventListener('click', e => {
+                    const option = e.target.closest('[data-quality-index]');
+                    if (!option) return;
+                    e.stopPropagation();
+                    applyQuality(option);
+                });
+                document.addEventListener('click', closePlayerMenus);
+                this._closePlayerMenus = closePlayerMenus;
                 this._refreshQualityMenu();
 
                 // Fullscreen — single button lives in the video topbar (works for both
@@ -850,7 +707,7 @@ export class LampaPlayer {
             _hideControls() {
                 const c = this._controls;
                 if (!c) return;
-                if (this._episodeSheet?.classList.contains('is-open') || this._qualitySheet?.classList.contains('is-open')) return;
+                if (this.containerRef?.querySelector('.lp-popover.is-open')) return;
                 c.classList.add('hidden');
                 this.containerRef?.classList.add('controls-hidden');
                 document.getElementById('playerVideoContainer')?.classList.add('controls-hidden');
@@ -1175,13 +1032,6 @@ export class LampaPlayer {
                     this._onFullscreenChange = null;
                 }
                 if (this._closePlayerMenus) document.removeEventListener('click', this._closePlayerMenus);
-                if (this._onEscSheet) document.removeEventListener('keydown', this._onEscSheet);
-                this._sheetBackdrop?.remove();
-                this._episodeSheet?.remove();
-                this._qualitySheet?.remove();
-                this._sheetBackdrop = null;
-                this._episodeSheet = null;
-                this._qualitySheet = null;
                 clearTimeout(this._centerTimer);
                 if (this.hls) { this.hls.destroy(); this.hls = null; }
                 if (this.videoRef) { this.videoRef.pause(); this.videoRef.removeAttribute('src'); this.videoRef.load(); }
