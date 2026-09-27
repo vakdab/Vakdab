@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260927-senplayer-v1';
+} from '../../legacy/app-legacy.js?v=20260927-senplayer-v2';
 import {
     normalizeNickname,
     stripNicknamePrefix,
@@ -15,7 +15,7 @@ import {
     saveProfile,
     getProfileStats
 } from '../../services/profile/profileStorage.js?v=20260927-persistence-v1';
-import { isSenPlayerButtonEnabled, setSenPlayerButtonEnabled } from '../../components/player/senPlayer.js?v=20260927-senplayer-v1';
+import { isSenPlayerButtonEnabled, setSenPlayerButtonEnabled } from '../../components/player/senPlayer.js?v=20260927-senplayer-v2';
 
         let settingsState = { tab: 'profile', previewOpen: true };
         let settingsCalendarOutsideHandler = null;

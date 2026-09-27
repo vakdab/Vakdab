@@ -45,10 +45,8 @@ export function isDirectMediaUrl(candidate, depth = 0) {
     return false;
 }
 
-export function buildSenPlayerUrl(mediaUrl, title = '') {
+export function buildSenPlayerUrl(mediaUrl) {
     if (!isDirectMediaUrl(mediaUrl)) throw new TypeError('SenPlayer needs a direct media URL');
 
-    const params = new URLSearchParams({ url: String(mediaUrl) });
-    if (title) params.set('name', String(title));
-    return `senplayer://x-callback-url/play?${params.toString()}`;
+    return `senplayer://x-callback-url/play?url=${encodeURIComponent(String(mediaUrl))}`;
 }

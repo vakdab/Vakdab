@@ -6,7 +6,7 @@ import { Storage } from '../../core/compat/storage.js?v=20260927-persistence-v2'
 import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260927-player-controls-v2';
 import {
     buildSenPlayerUrl, isDirectMediaUrl, isSenPlayerAvailableOnThisDevice, isSenPlayerButtonEnabled
-} from '../../components/player/senPlayer.js?v=20260927-senplayer-v1';
+} from '../../components/player/senPlayer.js?v=20260927-senplayer-v2';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, resolveUniversalPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -19,7 +19,7 @@ import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove
 import { renderPlayerInfoSkeleton } from '../../utils/skeleton.js';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260927-senplayer-v1';
+} from '../../legacy/app-legacy.js?v=20260927-senplayer-v2';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 import { renderPlayerCommentsSection, resetPlayerCommentsSection } from './commentsSection.js?v=20260927-player-comments-v1';
 import {
@@ -1938,7 +1938,7 @@ import {
                 return;
             }
             try {
-                window.location.href = buildSenPlayerUrl(source, `${playerPageAnime?.title || 'VakDab'} — серія ${playerPageCurrentEpisodeNum}`);
+                window.location.href = buildSenPlayerUrl(source);
             } catch (error) {
                 console.warn('[SenPlayer] Could not build playback link:', error);
                 showToast('Не вдалося підготувати посилання для SenPlayer');
