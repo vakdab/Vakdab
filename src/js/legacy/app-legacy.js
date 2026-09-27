@@ -35,7 +35,7 @@ import {
     setPlayerPageAnimeuaSeasons, setPlayerPageAnime, setPlayerPageCurrentSeason, setPlayerPageCurrentDub, setPlayerPageCurrentSource,
     openPlayerPage, closePlayerPage, buildSeasonRow, updateFilterChip, updateSourceChip, buildEpisodeViews,
     buildBottomSheetData, openBottomSheet, closeBottomSheet, closeMenuPopover, toggleLike, toggleDislike, showViewMode
-} from '../pages/player/animePlayerPage.js?v=20260927-related-v2';
+} from '../pages/player/animePlayerPage.js?v=20260927-related-v3';
 
 import { getProfile, renderSettingsPage } from '../pages/settings/settingsLegacy.js?v=20260903-settings-v2';
 import {

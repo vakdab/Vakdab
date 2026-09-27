@@ -1119,6 +1119,15 @@ import {
                     ? await renderRelatedAnimeFromJikan(data)
                     : [];
                 if (!rawItems.length) rawItems = await fetchAnimeRelations(targetAnime, data);
+                const exactTitle = targetAnime?.originalTitle || targetAnime?.title || '';
+                if (!rawItems.length && exactTitle) {
+                    const exactJikan = await withTimeout(
+                        resolveJikanByTitle(exactTitle),
+                        5000,
+                        'Jikan relations fallback timeout'
+                    );
+                    if (exactJikan?.relations?.length) rawItems = await renderRelatedAnimeFromJikan(exactJikan);
+                }
                 if (rawItems && rawItems.length > 0) {
                     playerRelatedItems = await Promise.all(rawItems.map(localizeRelatedItem));
                 } else if (data?._provider === 'anilist') {
