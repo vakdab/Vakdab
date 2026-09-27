@@ -1113,7 +1113,12 @@ import {
             if (!list) return;
             try {
                 const targetAnime = anime || playerPageAnime;
-                const rawItems = await fetchAnimeRelations(targetAnime, data);
+                // Prefer Jikan's relations for the exact MAL title currently open.
+                // This avoids a fuzzy title search returning relations for another anime.
+                let rawItems = Array.isArray(data?.relations) && data.relations.length
+                    ? await renderRelatedAnimeFromJikan(data)
+                    : [];
+                if (!rawItems.length) rawItems = await fetchAnimeRelations(targetAnime, data);
                 if (rawItems && rawItems.length > 0) {
                     playerRelatedItems = await Promise.all(rawItems.map(localizeRelatedItem));
                 } else if (data?._provider === 'anilist') {
