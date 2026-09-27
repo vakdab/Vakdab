@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
+} from '../../legacy/app-legacy.js?v=20260927-senplayer-v2';
 import {
     normalizeNickname,
     stripNicknamePrefix,
@@ -15,6 +15,7 @@ import {
     saveProfile,
     getProfileStats
 } from '../../services/profile/profileStorage.js?v=20260927-persistence-v1';
+import { isSenPlayerButtonEnabled, setSenPlayerButtonEnabled } from '../../components/player/senPlayer.js?v=20260927-senplayer-v2';
 
         let settingsState = { tab: 'profile', previewOpen: true };
         let settingsCalendarOutsideHandler = null;
@@ -293,6 +294,21 @@ import {
                     <svg id="star-4" class="star" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
                   </div>
                 </div>
+              </label>
+            </div>
+
+            <div class="settings-section-title">Відтворення</div>
+            <div class="settings-card">
+              <div class="settings-card-left">
+                <i class="fas fa-external-link-alt"></i>
+                <div>
+                  <div class="label">Кнопка SenPlayer</div>
+                  <div class="desc">Показувати кнопку відкриття прямих відеопосилань у SenPlayer на пристроях Apple</div>
+                </div>
+              </div>
+              <label class="settings-switch">
+                <input type="checkbox" id="settingsSenPlayerToggle" ${isSenPlayerButtonEnabled() ? 'checked' : ''} aria-label="Увімкнути кнопку SenPlayer">
+                <span class="settings-switch-slider"></span>
               </label>
             </div>
 
@@ -622,6 +638,13 @@ import {
         function wireSiteTab() {
             const themeInput = document.getElementById('themeSwitchInput');
             if (themeInput) themeInput.addEventListener('change', toggleTheme);
+
+            document.getElementById('settingsSenPlayerToggle')?.addEventListener('change', event => {
+                const enabled = event.currentTarget.checked;
+                setSenPlayerButtonEnabled(enabled);
+                window.dispatchEvent(new Event('vakdab:senplayer-setting-change'));
+                showToast(enabled ? 'Кнопку SenPlayer увімкнено' : 'Кнопку SenPlayer вимкнено');
+            });
 
             document.getElementById('settingsExportDataBtn')?.addEventListener('click', () => {
                 const data = {

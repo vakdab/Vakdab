@@ -5,6 +5,9 @@ import { Router } from '../../core/compat/router.js?v=20260926-comment-send-v1';
 import { Storage } from '../../core/compat/storage.js?v=20260927-persistence-v2';
 import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260927-player-controls-v2';
 import {
+    buildSenPlayerUrl, isDirectMediaUrl, isSenPlayerAvailableOnThisDevice, isSenPlayerButtonEnabled
+} from '../../components/player/senPlayer.js?v=20260927-senplayer-v2';
+import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, resolveUniversalPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
     searchHikka, searchHikkaAllTitles, switchProviderSource
@@ -16,7 +19,7 @@ import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove
 import { renderPlayerInfoSkeleton } from '../../utils/skeleton.js';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
+} from '../../legacy/app-legacy.js?v=20260927-senplayer-v2';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 import { renderPlayerCommentsSection, resetPlayerCommentsSection } from './commentsSection.js?v=20260927-player-comments-v1';
 import {
@@ -74,6 +77,17 @@ import {
         let playerCountdownTimer = null;
 
         const QUALITY_OPTIONS = ['Максимальна', '2160p (4K)', '1440p', '1080p', '720p', '480p', '360p'];
+
+        function syncSenPlayerButton() {
+            const button = document.getElementById('playerSenPlayerBtn');
+            if (!button) return;
+            button.hidden = !(
+                isSenPlayerButtonEnabled() && isSenPlayerAvailableOnThisDevice() &&
+                isDirectMediaUrl(playerPageActiveEpisodeFile)
+            );
+        }
+
+        window.addEventListener('vakdab:senplayer-setting-change', syncSenPlayerButton);
 
         function renderPlayerUnreleasedNotice(message, retryUrl) {
             const grid = document.getElementById('episodeViewGrid');
@@ -1377,6 +1391,8 @@ import {
             const videoTitleEl = document.getElementById('playerTopbarTitle');
             if (videoTitleEl) videoTitleEl.textContent = playerPageAnime?.title || '';
             videoDiv.innerHTML = '';
+            playerPageActiveEpisodeFile = null;
+            syncSenPlayerButton();
             let finalUrl = file;
             try {
                 finalUrl = await resolveUniversalPlaybackUrl(file);
@@ -1388,6 +1404,7 @@ import {
             }
             if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
             playerPageActiveEpisodeFile = finalUrl;
+            syncSenPlayerButton();
 
             if (playerPagePlayer) { playerPagePlayer.destroy();
                 playerPagePlayer = null; }
@@ -1905,6 +1922,28 @@ import {
                 return;
             });
         }
+
+        document.getElementById('playerSenPlayerBtn')?.addEventListener('click', () => {
+            const source = playerPageActiveEpisodeFile;
+            if (!isSenPlayerButtonEnabled()) {
+                syncSenPlayerButton();
+                return;
+            }
+            if (!isSenPlayerAvailableOnThisDevice()) {
+                showToast('SenPlayer доступний на iPhone, iPad та Mac');
+                return;
+            }
+            if (!isDirectMediaUrl(source)) {
+                showToast('Це джерело не має прямого відеопосилання для SenPlayer');
+                return;
+            }
+            try {
+                window.location.href = buildSenPlayerUrl(source);
+            } catch (error) {
+                console.warn('[SenPlayer] Could not build playback link:', error);
+                showToast('Не вдалося підготувати посилання для SenPlayer');
+            }
+        });
 
         document.getElementById('playerPageModal')?.addEventListener('click', event => {
             const link = event.target.closest?.('a[href]');

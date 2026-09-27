@@ -3,8 +3,8 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
-import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../pages/settings/settingsLegacy.js?v=20260927-appearance-v3';
+} from '../../legacy/app-legacy.js?v=20260927-senplayer-v2';
+import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../pages/settings/settingsLegacy.js?v=20260927-senplayer-v2';
 import { Storage } from './storage.js?v=20260927-persistence-v2';
 import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 

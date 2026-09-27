@@ -3,8 +3,8 @@ import {
     Auth, Router, Storage, escapeHtml,
     loadGenrePageContent, renderProfilePage, renderSettingsPage,
     showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
-import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../settings/settingsLegacy.js?v=20260927-appearance-v3';
+} from '../../legacy/app-legacy.js?v=20260927-senplayer-v2';
+import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../settings/settingsLegacy.js?v=20260927-senplayer-v2';
 import { debugLog } from '../../utils/debug.js';
 import { fetchTmdbCardInfo } from '../../services/tmdb.js?v=20260824-settings-redesign-v1';
 import { fetchAnimeLite, fetchHikkaByCategory, fetchHikkaMain, fetchHikkaQuickFilter, fetchHikkaTop100, hikkaCatalog, hikkaItem, hikkaRequest, normalizeGenreList, normalizeSynopsisText, searchHikka } from '../../services/catalog/catalog.js?v=20260911-moonanime-fallback-v4';
