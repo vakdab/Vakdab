@@ -15,7 +15,7 @@ function normalizeProfile(uid, data = {}) {
         nickname: normalizedNickname,
         realName: normalizedRealName,
         bio: String(profile.bio || ''),
-        bioBold: profile.bioBold === true,
+        bioBold: true,
         avatar: String(profile.avatar || ''),
         avatarVideo: String(profile.avatarVideo || ''),
         avatarVideoSettings: profile.avatarVideoSettings || {},

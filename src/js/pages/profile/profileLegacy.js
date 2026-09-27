@@ -7,7 +7,7 @@ import {
 } from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
 import { Storage } from '../../core/compat/storage.js?v=20260905-stickers-sync-v1';
 import { renderStickerFaceByKey } from './stickersLegacy.js?v=20260905-stickers-sync-v1';
-import { getProfile, saveProfile, getProfileStats, getProfileDisplayName, getProfileHandle } from '../settings/settingsLegacy.js?v=20260905-no-achievements-v1';
+import { getProfile, saveProfile, getProfileStats, getProfileDisplayName, getProfileHandle } from '../settings/settingsLegacy.js?v=20260927-appearance-v1';
 import { renderProfileSkeleton } from '../../utils/skeleton.js';
 
 function primeProfileMediaPlayback(container) {

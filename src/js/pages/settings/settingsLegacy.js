@@ -81,9 +81,7 @@ import {
                   <div class="settings-preview-avatar-wrap${decorationClass}"><div class="profile-avatar">${avatarMarkup}</div></div>
                   <div class="settings-preview-nick-row"><strong>${escapeHtml(getProfileDisplayName(profile))}</strong></div>
                   <div class="settings-preview-handle">${escapeHtml(getProfileHandle(profile))}</div>
-                  <div class="settings-preview-bio${profile.bioBold ? ' is-bold' : ''}">${escapeHtml(profile.bio || 'Опис профілю не додано')}</div>
-                  <button type="button" class="settings-preview-bio-btn"><i class="fas fa-align-left"></i> Опис профілю</button>
-                  <div class="settings-preview-tabs profile-tabs"><span class="profile-tab active">Профіль</span><span class="profile-tab">Статистика</span></div>
+                  <div class="settings-preview-bio is-bold">${escapeHtml(profile.bio || 'Опис профілю не додано')}</div>
                 </div>
               </div>
             `;
@@ -370,22 +368,8 @@ import {
             const avatarVideoSrc = profile.avatarVideo || '';
             return `
             <div class="appearance-layout">
-            <div class="appearance-intro">
-              <div class="appearance-intro-icon"><i class="fas fa-palette"></i></div>
-              <div><h3>Налаштуйте свій профіль</h3><p>Змініть банер, аватар та ефекти. Усі зміни зберігаються автоматично.</p></div>
-            </div>
             <div class="appearance-col appearance-col--main">
             <div class="appearance-section-card">
-            <div class="settings-section-title">Опис профілю</div>
-            <div class="settings-field">
-              <textarea id="settingsBioInput" maxlength="160" rows="3" placeholder="Розкажіть про себе…">${escapeHtml(profile.bio || '')}</textarea>
-                <div class="settings-bio-tools">
-                  <button type="button" class="settings-bio-bold-btn${profile.bioBold ? ' active' : ''}" id="settingsBioBoldBtn" aria-pressed="${profile.bioBold ? 'true' : 'false'}"><i class="fas fa-bold"></i> Жирний текст</button>
-                  <span class="settings-bio-tool-hint">Перемикає жирний опис у профілі та прев’ю.</span>
-                </div>
-                <span class="settings-field-hint"><span id="settingsBioCount">${(profile.bio || '').length}</span>/160 символів · зміни зберігаються автоматично</span>
-              </div>
-
             <div class="appearance-media-grid">
             <div class="appearance-media-block">
             <div class="settings-section-title">Банер</div>
@@ -414,6 +398,14 @@ import {
             <div class="settings-hint-text">JPG, PNG, WebP, GIF, MP4, WebM, MOV · відео до 50 МБ</div>
             </div>
             </div>
+            </div>
+            </div>
+
+            <div class="appearance-section-card">
+            <div class="settings-section-title">Опис профілю</div>
+            <div class="settings-field">
+              <textarea id="settingsBioInput" maxlength="160" rows="3" placeholder="Розкажіть про себе…">${escapeHtml(profile.bio || '')}</textarea>
+              <span class="settings-field-hint"><span id="settingsBioCount">${(profile.bio || '').length}</span>/160 символів · зміни зберігаються автоматично</span>
             </div>
             </div>
 
@@ -675,6 +667,9 @@ import {
             const bioCount = document.getElementById('settingsBioCount');
             if (bioInput && bioCount) bioInput.addEventListener('input', () => {
                 bioCount.textContent = String(bioInput.value.length);
+                if (settingsState.previewOpen) {
+                    renderSettingsPreviewPanel({ ...getProfile(), bio: bioInput.value, bioBold: true });
+                }
             });
             if (bioInput) bioInput.addEventListener('change', () => {
                 const p = getProfile();
@@ -683,20 +678,6 @@ import {
                 if (settingsState.previewOpen) renderSettingsPreviewPanel(p);
                 if (Router.currentRoute === 'profile') renderProfilePage();
             });
-            document.getElementById('settingsBioBoldBtn')?.addEventListener('click', () => {
-                const p = getProfile();
-                p.bioBold = !p.bioBold;
-                saveProfile(p);
-                const btn = document.getElementById('settingsBioBoldBtn');
-                if (btn) {
-                    btn.classList.toggle('active', p.bioBold);
-                    btn.setAttribute('aria-pressed', p.bioBold ? 'true' : 'false');
-                }
-                if (settingsState.previewOpen) renderSettingsPreviewPanel(p);
-                if (Router.currentRoute === 'profile') renderProfilePage();
-                showToast(p.bioBold ? 'Жирний опис увімкнено' : 'Жирний опис вимкнено');
-            });
-
             document.getElementById('settingsBannerUploadBtn')?.addEventListener('click', () => {
                 document.getElementById('bannerFileInput').click();
             });

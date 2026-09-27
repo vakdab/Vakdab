@@ -28,7 +28,7 @@ export function getDefaultProfile() {
         banner: '',
         bannerVideo: '',
         bio: 'Аніме ентузіаст. Дивлюсь усе підряд — від слайс-оф-лайф до психологічного трилера.',
-        bioBold: false,
+        bioBold: true,
         realName: '',
         birthdate: '',
         showBirthdate: true,
@@ -57,7 +57,8 @@ export function getProfile() {
     merged.nickname = normalizeNickname(legacyNickname, def.nickname);
     merged.realName = stripNicknamePrefix(merged.realName);
     if (merged.bannerFormat !== 'narrow' && merged.bannerFormat !== 'wide') merged.bannerFormat = def.bannerFormat;
-    merged.bioBold = merged.bioBold === true;
+    // Опис профілю завжди показується жирним — окремий перемикач більше не потрібен.
+    merged.bioBold = true;
     merged.hideHistory = merged.hideHistory === true;
     merged.hideBookmarks = merged.hideBookmarks === true;
     return merged;
