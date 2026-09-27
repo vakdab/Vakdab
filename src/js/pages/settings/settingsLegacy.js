@@ -70,6 +70,7 @@ import {
             const bannerEffectClass = (profile.bannerEffect && profile.bannerEffect !== 'none') ? ` banner-effect-${profile.bannerEffect}` : '';
             const decorationClass = (profile.avatarDecoration && profile.avatarDecoration !== 'none') ? ` avatar-decoration-${profile.avatarDecoration}` : '';
             const avatarMarkup = profile.avatarVideo ? profileMediaMarkup(profile.avatarVideo, '', 'video avatar', profile.avatarVideoSettings) : (profile.avatar ? profileMediaMarkup(profile.avatar, '', 'avatar') : `<span class="settings-preview-avatar-fallback">${escapeHtml((getProfileDisplayName(profile) || 'К').charAt(0).toUpperCase())}</span>`);
+            const previewAvatarMarkup = avatarMarkup.replace('loading="lazy"', 'loading="eager"');
             panel.innerHTML = `
               <div class="settings-preview-profile">
                 <div class="profile-banner settings-preview-banner profile-banner--${profile.bannerFormat === 'wide' ? 'wide' : 'narrow'}${bannerEffectClass}">
@@ -78,7 +79,7 @@ import {
                   ${profile.effect && profile.effect !== 'none' ? buildEffectOverlayHtml(profile.effect) : ''}
                 </div>
                 <div class="settings-preview-info">
-                  <div class="settings-preview-avatar-wrap${decorationClass}"><div class="profile-avatar">${avatarMarkup}</div></div>
+                  <div class="settings-preview-avatar-wrap${decorationClass}"><div class="profile-avatar">${previewAvatarMarkup}</div></div>
                   <div class="settings-preview-nick-row"><strong>${escapeHtml(getProfileDisplayName(profile))}</strong></div>
                   <div class="settings-preview-handle">${escapeHtml(getProfileHandle(profile))}</div>
                   <div class="settings-preview-bio is-bold">${escapeHtml(profile.bio || 'Опис профілю не додано')}</div>
@@ -378,9 +379,8 @@ import {
                 ${bannerVideoSrc ? profileMediaMarkup(bannerVideoSrc, '', 'video banner', profile.bannerVideoSettings) : (bannerSrc ? profileMediaMarkup(bannerSrc, '', 'banner') : '')}
               </div>
               <div class="settings-media-actions" aria-label="Керування банером">
-                <button class="settings-media-btn" id="settingsBannerUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
+                <button class="settings-media-btn settings-media-btn--replace" id="settingsBannerUploadBtn"><i class="fas fa-pen"></i> Редагувати</button>
                 ${bannerVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsBannerEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : (bannerSrc ? (isGifUrl(bannerSrc) ? `<button class="settings-media-btn settings-media-edit-video" id="settingsBannerEditGifBtn"><i class="fas fa-sliders"></i> Редагувати GIF</button>` : `<button class="settings-media-btn settings-media-edit-image" id="settingsBannerEditImageBtn"><i class="fas fa-crop-simple"></i> Редагувати банер</button>`) : '')}
-                ${(bannerSrc || bannerVideoSrc) ? `<button class="settings-media-delete" id="settingsBannerRemoveBtn" title="Видалити банер"><i class="fas fa-trash"></i></button>` : ''}
               </div>
             </div>
             <div class="settings-hint-text">JPG, PNG, WebP, GIF, MP4, WebM, MOV · відео до 50 МБ</div>
@@ -390,9 +390,8 @@ import {
             <div class="settings-media-card settings-media-card--avatar">
               <div class="settings-media-preview--avatar${(!avatarSrc && !avatarVideoSrc) ? ' is-empty' : ''}" id="settingsAvatarPreview">${avatarVideoSrc ? profileMediaMarkup(avatarVideoSrc, '', 'video avatar', profile.avatarVideoSettings) : (avatarSrc ? profileMediaMarkup(avatarSrc, '', 'avatar') : '<i class="fas fa-user"></i>')}</div>
               <div class="settings-media-actions">
-                <button class="settings-media-btn" id="settingsAvatarUploadBtn"><i class="fas fa-camera"></i> Змінити</button>
+                <button class="settings-media-btn settings-media-btn--replace" id="settingsAvatarUploadBtn"><i class="fas fa-pen"></i> Редагувати</button>
                 ${avatarVideoSrc ? `<button class="settings-media-btn settings-media-edit-video" id="settingsAvatarEditVideoBtn"><i class="fas fa-sliders"></i> Редагувати відео</button>` : (avatarSrc ? (isGifUrl(avatarSrc) ? `<button class="settings-media-btn settings-media-edit-video" id="settingsAvatarEditGifBtn"><i class="fas fa-sliders"></i> Редагувати GIF</button>` : `<button class="settings-media-btn settings-media-edit-image" id="settingsAvatarEditImageBtn"><i class="fas fa-crop-simple"></i> Редагувати аватарку</button>`) : '')}
-                ${(avatarSrc || avatarVideoSrc) ? `<button class="settings-media-delete" id="settingsAvatarRemoveBtn" title="Видалити аватар"><i class="fas fa-trash"></i></button>` : ''}
               </div>
             </div>
             <div class="settings-hint-text">JPG, PNG, WebP, GIF, MP4, WebM, MOV · відео до 50 МБ</div>
@@ -708,29 +707,6 @@ import {
                 const p = getProfile();
                 editExistingProfileImage(p.avatar, 'avatar');
             });
-            document.getElementById('settingsBannerRemoveBtn')?.addEventListener('click', () => {
-                if (!confirm('Видалити банер?')) return;
-                const p = getProfile();
-                p.banner = '';
-                p.bannerVideo = '';
-                p.bannerVideoSettings = null;
-                saveProfile(p);
-                showToast('Банер видалено');
-                renderSettingsPage();
-                if (Router.currentRoute === 'profile') renderProfilePage();
-            });
-            document.getElementById('settingsAvatarRemoveBtn')?.addEventListener('click', () => {
-                if (!confirm('Видалити аватар?')) return;
-                const p = getProfile();
-                p.avatar = '';
-                p.avatarVideo = '';
-                p.avatarVideoSettings = null;
-                saveProfile(p);
-                showToast('Аватарку видалено');
-                renderSettingsPage();
-                if (Router.currentRoute === 'profile') renderProfilePage();
-            });
-
             const previewBtn = document.getElementById('settingsPreviewToggleBtn');
             if (previewBtn) previewBtn.addEventListener('click', () => {
                 settingsState.previewOpen = !settingsState.previewOpen;

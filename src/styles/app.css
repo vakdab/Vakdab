@@ -19,8 +19,8 @@
 @import url('./components/pagination.css');
 @import url('./components/loader.css');
 @import url('./pages/search.css');
-@import url('./pages/profile.css?v=20260927-profile-editor-v1');
-@import url('./pages/settings.css?v=20260927-appearance-v1');
+@import url('./pages/profile.css?v=20260927-profile-editor-v2');
+@import url('./pages/settings.css?v=20260927-appearance-v2');
 @import url('./pages/genre.css');
 @import url('./pages/genres.css');
 @import url('./pages/schedule.css');

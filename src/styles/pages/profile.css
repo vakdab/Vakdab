@@ -1930,10 +1930,26 @@
 .settings-preview-banner { height: 148px; }
 .settings-preview-info { padding: 0 1.05rem 1.05rem; margin-top: -37px; }
 .settings-preview-info .settings-preview-avatar-wrap { width: 76px; height: 76px; margin-bottom: .7rem; }
+.settings-preview-info .settings-preview-avatar-wrap .profile-avatar {
+    width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
+    border: 0; background: var(--hover); display: flex; align-items: center; justify-content: center;
+}
+.settings-preview-info .settings-preview-avatar-wrap .profile-avatar img,
+.settings-preview-info .settings-preview-avatar-wrap .profile-avatar video {
+    display: block; width: 100%; height: 100%; object-fit: cover; opacity: 1; visibility: visible;
+}
 .settings-preview-nick-row { font-size: 1.12rem; }
 .settings-preview-handle { font-size: .74rem; }
 .settings-preview-bio { margin-top: .7rem; font-size: .88rem; line-height: 1.5; }
 .settings-preview-bio.is-bold { font-weight: 800; color: var(--text); }
+.settings-media-btn--replace {
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 68%, #111));
+    color: var(--accent-text) !important;
+    box-shadow: 0 8px 18px -12px var(--accent);
+}
+.settings-media-btn--replace:hover { opacity: 1 !important; transform: translateY(-1px); box-shadow: 0 11px 22px -13px var(--accent); }
+.settings-media-btn--replace:active { transform: scale(.97); }
 .settings-preview-bio-btn { cursor: default; background: color-mix(in srgb, var(--tag-bg) 82%, var(--surface)); }
 .settings-preview-sticker-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .48rem; }
 .settings-preview-sticker-slot { border-radius: 13px; }
