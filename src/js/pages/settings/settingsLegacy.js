@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260927-senplayer-v2';
+} from '../../legacy/app-legacy.js?v=20260927-senplayer-auto-v1';
 import {
     normalizeNickname,
     stripNicknamePrefix,
@@ -15,7 +15,7 @@ import {
     saveProfile,
     getProfileStats
 } from '../../services/profile/profileStorage.js?v=20260927-persistence-v1';
-import { isSenPlayerButtonEnabled, setSenPlayerButtonEnabled } from '../../components/player/senPlayer.js?v=20260927-senplayer-v2';
+import { isSenPlayerAutoLaunchEnabled, setSenPlayerAutoLaunchEnabled } from '../../components/player/senPlayer.js?v=20260927-senplayer-auto-v1';
 
         let settingsState = { tab: 'profile', previewOpen: true };
         let settingsCalendarOutsideHandler = null;
@@ -302,12 +302,12 @@ import { isSenPlayerButtonEnabled, setSenPlayerButtonEnabled } from '../../compo
               <div class="settings-card-left">
                 <i class="fas fa-external-link-alt"></i>
                 <div>
-                  <div class="label">Кнопка SenPlayer</div>
-                  <div class="desc">Показувати кнопку відкриття прямих відеопосилань у SenPlayer на пристроях Apple</div>
+                  <div class="label">Автоматичне відтворення в SenPlayer</div>
+                  <div class="desc">На iPhone, iPad і Mac натискання «Відтворити» або вибір серії відкриє пряме відео в установленому SenPlayer. Вимкніть, щоб залишити внутрішній плеєр; джерела без прямого потоку відтворюються тут.</div>
                 </div>
               </div>
               <label class="settings-switch">
-                <input type="checkbox" id="settingsSenPlayerToggle" ${isSenPlayerButtonEnabled() ? 'checked' : ''} aria-label="Увімкнути кнопку SenPlayer">
+                <input type="checkbox" id="settingsSenPlayerAutoLaunchToggle" ${isSenPlayerAutoLaunchEnabled() ? 'checked' : ''} aria-label="Автоматично відтворювати відео в SenPlayer">
                 <span class="settings-switch-slider"></span>
               </label>
             </div>
@@ -639,11 +639,10 @@ import { isSenPlayerButtonEnabled, setSenPlayerButtonEnabled } from '../../compo
             const themeInput = document.getElementById('themeSwitchInput');
             if (themeInput) themeInput.addEventListener('change', toggleTheme);
 
-            document.getElementById('settingsSenPlayerToggle')?.addEventListener('change', event => {
+            document.getElementById('settingsSenPlayerAutoLaunchToggle')?.addEventListener('change', event => {
                 const enabled = event.currentTarget.checked;
-                setSenPlayerButtonEnabled(enabled);
-                window.dispatchEvent(new Event('vakdab:senplayer-setting-change'));
-                showToast(enabled ? 'Кнопку SenPlayer увімкнено' : 'Кнопку SenPlayer вимкнено');
+                setSenPlayerAutoLaunchEnabled(enabled);
+                showToast(enabled ? 'Автоматичний запуск SenPlayer увімкнено' : 'Автоматичний запуск SenPlayer вимкнено');
             });
 
             document.getElementById('settingsExportDataBtn')?.addEventListener('click', () => {

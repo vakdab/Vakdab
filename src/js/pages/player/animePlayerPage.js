@@ -3,10 +3,10 @@ import { auth, db } from '../../services/firebase/client.js';
 import { GENRE_MAP } from '../../config/constants.js?v=20260910-anime4k-v1';
 import { Router } from '../../core/compat/router.js?v=20260926-comment-send-v1';
 import { Storage } from '../../core/compat/storage.js?v=20260927-persistence-v2';
-import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260927-player-controls-v2';
+import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260927-senplayer-auto-v1';
 import {
-    buildSenPlayerUrl, isDirectMediaUrl, isSenPlayerAvailableOnThisDevice, isSenPlayerButtonEnabled
-} from '../../components/player/senPlayer.js?v=20260927-senplayer-v2';
+    buildSenPlayerUrl, shouldAutoLaunchSenPlayer
+} from '../../components/player/senPlayer.js?v=20260927-senplayer-auto-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
     resolveAshdiPlaybackUrl, resolveUniversalPlaybackUrl, fetchHikkaByGenre, fetchHikkaTop100, loadHikkaDetail,
@@ -19,7 +19,7 @@ import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove
 import { renderPlayerInfoSkeleton } from '../../utils/skeleton.js';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260927-senplayer-v2';
+} from '../../legacy/app-legacy.js?v=20260927-senplayer-auto-v1';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 import { renderPlayerCommentsSection, resetPlayerCommentsSection } from './commentsSection.js?v=20260927-player-comments-v1';
 import {
@@ -44,7 +44,6 @@ import {
         export let playerPageCurrentSeason = '1';
         export let playerPageCurrentDub = '';
         let playerPageCurrentQuality = '1080p';
-        let playerPageActiveEpisodeFile = null;
         let playerPagePlaybackRequest = 0;
         let playerPageCurrentAnimeUrl = null;
         export let playerPageCurrentSource = 'Основне';
@@ -78,16 +77,17 @@ import {
 
         const QUALITY_OPTIONS = ['Максимальна', '2160p (4K)', '1440p', '1080p', '720p', '480p', '360p'];
 
-        function syncSenPlayerButton() {
-            const button = document.getElementById('playerSenPlayerBtn');
-            if (!button) return;
-            button.hidden = !(
-                isSenPlayerButtonEnabled() && isSenPlayerAvailableOnThisDevice() &&
-                isDirectMediaUrl(playerPageActiveEpisodeFile)
-            );
+        function handoffToSenPlayer(source) {
+            if (!shouldAutoLaunchSenPlayer(source)) return false;
+            try {
+                window.location.assign(buildSenPlayerUrl(source));
+                return true;
+            } catch (error) {
+                console.warn('[SenPlayer] Could not open resolved video:', error);
+                showToast('Не вдалося відкрити SenPlayer — запускаємо вбудований плеєр');
+                return false;
+            }
         }
-
-        window.addEventListener('vakdab:senplayer-setting-change', syncSenPlayerButton);
 
         function renderPlayerUnreleasedNotice(message, retryUrl) {
             const grid = document.getElementById('episodeViewGrid');
@@ -162,7 +162,6 @@ import {
             if (playerPagePlayer) { playerPagePlayer.destroy();
                 playerPagePlayer = null; }
             playerPageAnime = null;
-            playerPageActiveEpisodeFile = null;
             playerPageCurrentEpisodeNum = '1';
             playerPagePlaybackRequest += 1;
             playerJikanData = null;
@@ -1376,6 +1375,13 @@ import {
             cleanupAniSkip();
             const playbackRequest = ++playerPagePlaybackRequest;
             playerPageCurrentEpisodeNum = epNum || '1';
+            if (playerPagePlayer) {
+                playerPagePlayer.destroy();
+                playerPagePlayer = null;
+            }
+            // Direct streams can be handed off in the original tap's user gesture,
+            // before any asynchronous source resolution can expire it on iOS.
+            if (autoplay && handoffToSenPlayer(file)) return;
             // Start AniSkip before any source resolution, layout work, or video
             // startup. This removes the visible 0:03 -> 0:06 race on first play.
             const openingSegmentsPromise = getAniSkipSegments(playerPageAnime, epNum);
@@ -1391,8 +1397,6 @@ import {
             const videoTitleEl = document.getElementById('playerTopbarTitle');
             if (videoTitleEl) videoTitleEl.textContent = playerPageAnime?.title || '';
             videoDiv.innerHTML = '';
-            playerPageActiveEpisodeFile = null;
-            syncSenPlayerButton();
             let finalUrl = file;
             try {
                 finalUrl = await resolveUniversalPlaybackUrl(file);
@@ -1403,11 +1407,7 @@ import {
                 finalUrl = file;
             }
             if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
-            playerPageActiveEpisodeFile = finalUrl;
-            syncSenPlayerButton();
-
-            if (playerPagePlayer) { playerPagePlayer.destroy();
-                playerPagePlayer = null; }
+            if (autoplay && handoffToSenPlayer(finalUrl)) return;
             if (playbackRequest !== playerPagePlaybackRequest || !playerPageIsOpen) return;
             const episodeOptions = getCurrentEpisodes().filter(ep => ep?.file).map(ep => ({
                 episode: ep.episode,
@@ -1418,6 +1418,7 @@ import {
                 episode: epNum,
                 episodeOptions,
                 autoplay,
+                onBeforeUserPlay: () => handoffToSenPlayer(finalUrl),
                 onEpisodeSelect: item => playEpisode(item.file, item.episode)
             });
             await playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || '', `Серія ${epNum}`, { autoplay });
@@ -1922,28 +1923,6 @@ import {
                 return;
             });
         }
-
-        document.getElementById('playerSenPlayerBtn')?.addEventListener('click', () => {
-            const source = playerPageActiveEpisodeFile;
-            if (!isSenPlayerButtonEnabled()) {
-                syncSenPlayerButton();
-                return;
-            }
-            if (!isSenPlayerAvailableOnThisDevice()) {
-                showToast('SenPlayer доступний на iPhone, iPad та Mac');
-                return;
-            }
-            if (!isDirectMediaUrl(source)) {
-                showToast('Це джерело не має прямого відеопосилання для SenPlayer');
-                return;
-            }
-            try {
-                window.location.href = buildSenPlayerUrl(source);
-            } catch (error) {
-                console.warn('[SenPlayer] Could not build playback link:', error);
-                showToast('Не вдалося підготувати посилання для SenPlayer');
-            }
-        });
 
         document.getElementById('playerPageModal')?.addEventListener('click', event => {
             const link = event.target.closest?.('a[href]');
