@@ -4,7 +4,7 @@ import {
     editExistingProfileVideo, escapeHtml, isGifUrl, isVideoUrl,
     profileMediaMarkup, renderProfilePage, showToast,
     syncLeftdockActive, toggleTheme
-} from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
+} from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
 import {
     normalizeNickname,
     stripNicknamePrefix,

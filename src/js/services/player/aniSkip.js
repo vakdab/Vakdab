@@ -1,4 +1,4 @@
-import { showToast } from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
+import { showToast } from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
 
 const aniSkipCache = new Map();
 const aniSkipMalIdCache = new Map();

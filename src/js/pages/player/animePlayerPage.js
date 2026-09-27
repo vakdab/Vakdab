@@ -2,7 +2,7 @@ import { doc, setDoc, deleteDoc, collection, query, where } from '../../config/f
 import { auth, db } from '../../services/firebase/client.js';
 import { GENRE_MAP } from '../../config/constants.js?v=20260910-anime4k-v1';
 import { Router } from '../../core/compat/router.js?v=20260926-comment-send-v1';
-import { Storage } from '../../core/compat/storage.js?v=20260910-anime4k-v1';
+import { Storage } from '../../core/compat/storage.js?v=20260927-persistence-v2';
 import { LampaPlayer } from '../../components/player/lampaPlayer.js?v=20260927-player-controls-v1';
 import {
     CATALOG_POSTER_FALLBACK, normalizeGenreList, normalizePosterUrl, pickPreferredDub,
@@ -16,7 +16,7 @@ import { renderProfilePage } from '../profile/profileLegacy.js?v=20260906-remove
 import { renderPlayerInfoSkeleton } from '../../utils/skeleton.js';
 import {
     detectDeviceInfo, ensureFirebaseGuestAuth, escapeHtml, showToast, loadGenres
-} from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
+} from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
 import { loadFeature } from '../../core/feature-loader.js?v=20260905-deadcode-v1';
 import { renderPlayerCommentsSection, resetPlayerCommentsSection } from './commentsSection.js?v=20260927-player-comments-v1';
 import {

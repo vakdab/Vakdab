@@ -1,7 +1,7 @@
 import {
     Auth, Router, Storage, PROFILE_STICKER_SLOTS,
     renderProfilePage, renderSettingsPage, showToast, showToastProgress, syncLeftdockActive
-} from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
+} from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
 import { escapeHtml } from '../../utils/string.js';
 import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../../services/profile/profileStorage.js?v=20260927-persistence-v1';
 import {

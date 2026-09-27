@@ -1,5 +1,5 @@
-import { Auth } from './auth.js';
-import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
+import { Auth } from './auth.js?v=20260927-persistence-v2';
+import { PROFILE_STICKER_SLOTS, getDefaultStickers } from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
         export const Storage = {
             _syncTimer: null,
             _pendingSyncScope: null,

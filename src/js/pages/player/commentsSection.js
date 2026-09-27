@@ -1,4 +1,4 @@
-import { escapeHtml, showToast } from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
+import { escapeHtml, showToast } from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
 import { Router } from '../../core/compat/router.js?v=20260926-comment-send-v1';
 import { auth } from '../../services/firebase/client.js';
 import { getProfile, getProfileDisplayName } from '../../services/profile/profileStorage.js?v=20260927-persistence-v1';

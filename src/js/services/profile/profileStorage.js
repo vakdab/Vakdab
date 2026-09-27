@@ -1,5 +1,5 @@
-import { Storage } from '../../core/compat/storage.js';
-import { Auth } from '../../core/compat/auth.js';
+import { Storage } from '../../core/compat/storage.js?v=20260927-persistence-v2';
+import { Auth } from '../../core/compat/auth.js?v=20260927-persistence-v2';
 
 export function normalizeNickname(value, fallback = '@user') {
     const raw = String(value || '').trim().replace(/^@+/, '').replace(/\s+/g, '_').replace(/[^\p{L}\p{N}._-]/gu, '').slice(0, 24);

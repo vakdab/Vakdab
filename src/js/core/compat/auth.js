@@ -3,9 +3,9 @@ import { auth, db, initialized as firebaseInitialized } from '../../services/fir
 import {
     Router, getDefaultStickers, calcTotalXP, getLevel,
     renderAuthPage, renderProfilePage, showToast
-} from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
+} from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
 import { getDefaultProfile, normalizeNickname, stripNicknamePrefix } from '../../pages/settings/settingsLegacy.js?v=20260927-appearance-v3';
-import { Storage } from './storage.js?v=20260905-stickers-sync-v1';
+import { Storage } from './storage.js?v=20260927-persistence-v2';
 import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-settings-redesign-v1';
 
         const Auth = {
@@ -185,13 +185,13 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                             }
                             Storage._setProfile(mergedProfile);
                             if (localIsNewer) this.syncUserData({ scope: 'profile' }).catch(() => {});
-                        } else if (this._user && this._user.displayName) {
-                            const p = getDefaultProfile();
-                            p.nickname = this._user.displayName;
-                            if (this._user.photoURL) p.avatar = this._user.photoURL;
-                            Storage._setProfile(p);
                         } else {
-                            Storage._setProfile(getDefaultProfile());
+                            // Старий документ може не мати поля profile. Не стираємо
+                            // локально збережені банер та аватар порожніми дефолтами.
+                            const p = { ...getDefaultProfile(), ...localProfileBeforeLoad };
+                            if (this._user && this._user.displayName && (!p.realName || p.realName === 'Користувач')) p.realName = stripNicknamePrefix(this._user.displayName);
+                            if (this._user && this._user.photoURL && !p.avatar) p.avatar = this._user.photoURL;
+                            Storage._setProfile(p);
                         }
                         const remoteHistoryTS = Number(data.historyUpdatedAt || 0);
                         const localHistoryTS = Storage.getHistoryTS();
@@ -257,7 +257,10 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                 } catch (e) {
                     console.warn('Error loading user data:', e);
                     // При помилці — створюємо мінімальний профіль
-                    if (this._pendingTelegramProfile) {
+                    const localProfileOnError = Storage.getProfile();
+                    if (localProfileOnError && typeof localProfileOnError === 'object') {
+                        Storage._setProfile({ ...getDefaultProfile(), ...localProfileOnError });
+                    } else if (this._pendingTelegramProfile) {
                         const p = getDefaultProfile();
                         const tg = this._pendingTelegramProfile;
                         p.nickname = normalizeNickname(tg.username || `tg_${tg.id}`, '@user');
@@ -271,7 +274,7 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                         if (this._user.photoURL) p.avatar = this._user.photoURL;
                         Storage._setProfile(p);
                     } else {
-                        Storage._setProfile(getDefaultProfile());
+                        Storage._setProfile({ ...getDefaultProfile(), ...(localProfileOnError || {}) });
                     }
                                 } finally {
                     this._loadingData = false;

@@ -20,8 +20,8 @@ export const PROFILE_STICKER_SLOTS = 8;
         // ====================================================================
         //  СИСТЕМА АВТОРИЗАЦІЇ
         // ====================================================================
-import { Auth } from '../core/compat/auth.js?v=20260910-aniskip-v2';
-import { Storage } from '../core/compat/storage.js?v=20260910-aniskip-v2';
+import { Auth } from '../core/compat/auth.js?v=20260927-persistence-v2';
+import { Storage } from '../core/compat/storage.js?v=20260927-persistence-v2';
 import { Router } from '../core/compat/router.js?v=20260926-comment-send-v1';
 import { LampaPlayer } from '../components/player/lampaPlayer.js?v=20260927-player-controls-v1';
 import { initBottomNav } from '../components/navigation/bottomNav.js';

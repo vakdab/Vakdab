@@ -1,6 +1,6 @@
-import { Auth } from '../../core/compat/auth.js?v=20260824-settings-redesign-v1';
+import { Auth } from '../../core/compat/auth.js?v=20260927-persistence-v2';
 import { Router } from '../../core/compat/router.js?v=20260926-comment-send-v1';
-import { Storage } from '../../core/compat/storage.js?v=20260905-stickers-sync-v1';
+import { Storage } from '../../core/compat/storage.js?v=20260927-persistence-v2';
 import { db, auth, initialized as firebaseInitialized } from '../../services/firebase/client.js';
 import { collection, limit, onSnapshot, query, signInAnonymously } from '../../config/firebase.js';
 import { renderStickerFaceByKey } from '../../pages/profile/stickersLegacy.js?v=20260905-stickers-sync-v1';

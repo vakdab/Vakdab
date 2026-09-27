@@ -1,6 +1,6 @@
 import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../config/constants.js';
 import { escapeHtml } from './string.js';
-import { showToast, showToastProgress, Router, renderProfilePage, renderSettingsPage } from '../legacy/app-legacy.js?v=20260926-comment-send-v1';
+import { showToast, showToastProgress, Router, renderProfilePage, renderSettingsPage } from '../legacy/app-legacy.js?v=20260927-persistence-v2';
 import { getProfile, saveProfile } from '../services/profile/profileStorage.js?v=20260927-persistence-v1';
 
 export async function uploadToCloudinary(file, maxW, maxH, quality) {

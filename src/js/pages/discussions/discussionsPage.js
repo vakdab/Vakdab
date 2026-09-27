@@ -1,5 +1,5 @@
 import { openPlayerPage } from '../player/animePlayerPage.js?v=20260927-player-comments-v1';
-import { escapeHtml, showToast } from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
+import { escapeHtml, showToast } from '../../legacy/app-legacy.js?v=20260927-persistence-v2';
 import { renderCommentsSkeleton } from '../../utils/skeleton.js';
 import { Router } from '../../core/compat/router.js?v=20260926-comment-send-v1';
 import { auth } from '../../services/firebase/client.js';
