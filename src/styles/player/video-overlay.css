@@ -887,15 +887,3 @@
     #playerPageModal .player-preview-menu-label,
     #playerPageModal .player-preview-menu button { padding-left: 14px; padding-right: 12px; }
 }
-
-/* The opening frame is intentionally clean. Controls and title chrome appear
-   only after the media element reports that playback has started. */
-#playerPageModal .player-video-container.is-preview .video-overlay-topbar {
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-    transform: translateY(-8px) !important;
-}
-#playerPageModal .player-video-container.is-preview .player-preview-bottom-overlay {
-    display: none !important;
-}
