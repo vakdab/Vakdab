@@ -242,6 +242,7 @@ import {
                     hidePlayerFramePoster();
                 }
                 document.getElementById('playerPreviewPlay')?.classList.remove('is-hidden');
+                document.getElementById('playerPreviewBottomOverlay')?.classList.remove('is-hidden');
                 updatePlayerVideoFrame(anime, playerPageCurrentEpisodeNum);
 
                 const heroPoster = document.getElementById('playerHeroPoster');
@@ -1353,6 +1354,7 @@ import {
             const videoDiv = document.getElementById('playerPageVideo');
             const previewPlayButton = document.getElementById('playerPreviewPlay');
             previewPlayButton?.classList.add('is-hidden');
+            document.getElementById('playerPreviewBottomOverlay')?.classList.add('is-hidden');
             hidePlayerFramePoster();
             videoContainer.classList.add('active');
             videoContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1890,6 +1892,7 @@ import {
             const episodes = getCurrentEpisodes();
             if (!episodes || !episodes.length) {
                 previewPlayButton?.classList.remove('is-hidden');
+                document.getElementById('playerPreviewBottomOverlay')?.classList.remove('is-hidden');
                 showToast('Серії ще не завантажені або недоступні');
                 return;
             }
@@ -1900,12 +1903,13 @@ import {
                 playEpisode(targetEp.file, targetEp.episode);
             } else {
                 previewPlayButton?.classList.remove('is-hidden');
+                document.getElementById('playerPreviewBottomOverlay')?.classList.remove('is-hidden');
                 showToast('Файл відео ще недоступний');
             }
         }
 
         const handlePreviewPlay = event => {
-            const previewPlayButton = event.target.closest?.('#playerPreviewPlay');
+            const previewPlayButton = event.target.closest?.('#playerPreviewPlay, #playerPreviewBottomPlay');
             if (!previewPlayButton) return;
             event.preventDefault();
             event.stopPropagation();
