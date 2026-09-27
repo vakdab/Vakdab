@@ -29,6 +29,7 @@ export function getDefaultProfile() {
         bannerVideo: '',
         bio: 'Аніме ентузіаст. Дивлюсь усе підряд — від слайс-оф-лайф до психологічного трилера.',
         bioBold: true,
+        profileUpdatedAt: 0,
         realName: '',
         birthdate: '',
         showBirthdate: true,
@@ -65,7 +66,8 @@ export function getProfile() {
 }
 
 export function saveProfile(data) {
-    Storage._setProfile(data);
+    const nextProfile = { ...data, profileUpdatedAt: Date.now(), bioBold: true };
+    Storage._setProfile(nextProfile);
     try { window.dispatchEvent(new CustomEvent('vakdab:profile-changed')); } catch {}
     if (Auth.isAuthenticated()) {
         const syncPromise = Auth.syncUserData({ scope: 'profile' }).catch(error => {

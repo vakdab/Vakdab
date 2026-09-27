@@ -147,7 +147,20 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                         /* console.log removed */
                         /* console.log removed */
                         if (data.profile) {
-                            const mergedProfile = Object.assign(getDefaultProfile(), data.profile);
+                            const remoteProfile = data.profile || {};
+                            const localProfileUpdatedAt = Number(localProfileBeforeLoad.profileUpdatedAt || 0);
+                            const remoteProfileUpdatedAt = Number(remoteProfile.profileUpdatedAt || 0);
+                            const localIsNewer = localProfileUpdatedAt > remoteProfileUpdatedAt;
+                            const mergedProfile = Object.assign(
+                                getDefaultProfile(),
+                                remoteProfile,
+                                localIsNewer ? localProfileBeforeLoad : {}
+                            );
+                            // Старий/неповний Firebase-профіль не має права стирати вже
+                            // завантажені Cloudinary-посилання з localStorage.
+                            ['avatar', 'avatarVideo', 'avatarVideoSettings', 'banner', 'bannerVideo', 'bannerVideoSettings', 'bannerFormat'].forEach(key => {
+                                if (!mergedProfile[key] && localProfileBeforeLoad[key]) mergedProfile[key] = localProfileBeforeLoad[key];
+                            });
                             const telegramProfile = this._pendingTelegramProfile;
                             const legacyNickname = String(mergedProfile.nickname || '').trim();
                             if (!mergedProfile.realName && legacyNickname && legacyNickname !== '@user' && legacyNickname !== 'Користувач') mergedProfile.realName = stripNicknamePrefix(legacyNickname);
@@ -171,6 +184,7 @@ import { TELEGRAM_AUTH_ENDPOINT } from '../../config/constants.js?v=20260824-set
                                 mergedProfile.avatar = this._user.photoURL;
                             }
                             Storage._setProfile(mergedProfile);
+                            if (localIsNewer) this.syncUserData({ scope: 'profile' }).catch(() => {});
                         } else if (this._user && this._user.displayName) {
                             const p = getDefaultProfile();
                             p.nickname = this._user.displayName;

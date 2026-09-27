@@ -342,7 +342,7 @@ export function initProfileFileInputs() {
                     const profile = getProfile();
                     if (mediaType === 'video' || mediaType === 'gif') { profile.avatarVideo = imageUrl; profile.avatar = ''; profile.avatarVideoSettings = mediaSettings || null; }
                     else { profile.avatar = imageUrl; profile.avatarVideo = ''; profile.avatarVideoSettings = null; }
-                    saveProfile(profile);
+                    await saveProfile(profile);
                     if (Router.currentRoute === 'profile') renderProfilePage();
                     if (Router.currentRoute === 'settings') renderSettingsPage();
                     showToast('Аватарку оновлено');
@@ -425,7 +425,7 @@ export function initProfileFileInputs() {
                     if (mediaType === 'video' || mediaType === 'gif') { profile.bannerVideo = imageUrl; profile.banner = ''; profile.bannerVideoSettings = mediaSettings || null; }
                     else { profile.banner = imageUrl; profile.bannerVideo = ''; profile.bannerVideoSettings = null; }
                     profile.bannerFormat = mediaSettings?.bannerFormat === 'wide' || format === 'wide' ? 'wide' : 'narrow';
-                    saveProfile(profile);
+                    await saveProfile(profile);
                     if (Router.currentRoute === 'profile') renderProfilePage();
                     if (Router.currentRoute === 'settings') renderSettingsPage();
                     showToast('Банер оновлено');
