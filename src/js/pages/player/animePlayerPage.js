@@ -180,6 +180,9 @@ import {
             playerVideoContainer.classList.add('active');
             playerVideoContainer.classList.remove('has-played');
             playerVideoContainer.classList.add('is-preview');
+            document.getElementById('playerPreviewPlay')?.classList.add('is-hidden');
+            document.getElementById('playerPreviewBottomOverlay')?.classList.add('is-hidden');
+            document.getElementById('playerPreviewBottomOverlay')?.setAttribute('aria-hidden', 'true');
             const posterTargets = [document.getElementById('playerPosterImg'), document.getElementById('playerHeroPoster')];
             posterTargets.forEach(img => { if (img) { img.src = ''; img.alt = ''; } });
             const playerHero = document.getElementById('playerBlurBg');
@@ -241,8 +244,6 @@ import {
                 } else {
                     hidePlayerFramePoster();
                 }
-                document.getElementById('playerPreviewPlay')?.classList.remove('is-hidden');
-                document.getElementById('playerPreviewBottomOverlay')?.classList.remove('is-hidden');
                 refreshPreviewEpisodeMenu();
                 updatePlayerVideoFrame(anime, playerPageCurrentEpisodeNum);
 
@@ -1293,9 +1294,6 @@ import {
             if (url) {
                 frame.src = url;
                 frame.classList.remove('is-hidden');
-                if (!playerPageIsPlaying && !playerPagePlayer?.videoRef) {
-                    document.getElementById('playerPreviewPlay')?.classList.remove('is-hidden');
-                }
             } else {
                 frame.classList.add('is-hidden');
             }
@@ -1456,6 +1454,9 @@ import {
                     const container = document.getElementById('playerVideoContainer');
                     container?.classList.add('has-played');
                     container?.classList.remove('is-preview');
+                    const previewOverlay = document.getElementById('playerPreviewBottomOverlay');
+                    previewOverlay?.classList.remove('is-hidden');
+                    previewOverlay?.setAttribute('aria-hidden', 'false');
                 };
                 const onPause = () => {
                     syncPlaybackClock();
