@@ -189,6 +189,7 @@ export class LampaPlayer {
                 this._progressUpHandler = null;
                 this._onFullscreenChange = null;
                 this._userInteractedPlay = false;
+                this._centerTogglePending = false;
                 this._fullscreenPlayer = new VakdabFullscreenPlayer();
                 this._init();
             }
@@ -289,6 +290,7 @@ export class LampaPlayer {
 
                 v.addEventListener('play', () => {
                     if (this.videoRef !== v) return;
+                    this._centerTogglePending = false;
                     if (!this.options.autoplay && !this._userInteractedPlay) {
                         try { v.pause(); } catch (_) {}
                         this.state.playing = false;
@@ -301,11 +303,12 @@ export class LampaPlayer {
                 });
                 v.addEventListener('pause', () => {
                     if (this.videoRef !== v) return;
+                    const pausedFromCenter = this._centerTogglePending;
+                    this._centerTogglePending = false;
                     this.state.playing = false;
                     this._updatePlayBtn();
-                    // Paused state must always expose the transport controls and
-                    // the title overlay again, including after the auto-hide timer.
-                    this._showControls();
+                    // A center pause must not reopen the lower transport overlay.
+                    if (!pausedFromCenter) this._showControls();
                 });
                 const syncTimeState = () => {
                     if (this.videoRef !== v) return;
@@ -380,6 +383,7 @@ export class LampaPlayer {
                     } else {
                         // Center zone: toggle play/pause
                         this._userInteractedPlay = true;
+                        this._centerTogglePending = true;
                         this.togglePlay();
                         const isPlayingNow = this.videoRef ? !this.videoRef.paused : this.state.playing;
                         this._flashCenter(isPlayingNow ? LP_ICONS.play : LP_ICONS.pause);
