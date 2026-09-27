@@ -338,7 +338,24 @@ body.player-page-open > .bottom-sheet-overlay {
 /* ============== Cast and synopsis ============== */
 #playerPageModal .modal-content section:not(.player-section) { padding: 18px 20px 4px; border-top: 1px solid var(--border); }
 #playerPageModal .section-title { margin-bottom: 10px; color: var(--text); font-size: 16px; font-weight: 800; }
-#playerPageModal .details-text { max-width: 900px; margin: 0; line-height: 1.65; font-size: 14px; }
+#playerPageModal .synopsis-section { order: 15; padding-top: 20px; padding-bottom: 14px; border-top: 0; }
+#playerPageModal .synopsis-section .details-text {
+    max-width: 980px;
+    margin: 0;
+    overflow: hidden;
+    color: color-mix(in srgb, var(--text) 68%, var(--surface));
+    font-size: clamp(20px, 4.6vw, 32px);
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: -.01em;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+}
+#playerPageModal .synopsis-section .details-text.expanded {
+    display: block;
+    -webkit-line-clamp: unset;
+}
 #playerPageModal .hscroll { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; }
 #playerPageModal .hscroll::-webkit-scrollbar { display: none; }
 #playerPageModal .cast-card {
@@ -355,8 +372,30 @@ body.player-page-open > .bottom-sheet-overlay {
 #playerPageModal .cast-name,
 #playerPageModal .cast-role { padding: 6px 7px 0; color: var(--text); font-size: 11px; font-weight: 700; }
 #playerPageModal .cast-role { padding-top: 2px; padding-bottom: 8px; color: var(--text-muted); font-size: 10px; font-weight: 400; }
-#playerPageModal .synopsis-more-btn { border: 0; background: transparent; color: var(--accent); cursor: pointer; font-weight: 700; }
-#playerPageModal .synopsis-more-btn:hover { text-decoration: underline; }
+#playerPageModal .synopsis-more-btn {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    font-size: clamp(16px, 3.8vw, 22px);
+    font-weight: 800;
+}
+#playerPageModal .synopsis-more-btn::before {
+    content: '';
+    width: 14px;
+    height: 14px;
+    border-right: 4px solid currentColor;
+    border-bottom: 4px solid currentColor;
+    transform: rotate(45deg) translateY(-3px);
+    transition: transform .2s ease;
+}
+#playerPageModal .synopsis-more-btn:hover { color: var(--accent); }
+#playerPageModal .synopsis-more-btn.is-expanded::before { transform: rotate(225deg) translate(-2px, -2px); }
 
 @media (min-width: 760px) {
     #playerPageModal .modal-content {
@@ -635,6 +674,7 @@ body.player-page-open > .bottom-sheet-overlay {
     pointer-events: none;
 }
 #playerPageModal #page-info > .content-top { order: 10; }
+#playerPageModal #page-info > #synopsisSection { order: 15; }
 #playerPageModal #page-info > .anime-info-section { order: 20; }
 #playerPageModal #page-info > .ratings-row { order: 30; }
 #playerPageModal #page-info > .actions { order: 40; }

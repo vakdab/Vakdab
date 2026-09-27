@@ -193,9 +193,16 @@ import {
             document.getElementById('page-episodes').classList.remove('active');
             document.getElementById('page-info').classList.add('active');
             const synopsisEl = document.getElementById('playerSynopsis');
-            if (synopsisEl) synopsisEl.textContent = '';
+            if (synopsisEl) {
+                synopsisEl.textContent = '';
+                synopsisEl.classList.remove('expanded');
+            }
             const moreBtn = document.getElementById('synopsisMoreBtn');
-            if (moreBtn) moreBtn.style.display = 'none';
+            if (moreBtn) {
+                moreBtn.style.display = 'none';
+                moreBtn.classList.remove('is-expanded');
+                moreBtn.textContent = 'Показати повністю';
+            }
             document.getElementById('playerTopbarTitle').textContent = '';
             document.getElementById('playerVideoEpisodeOverlay')?.replaceChildren();
             document.getElementById('playerVideoSeasonOverlay')?.replaceChildren();
@@ -287,16 +294,19 @@ import {
                 const synopsisEl = document.getElementById('playerSynopsis');
                 if (synopsisEl) {
                     synopsisEl.textContent = anime.synopsis || 'Опис відсутній.';
+                    synopsisEl.classList.remove('expanded');
                     const moreBtn = document.getElementById('synopsisMoreBtn');
                     setTimeout(() => {
                         if (moreBtn && synopsisEl.scrollHeight > synopsisEl.clientHeight + 2) {
-                            moreBtn.style.display = 'block';
+                            moreBtn.style.display = 'inline-flex';
                         }
                     }, 100);
                     if (moreBtn) {
                         moreBtn.onclick = () => {
                             synopsisEl.classList.toggle('expanded');
-                            moreBtn.textContent = synopsisEl.classList.contains('expanded') ? 'менше' : 'більше';
+                            const expanded = synopsisEl.classList.contains('expanded');
+                            moreBtn.classList.toggle('is-expanded', expanded);
+                            moreBtn.textContent = expanded ? 'Згорнути' : 'Показати повністю';
                         };
                     }
                 }
