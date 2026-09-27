@@ -293,7 +293,7 @@ import {
                 document.getElementById('playerEpisodeCountNum').textContent = totalEpisodes;
                 const synopsisEl = document.getElementById('playerSynopsis');
                 if (synopsisEl) {
-                    synopsisEl.textContent = anime.synopsis || 'Опис відсутній.';
+                    synopsisEl.textContent = cleanPlayerSynopsis(anime.synopsis) || 'Опис відсутній.';
                     synopsisEl.classList.remove('expanded');
                     const moreBtn = document.getElementById('synopsisMoreBtn');
                     setTimeout(() => {
@@ -891,6 +891,13 @@ import {
         function setSectionState(id, visible) {
             const el = document.getElementById(id);
             if (el) el.style.display = visible ? '' : 'none';
+        }
+
+        function cleanPlayerSynopsis(value) {
+            return String(value || '')
+                .replace(/\s*(?:\(|\[)?\s*(?:Джерело|Источник|Source)\s*(?::|—|-)?.*$/iu, '')
+                .replace(/\s+/g, ' ')
+                .trim();
         }
 
         function formatJikanDuration(value) {

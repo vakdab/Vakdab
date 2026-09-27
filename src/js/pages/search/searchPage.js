@@ -1,5 +1,5 @@
 import { searchHikka } from '../../services/catalog/catalog.js';
-import { openPlayerPage } from '../player/animePlayerPage.js?v=20260927-synopsis-v1';
+import { openPlayerPage } from '../player/animePlayerPage.js?v=20260927-synopsis-v2';
 import { syncLeftdockActive } from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
 import { renderAnimeCardSkeleton } from '../../utils/skeleton.js';
 

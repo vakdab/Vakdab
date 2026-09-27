@@ -344,10 +344,11 @@ body.player-page-open > .bottom-sheet-overlay {
     margin: 0;
     overflow: hidden;
     color: color-mix(in srgb, var(--text) 68%, var(--surface));
-    font-size: clamp(20px, 4.6vw, 32px);
+    font-family: inherit;
+    font-size: clamp(14px, 2.4vw, 17px);
     font-weight: 400;
-    line-height: 1.5;
-    letter-spacing: -.01em;
+    line-height: 1.65;
+    letter-spacing: normal;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 5;
