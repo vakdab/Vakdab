@@ -777,3 +777,39 @@
     #playerPageModal .lampa-player-container iframe,
     #playerPageModal .player-frame-poster { transition: none; animation-duration: .01ms !important; }
 }
+
+/* White, compact selector theme. The old accordion/grid is intentionally removed. */
+#playerPageModal #playerCompactControls,
+#playerPageModal #playerEpisodesSection { display: none !important; }
+#playerPageModal .player-preview-menu,
+#playerPageModal .lp-popover {
+    color: #161616 !important;
+    background: #fff !important;
+    border-color: #d7d7d7 !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .2) !important;
+    text-shadow: none;
+}
+#playerPageModal .player-preview-menu-label,
+#playerPageModal .lp-popover-label { color: #757575 !important; }
+#playerPageModal .player-preview-menu button,
+#playerPageModal .lp-popover button {
+    color: #242424 !important;
+    background: transparent !important;
+}
+#playerPageModal .player-preview-menu button:hover,
+#playerPageModal .player-preview-menu button.is-active,
+#playerPageModal .lp-popover button:hover,
+#playerPageModal .lp-popover button:focus-visible,
+#playerPageModal .lp-popover button.is-active {
+    color: #111 !important;
+    background: #f0f0f0 !important;
+}
+#playerPageModal .player-preview-pill,
+#playerPageModal .lp-control-pill {
+    color: #202020 !important;
+    background: #fff !important;
+    border-color: #d0d0d0 !important;
+    text-shadow: none;
+}
+#playerPageModal .player-preview-pill span,
+#playerPageModal .lp-chevron { color: #666 !important; }
