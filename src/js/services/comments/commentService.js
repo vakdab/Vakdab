@@ -5,7 +5,7 @@ import {
 import { auth, db } from '../firebase/client.js';
 import { hashCode } from '../../utils/string.js';
 import { Auth } from '../../core/compat/auth.js';
-import { getProfile, getProfileDisplayName, getProfileHandle } from '../profile/profileStorage.js';
+import { getProfile, getProfileDisplayName, getProfileHandle } from '../profile/profileStorage.js?v=20260927-persistence-v1';
 
 // Колекція Firestore зі спільними коментарями до аніме.
 const COMMENTS_COLLECTION = 'anime_comments';

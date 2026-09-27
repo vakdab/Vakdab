@@ -2958,7 +2958,7 @@ import { renderAnimeCardSkeleton, renderPopularCardSkeleton } from '../../utils/
             profileEditNick,
             profileEditBio,
             initProfileFileInputs
-        } from '../profile/profileModals.js';
+        } from '../profile/profileModals.js?v=20260927-persistence-v1';
 
         export {
             uploadToCloudinary,

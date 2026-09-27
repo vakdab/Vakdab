@@ -14,7 +14,7 @@ import {
     getProfile,
     saveProfile,
     getProfileStats
-} from '../../services/profile/profileStorage.js';
+} from '../../services/profile/profileStorage.js?v=20260927-persistence-v1';
 
         let settingsState = { tab: 'profile', previewOpen: true };
         let settingsCalendarOutsideHandler = null;
@@ -799,7 +799,7 @@ import {
             getProfile,
             saveProfile,
             getProfileStats
-        } from '../../services/profile/profileStorage.js';
+        } from '../../services/profile/profileStorage.js?v=20260927-persistence-v1';
 
         function getMedalWordForm(n) {
             const lastTwo = n % 100;

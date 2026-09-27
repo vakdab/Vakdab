@@ -3,7 +3,7 @@ import {
     renderProfilePage, renderSettingsPage, showToast, showToastProgress, syncLeftdockActive
 } from '../../legacy/app-legacy.js?v=20260926-comment-send-v1';
 import { escapeHtml } from '../../utils/string.js';
-import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../../services/profile/profileStorage.js';
+import { getProfile, saveProfile, getProfileDisplayName, stripNicknamePrefix } from '../../services/profile/profileStorage.js?v=20260927-persistence-v1';
 import {
     isVideoFile, CLOUDINARY_IMAGE_FILE_LIMIT,
     uploadVideoToCloudinary, uploadGifToCloudinary, uploadRawToCloudinary, uploadBlobToCloudinary,
