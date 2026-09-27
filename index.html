@@ -68,7 +68,7 @@
         }
     </script>
 
-    <link rel="stylesheet" href="./src/styles/app.css?v=20260926-comment-send-v1" />
+    <link rel="stylesheet" href="./src/styles/app.css?v=20260927-related-v2" />
 </head>
 <body class="appletv-agnative-topnav">
 
@@ -282,6 +282,12 @@
                 <div class="section-heading-row"><div class="section-title">Основна інформація</div></div>
                 <div class="anime-info-grid" id="animeInfoGrid"><div class="anime-info-placeholder">Завантаження інформації…</div></div>
                 <div class="anime-countdown" id="animeCountdown" aria-live="polite"></div>
+            </section>
+
+            <!-- RELATED ANIME: populated only from canonical relation APIs -->
+            <section id="relatedSection" style="display:none;">
+                <div class="section-heading-row"><div class="section-title">Пов’язані аніме <span id="relatedCount"></span></div><button class="section-more-btn" id="relatedMoreBtn" type="button" hidden aria-label="Показати всі пов’язані аніме">→</button></div>
+                <div class="related-list" id="relatedList"></div>
             </section>
 
             <!-- MAIN CHARACTERS -->
