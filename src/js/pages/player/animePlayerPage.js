@@ -1900,10 +1900,16 @@ import {
             const button = document.getElementById('playerPreviewEpisodeBtn');
             if (!menu || !button) return;
             const episodes = getCurrentEpisodes().filter(ep => ep?.file);
-            menu.innerHTML = `<div class="player-preview-menu-label">Оберіть серію <span>${episodes.length ? `${episodes.length} доступно` : 'немає доступних'}</span></div>` + (episodes.map(ep => {
+            const currentEpisode = String(playerPageCurrentEpisodeNum || episodes[0]?.episode || '1');
+            const orderedEpisodes = [...episodes].sort((a, b) => {
+                const aCurrent = sameEpisodeValue(a.episode, currentEpisode) ? -1 : 0;
+                const bCurrent = sameEpisodeValue(b.episode, currentEpisode) ? -1 : 0;
+                return aCurrent - bCurrent;
+            });
+            menu.innerHTML = `<div class="player-preview-menu-label">Серія ${escapeHtml(currentEpisode)}</div>` + (orderedEpisodes.map(ep => {
                 const episode = String(ep.episode);
                 const active = sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum);
-                return `<button type="button" role="menuitem" data-preview-episode="${escapeHtml(episode)}" class="${active ? 'is-active' : ''}" aria-current="${active ? 'true' : 'false'}">${escapeHtml(episode)}${active ? '<span class="player-preview-menu-check" aria-hidden="true">✓</span>' : ''}</button>`;
+                return `<button type="button" role="menuitem" data-preview-episode="${escapeHtml(episode)}" class="${active ? 'is-active' : ''}" aria-current="${active ? 'true' : 'false'}">Серія ${escapeHtml(episode)}</button>`;
             }).join('') || '<span class="player-preview-menu-empty">Серії недоступні</span>');
             button.firstChild.textContent = `Серія ${playerPageCurrentEpisodeNum || '1'} `;
         }

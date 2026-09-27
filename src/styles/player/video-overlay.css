@@ -817,49 +817,51 @@
 /* Comfortable episode picking on touch screens: larger hit targets, a clear
    count, and a menu that remains usable when a title has many episodes. */
 #playerPageModal .player-preview-menu {
-    width: min(320px, calc(100vw - 24px));
-    max-height: min(52vh, 360px);
-    padding: 10px;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 5px;
+    width: min(280px, calc(100vw - 40px));
+    max-height: min(58vh, 430px);
+    padding: 0;
+    grid-template-columns: 1fr;
+    gap: 0;
+    border: 0;
+    border-radius: 0 0 5px 5px;
+    background: rgba(103, 101, 104, .94) !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .32) !important;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
 }
 #playerPageModal .player-preview-menu-label {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 2px 4px 8px;
-    font-size: 11px;
-    letter-spacing: .02em;
+    display: block;
+    padding: 10px 44px 8px;
+    color: #fff !important;
+    font-size: 22px;
+    font-weight: 400;
+    letter-spacing: 0;
     text-transform: none;
 }
 #playerPageModal .player-preview-menu-label span {
-    color: #929292;
-    font-size: 10px;
-    font-weight: 600;
-    white-space: nowrap;
+    display: none;
 }
 #playerPageModal .player-preview-menu button {
-    position: relative;
-    min-height: 42px;
-    padding: 0 5px;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    font-size: 13px;
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
+    justify-content: flex-start;
+    min-height: 54px;
+    padding: 0 44px;
+    border: 0;
+    border-radius: 0;
+    color: #fff !important;
+    background: transparent !important;
+    font-size: 21px;
+    font-weight: 400;
+    text-align: left;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
 }
 #playerPageModal .player-preview-menu button.is-active {
-    border-color: #bdbdbd;
-    background: #e9e9e9 !important;
-    font-weight: 800;
+    color: #fff !important;
+    background: rgba(255, 255, 255, .08) !important;
+    font-weight: 400;
 }
 #playerPageModal .player-preview-menu button:focus-visible {
-    outline: 2px solid #222;
+    outline: 2px solid rgba(255, 255, 255, .9);
     outline-offset: 1px;
 }
 #playerPageModal .player-preview-menu-check {
@@ -873,17 +875,15 @@
 #playerPageModal .player-preview-menu-empty {
     grid-column: 1 / -1;
     display: block;
-    padding: 14px 6px;
-    color: #777;
-    font-size: 12px;
+    padding: 18px 44px;
+    color: #fff;
+    font-size: 16px;
     text-align: center;
 }
 @media (max-width: 430px) {
     #playerPageModal .player-preview-menu {
-        width: min(320px, calc(100vw - 20px));
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 6px;
-        padding: 10px;
+        width: min(280px, calc(100vw - 40px));
     }
-    #playerPageModal .player-preview-menu button { min-height: 44px; }
+    #playerPageModal .player-preview-menu-label,
+    #playerPageModal .player-preview-menu button { padding-left: 44px; padding-right: 24px; }
 }
