@@ -817,8 +817,8 @@
 /* Comfortable episode picking on touch screens: larger hit targets, a clear
    count, and a menu that remains usable when a title has many episodes. */
 #playerPageModal .player-preview-menu {
-    width: min(280px, calc(100vw - 40px));
-    max-height: min(58vh, 430px);
+    width: min(190px, calc(100vw - 48px));
+    max-height: min(46vh, 330px);
     padding: 0;
     grid-template-columns: 1fr;
     gap: 0;
@@ -831,9 +831,9 @@
 }
 #playerPageModal .player-preview-menu-label {
     display: block;
-    padding: 10px 44px 8px;
+    padding: 8px 14px 5px;
     color: #fff !important;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 400;
     letter-spacing: 0;
     text-transform: none;
@@ -843,13 +843,13 @@
 }
 #playerPageModal .player-preview-menu button {
     justify-content: flex-start;
-    min-height: 54px;
-    padding: 0 44px;
+    min-height: 44px;
+    padding: 0 14px;
     border: 0;
     border-radius: 0;
     color: #fff !important;
     background: transparent !important;
-    font-size: 21px;
+    font-size: 18px;
     font-weight: 400;
     text-align: left;
     -webkit-tap-highlight-color: transparent;
@@ -875,15 +875,15 @@
 #playerPageModal .player-preview-menu-empty {
     grid-column: 1 / -1;
     display: block;
-    padding: 18px 44px;
+    padding: 14px;
     color: #fff;
     font-size: 16px;
     text-align: center;
 }
 @media (max-width: 430px) {
     #playerPageModal .player-preview-menu {
-        width: min(280px, calc(100vw - 40px));
+        width: min(190px, calc(100vw - 48px));
     }
     #playerPageModal .player-preview-menu-label,
-    #playerPageModal .player-preview-menu button { padding-left: 44px; padding-right: 24px; }
+    #playerPageModal .player-preview-menu button { padding-left: 14px; padding-right: 12px; }
 }
