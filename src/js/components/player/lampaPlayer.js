@@ -18,7 +18,7 @@ import { VakdabFullscreenPlayer } from './fullscreenPlayer.js';
                     isolation: isolate; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
                 }
                 .lampa-player-container *, .lampa-player-container *::before, .lampa-player-container *::after { box-sizing: border-box; }
-                .lampa-player-container video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; position: relative; z-index: 0; }
+                .lampa-player-container video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; position: relative; z-index: 0; pointer-events: none; }
                 .lampa-player-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
 
                 .lp-spinner {
@@ -44,15 +44,16 @@ import { VakdabFullscreenPlayer } from './fullscreenPlayer.js';
                 @media (prefers-reduced-motion: reduce) { .lp-spinner-loader, .lp-spinner-dot { animation: none !important; } }
 
                 .lp-opening-skip {
-                    position: absolute; z-index: 40 !important; left: 12px; bottom: 62px;
-                    display: inline-flex !important; align-items: center; justify-content: center; gap: 5px;
-                    width: fit-content !important; max-width: min(158px, calc(100% - 24px)); min-width: 0;
-                    min-height: 32px; height: 32px; border: 1px solid rgba(255,255,255,.95);
-                    border-radius: 999px; padding: 5px 9px; color: #111; background: rgba(255,255,255,.78);
+                    position: absolute; z-index: 40 !important; left: 16px; bottom: 94px;
+                    display: inline-flex !important; align-items: center; justify-content: center; gap: 4px;
+                    width: fit-content !important; max-width: min(140px, calc(100% - 32px)); min-width: 0;
+                    min-height: 22px; height: 22px; border: 1px solid rgba(255,255,255,.9);
+                    border-radius: 999px; padding: 2px 8px; color: #111; background: rgba(255,255,255,.85);
                     -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-                    font: 700 11px/1.1 inherit; letter-spacing: 0; cursor: pointer; white-space: nowrap;
+                    box-shadow: 0 4px 12px rgba(0,0,0,.25);
+                    font: 600 9px/1.1 inherit; letter-spacing: 0; cursor: pointer; white-space: nowrap;
                     touch-action: manipulation; pointer-events: none; opacity: 0;
-                    transform: translate3d(0, 8px, 0) scale(.96); transform-origin: left center;
+                    transform: translate3d(0, 6px, 0) scale(.96); transform-origin: left center;
                     visibility: hidden; transition: opacity .22s ease, transform .22s ease, visibility 0s linear .22s;
                 }
                 .lp-opening-skip.is-visible {
@@ -60,12 +61,12 @@ import { VakdabFullscreenPlayer } from './fullscreenPlayer.js';
                     transform: translate3d(0, 0, 0) scale(1);
                     transition-delay: 0s;
                 }
-                .lp-opening-skip:hover { background: rgba(255,255,255,.9); transform: translate3d(0, -1px, 0) scale(1.01); }
-                .lp-opening-skip:active { transform: translate3d(0, 0, 0) scale(.98); }
-                .lp-opening-skip svg { width: 13px; height: 13px; flex: 0 0 13px; fill: currentColor; }
+                .lp-opening-skip:hover { background: rgba(255,255,255,.95); transform: translate3d(0, -1px, 0) scale(1.02); }
+                .lp-opening-skip:active { transform: translate3d(0, 0, 0) scale(.96); }
+                .lp-opening-skip svg { width: 8px; height: 8px; flex: 0 0 8px; fill: currentColor; }
                 @media (max-width: 600px) {
-                    .lp-opening-skip { left: 10px; bottom: 58px; max-width: 150px; min-height: 30px; height: 30px; padding: 4px 8px; font-size: 10px; }
-                    .lp-opening-skip svg { width: 12px; height: 12px; flex-basis: 12px; }
+                    .lp-opening-skip { left: 12px; bottom: 82px; max-width: 130px; min-height: 20px; height: 20px; padding: 1px 7px; font-size: 8.5px; }
+                    .lp-opening-skip svg { width: 7.5px; height: 7.5px; flex-basis: 7.5px; }
                 }
 
                 .lp-controls {
@@ -108,12 +109,20 @@ import { VakdabFullscreenPlayer } from './fullscreenPlayer.js';
                     z-index: 15; pointer-events: none;
                 }
                 .lp-center-play-btn {
-                    width: 58px; height: 58px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.3);
-                    border-radius: 50%; display: flex; align-items: center; justify-content: center;
-                    opacity: 0; transform: scale(.7); transition: opacity .22s, transform .22s;
+                    width: auto; height: auto; min-width: 0; min-height: 0;
+                    background: transparent; border: none; border-radius: 0;
+                    display: flex; align-items: center; justify-content: center;
+                    opacity: 0; transform: scale(.65); transition: opacity .2s ease-out, transform .22s cubic-bezier(.18, .89, .32, 1.28);
+                    pointer-events: none; box-shadow: none;
                 }
                 .lp-center-play-btn.show { opacity: 1; transform: scale(1); }
-                .lp-center-play-btn svg { width: 24px; height: 24px; fill: #fff; }
+                .lp-center-play-btn svg {
+                    width: 82px; height: 82px; fill: #fff;
+                    filter: drop-shadow(0 4px 22px rgba(0,0,0,.95)) drop-shadow(0 2px 8px rgba(0,0,0,.85));
+                }
+                @media (max-width: 600px) {
+                    .lp-center-play-btn svg { width: 70px; height: 70px; }
+                }
 
                 .lp-error {
                     position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column;
@@ -138,7 +147,6 @@ import { VakdabFullscreenPlayer } from './fullscreenPlayer.js';
                     .lp-select { font-size: 10px; padding-inline: 2px; }
                     .lp-controls { padding: 10px 10px 12px; gap: 8px; }
                     .lp-bottom-row { gap: 10px; }
-                    .lp-opening-skip { left: 10px; bottom: 60px; max-width: calc(100% - 20px); min-height: 36px; padding: 7px 11px; font-size: 11px; }
                 }
 
                         `;
@@ -186,6 +194,7 @@ export class LampaPlayer {
                 this._progressMoveHandler = null;
                 this._progressUpHandler = null;
                 this._onFullscreenChange = null;
+                this._userInteractedPlay = false;
                 this._fullscreenPlayer = new VakdabFullscreenPlayer();
                 this._init();
             }
@@ -201,6 +210,8 @@ export class LampaPlayer {
                 v.setAttribute('crossorigin', 'anonymous');
                 v.setAttribute('playsinline', '');
                 v.controls = false;
+                v.autoplay = false;
+                v.defaultMuted = false;
                 v.preload = 'metadata';
                 v.poster = normalizePosterUrl(this.options.poster);
                 this.videoRef = v;
@@ -208,7 +219,7 @@ export class LampaPlayer {
 
                 // Spinner
                 const spinner = document.createElement('div');
-                spinner.className = 'lp-spinner';
+                spinner.className = 'lp-spinner hidden';
                 spinner.innerHTML = '<div class="lp-spinner-loader" aria-label="Завантаження" role="status">' + '<div class="lp-spinner-dot"></div>'.repeat(6) + '</div>';
                 this._spinner = spinner;
                 wrap.appendChild(spinner);
@@ -239,11 +250,9 @@ export class LampaPlayer {
                         <div class="lp-settings-wrap">
                             <div class="lp-menu-wrap">
                                 <button type="button" class="lp-control-pill" id="lpEpisodeBtn" aria-expanded="false" aria-label="Вибрати серію"><span id="lpEpisodeLabel">Серія</span><span class="lp-chevron">⌃</span></button>
-                                <div class="lp-popover lp-episode-menu" id="lpEpisodeMenu" role="menu" aria-hidden="true"></div>
                             </div>
                             <div class="lp-menu-wrap">
                                 <button type="button" class="lp-control-pill lp-quality-pill" id="lpQualityBtn" aria-expanded="false" aria-label="Вибрати якість"><span id="lpQualityLabel">Авто</span><span class="lp-chevron">⌃</span></button>
-                                <div class="lp-popover" id="lpQualityMenu" role="menu" aria-hidden="true"></div>
                             </div>
                             <div class="lp-volume-group">
                                 <button class="lp-btn" id="lpVolBtn" title="Вимкнути звук" aria-label="Вимкнути звук">${LP_ICONS.volOn}</button>
@@ -263,6 +272,31 @@ export class LampaPlayer {
                 this._qualityRail = qualityRail;
                 wrap.classList.add('is-native');
 
+                // Phone-adapted Bottom Sheets for Episodes and Quality
+                const rootContainer = document.getElementById('playerPageModal') || document.body;
+                const sheetBackdrop = document.createElement('div');
+                sheetBackdrop.className = 'lp-sheet-backdrop';
+                rootContainer.appendChild(sheetBackdrop);
+                this._sheetBackdrop = sheetBackdrop;
+
+                const episodeSheet = document.createElement('div');
+                episodeSheet.className = 'lp-sheet lp-episode-sheet';
+                episodeSheet.id = 'lpEpisodeMenu';
+                episodeSheet.setAttribute('role', 'dialog');
+                episodeSheet.setAttribute('aria-modal', 'true');
+                episodeSheet.setAttribute('aria-hidden', 'true');
+                rootContainer.appendChild(episodeSheet);
+                this._episodeSheet = episodeSheet;
+
+                const qualitySheet = document.createElement('div');
+                qualitySheet.className = 'lp-sheet lp-quality-sheet';
+                qualitySheet.id = 'lpQualityMenu';
+                qualitySheet.setAttribute('role', 'dialog');
+                qualitySheet.setAttribute('aria-modal', 'true');
+                qualitySheet.setAttribute('aria-hidden', 'true');
+                rootContainer.appendChild(qualitySheet);
+                this._qualitySheet = qualitySheet;
+
                 this.container.appendChild(wrap);
                 this._bindEvents();
                 this._showControls();
@@ -271,12 +305,22 @@ export class LampaPlayer {
             _bindEvents() {
                 const v = this.videoRef;
                 const wrap = this.containerRef;
+                if (!v || !wrap) return;
 
                 v.addEventListener('play', () => {
+                    if (this.videoRef !== v) return;
+                    if (!this.options.autoplay && !this._userInteractedPlay) {
+                        try { v.pause(); } catch (_) {}
+                        this.state.playing = false;
+                        this._updatePlayBtn();
+                        this._showControls();
+                        return;
+                    }
                     this.state.playing = true;
                     this._updatePlayBtn();
                 });
                 v.addEventListener('pause', () => {
+                    if (this.videoRef !== v) return;
                     this.state.playing = false;
                     this._updatePlayBtn();
                     // Paused state must always expose the transport controls and
@@ -284,58 +328,100 @@ export class LampaPlayer {
                     this._showControls();
                 });
                 const syncTimeState = () => {
+                    if (this.videoRef !== v) return;
                     this.state.currentTime = Number.isFinite(v.currentTime) ? v.currentTime : 0;
                     this.state.duration = Number.isFinite(v.duration) ? v.duration : 0;
                     this._updateProgress();
                 };
                 v.addEventListener('loadedmetadata', () => {
+                    if (this.videoRef !== v) return;
                     if (v.readyState >= 1) this._clearPlaybackError();
                     syncTimeState();
                 });
                 v.addEventListener('durationchange', syncTimeState);
                 v.addEventListener('timeupdate', syncTimeState);
                 v.addEventListener('waiting', () => {
+                    if (this.videoRef !== v) return;
                     this.state.loading = true;
-                    this._spinner.classList.remove('hidden');
+                    this._spinner?.classList.remove('hidden');
                 });
                 v.addEventListener('playing', () => {
+                    if (this.videoRef !== v) return;
+                    if (!this.options.autoplay && !this._userInteractedPlay) {
+                        try { v.pause(); } catch (_) {}
+                        this.state.playing = false;
+                        this._updatePlayBtn();
+                        this._showControls();
+                        return;
+                    }
                     this.state.loading = false;
                     this._spinner?.classList.add('hidden');
                     this._clearPlaybackError();
                 });
                 v.addEventListener('canplay', () => {
+                    if (this.videoRef !== v) return;
+                    if (!this.options.autoplay && !this._userInteractedPlay) {
+                        try { v.pause(); } catch (_) {}
+                        this.state.playing = false;
+                        this._updatePlayBtn();
+                    }
                     this.state.loading = false;
                     this._spinner?.classList.add('hidden');
                     this._clearPlaybackError();
                 });
                 v.addEventListener('error', () => {
+                    if (this.videoRef !== v) return;
                     this.state.loading = false;
-                    this._spinner.classList.add('hidden');
+                    this._spinner?.classList.add('hidden');
                 });
                 v.addEventListener('ended', () => {
+                    if (this.videoRef !== v) return;
                     this.state.playing = false;
                     this._updatePlayBtn();
                 });
 
-                // Click on wrap — toggle play, show controls
+                // Click on wrap — zone based: left/right reveals/toggles overlay, middle toggles play/pause
                 wrap.addEventListener('click', e => {
-                    if (e.target.closest('.lp-controls, .lp-quality-rail, .lp-opening-skip, .video-overlay-topbar, .player-preview-play')) return;
-                    this._flashCenter();
-                    this.togglePlay();
-                    this._showControls();
+                    if (e.target.closest('.lp-controls, .lp-quality-rail, .lp-opening-skip, .video-overlay-topbar, .lp-sheet, .lp-sheet-backdrop')) return;
+                    const rect = wrap.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const ratio = rect.width > 0 ? clickX / rect.width : 0.5;
+
+                    if (ratio < 0.35 || ratio > 0.65) {
+                        // Left / Right zone: toggle overlay visibility
+                        const isHidden = this._controls?.classList.contains('hidden') ||
+                                         this.containerRef?.classList.contains('controls-hidden') ||
+                                         document.getElementById('playerVideoContainer')?.classList.contains('controls-hidden');
+                        if (isHidden) {
+                            this._showControls();
+                        } else {
+                            this._hideControls();
+                        }
+                    } else {
+                        // Center zone: toggle play/pause
+                        this._userInteractedPlay = true;
+                        this.togglePlay();
+                        const isPlayingNow = this.videoRef ? !this.videoRef.paused : this.state.playing;
+                        this._flashCenter(isPlayingNow ? LP_ICONS.play : LP_ICONS.pause);
+                        this._showControls();
+                    }
                 });
                 wrap.addEventListener('dblclick', e => {
-                    if (e.target.closest('.lp-controls, .lp-quality-rail, .lp-opening-skip, .video-overlay-topbar, .player-preview-play')) return;
+                    if (e.target.closest('.lp-controls, .lp-quality-rail, .lp-opening-skip, .video-overlay-topbar, .lp-popover')) return;
                     this.toggleFullscreen();
                 });
                 wrap.addEventListener('mousemove', () => this._showControls());
-                wrap.addEventListener('pointerdown', () => this._showControls(), { passive: true });
-                wrap.addEventListener('touchstart', () => this._showControls(), { passive: true });
-                wrap.addEventListener('touchend', () => this._showControls(), { passive: true });
 
                 // Play button
                 const playBtn = wrap.querySelector('#lpPlayBtn');
-                if (playBtn) playBtn.addEventListener('click', e => { e.stopPropagation(); this._flashCenter(); this.togglePlay(); });
+                if (playBtn) playBtn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    this._userInteractedPlay = true;
+                    this.togglePlay();
+                    const isPlayingNow = this.videoRef ? !this.videoRef.paused : this.state.playing;
+                    this._flashCenter(isPlayingNow ? LP_ICONS.play : LP_ICONS.pause);
+                    this._showControls();
+                });
 
                 // Progress bar seek
                 const progress = wrap.querySelector('#lpProgress');
@@ -378,90 +464,212 @@ export class LampaPlayer {
 
                 // Episode and quality selectors live inside the bottom overlay.
                 const episodeBtn = wrap.querySelector('#lpEpisodeBtn');
-                const episodeMenu = wrap.querySelector('#lpEpisodeMenu');
                 const episodeLabel = wrap.querySelector('#lpEpisodeLabel');
-                const renderEpisodeMenu = () => {
-                    if (!episodeMenu) return;
-                    const items = Array.isArray(this.options.episodeOptions) ? this.options.episodeOptions : [];
-                    episodeMenu.innerHTML = '<div class="lp-popover-label">Серії</div>' + (items.length
-                        ? items.map(item => `<button type="button" data-episode-value="${String(item.episode)}" role="menuitem"><span>Серія ${String(item.episode)}</span></button>`).join('')
-                        : '<div class="lp-popover-label">Серії недоступні</div>');
+                const qualityBtn = wrap.querySelector('#lpQualityBtn');
+                const qualityLabel = wrap.querySelector('#lpQualityLabel');
+                const qualityRail = this._qualityRail;
+
+                const closeSheets = () => {
+                    this._sheetBackdrop?.classList.remove('is-open');
+                    this._episodeSheet?.classList.remove('is-open');
+                    this._qualitySheet?.classList.remove('is-open');
+                    episodeBtn?.classList.remove('is-open');
+                    qualityBtn?.classList.remove('is-open');
+                    this._episodeSheet?.setAttribute('aria-hidden', 'true');
+                    this._qualitySheet?.setAttribute('aria-hidden', 'true');
+                    episodeBtn?.setAttribute('aria-expanded', 'false');
+                    qualityBtn?.setAttribute('aria-expanded', 'false');
                 };
-                renderEpisodeMenu();
-                const updateEpisodeLabel = value => { if (episodeLabel) episodeLabel.textContent = `Серія ${value || this.options.episode || ''}`.trim(); };
+                this._sheetBackdrop?.addEventListener('click', closeSheets);
+                this._closePlayerMenus = closeSheets;
+
+                const escapeHtmlHelper = str => String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+                const updateEpisodeLabel = value => {
+                    if (episodeLabel) episodeLabel.textContent = `Серія ${value || this.options.episode || ''}`.trim();
+                };
                 updateEpisodeLabel(this.options.episode);
-                const setEpisodeMenuOpen = open => {
-                    episodeMenu?.classList.toggle('is-open', open);
-                    episodeBtn?.classList.toggle('is-open', open);
-                    episodeMenu?.setAttribute('aria-hidden', String(!open));
-                    episodeBtn?.setAttribute('aria-expanded', String(open));
+
+                const renderEpisodeSheet = () => {
+                    if (!this._episodeSheet) return;
+                    const items = Array.isArray(this.options.episodeOptions) ? this.options.episodeOptions : [];
+                    const currentEp = String(this.options.episode || '1');
+                    const currentIndex = items.findIndex(item => String(item.episode) === currentEp);
+                    const prevItem = currentIndex > 0 ? items[currentIndex - 1] : null;
+                    const nextItem = (currentIndex >= 0 && currentIndex < items.length - 1) ? items[currentIndex + 1] : null;
+
+                    let html = `
+                        <div class="lp-sheet-handle"></div>
+                        <div class="lp-sheet-header">
+                            <div class="lp-sheet-title-group">
+                                <span class="lp-sheet-title">Вибір серії</span>
+                                <span class="lp-sheet-badge">${items.length} ${items.length === 1 ? 'серія' : (items.length >= 2 && items.length <= 4 ? 'серії' : 'серій')}</span>
+                            </div>
+                            <button type="button" class="lp-sheet-close" id="lpEpisodeClose" aria-label="Закрити">✕</button>
+                        </div>
+                    `;
+
+                    if (items.length > 1) {
+                        html += `
+                            <div class="lp-sheet-nav">
+                                <button type="button" class="lp-sheet-nav-btn" data-nav="prev" ${!prevItem ? 'disabled' : ''}>◀ Попередня</button>
+                                <span class="lp-sheet-nav-current">Зараз: Серія ${escapeHtmlHelper(currentEp)}</span>
+                                <button type="button" class="lp-sheet-nav-btn" data-nav="next" ${!nextItem ? 'disabled' : ''}>Наступна ▶</button>
+                            </div>
+                        `;
+                    }
+
+                    html += `<div class="lp-sheet-body"><div class="lp-episode-grid">`;
+                    if (items.length) {
+                        html += items.map(item => {
+                            const isAct = String(item.episode) === currentEp;
+                            const epStr = String(item.episode);
+                            return `<button type="button" data-episode-value="${escapeHtmlHelper(epStr)}" class="lp-episode-tile ${isAct ? 'is-active' : ''}"><span>${escapeHtmlHelper(epStr)}</span></button>`;
+                        }).join('');
+                    } else {
+                        html += '<div style="grid-column: 1 / -1; text-align: center; color: rgba(255,255,255,.5); padding: 24px;">Серії недоступні</div>';
+                    }
+                    html += `</div></div>`;
+
+                    this._episodeSheet.innerHTML = html;
+                    this._episodeSheet.querySelector('#lpEpisodeClose')?.addEventListener('click', closeSheets);
+
+                    this._episodeSheet.querySelectorAll('.lp-sheet-nav-btn').forEach(btn => {
+                        btn.addEventListener('click', e => {
+                            e.stopPropagation();
+                            const nav = btn.dataset.nav;
+                            const target = nav === 'prev' ? prevItem : nextItem;
+                            if (target) {
+                                this.options.episode = target.episode;
+                                updateEpisodeLabel(target.episode);
+                                closeSheets();
+                                if (typeof this.options.onEpisodeSelect === 'function') {
+                                    this.options.onEpisodeSelect(target);
+                                }
+                            }
+                        });
+                    });
+
+                    this._episodeSheet.querySelectorAll('.lp-episode-tile').forEach(tile => {
+                        tile.addEventListener('click', e => {
+                            e.stopPropagation();
+                            const val = tile.dataset.episodeValue;
+                            const item = items.find(entry => String(entry.episode) === val);
+                            if (item) {
+                                this.options.episode = item.episode;
+                                updateEpisodeLabel(item.episode);
+                                closeSheets();
+                                if (typeof this.options.onEpisodeSelect === 'function') {
+                                    this.options.onEpisodeSelect(item);
+                                }
+                            }
+                        });
+                    });
+                };
+
+                const openEpisodeSheet = () => {
+                    closeSheets();
+                    renderEpisodeSheet();
+                    this._sheetBackdrop?.classList.add('is-open');
+                    this._episodeSheet?.classList.add('is-open');
+                    episodeBtn?.classList.add('is-open');
+                    this._episodeSheet?.setAttribute('aria-hidden', 'false');
+                    episodeBtn?.setAttribute('aria-expanded', 'true');
+                    requestAnimationFrame(() => {
+                        this._episodeSheet?.querySelector('.is-active')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    });
                 };
                 episodeBtn?.addEventListener('click', e => {
                     e.stopPropagation();
-                    setEpisodeMenuOpen(!episodeMenu?.classList.contains('is-open'));
-                });
-                episodeMenu?.addEventListener('click', e => {
-                    const option = e.target.closest('[data-episode-value]');
-                    if (!option) return;
-                    e.stopPropagation();
-                    const item = (this.options.episodeOptions || []).find(entry => String(entry.episode) === option.dataset.episodeValue);
-                    updateEpisodeLabel(item?.episode);
-                    setEpisodeMenuOpen(false);
-                    if (item && typeof this.options.onEpisodeSelect === 'function') this.options.onEpisodeSelect(item);
+                    const isOpen = this._episodeSheet?.classList.contains('is-open');
+                    if (isOpen) closeSheets(); else openEpisodeSheet();
                 });
 
-                // Quality menu support remains available for HLS sources.
-                const qualityBtn = wrap.querySelector('#lpQualityBtn');
-                const qualityMenu = wrap.querySelector('#lpQualityMenu');
-                const qualityLabel = wrap.querySelector('#lpQualityLabel');
-                const qualityRail = this._qualityRail;
-                const setMenuOpen = (menu, btn, open) => {
-                    if (!menu || !btn) return;
-                    menu.classList.toggle('is-open', open);
-                    menu.setAttribute('aria-hidden', String(!open));
-                    btn.setAttribute('aria-expanded', String(open));
-                    btn.classList.toggle('is-open', open);
-                };
-                const isMenuOpen = menu => menu && menu.classList.contains('is-open');
-                const closePlayerMenus = () => { setMenuOpen(qualityMenu, qualityBtn, false); setEpisodeMenuOpen(false); };
-                if (qualityBtn && qualityMenu) qualityBtn.addEventListener('click', e => {
-                    e.stopPropagation();
-                    const willOpen = !isMenuOpen(qualityMenu);
-                    this._refreshQualityMenu();
-                    setMenuOpen(qualityMenu, qualityBtn, willOpen);
-                });
-                const applyQuality = option => {
-                    if (!option) return;
-                    const idx = Number(option.dataset.qualityIndex);
-                    if (this.hls) this.hls.currentLevel = idx;
-                    const label = option.dataset.qualityLabel || 'Авто';
-                    if (qualityLabel) qualityLabel.textContent = label;
-                    qualityMenu?.querySelectorAll('[data-quality-index]').forEach(item => {
-                        const active = item === option || Number(item.dataset.qualityIndex) === idx;
-                        item.classList.toggle('is-active', active);
-                        item.setAttribute('aria-checked', String(active));
+                // Quality sheet support
+                const renderQualitySheet = () => {
+                    if (!this._qualitySheet) return;
+                    const levels = this.hls?.levels || [];
+                    const unique = [];
+                    levels.forEach((level, index) => {
+                        const label = level.height ? `${level.height}p` : `Рівень ${index + 1}`;
+                        if (!unique.some(item => item.label === label)) {
+                            unique.push({ label, index, height: level.height || 0 });
+                        }
                     });
-                    qualityRail?.querySelectorAll('[data-quality-index]').forEach(item => {
-                        const active = item === option || (idx >= 0 && Number(item.dataset.qualityIndex) === idx);
-                        item.classList.toggle('is-active', active);
-                        item.setAttribute('aria-checked', String(active));
+                    unique.sort((a, b) => (b.height || 0) - (a.height || 0));
+
+                    let currentIdx = this.hls ? this.hls.currentLevel : -1;
+                    const checkSvg = '<svg class="lp-check" viewBox="0 0 24 24" width="16" height="16"><path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+                    let html = `
+                        <div class="lp-sheet-handle"></div>
+                        <div class="lp-sheet-header">
+                            <div class="lp-sheet-title-group">
+                                <span class="lp-sheet-title">Якість відео</span>
+                                <span class="lp-sheet-badge">HLS</span>
+                            </div>
+                            <button type="button" class="lp-sheet-close" id="lpQualityClose" aria-label="Закрити">✕</button>
+                        </div>
+                        <div class="lp-sheet-body">
+                            <div class="lp-quality-list">
+                                <button type="button" class="lp-quality-item ${currentIdx === -1 ? 'is-active' : ''}" data-quality-index="-1" data-quality-label="Авто">
+                                    <span>Авто (рекомендовано)</span>
+                                    ${checkSvg}
+                                </button>
+                    `;
+
+                    unique.forEach(item => {
+                        const isAct = item.index === currentIdx;
+                        const sub = item.height >= 1080 ? 'Full HD' : (item.height >= 720 ? 'HD' : '');
+                        const labelText = sub ? `${item.label} · ${sub}` : item.label;
+                        html += `
+                            <button type="button" class="lp-quality-item ${isAct ? 'is-active' : ''}" data-quality-index="${item.index}" data-quality-label="${item.label}">
+                                <span>${labelText}</span>
+                                ${checkSvg}
+                            </button>
+                        `;
                     });
-                    closePlayerMenus();
+
+                    html += `</div></div>`;
+                    this._qualitySheet.innerHTML = html;
+
+                    this._qualitySheet.querySelector('#lpQualityClose')?.addEventListener('click', closeSheets);
+
+                    this._qualitySheet.querySelectorAll('.lp-quality-item').forEach(item => {
+                        item.addEventListener('click', e => {
+                            e.stopPropagation();
+                            const idx = Number(item.dataset.qualityIndex);
+                            if (this.hls) this.hls.currentLevel = idx;
+                            const label = item.dataset.qualityLabel || 'Авто';
+                            if (qualityLabel) qualityLabel.textContent = label;
+                            qualityRail?.querySelectorAll('[data-quality-index]').forEach(railItem => {
+                                const active = Number(railItem.dataset.qualityIndex) === idx;
+                                railItem.classList.toggle('is-active', active);
+                            });
+                            closeSheets();
+                        });
+                    });
                 };
-                qualityMenu?.addEventListener('click', e => {
-                    const option = e.target.closest('[data-quality-index]');
-                    if (!option) return;
+
+                const openQualitySheet = () => {
+                    closeSheets();
+                    renderQualitySheet();
+                    this._sheetBackdrop?.classList.add('is-open');
+                    this._qualitySheet?.classList.add('is-open');
+                    qualityBtn?.classList.add('is-open');
+                    this._qualitySheet?.setAttribute('aria-hidden', 'false');
+                    qualityBtn?.setAttribute('aria-expanded', 'true');
+                };
+                qualityBtn?.addEventListener('click', e => {
                     e.stopPropagation();
-                    applyQuality(option);
+                    const isOpen = this._qualitySheet?.classList.contains('is-open');
+                    if (isOpen) closeSheets(); else openQualitySheet();
                 });
-                qualityRail?.addEventListener('click', e => {
-                    const option = e.target.closest('[data-quality-index]');
-                    if (!option) return;
-                    e.stopPropagation();
-                    applyQuality(option);
-                });
-                document.addEventListener('click', closePlayerMenus);
-                this._closePlayerMenus = closePlayerMenus;
+
+                const onEscSheet = e => { if (e.key === 'Escape') closeSheets(); };
+                document.addEventListener('keydown', onEscSheet);
+                this._onEscSheet = onEscSheet;
+
                 this._refreshQualityMenu();
 
                 // Fullscreen — single button lives in the video topbar (works for both
@@ -630,27 +838,42 @@ export class LampaPlayer {
                 if (!c) return;
                 c.classList.remove('hidden');
                 this.containerRef?.classList.remove('controls-hidden');
+                document.getElementById('playerVideoContainer')?.classList.remove('controls-hidden');
                 clearTimeout(this._controlsTimer);
                 if (this.state.playing) {
                     this._controlsTimer = setTimeout(() => {
-                        c.classList.add('hidden');
-                        this.containerRef?.classList.add('controls-hidden');
+                        this._hideControls();
                     }, 3200);
                 }
             }
 
-            _flashCenter() {
-                const btn = this._centerBtn;
-                if (!btn) return;
-                btn.innerHTML = this.state.playing ? LP_ICONS.pause : LP_ICONS.play;
-                btn.classList.add('show');
-                clearTimeout(this._centerTimer);
-                this._centerTimer = setTimeout(() => btn.classList.remove('show'), 600);
+            _hideControls() {
+                const c = this._controls;
+                if (!c) return;
+                if (this._episodeSheet?.classList.contains('is-open') || this._qualitySheet?.classList.contains('is-open')) return;
+                c.classList.add('hidden');
+                this.containerRef?.classList.add('controls-hidden');
+                document.getElementById('playerVideoContainer')?.classList.add('controls-hidden');
+                clearTimeout(this._controlsTimer);
             }
 
-	            async loadSource(src, animeTitle, episodeTitle) {
+            _flashCenter(customIcon = null) {
+                const btn = this._centerBtn;
+                if (!btn) return;
+                if (customIcon) {
+                    btn.innerHTML = customIcon;
+                } else {
+                    btn.innerHTML = this.state.playing ? LP_ICONS.pause : LP_ICONS.play;
+                }
+                btn.classList.add('show');
+                clearTimeout(this._centerTimer);
+                this._centerTimer = setTimeout(() => btn.classList.remove('show'), 650);
+            }
+
+	            async loadSource(src, animeTitle, episodeTitle, options = {}) {
 	                const requestId = ++this._sourceRequestId;
-	                this._lastSourceRequest = { src, animeTitle, episodeTitle };
+	                this._lastSourceRequest = { src, animeTitle, episodeTitle, options };
+                    const autoplay = (typeof options?.autoplay === 'boolean') ? options.autoplay : (this.options.autoplay !== false);
 
                     if (src && isEmbedUrl(src)) {
                         try {
@@ -708,11 +931,11 @@ export class LampaPlayer {
                 clearTimeout(this._spinnerHideTimer);
                 clearTimeout(this._playLoaderTimer);
                 this._playLoaderActive = false;
-                this._spinner.classList.add('hidden');
+                this._spinner?.classList.add('hidden');
                 this._updatePlayBtn();
 
 	                if (this.hls) { this.hls.destroy(); this.hls = null; }
-	                v.pause();
+	                try { v.pause(); } catch (_) {}
 	                if (!src) { this.state.loading = false; return; }
 
                 const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
@@ -731,6 +954,13 @@ export class LampaPlayer {
                 };
                 const safePlay = () => {
                     if (!isCurrentRequest()) return;
+                    if (!autoplay || !this._userInteractedPlay) {
+                        try { v.pause(); } catch (_) {}
+                        this.state.playing = false;
+                        this._updatePlayBtn();
+                        this._showControls();
+                        return;
+                    }
                     v.play().catch(() => {
                         if (!isCurrentRequest()) return;
                         v.muted = true;
@@ -820,7 +1050,7 @@ export class LampaPlayer {
                 if (!this._spinner || this._playLoaderActive) return;
                 this._playLoaderActive = true;
                 this._spinnerStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
-                this._spinner.classList.remove('hidden');
+                this._spinner?.classList.remove('hidden');
                 clearTimeout(this._playLoaderTimer);
                 this._playLoaderTimer = window.setTimeout(() => {
                     this._playLoaderActive = false;
@@ -876,8 +1106,7 @@ export class LampaPlayer {
 
             play(options = {}) {
                 if (!this.videoRef) return;
-                // Play must react immediately to a user gesture. Loading feedback
-                // is driven by the media `waiting` event, not an artificial delay.
+                this._userInteractedPlay = true;
                 this._playNow();
             }
 
@@ -946,6 +1175,13 @@ export class LampaPlayer {
                     this._onFullscreenChange = null;
                 }
                 if (this._closePlayerMenus) document.removeEventListener('click', this._closePlayerMenus);
+                if (this._onEscSheet) document.removeEventListener('keydown', this._onEscSheet);
+                this._sheetBackdrop?.remove();
+                this._episodeSheet?.remove();
+                this._qualitySheet?.remove();
+                this._sheetBackdrop = null;
+                this._episodeSheet = null;
+                this._qualitySheet = null;
                 clearTimeout(this._centerTimer);
                 if (this.hls) { this.hls.destroy(); this.hls = null; }
                 if (this.videoRef) { this.videoRef.pause(); this.videoRef.removeAttribute('src'); this.videoRef.load(); }
