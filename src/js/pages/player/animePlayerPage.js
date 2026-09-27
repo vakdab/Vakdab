@@ -1900,7 +1900,7 @@ import {
             const button = document.getElementById('playerPreviewEpisodeBtn');
             if (!menu || !button) return;
             const episodes = getCurrentEpisodes().filter(ep => ep?.file);
-            menu.innerHTML = episodes.map(ep => `<button type="button" data-preview-episode="${escapeHtml(String(ep.episode))}" class="${sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum) ? 'is-active' : ''}">Серія ${escapeHtml(String(ep.episode))}</button>`).join('') || '<span style="display:block;padding:8px;color:#fff;font-size:11px">Серії недоступні</span>';
+            menu.innerHTML = '<div class="player-preview-menu-label">Оберіть серію</div>' + (episodes.map(ep => `<button type="button" data-preview-episode="${escapeHtml(String(ep.episode))}" class="${sameEpisodeValue(ep.episode, playerPageCurrentEpisodeNum) ? 'is-active' : ''}">${escapeHtml(String(ep.episode))}</button>`).join('') || '<span style="grid-column:1/-1;display:block;padding:8px;color:#fff;font-size:11px">Серії недоступні</span>');
             button.firstChild.textContent = `Серія ${playerPageCurrentEpisodeNum || '1'} `;
         }
         document.getElementById('playerPreviewEpisodeBtn')?.addEventListener('click', event => {
