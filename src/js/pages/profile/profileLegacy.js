@@ -99,8 +99,11 @@ export function renderProfilePage() {
                 <div class="profile-meta">
                   <span>${profileHandle}</span>
                 </div>
-                <div class="profile-bio-row">
-                  <div class="profile-bio${profile.bioBold ? ' is-bold' : ''}" id="profileBioText">${profileBioText}</div>
+                <div class="profile-bio-section">
+                  <div class="profile-bio-label">ОПИС</div>
+                  <div class="profile-bio-row">
+                    <div class="profile-bio${profile.bioBold ? ' is-bold' : ''}" id="profileBioText">${profileBioText}</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -320,7 +323,7 @@ export async function renderPublicProfilePage(uid) {
               </div>
               <div class="profile-nick-row"><span class="profile-nick">${nickname}</span></div>
               <div class="profile-meta"><span>${handle}</span></div>
-              ${profile.bio ? `<div class="profile-bio-row"><div class="profile-bio${profile.bioBold ? ' is-bold' : ''}">${escapeHtml(profile.bio)}</div></div>` : ''}
+              ${profile.bio ? `<div class="profile-bio-section"><div class="profile-bio-label">ОПИС</div><div class="profile-bio-row"><div class="profile-bio${profile.bioBold ? ' is-bold' : ''}">${escapeHtml(profile.bio)}</div></div></div>` : ''}
             </div>
           </div>
           <div class="profile-tabs" id="publicProfileTabs">
