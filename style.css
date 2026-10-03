@@ -3690,7 +3690,7 @@ body:not(.dark-mode) .hero-slide-overlay {
     margin-bottom: 12px;
   }
   .profile-header-actions {
-    top: 44px;
+    top: 56px;
     right: 1.2rem;
   }
 }
@@ -3700,7 +3700,7 @@ body:not(.dark-mode) .hero-slide-overlay {
     margin-bottom: 14px;
   }
   .profile-header-actions {
-    top: 48px;
+    top: 60px;
     right: 1.5rem;
   }
 }
@@ -4869,7 +4869,7 @@ body:not(.dark-mode) .hero-slide-overlay {
   justify-content: flex-end;
   gap: 6px;
   position: absolute;
-  top: 40px;
+  top: 52px;
   right: 1rem;
   z-index: 4;
   margin: 0;
