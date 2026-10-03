@@ -1406,6 +1406,7 @@
     .profile-header-actions { gap: 4px; }
     .profile-stat-action,
     .profile-edit-trigger { min-height: 36px; padding-inline: 9px; font-size: 11px; }
+    .profile-edit-trigger span { display: none; }
 }
 
 
