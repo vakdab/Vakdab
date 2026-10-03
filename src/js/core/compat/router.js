@@ -9,7 +9,6 @@ import {
 } from '../../legacy/app-legacy.js?v=20260927-senplayer-auto-v1';
 import { destroyLivePage, renderLivePage } from '../../pages/live/livePage.js?v=20260827-live-screen-v1';
 import { renderProfileSkeleton, renderStickersSkeleton, renderLiveSkeleton } from '../../utils/skeleton.js';
-import { renderDiscussionsPage } from '../../pages/discussions/discussionsPage.js?v=20260926-discussions-no-intro-v1';
 
         export const Router = {
             currentRoute: 'main',
@@ -67,8 +66,6 @@ import { renderDiscussionsPage } from '../../pages/discussions/discussionsPage.j
                 document.getElementById('stickersPageContainer').style.display = 'none';
                 document.getElementById('mangaPageContainer').classList.remove('active');
                 document.getElementById('mangaPageContainer').style.display = 'none';
-                const discussionsPage = document.getElementById('discussionsPageContainer');
-                if (discussionsPage) { discussionsPage.classList.remove('active'); discussionsPage.style.display = 'none'; }
                 const liveWidget = document.getElementById('liveStreamContainer');
                 const livePage = document.getElementById('livePageContainer');
                 if (route !== 'live') destroyLivePage();
@@ -140,8 +137,6 @@ import { renderDiscussionsPage } from '../../pages/discussions/discussionsPage.j
                     this.showLive();
                 } else if (route === 'stickers') {
                     this.showStickers();
-                } else if (route === 'discussions') {
-                    this.showDiscussions();
                 } else if (route === 'manga') {
                     if (params.url) this.showManga(params.url, params.title || '');
                     else this.showMain();
@@ -251,13 +246,6 @@ import { renderDiscussionsPage } from '../../pages/discussions/discussionsPage.j
                 container.style.display = 'block';
                 container.classList.add('active');
                 renderSchedulePage();
-            },
-            showDiscussions() {
-                const container = document.getElementById('discussionsPageContainer');
-                if (!container) return;
-                container.style.display = 'block';
-                container.classList.add('active');
-                renderDiscussionsPage();
             },
             showLive() {
                 const container = document.getElementById('livePageContainer');
