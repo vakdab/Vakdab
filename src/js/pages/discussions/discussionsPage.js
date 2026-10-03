@@ -94,6 +94,9 @@ import {
             if (discussionsState.loading) return;
             const listEl = document.getElementById('discussionsList');
             if (reset && listEl) listEl.innerHTML = renderCommentsSkeleton(5);
+            const refreshBtn = document.getElementById('discussionsRefresh');
+            refreshBtn?.classList.add('is-loading');
+            refreshBtn?.setAttribute('aria-busy', 'true');
             discussionsState.loading = true;
             try {
                 const fetcher = discussionsState.mode === 'popular' ? fetchPopularComments : fetchRecentComments;
@@ -106,6 +109,8 @@ import {
                 showToast('Обговорення тимчасово недоступне');
             } finally {
                 discussionsState.loading = false;
+                refreshBtn?.classList.remove('is-loading');
+                refreshBtn?.setAttribute('aria-busy', 'false');
             }
         }
 
@@ -120,6 +125,14 @@ import {
             }
             container.innerHTML = `
             <section class="discussions-page" aria-label="Обговорення">
+                <header class="discussions-heading">
+                    <div>
+                        <p class="discussions-eyebrow">Спільнота VakDab</p>
+                        <h1>Обговорення</h1>
+                        <p class="discussions-heading__note">Ділися враженнями, знаходь нові аніме та відповідай іншим.</p>
+                    </div>
+                    <button type="button" class="discussions-refresh" id="discussionsRefresh" aria-label="Оновити обговорення" aria-busy="false"><i class="fas fa-rotate" aria-hidden="true"></i><span>Оновити</span></button>
+                </header>
                 <div class="discussions-toolbar">
                     <div class="discussions-tabs" role="tablist" aria-label="Сортування">
                         <button type="button" class="discussions-tab is-active" data-discussions-mode="recent" role="tab" aria-selected="true">Останні</button>
@@ -141,6 +154,8 @@ import {
                     loadFeed(true);
                 });
             });
+
+            document.getElementById('discussionsRefresh')?.addEventListener('click', () => loadFeed(true));
 
             const searchInput = document.getElementById('discussionsSearchInput');
             const searchClear = document.getElementById('discussionsSearchClear');
