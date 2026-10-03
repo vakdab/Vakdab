@@ -163,7 +163,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 4px;
+            margin-bottom: 1px;
         }
         .profile-nick {
             font-size: 20px;
@@ -225,6 +225,7 @@
             gap: 6px;
             margin-top: 0;
             margin-bottom: 10px;
+            line-height: 1.25;
         }
         @media (min-width:480px) {
             .profile-meta {
@@ -1538,7 +1539,7 @@
 
         #profilePageContainer {
             display: none;
-            animation: fadeInUp .3s var(--ui-ease);
+            animation: none;
             margin-top: 0.5rem;
             width: 100%;
         }
