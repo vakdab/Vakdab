@@ -1974,3 +1974,125 @@ body:not(.dark-mode) #playerPageModal .player-team-avatar {
     #playerPageModal .player-team-card.team-swipe-enter-left,
     #playerPageModal .player-team-card.team-swipe-enter-right { animation-duration: .01ms; }
 }
+
+/* Responsive player composition v20261003.
+   Wide screens use a centered editorial layout. Smaller screens keep the same
+   hierarchy but collapse every rail into a single readable column. */
+#playerPageModal #page-info {
+    width: 100%;
+    max-width: 1180px;
+    margin-inline: auto;
+    padding-bottom: clamp(24px, 4vw, 52px);
+}
+#playerPageModal .player-hero-poster-wrap {
+    position: absolute;
+    z-index: 4;
+    left: clamp(18px, 4vw, 48px);
+    bottom: -74px;
+    width: clamp(150px, 18vw, 224px);
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border: 4px solid var(--surface);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: 0 18px 42px color-mix(in srgb, var(--text) 22%, transparent);
+}
+#playerPageModal .player-hero-poster {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+@media (min-width: 900px) {
+    #playerPageModal .hero-img {
+        height: clamp(320px, 32vw, 430px);
+        border-radius: 0 0 22px 22px;
+    }
+    #playerPageModal .hero-img::after {
+        background: linear-gradient(180deg, transparent 24%, color-mix(in srgb, var(--bg) 30%, transparent) 62%, var(--bg) 100%);
+    }
+    #playerPageModal .topbar { top: 20px; left: 28px; right: 28px; }
+    #playerPageModal .logo-wrap {
+        right: clamp(28px, 5vw, 84px);
+        bottom: 42px;
+        left: clamp(300px, 28vw, 390px);
+    }
+    #playerPageModal .kicker {
+        max-width: 760px;
+        font-size: clamp(28px, 3.2vw, 46px);
+    }
+    #playerPageModal .content-top {
+        min-height: 116px;
+        margin-top: 0;
+        padding: 94px clamp(28px, 5vw, 84px) 16px clamp(300px, 28vw, 390px);
+    }
+    #playerPageModal .content-top h1.title { display: none; }
+    #playerPageModal .content-top .meta-line { font-size: 14px; }
+    #playerPageModal .tag-row { margin-top: 10px; }
+    #playerPageModal .ratings-row,
+    #playerPageModal .actions {
+        padding-inline: clamp(28px, 5vw, 84px);
+    }
+    #playerPageModal .ratings-row { margin-left: clamp(300px, 28vw, 390px); padding-top: 0; }
+    #playerPageModal .actions { margin-left: clamp(300px, 28vw, 390px); padding-top: 0; }
+    #playerPageModal .player-section {
+        max-width: 1100px;
+        padding-inline: clamp(28px, 5vw, 84px);
+    }
+    #playerPageModal .player-compact-controls {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    #playerPageModal .player-video-container {
+        border-radius: 18px;
+    }
+    #playerPageModal .synopsis-section,
+    #playerPageModal .anime-info-section,
+    #playerPageModal #relatedSection,
+    #playerPageModal #mainCharactersSection,
+    #playerPageModal #castSection,
+    #playerPageModal #mediaSection {
+        max-width: 1100px;
+        margin-inline: auto;
+        padding-inline: clamp(28px, 5vw, 84px);
+    }
+    #playerPageModal .synopsis-section .details-text {
+        max-width: 900px;
+        padding: 20px 22px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: color-mix(in srgb, var(--surface) 94%, transparent);
+    }
+}
+
+@media (max-width: 899px) {
+    #playerPageModal #page-info { max-width: 760px; }
+    #playerPageModal .player-hero-poster-wrap {
+        left: 50%;
+        bottom: -54px;
+        width: clamp(132px, 34vw, 190px);
+        transform: translateX(-50%);
+    }
+    #playerPageModal .hero-img { margin-bottom: 60px; }
+    #playerPageModal .logo-wrap {
+        right: 16px;
+        bottom: 18px;
+        left: 16px;
+        text-align: center;
+    }
+    #playerPageModal .kicker { font-size: clamp(20px, 6vw, 32px); }
+    #playerPageModal .content-top { padding-top: 0; text-align: center; }
+    #playerPageModal .content-top .tag-row { justify-content: center; }
+    #playerPageModal .ratings-row,
+    #playerPageModal .actions { justify-content: center; }
+}
+
+@media (max-width: 560px) {
+    #playerPageModal .hero-img { height: clamp(270px, 68vw, 340px); }
+    #playerPageModal .player-hero-poster-wrap { bottom: -48px; }
+    #playerPageModal .content-top { padding-inline: 12px; }
+    #playerPageModal .content-top .meta-line { font-size: 12px; }
+    #playerPageModal .ratings-row { gap: 8px; }
+    #playerPageModal .rating-card { min-width: 0; flex: 1 1 130px; }
+    #playerPageModal .player-section { padding-inline: 10px; }
+}
