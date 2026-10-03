@@ -2096,3 +2096,17 @@ body:not(.dark-mode) #playerPageModal .player-team-avatar {
     #playerPageModal .rating-card { min-width: 0; flex: 1 1 130px; }
     #playerPageModal .player-section { padding-inline: 10px; }
 }
+
+/* Keep the floating poster above the following content on touch screens.
+   The hero artwork itself remains clipped, while the poster can overlap the
+   white information surface instead of being cut at the hero edge. */
+#playerPageModal .hero-img {
+    overflow: visible;
+}
+#playerPageModal .hero-img::after,
+#playerPageModal .hero-img .smoke {
+    clip-path: inset(0);
+}
+#playerPageModal .hero-img .player-hero-poster-wrap {
+    overflow: hidden;
+}
