@@ -1379,6 +1379,7 @@
     color: var(--text-secondary);
     cursor: default;
     white-space: nowrap;
+    margin: 0;
 }
 .profile-stat-action strong {
     color: var(--text);
