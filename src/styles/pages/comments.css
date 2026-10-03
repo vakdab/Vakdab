@@ -858,3 +858,83 @@ img.dsc-card__poster { display: block; }
 @media (prefers-reduced-motion: reduce) {
     .discussions-refresh.is-loading i { animation: none; }
 }
+
+/* Compact mobile discussion pass based on the iPhone layout: keep the
+   conversation readable without oversized empty cards or deep nesting. */
+#playerPageModal #commentsSection {
+    max-width: 1100px;
+    margin-inline: auto;
+    background: transparent;
+}
+#playerPageModal #commentsSection .cmt-heading-copy { flex: 1; }
+#playerPageModal #commentsSection .cmt-composer {
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: start;
+    padding: 12px;
+    border-color: color-mix(in srgb, var(--border) 88%, transparent);
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    box-shadow: var(--shadow-sm);
+}
+#playerPageModal #commentsSection .cmt-composer__input,
+#playerPageModal #commentsSection .cmt-reply-input {
+    min-height: 72px;
+    max-height: 150px;
+}
+#playerPageModal #commentsSection .cmt-card {
+    align-items: flex-start;
+    padding: 14px;
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    box-shadow: 0 5px 18px color-mix(in srgb, var(--text) 4%, transparent);
+}
+#playerPageModal #commentsSection .cmt-card__body { min-width: 0; }
+#playerPageModal #commentsSection .cmt-card__head { min-height: 34px; }
+#playerPageModal #commentsSection .cmt-card__text { max-width: 70ch; }
+#playerPageModal #commentsSection .cmt-card__actions {
+    padding-top: 8px;
+    border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+}
+#playerPageModal #commentsSection .cmt-replies {
+    margin-left: 4px;
+    padding-left: 12px;
+    border-left-width: 3px;
+    border-left-color: color-mix(in srgb, var(--accent) 24%, var(--border));
+}
+#playerPageModal #commentsSection .cmt-card--reply {
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+#playerPageModal #commentsSection .cmt-reply-composer {
+    background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+}
+
+#playerPageModal .related-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+#playerPageModal .related-card {
+    min-height: 104px;
+    align-items: center;
+    padding: 10px;
+}
+#playerPageModal .related-card img {
+    flex-basis: 58px;
+    width: 58px;
+    height: 82px;
+}
+
+@media (max-width: 620px) {
+    #playerPageModal .related-list { grid-template-columns: 1fr; gap: 10px; }
+    #playerPageModal .related-card { min-height: 92px; }
+    #playerPageModal .related-card img { flex-basis: 54px; width: 54px; height: 76px; }
+    #playerPageModal #commentsSection .cmt-card { padding: 13px; }
+    #playerPageModal #commentsSection .cmt-card__text { font-size: 15px; line-height: 1.5; }
+    #playerPageModal #commentsSection .cmt-card__actions { gap: 6px; }
+}
+
+@media (max-width: 380px) {
+    #playerPageModal #commentsSection .cmt-composer {
+        grid-template-columns: 30px minmax(0, 1fr);
+        padding: 10px;
+    }
+    #playerPageModal #commentsSection .cmt-composer__input { min-height: 68px; }
+    #playerPageModal #commentsSection .cmt-card { padding: 11px; }
+}
