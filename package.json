@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node server.js",
     "build": "node scripts/build.js",
-    "lint": "node --check server.js && node --check js/script.js && node scripts/build.js",
+    "lint": "node --check server.js && node --check script.js && node scripts/build.js",
     "start": "node server.js"
   },
   "dependencies": {
