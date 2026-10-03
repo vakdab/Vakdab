@@ -234,12 +234,14 @@
                 font-size: 13px;
                 margin-bottom: 12px;
             }
+            .profile-header-actions { top: 44px; right: 1.2rem; }
         }
         @media (min-width:768px) {
             .profile-meta {
                 font-size: 14px;
                 margin-bottom: 14px;
             }
+            .profile-header-actions { top: 48px; right: 1.5rem; }
         }
         .profile-meta .dot {
             width: 3px;
@@ -339,7 +341,7 @@
             text-align: center;
         }
         @media (max-width:479px) {
-            .profile-head-row { min-height: 76px; gap: .65rem; }
+            .profile-head-row { min-height: 88px; gap: .65rem; }
             .profile-stat-pill { min-width: 0; padding: 9px 5px; }
             .profile-stat-pill .num { font-size: 16px; }
             .profile-stat-pill .label { font-size: 8px; letter-spacing: .6px; }
@@ -1352,7 +1354,11 @@
     align-items: center;
     justify-content: flex-end;
     gap: 6px;
-    margin: -2px 0 10px auto;
+    position: absolute;
+    top: 40px;
+    right: 1rem;
+    z-index: 4;
+    margin: 0;
 }
 .profile-header-actions .profile-edit-trigger { margin: 0; }
 .profile-stat-action,
