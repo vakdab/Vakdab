@@ -1346,7 +1346,16 @@
     color: var(--text);
 }
 
-/* One-tap access to the complete profile editor from the profile page. */
+/* Compact profile metrics and one-tap access to the complete profile editor. */
+.profile-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    margin: 0 0 9px auto;
+}
+.profile-header-actions .profile-edit-trigger { margin: 0; }
+.profile-stat-action,
 .profile-edit-trigger {
     display: inline-flex;
     align-items: center;
@@ -1366,6 +1375,24 @@
     box-shadow: var(--shadow-sm);
     transition: border-color .18s ease, color .18s ease, background .18s ease, transform .18s ease;
 }
+.profile-stat-action {
+    color: var(--text-secondary);
+    cursor: default;
+    white-space: nowrap;
+}
+.profile-stat-action strong {
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 800;
+}
+.profile-stat-action small {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .02em;
+}
+.profile-stat-action i { font-size: 11px; }
+.profile-stat-action:hover,
 .profile-edit-trigger:hover,
 .profile-edit-trigger:focus-visible {
     border-color: var(--border-hover);
@@ -1375,7 +1402,9 @@
 .profile-edit-trigger:active { transform: scale(.97); }
 .profile-edit-trigger i { font-size: 11px; }
 @media (max-width: 420px) {
-    .profile-edit-trigger { min-height: 36px; padding-inline: 11px; font-size: 11px; }
+    .profile-header-actions { gap: 4px; }
+    .profile-stat-action,
+    .profile-edit-trigger { min-height: 36px; padding-inline: 8px; font-size: 11px; }
     .profile-edit-trigger span { display: none; }
 }
 
