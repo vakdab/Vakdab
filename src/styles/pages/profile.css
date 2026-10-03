@@ -163,7 +163,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 1px;
+            margin-bottom: 0;
         }
         .profile-nick {
             font-size: 20px;
@@ -223,9 +223,11 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            margin-top: 0;
+            margin-top: -4px;
             margin-bottom: 10px;
             line-height: 1.25;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: geometricPrecision;
         }
         @media (min-width:480px) {
             .profile-meta {
@@ -258,6 +260,8 @@
             letter-spacing: 0.16em;
             line-height: 1;
             margin: 0 0 6px 3px;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: geometricPrecision;
         }
         .profile-bio-row {
             display: flex;
@@ -274,6 +278,8 @@
             color: var(--text-secondary);
             flex: 1;
             min-width: 0;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: geometricPrecision;
         }
         @media (min-width:480px) {
             .profile-bio {

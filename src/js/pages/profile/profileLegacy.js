@@ -55,6 +55,9 @@ export function renderProfilePage() {
             }
             const isGuestMode = Auth.isGuest();
             const profile = getProfile();
+            const renderKey = JSON.stringify(profile);
+            if (container.dataset.profileRenderKey === renderKey && container.querySelector('.profile-wrapper')) return;
+            container.dataset.profileRenderKey = renderKey;
             const stats = getProfileStats();
             // GIF detection — use isGifUrl helper
             const activeBanner = profile.bannerVideo || profile.banner || '';
@@ -284,6 +287,9 @@ export async function renderPublicProfilePage(uid) {
             container.innerHTML = '<div class="profile-public-empty">Користувача не знайдено.</div>';
             return;
         }
+        const renderKey = JSON.stringify(profile);
+        if (container.dataset.profileRenderKey === renderKey && container.querySelector('.profile-wrapper')) return;
+        container.dataset.profileRenderKey = renderKey;
         const banner = profile.bannerVideo || profile.banner || '';
         const avatar = profile.avatarVideo || profile.avatar || '';
         const isWide = profile.bannerFormat === 'wide';
