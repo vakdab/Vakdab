@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node server.js",
     "build": "echo 'No build step required'",
-    "lint": "node --check server.js && node --check src/js/core/bootstrap.js",
+    "lint": "node --check server.js && node --check script.js",
     "start": "node server.js"
   },
   "dependencies": {
