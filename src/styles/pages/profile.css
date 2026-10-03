@@ -339,7 +339,8 @@
             text-align: center;
         }
         @media (max-width:479px) {
-            .profile-head-row { min-height: 76px; gap: .65rem; }
+            .profile-head-row { min-height: 88px; gap: .65rem; }
+            .profile-header-actions { transform: translateY(10px); }
             .profile-stat-pill { min-width: 0; padding: 9px 5px; }
             .profile-stat-pill .num { font-size: 16px; }
             .profile-stat-pill .label { font-size: 8px; letter-spacing: .6px; }
