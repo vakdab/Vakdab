@@ -1,0 +1,10 @@
+try {
+  if (globalThis.Telegram?.WebApp) {
+    globalThis.Telegram.WebApp.ready();
+    globalThis.Telegram.WebApp.expand();
+  }
+} catch (_) {
+}
+var telegramStartParam = globalThis.Telegram?.WebApp?.initDataUnsafe?.start_param || "";
+if (telegramStartParam === "live" && window.location.hash.slice(1) !== "live") window.location.hash = "live";
+bootstrap().catch((error) => console.warn("[VakDab] app bootstrap:", error));

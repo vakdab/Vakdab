@@ -1,0 +1,56 @@
+/* ============================================================
+   VakDab Modular Stylesheet Index
+   ============================================================ */
+
+/* Base */
+@import "./base/reset.css";
+@import "./base/variables.css";
+@import "./base/typography.css";
+
+/* Themes */
+@import "./themes/light.css";
+@import "./themes/dark.css";
+
+/* Utilities & Effects */
+@import "./utils/animations.css";
+@import "./utils/glassmorphism.css";
+@import "./utils/utilities.css";
+
+/* Components */
+@import "./components/hero.css";
+@import "./components/home-quick-filter.css";
+@import "./components/left-menu.css";
+@import "./components/toast.css";
+@import "./components/back-to-top.css";
+@import "./components/anime-card.css";
+@import "./components/genre-section.css";
+@import "./components/pagination.css";
+@import "./components/loader.css";
+@import "./components/mobile-adaptive.css";
+
+/* Pages */
+@import "./pages/main.css";
+@import "./pages/search.css";
+@import "./pages/profile.css";
+@import "./pages/settings.css";
+@import "./pages/genre.css";
+@import "./pages/genres.css";
+@import "./pages/schedule.css";
+@import "./pages/rating.css";
+@import "./pages/stickers.css";
+@import "./pages/manga.css";
+@import "./pages/live.css";
+@import "./pages/design-polish.css";
+@import "./pages/ux-2026.css";
+
+/* Player */
+@import "./player/player-modal.css";
+@import "./player/anime-info.css";
+@import "./player/video-player.css";
+@import "./player/episodes.css";
+@import "./player/player-polish.css";
+@import "./player/video-overlay.css";
+
+/* Overrides & Layout Polish */
+@import "./layout-polish.css";
+@import "./bundle-entry.css";

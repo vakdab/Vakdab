@@ -1,0 +1,7 @@
+.genre-section {
+  position: relative;
+}
+.genre-section:hover .carousel-btn {
+  opacity: 1;
+  pointer-events: auto;
+}

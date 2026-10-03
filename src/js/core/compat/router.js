@@ -1,0 +1,302 @@
+var Router;
+var init_router = __esm({
+  "src/js/core/compat/router.js?v=20260926-comment-send-v1"() {
+    init_constants2();
+    init_feature_loader();
+    init_app_legacy();
+    init_livePage();
+    init_skeleton();
+    Router = {
+      currentRoute: "main",
+      params: {},
+      init() {
+        window.addEventListener("hashchange", () => this.handleRoute());
+        this.handleRoute();
+      },
+      handleRoute() {
+        const hash = window.location.hash.slice(1) || "main";
+        const parts = hash.split("?");
+        const route = parts[0];
+        const query2 = parts[1] || "";
+        const params = Object.fromEntries(new URLSearchParams(query2));
+        this.currentRoute = route;
+        this.params = params;
+        this.navigate(route, params);
+      },
+      navigate(route, params) {
+        const playerModal = document.getElementById("playerPageModal");
+        if (playerModal && route !== "anime") {
+          if (playerModal.classList.contains("is-open")) closePlayerPage();
+          playerModal.classList.remove("active", "show", "open");
+          playerModal.style.display = "none";
+          playerModal.setAttribute("aria-hidden", "true");
+          window.scrollTo(0, 0);
+        }
+        document.getElementById("genreSectionsContainer").style.display = "none";
+        const catalogPage = document.getElementById("catalogPageContainer");
+        if (catalogPage) {
+          catalogPage.classList.remove("active");
+          catalogPage.style.display = "none";
+        }
+        document.getElementById("animeContainer").style.display = "none";
+        const homeRecommendations = document.getElementById("homeRecommendationsContainer");
+        if (homeRecommendations) homeRecommendations.style.display = "none";
+        document.getElementById("paginationRow").innerHTML = "";
+        document.getElementById("profilePageContainer").classList.remove("active");
+        document.getElementById("profilePageContainer").style.display = "none";
+        document.getElementById("genrePageContainer").classList.remove("active");
+        document.getElementById("genrePageContainer").style.display = "none";
+        document.getElementById("searchPageContainer").classList.remove("active");
+        document.getElementById("searchPageContainer").style.display = "none";
+        document.getElementById("settingsPageContainer").classList.remove("active");
+        document.getElementById("settingsPageContainer").style.display = "none";
+        document.getElementById("ratingPageContainer").classList.remove("active");
+        document.getElementById("ratingPageContainer").style.display = "none";
+        document.getElementById("genresPageContainer").classList.remove("active");
+        document.getElementById("genresPageContainer").style.display = "none";
+        document.getElementById("schedulePageContainer").classList.remove("active");
+        document.getElementById("schedulePageContainer").style.display = "none";
+        document.getElementById("stickersPageContainer").classList.remove("active");
+        document.getElementById("stickersPageContainer").style.display = "none";
+        document.getElementById("mangaPageContainer").classList.remove("active");
+        document.getElementById("mangaPageContainer").style.display = "none";
+        const liveWidget = document.getElementById("liveStreamContainer");
+        const livePage = document.getElementById("livePageContainer");
+        if (route !== "live") destroyLivePage();
+        if (liveWidget) liveWidget.style.display = "none";
+        if (livePage) {
+          livePage.classList.remove("active");
+          livePage.style.display = "none";
+        }
+        const hero = document.getElementById("heroWrapper");
+        const quickFilterBar = document.getElementById("homeQuickFilterBar");
+        const logo = document.querySelector(".logo");
+        const searchBtn = document.querySelector(".search-circle-btn");
+        if (route === "main") {
+          if (hero) hero.style.display = "block";
+          if (quickFilterBar) quickFilterBar.style.display = "block";
+          if (liveWidget) liveWidget.style.display = "none";
+          if (logo) logo.style.display = "flex";
+          if (searchBtn) searchBtn.style.display = "flex";
+          if (typeof window.buildHeroBanner === "function") {
+            window.buildHeroBanner();
+          }
+        } else {
+          if (hero) hero.style.display = "none";
+          if (quickFilterBar) quickFilterBar.style.display = "none";
+          if (logo) logo.style.display = "none";
+          if (searchBtn) searchBtn.style.display = "none";
+          if (typeof window.stopHeroRotation === "function") {
+            window.stopHeroRotation();
+          }
+        }
+        document.querySelectorAll(".agnative-leftdock__item.selector").forEach((el) => el.classList.remove(
+          "is-active"
+        ));
+        if (route === "main") {
+          document.querySelector('.agnative-leftdock__item.selector[data-action="main"]')?.classList.add(
+            "is-active"
+          );
+          this.showMain();
+        } else if (route === "catalog") {
+          document.querySelector('.agnative-leftdock__item.selector[data-action="main"]')?.classList.add("is-active");
+          this.showCatalog();
+        } else if (route === "profile") {
+          document.querySelector('.agnative-leftdock__item.selector[data-action="profile"]')?.classList.add(
+            "is-active"
+          );
+          this.showProfile(params.uid || "");
+        } else if (route === "genre") {
+          const slug = params.slug || "";
+          const name = params.name || slug;
+          document.querySelector(`.agnative-leftdock__item.selector[data-action="genre-${slug}"]`)?.classList.add("is-active");
+          this.showGenre(slug, name);
+        } else if (route === "search") {
+          document.querySelector('.agnative-leftdock__item.selector[data-action="main"]')?.classList.add(
+            "is-active"
+          );
+          this.showSearch();
+        } else if (route === "settings") {
+          document.querySelector('.agnative-leftdock__item.selector[data-action="settings"]')?.classList.add(
+            "is-active"
+          );
+          this.showSettings(params.tab);
+        } else if (route === "genres") {
+          this.goTo("main");
+        } else if (route === "rating") {
+          this.showRating();
+        } else if (route === "schedule") {
+          this.showSchedule();
+        } else if (route === "live") {
+          this.showLive();
+        } else if (route === "stickers") {
+          this.showStickers();
+        } else if (route === "manga") {
+          if (params.url) this.showManga(params.url, params.title || "");
+          else this.showMain();
+        } else if (route.startsWith("anime/")) {
+          this.showMain();
+          const animeIdMatch = route.match(/^anime\/([A-Za-z0-9][A-Za-z0-9-]{1,180})$/);
+          if (animeIdMatch) {
+            const animeUrl = `${HIKKA_API}/anime/${animeIdMatch[1]}`;
+            setTimeout(() => openPlayerPage2(animeUrl, { fromDeepLink: true }), 150);
+          } else {
+            setTimeout(() => {
+              this.goTo("main");
+              showToast("\u0410\u043D\u0456\u043C\u0435 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E");
+            }, 0);
+          }
+        } else {
+          window.location.hash = "main";
+        }
+      },
+      showMain() {
+        const catalogPage = document.getElementById("catalogPageContainer");
+        if (catalogPage) {
+          catalogPage.classList.remove("active");
+          catalogPage.style.display = "none";
+        }
+        const catalog = document.getElementById("genreSectionsContainer");
+        if (catalog) catalog.style.display = "none";
+        const homeRecommendations = document.getElementById("homeRecommendationsContainer");
+        if (homeRecommendations) {
+          homeRecommendations.style.display = "block";
+          if (!homeRecommendations.hasChildNodes() || homeRecommendations.querySelector(".loader")) loadHomeRecommendations();
+        }
+        document.getElementById("animeContainer").style.display = "none";
+        document.getElementById("paginationRow").innerHTML = "";
+        setCurrentTab("main");
+        setCurrentSearchQuery("");
+        setCurrentCategory("");
+        setCurrentPage(1);
+        document.querySelectorAll(".action-pill").forEach((p) => p.classList.remove("active-pill"));
+        const si = document.getElementById("searchPageInput");
+        if (si) si.value = "";
+        const cb = document.getElementById("searchPageClearBtn");
+        if (cb) cb.classList.remove("visible");
+        document.getElementById("paginationRow").innerHTML = "";
+        syncLeftdockActive();
+      },
+      showCatalog() {
+        const container = document.getElementById("catalogPageContainer");
+        if (!container) return;
+        container.style.display = "block";
+        container.classList.add("active");
+        const catalog = document.getElementById("genreSectionsContainer");
+        catalog.style.display = "flex";
+        if (!catalog.hasChildNodes() || catalog.querySelector(".loader")) loadAndDisplayGenreSections();
+        setCurrentTab("main");
+        syncLeftdockActive();
+      },
+      showProfile(publicUid = "") {
+        loadFeature("profile").catch((error) => console.warn("[VakDab] profile feature preload:", error));
+        const container = document.getElementById("profilePageContainer");
+        container.style.display = "block";
+        container.classList.add("active");
+        if (publicUid) {
+          renderPublicProfilePage(publicUid);
+          syncLeftdockActive();
+          return;
+        }
+        if (!Auth._authResolved) {
+          container.innerHTML = renderProfileSkeleton();
+          setTimeout(() => {
+            if (!Auth._authResolved && Router.currentRoute === "profile") {
+              Auth._authResolved = true;
+              if (Auth.isAuthenticated() || Auth.isGuest()) {
+                renderProfilePage2();
+              } else {
+                renderAuthPage();
+              }
+            }
+          }, 1500);
+        } else if (Auth.isAuthenticated() || Auth.isGuest()) {
+          renderProfilePage2();
+        } else {
+          renderAuthPage();
+        }
+        syncLeftdockActive();
+      },
+      showGenre(slug, name) {
+        const container = document.getElementById("genrePageContainer");
+        container.style.display = "block";
+        container.classList.add("active");
+        renderGenrePage(slug, name);
+      },
+      showSchedule() {
+        const container = document.getElementById("schedulePageContainer");
+        container.style.display = "block";
+        container.classList.add("active");
+        renderSchedulePage();
+      },
+      showLive() {
+        const container = document.getElementById("livePageContainer");
+        if (!container) return;
+        container.style.display = "block";
+        container.classList.add("active");
+        if (!container.hasChildNodes() || container.querySelector(".loader")) {
+          container.innerHTML = renderLiveSkeleton();
+        }
+        renderLivePage();
+      },
+      showStickers() {
+        const container = document.getElementById("stickersPageContainer");
+        if (container) {
+          container.style.display = "block";
+          container.classList.add("active");
+          if (!container.hasChildNodes() || container.querySelector(".loader")) {
+            container.innerHTML = renderStickersSkeleton();
+          }
+        }
+        loadFeature("stickers").then(({ renderStickersPage: renderStickersPage2 }) => {
+          if (this.currentRoute === "stickers") renderStickersPage2(container);
+        }).catch((error) => {
+          console.error("[VakDab] stickers feature failed to load:", error);
+          if (container) container.innerHTML = '<div class="loader">\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u043C\u043E\u0434\u0443\u043B\u044C \u043D\u0430\u043B\u0456\u043F\u043E\u043A. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.</div>';
+        });
+        syncLeftdockActive();
+      },
+      showManga(chapterUrl, mangaTitle = "") {
+        const container = document.getElementById("mangaPageContainer");
+        if (!container) return;
+        container.style.display = "block";
+        container.classList.add("active");
+        loadMangaReader().then(({ renderMangaReader: renderMangaReader2 }) => renderMangaReader2(container, chapterUrl, (nextUrl) => {
+          if (nextUrl) this.goTo("manga", { url: nextUrl, title: mangaTitle });
+          else this.goTo("main");
+        }, mangaTitle)).catch((error) => {
+          console.error("[VakDab] manga feature failed to load:", error);
+          container.innerHTML = '<div class="loader">\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u043C\u043E\u0434\u0443\u043B\u044C \u043C\u0430\u043D\u0491\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.</div>';
+        });
+      },
+      showSearch() {
+        const container = document.getElementById("searchPageContainer");
+        if (container) {
+          container.style.display = "block";
+          container.classList.add("active");
+        }
+        renderSearchPage();
+      },
+      showSettings(tab) {
+        const container = document.getElementById("settingsPageContainer");
+        if (container) {
+          container.style.display = "block";
+          container.classList.add("active");
+        }
+        renderSettingsPage(tab);
+      },
+      showRating() {
+        const container = document.getElementById("ratingPageContainer");
+        if (container) {
+          container.style.display = "block";
+          container.classList.add("active");
+        }
+        initRatingPage();
+      },
+      goTo(route, params = {}) {
+        const query2 = new URLSearchParams(params).toString();
+        window.location.hash = query2 ? route + "?" + query2 : route;
+      }
+    };
+  }
+});
