@@ -92,20 +92,20 @@ export function renderProfilePage() {
                       <span class="avatar-placeholder" style="display:${profile.avatarVideo || profile.avatar ? 'none' : 'flex'};">${escapeHtml(getProfileDisplayName(profile).charAt(0).toUpperCase())}</span>
                     </div>
                   </div>
-                  <div class="profile-header-actions">
-                    <span class="profile-stat-action" title="Досвід користувача">
-                      <i class="fas fa-star" aria-hidden="true"></i>
-                      <strong>${profileXP.toLocaleString('uk-UA')}</strong><small>XP</small>
-                    </span>
-                    <span class="profile-stat-action" title="Час перегляду">
-                      <i class="fas fa-clock" aria-hidden="true"></i>
-                      <strong>${profileWatchMinutes.toLocaleString('uk-UA')}</strong><small>хв</small>
-                    </span>
-                    <button type="button" class="profile-edit-trigger" id="profileEditTrigger" aria-label="Редагувати профіль">
-                      <i class="fas fa-pen" aria-hidden="true"></i>
-                      <span>Редагувати</span>
-                    </button>
-                  </div>
+                </div>
+                <div class="profile-header-actions">
+                  <span class="profile-stat-action" title="Досвід користувача">
+                    <i class="fas fa-star" aria-hidden="true"></i>
+                    <strong>${profileXP.toLocaleString('uk-UA')}</strong><small>XP</small>
+                  </span>
+                  <span class="profile-stat-action" title="Час перегляду">
+                    <i class="fas fa-clock" aria-hidden="true"></i>
+                    <strong>${profileWatchMinutes.toLocaleString('uk-UA')}</strong><small>хв</small>
+                  </span>
+                  <button type="button" class="profile-edit-trigger" id="profileEditTrigger" aria-label="Редагувати профіль">
+                    <i class="fas fa-pen" aria-hidden="true"></i>
+                    <span>Редагувати</span>
+                  </button>
                 </div>
                 <div class="profile-nick-row">
                   <span class="profile-nick" id="profileNickText">${profileNickname}</span>

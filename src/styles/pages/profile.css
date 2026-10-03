@@ -339,8 +339,7 @@
             text-align: center;
         }
         @media (max-width:479px) {
-            .profile-head-row { min-height: 88px; gap: .65rem; }
-            .profile-header-actions { transform: translateY(10px); }
+            .profile-head-row { min-height: 76px; gap: .65rem; }
             .profile-stat-pill { min-width: 0; padding: 9px 5px; }
             .profile-stat-pill .num { font-size: 16px; }
             .profile-stat-pill .label { font-size: 8px; letter-spacing: .6px; }
@@ -1353,7 +1352,7 @@
     align-items: center;
     justify-content: flex-end;
     gap: 6px;
-    margin: 0 0 9px auto;
+    margin: -2px 0 10px auto;
 }
 .profile-header-actions .profile-edit-trigger { margin: 0; }
 .profile-stat-action,
@@ -1405,8 +1404,7 @@
 @media (max-width: 420px) {
     .profile-header-actions { gap: 4px; }
     .profile-stat-action,
-    .profile-edit-trigger { min-height: 36px; padding-inline: 8px; font-size: 11px; }
-    .profile-edit-trigger span { display: none; }
+    .profile-edit-trigger { min-height: 36px; padding-inline: 9px; font-size: 11px; }
 }
 
 
