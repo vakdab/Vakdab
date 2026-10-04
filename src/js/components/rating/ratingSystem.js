@@ -84,15 +84,8 @@ function initRatingPage() {
   wrap.dataset.init = "1";
   wrap.innerHTML = `
                 <div class="rg-tab-panel active" id="rgPanelRating">
-                    <div class="rg-page-heading">
-                        <div class="rg-page-kicker">ВАШ ПРОГРЕС</div>
-                        <h1>Досягнення</h1>
-                        <p>Збирайте нагороди за перегляд, час із нами та улюблені тайтли.</p>
-                    </div>
-                    <div id="rgMyStats">${renderRatingStatsSkeleton()}</div>
-                    <div id="rgAchievements"></div>
-                    <section class="rg-global-section" aria-labelledby="rgGlobalTitle">
-                        <div class="rg-lb-title" id="rgGlobalTitle">Глобальний рейтинг</div>
+                    <section class="rg-global-section rg-global-first" aria-labelledby="rgGlobalTitle">
+                        <div class="rg-lb-title" id="rgGlobalTitle">ГЛОБАЛЬНИЙ РЕЙТИНГ</div>
                         <div class="rg-sort-tabs" role="tablist" aria-label="Сортування рейтингу">
                             <button class="rg-sort-tab active" data-sort="xp" role="tab">XP</button>
                             <button class="rg-sort-tab" data-sort="episodes" role="tab">Перегляди</button>
@@ -101,6 +94,8 @@ function initRatingPage() {
                         </div>
                         <div id="rgLeaderboard">${renderLeaderboardSkeleton()}</div>
                     </section>
+                    <div id="rgAchievements"></div>
+                    <div id="rgMyStats">${renderRatingStatsSkeleton()}</div>
                 </div>
             `;
   wrap.querySelectorAll(".rg-sort-tab").forEach((btn) => {
@@ -141,7 +136,10 @@ function renderAchievements({ watchedEpisodes, watchMinutes, bookmarks, level })
   const clock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>';
   const bookmark = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5V21l-6-3.6L6 21V4.5Z"/></svg>';
   const levelIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></svg>';
-  return `<div class="rg-achievements-heading"><h2>Найближчі цілі</h2><span>Ваші особисті досягнення</span></div><div class="rg-achievements-grid">
+  const chips = [
+    ["Усі", 7, true], ["У процесі", 5], ["Отримано", 2], ["Час із нами", 1], ["Час перегляду", 1], ["Закладки", 1], ["Підборки", 1], ["Перегляди", 1], ["Драми", 1], ["Мелодрама", 1]
+  ].map(([label, count, active]) => `<button class="rg-achievement-chip${active ? " active" : ""}" type="button"><span>${label}</span><small>${count}</small></button>`).join("");
+  return `<section class="rg-achievements-section"><div class="rg-achievements-heading"><h2>Досягнення</h2></div><div class="rg-achievement-chips" role="tablist" aria-label="Фільтр досягнень">${chips}</div><div class="rg-achievements-grid">
     ${renderAchievementCard({ icon: trophy, title: "Цінитель", subtitle: "Переглянуті епізоди", value: watchedEpisodes, goal: 40 })}
     ${renderAchievementCard({ icon: clock, title: "Постійний глядач", subtitle: "Хвилини перегляду", value: watchMinutes, goal: 365, accent: "blue" })}
     ${renderAchievementCard({ icon: bookmark, title: "Колекціонер", subtitle: "Тайтли у закладках", value: bookmarks, goal: 10, accent: "cyan" })}
