@@ -62,6 +62,11 @@ function calculateBaseXP({ episodes = 0, watchSeconds = 0, bookmarks = 0 } = {})
 function getWatchedEpisodesCount() {
   return (Storage.getHistory() || []).filter((item) => Number(item?.progress) >= 88).length;
 }
+function getDaysWithUs() {
+  const timestamps = (Storage.getHistory() || []).map((item) => Number(item?.timestamp) || 0).filter(Boolean);
+  if (!timestamps.length) return 0;
+  return Math.max(1, Math.floor((Date.now() - Math.min(...timestamps)) / 864e5) + 1);
+}
 function calcTotalXP() {
   const bookmarks = Storage.getBookmarks() || [];
   return calculateBaseXP({ episodes: getWatchedEpisodesCount(), watchSeconds: Storage.getWatchTime() || 0, bookmarks: bookmarks.length });
@@ -144,20 +149,24 @@ function renderAchievementCard({ icon, title, subtitle, value, goal, accent = ""
     <div class="rg-achievement-progress"><div class="rg-progress-track"><span style="width:${pct}%"></span></div><div class="rg-achievement-foot"><span>${safeValue.toLocaleString("uk-UA")} / ${safeGoal.toLocaleString("uk-UA")}</span><strong>${remaining ? `Залишилось: ${remaining.toLocaleString("uk-UA")}` : "Отримано"}</strong></div></div>
   </article>`;
 }
-function renderAchievements({ watchedEpisodes, watchMinutes, bookmarks, level }) {
+function renderAchievements({ watchedEpisodes, watchMinutes, bookmarks, daysWithUs, level }) {
   const trophy = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 21h8M12 17v4M6 3h12v6a6 6 0 0 1-12 0V3Z"/><path d="M6 5H3v2a4 4 0 0 0 4 4M18 5h3v2a4 4 0 0 1-4 4"/></svg>';
   const clock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>';
   const bookmark = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5V21l-6-3.6L6 21V4.5Z"/></svg>';
   const levelIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></svg>';
-  const achievementTotal = 4;
-  const earned = [watchedEpisodes >= 40, watchMinutes >= 365, bookmarks >= 10, level >= 10].filter(Boolean).length;
+  const achievementDefinitions = [
+    { value: daysWithUs, goal: 30 }, { value: watchMinutes, goal: 365 }, { value: bookmarks, goal: 10 }, { value: watchedEpisodes, goal: 40 }, { value: level, goal: 10 }
+  ];
+  const achievementTotal = achievementDefinitions.length;
+  const earned = achievementDefinitions.filter(({ value, goal }) => value >= goal).length;
   const chips = [
     ["Усі", achievementTotal, "all", true], ["У процесі", achievementTotal - earned, "progress"], ["Отримано", earned, "earned"],
-    ["Час із нами", 1, "watch"], ["Час перегляду", 1, "watch"], ["Закладки", 1, "bookmarks"], ["Підборки", 0, "collections"], ["Перегляди", 1, "episodes"], ["Драми", 0, "genres"], ["Мелодрама", 0, "genres"]
+    ["Час із нами", 1, "stay"], ["Час перегляду", 1, "watch"], ["Закладки", 1, "bookmarks"], ["Перегляди", 1, "episodes"]
   ].map(([label, count, filter, active]) => `<button class="rg-achievement-chip${active ? " active" : ""}" data-achievement-filter="${filter}" type="button"><span>${label}</span><small>${count}</small></button>`).join("");
   return `<section class="rg-achievements-section"><div class="rg-achievements-heading"><h2>Досягнення</h2></div><div class="rg-achievement-chips" role="tablist" aria-label="Фільтр досягнень">${chips}</div><div class="rg-achievements-grid">
     ${renderAchievementCard({ icon: trophy, title: "Цінитель", subtitle: "Переглянуті епізоди", value: watchedEpisodes, goal: 40, group: "episodes" })}
-    ${renderAchievementCard({ icon: clock, title: "Постійний глядач", subtitle: "Хвилини перегляду", value: watchMinutes, goal: 365, accent: "blue", group: "watch" })}
+    ${renderAchievementCard({ icon: clock, title: "Постійний глядач", subtitle: "Днів із нами", value: daysWithUs, goal: 365, accent: "blue", group: "stay" })}
+    ${renderAchievementCard({ icon: clock, title: "Час перегляду", subtitle: "Хвилини перегляду", value: watchMinutes, goal: 365, accent: "blue", group: "watch" })}
     ${renderAchievementCard({ icon: bookmark, title: "Колекціонер", subtitle: "Тайтли у закладках", value: bookmarks, goal: 10, accent: "cyan", group: "bookmarks" })}
     ${renderAchievementCard({ icon: levelIcon, title: `Рівень ${level}`, subtitle: "XP та активність", value: level, goal: 10, accent: "purple", group: "watch" })}
   </div>`;
@@ -171,11 +180,12 @@ function loadMyStats() {
   const watchSec = Storage.getWatchTime() || 0;
   const watchMinutes = Math.floor(watchSec / 60);
   const watchedEpisodes = getWatchedEpisodesCount();
+  const daysWithUs = getDaysWithUs();
   const rankInfo = getUserRankInfo(watchedEpisodes, watchMinutes);
   const totalXP = calcTotalXP();
   const xpProg = getXPProgress(totalXP);
   const achievementsEl = document.getElementById("rgAchievements");
-  if (achievementsEl) achievementsEl.innerHTML = renderAchievements({ watchedEpisodes, watchMinutes, bookmarks: bookmarks.length, level: xpProg.level });
+  if (achievementsEl) achievementsEl.innerHTML = renderAchievements({ watchedEpisodes, watchMinutes, bookmarks: bookmarks.length, daysWithUs, level: xpProg.level });
   const avHtml = ratingProfileMediaMarkup(profile, "rg-stats-avatar-media");
   statsEl.innerHTML = `
                 <div class="rg-my-stats">
