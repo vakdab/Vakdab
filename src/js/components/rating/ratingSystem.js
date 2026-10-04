@@ -84,11 +84,23 @@ function initRatingPage() {
   wrap.dataset.init = "1";
   wrap.innerHTML = `
                 <div class="rg-tab-panel active" id="rgPanelRating">
-                    <div id="rgMyStats">${renderRatingStatsSkeleton()}</div>
-                    <div class="rg-lb-title">\u0413\u043B\u043E\u0431\u0430\u043B\u044C\u043D\u0438\u0439 \u0440\u0435\u0439\u0442\u0438\u043D\u0433</div>
-                    <div id="rgLeaderboard">
-                        ${renderLeaderboardSkeleton()}
+                    <div class="rg-page-heading">
+                        <div class="rg-page-kicker">ВАШ ПРОГРЕС</div>
+                        <h1>Досягнення</h1>
+                        <p>Збирайте нагороди за перегляд, час із нами та улюблені тайтли.</p>
                     </div>
+                    <div id="rgMyStats">${renderRatingStatsSkeleton()}</div>
+                    <div id="rgAchievements"></div>
+                    <section class="rg-global-section" aria-labelledby="rgGlobalTitle">
+                        <div class="rg-lb-title" id="rgGlobalTitle">Глобальний рейтинг</div>
+                        <div class="rg-sort-tabs" role="tablist" aria-label="Сортування рейтингу">
+                            <button class="rg-sort-tab active" data-sort="xp" role="tab">XP</button>
+                            <button class="rg-sort-tab" data-sort="episodes" role="tab">Перегляди</button>
+                            <button class="rg-sort-tab" data-sort="minutes" role="tab">Час перегляду</button>
+                            <button class="rg-sort-tab" data-sort="bookmarks" role="tab">Закладки</button>
+                        </div>
+                        <div id="rgLeaderboard">${renderLeaderboardSkeleton()}</div>
+                    </section>
                 </div>
             `;
   wrap.querySelectorAll(".rg-sort-tab").forEach((btn) => {
@@ -113,6 +125,29 @@ function initRatingPage() {
     });
   }
 }
+function renderAchievementCard({ icon, title, subtitle, value, goal, accent = "" }) {
+  const safeValue = Math.max(0, Number(value) || 0);
+  const safeGoal = Math.max(1, Number(goal) || 1);
+  const pct = Math.min(100, Math.round(safeValue / safeGoal * 100));
+  const remaining = Math.max(0, safeGoal - safeValue);
+  return `<article class="rg-achievement-card ${accent ? `is-${accent}` : ""}">
+    <div class="rg-achievement-icon">${icon}</div>
+    <div class="rg-achievement-copy"><h3>${title}</h3><p>${subtitle}</p></div>
+    <div class="rg-achievement-progress"><div class="rg-progress-track"><span style="width:${pct}%"></span></div><div class="rg-achievement-foot"><span>${safeValue.toLocaleString("uk-UA")} / ${safeGoal.toLocaleString("uk-UA")}</span><strong>${remaining ? `Залишилось: ${remaining.toLocaleString("uk-UA")}` : "Отримано"}</strong></div></div>
+  </article>`;
+}
+function renderAchievements({ watchedEpisodes, watchMinutes, bookmarks, level }) {
+  const trophy = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 21h8M12 17v4M6 3h12v6a6 6 0 0 1-12 0V3Z"/><path d="M6 5H3v2a4 4 0 0 0 4 4M18 5h3v2a4 4 0 0 1-4 4"/></svg>';
+  const clock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>';
+  const bookmark = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5V21l-6-3.6L6 21V4.5Z"/></svg>';
+  const levelIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></svg>';
+  return `<div class="rg-achievements-heading"><h2>Найближчі цілі</h2><span>Ваші особисті досягнення</span></div><div class="rg-achievements-grid">
+    ${renderAchievementCard({ icon: trophy, title: "Цінитель", subtitle: "Переглянуті епізоди", value: watchedEpisodes, goal: 40 })}
+    ${renderAchievementCard({ icon: clock, title: "Постійний глядач", subtitle: "Хвилини перегляду", value: watchMinutes, goal: 365, accent: "blue" })}
+    ${renderAchievementCard({ icon: bookmark, title: "Колекціонер", subtitle: "Тайтли у закладках", value: bookmarks, goal: 10, accent: "cyan" })}
+    ${renderAchievementCard({ icon: levelIcon, title: `Рівень ${level}`, subtitle: "XP та активність", value: level, goal: 10, accent: "purple" })}
+  </div>`;
+}
 function loadMyStats() {
   const statsEl = document.getElementById("rgMyStats");
   if (!statsEl) return;
@@ -127,6 +162,8 @@ function loadMyStats() {
   const totalXP = calcTotalXP();
   const xpLvl = getLevel(totalXP);
   const xpProg = getXPProgress(totalXP);
+  const achievementsEl = document.getElementById("rgAchievements");
+  if (achievementsEl) achievementsEl.innerHTML = renderAchievements({ watchedEpisodes, watchMinutes, bookmarks: bookmarks.length, level: xpProg.level });
   const avHtml = ratingProfileMediaMarkup(profile, "rg-stats-avatar-media");
   statsEl.innerHTML = `
                 <div class="rg-my-stats">
