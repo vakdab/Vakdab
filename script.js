@@ -17616,11 +17616,12 @@ function isVideoUrl2(url) {
 }
 function ratingProfileMediaMarkup(profile, className) {
   const url = profile.avatarVideo || profile.avatar || "";
-  if (!url) return `<span>${escapeRatingHtml((profile.nickname || "?").slice(0, 1).toUpperCase())}</span>`;
+  const fallback = escapeRatingHtml((profile.nickname || "?").slice(0, 1).toUpperCase());
+  if (!url) return `<span>${fallback}</span>`;
   const safeUrl2 = escapeRatingHtml(url);
-  if (isVideoUrl2(url)) return `<video class="${className}" src="${safeUrl2}" autoplay muted loop playsinline preload="metadata" aria-label="\u0410\u0432\u0430\u0442\u0430\u0440\u043A\u0430"></video>`;
+  if (isVideoUrl2(url)) return `<video class="${className}" src="${safeUrl2}" autoplay muted loop playsinline preload="metadata" aria-label="\u0410\u0432\u0430\u0442\u0430\u0440\u043a\u0430" onerror="this.remove();this.parentElement.textContent='${fallback}'"></video>`;
   const gifClass = isGifUrl2(url) ? " is-gif" : "";
-  return `<img class="${className}${gifClass}" src="${safeUrl2}" alt="" loading="lazy">`;
+  return `<img class="${className}${gifClass}" src="${safeUrl2}" alt="" loading="lazy" onerror="this.remove();this.parentElement.textContent='${fallback}'">`;
 }
 function ratingNickBadgeMarkup(profile) {
   const stickers = profile?.stickers;
@@ -17948,7 +17949,7 @@ var init_ratingSystem = __esm({
     init_skeleton();
     _lbSortKey = "xp";
     _lbUsersCache = [];
-    TOP_BADGES = Object.freeze({ p1: "./app/assets/rating/top-1.png", p2: "./app/assets/rating/top-2.png", p3: "./app/assets/rating/top-3.png" });
+    TOP_BADGES = Object.freeze({ p1: "./assets/rating/top-1.png", p2: "./assets/rating/top-2.png", p3: "./assets/rating/top-3.png" });
     LB_SORT_CONFIG = {
       xp: { unit: "XP", getVal: (u) => u.xp },
       episodes: { unit: "\u0441\u0435\u0440.", getVal: (u) => u.episodes },
