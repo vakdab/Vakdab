@@ -314,6 +314,7 @@
   height: 86px;
   object-fit: contain;
   display: block;
+  transform: translateY(8px);
   filter: drop-shadow(0 4px 7px rgba(0, 0, 0, .16));
   transition: transform .25s ease, filter .25s ease;
 }
@@ -322,7 +323,7 @@
   height: 102px;
 }
 .rg-podium-item:hover .rg-podium-badge {
-  transform: translateY(-2px) rotate(2deg);
+  transform: translateY(6px) rotate(2deg);
   filter: drop-shadow(0 6px 10px rgba(var(--accent-rgb), .26));
 }
 .rg-podium-rank-label {
