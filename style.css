@@ -8451,6 +8451,45 @@ body:not(.dark-mode) .hero-slide-overlay {
   .rg-stat-label { font-size: 9px; letter-spacing: 1.3px; }
 }
 
+/* Pill navigation matching the reference menu */
+.rg-global-first .rg-sort-tabs,
+.rg-achievement-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.rg-global-first .rg-sort-tabs::-webkit-scrollbar,
+.rg-achievement-chips::-webkit-scrollbar { display: none; }
+.rg-global-first .rg-sort-tab,
+.rg-achievement-chip {
+  flex: 0 0 auto;
+  border: 2px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  box-shadow: none;
+  font-weight: 700;
+}
+.rg-global-first .rg-sort-tab.active,
+.rg-achievement-chip.active {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--background);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
+}
+.rg-global-first .rg-sort-tab:hover,
+.rg-achievement-chip:hover { border-color: var(--text-secondary); color: var(--text); }
+.rg-global-first .rg-sort-tab.active:hover,
+.rg-achievement-chip.active:hover { color: var(--background); }
+.rg-achievement-chip small { color: inherit; opacity: .7; }
+@media (max-width: 599px) {
+  .rg-global-first .rg-sort-tabs { margin-right: 0; padding-right: 0; }
+  .rg-global-first .rg-sort-tab { min-height: 50px; padding-inline: 22px; font-size: 15px; }
+  .rg-achievement-chips { padding-right: 0; }
+  .rg-achievement-chip { min-height: 40px; padding-inline: 15px; font-size: 14px; }
+}
+
 
 /* src/styles/pages/stickers.css */
 .sticker-color-control {
