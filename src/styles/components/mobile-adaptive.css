@@ -31,6 +31,29 @@ body {
   padding-top: 0 !important;
   padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
 }
+
+/* Keep the profile avatar circular in the bottom navigation. */
+.bn-profile-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--surface, #1b1b22);
+  color: var(--text, #fff);
+  line-height: 1;
+}
+.bn-profile-avatar img,
+.bn-profile-avatar video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
 @media (max-width: 768px) {
   input,
   select,
