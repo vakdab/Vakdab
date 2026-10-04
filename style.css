@@ -8415,6 +8415,42 @@ body:not(.dark-mode) .hero-slide-overlay {
   .rg-achievement-chip small { font-size: 11px; }
 }
 
+/* Polished personal progress card */
+.rg-my-stats {
+  margin: 1.1rem 1rem 0;
+  padding: 1.35rem;
+  border-radius: 24px;
+  background: var(--glass);
+  border: 1px solid var(--border);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .08);
+}
+.rg-profile-summary { margin-bottom: 1.2rem; }
+.rg-stats-avatar { width: 72px; height: 72px; border-width: 3px; box-shadow: 0 8px 20px rgba(var(--accent-rgb), .16); }
+.rg-stats-name { font-size: 25px; letter-spacing: -.6px; }
+.rg-stats-rank-badge { padding: 8px 14px; margin-top: 8px; font-size: 12px; letter-spacing: .15px; }
+.rg-stats-rank-badge svg { width: 14px; height: 14px; }
+.rg-xp-bar-wrap { margin: 0 0 1.15rem; }
+.rg-xp-labels { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; color: var(--text-muted); font-size: 15px; }
+.rg-xp-labels span:last-child { text-align: right; }
+.rg-xp-track { height: 12px; overflow: hidden; border-radius: 999px; background: var(--border); }
+.rg-xp-track span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width .35s ease; }
+.rg-stats-grid { gap: 12px; }
+.rg-stat-cell { padding: 18px 10px 15px; border-radius: 20px; background: rgba(var(--accent-rgb), .035); }
+.rg-stat-val { font-size: 34px; }
+.rg-stat-label { font-size: 11px; letter-spacing: 2px; }
+.rg-achievement-card[hidden] { display: none; }
+@media (max-width: 599px) {
+  .rg-my-stats { margin: .9rem .85rem 0; padding: 1rem; border-radius: 20px; }
+  .rg-stats-avatar { width: 58px; height: 58px; }
+  .rg-stats-name { font-size: 20px; }
+  .rg-stats-rank-badge { padding: 6px 10px; font-size: 10px; }
+  .rg-xp-labels { font-size: 12px; }
+  .rg-xp-track { height: 9px; }
+  .rg-stat-cell { padding: 14px 7px 12px; }
+  .rg-stat-val { font-size: 27px; }
+  .rg-stat-label { font-size: 9px; letter-spacing: 1.3px; }
+}
+
 
 /* src/styles/pages/stickers.css */
 .sticker-color-control {

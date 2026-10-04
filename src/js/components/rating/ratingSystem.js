@@ -59,10 +59,12 @@ function calculateBaseXP({ episodes = 0, watchSeconds = 0, bookmarks = 0 } = {})
   const safeBookmarks = Math.max(0, Math.floor(Number(bookmarks) || 0));
   return safeEpisodes * 250 + watchMinutes * 100 + safeBookmarks * 50;
 }
+function getWatchedEpisodesCount() {
+  return (Storage.getHistory() || []).filter((item) => Number(item?.progress) >= 88).length;
+}
 function calcTotalXP() {
-  const history2 = Storage.getHistory() || [];
   const bookmarks = Storage.getBookmarks() || [];
-  return calculateBaseXP({ episodes: history2.length, watchSeconds: Storage.getWatchTime() || 0, bookmarks: bookmarks.length });
+  return calculateBaseXP({ episodes: getWatchedEpisodesCount(), watchSeconds: Storage.getWatchTime() || 0, bookmarks: bookmarks.length });
 }
 function getLevel(xp) {
   return Math.floor(Math.sqrt(xp / 50)) + 1;
@@ -108,6 +110,16 @@ function initRatingPage() {
       if (lb && _lbUsersCache.length) renderLeaderboard(lb, _lbUsersCache, _lbSortKey);
     });
   });
+  wrap.addEventListener("click", (event) => {
+    const chip = event.target.closest("[data-achievement-filter]");
+    if (!chip) return;
+    const filter = chip.dataset.achievementFilter;
+    wrap.querySelectorAll(".rg-achievement-chip").forEach((item) => item.classList.toggle("active", item === chip));
+    wrap.querySelectorAll(".rg-achievement-card").forEach((card) => {
+      const visible = filter === "all" || filter === card.dataset.achievementState || filter === card.dataset.achievementGroup;
+      card.hidden = !visible;
+    });
+  });
   loadMyStats();
   loadLeaderboard();
   if (!window.__vakdabRatingStickerRefreshBound) {
@@ -120,12 +132,13 @@ function initRatingPage() {
     });
   }
 }
-function renderAchievementCard({ icon, title, subtitle, value, goal, accent = "" }) {
+function renderAchievementCard({ icon, title, subtitle, value, goal, accent = "", group = "all" }) {
   const safeValue = Math.max(0, Number(value) || 0);
   const safeGoal = Math.max(1, Number(goal) || 1);
   const pct = Math.min(100, Math.round(safeValue / safeGoal * 100));
   const remaining = Math.max(0, safeGoal - safeValue);
-  return `<article class="rg-achievement-card ${accent ? `is-${accent}` : ""}">
+  const state = safeValue >= safeGoal ? "earned" : "progress";
+  return `<article class="rg-achievement-card ${accent ? `is-${accent}` : ""}" data-achievement-group="${group}" data-achievement-state="${state}">
     <div class="rg-achievement-icon">${icon}</div>
     <div class="rg-achievement-copy"><h3>${title}</h3><p>${subtitle}</p></div>
     <div class="rg-achievement-progress"><div class="rg-progress-track"><span style="width:${pct}%"></span></div><div class="rg-achievement-foot"><span>${safeValue.toLocaleString("uk-UA")} / ${safeGoal.toLocaleString("uk-UA")}</span><strong>${remaining ? `Залишилось: ${remaining.toLocaleString("uk-UA")}` : "Отримано"}</strong></div></div>
@@ -136,14 +149,17 @@ function renderAchievements({ watchedEpisodes, watchMinutes, bookmarks, level })
   const clock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>';
   const bookmark = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5V21l-6-3.6L6 21V4.5Z"/></svg>';
   const levelIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></svg>';
+  const achievementTotal = 4;
+  const earned = [watchedEpisodes >= 40, watchMinutes >= 365, bookmarks >= 10, level >= 10].filter(Boolean).length;
   const chips = [
-    ["Усі", 7, true], ["У процесі", 5], ["Отримано", 2], ["Час із нами", 1], ["Час перегляду", 1], ["Закладки", 1], ["Підборки", 1], ["Перегляди", 1], ["Драми", 1], ["Мелодрама", 1]
-  ].map(([label, count, active]) => `<button class="rg-achievement-chip${active ? " active" : ""}" type="button"><span>${label}</span><small>${count}</small></button>`).join("");
+    ["Усі", achievementTotal, "all", true], ["У процесі", achievementTotal - earned, "progress"], ["Отримано", earned, "earned"],
+    ["Час із нами", 1, "watch"], ["Час перегляду", 1, "watch"], ["Закладки", 1, "bookmarks"], ["Підборки", 0, "collections"], ["Перегляди", 1, "episodes"], ["Драми", 0, "genres"], ["Мелодрама", 0, "genres"]
+  ].map(([label, count, filter, active]) => `<button class="rg-achievement-chip${active ? " active" : ""}" data-achievement-filter="${filter}" type="button"><span>${label}</span><small>${count}</small></button>`).join("");
   return `<section class="rg-achievements-section"><div class="rg-achievements-heading"><h2>Досягнення</h2></div><div class="rg-achievement-chips" role="tablist" aria-label="Фільтр досягнень">${chips}</div><div class="rg-achievements-grid">
-    ${renderAchievementCard({ icon: trophy, title: "Цінитель", subtitle: "Переглянуті епізоди", value: watchedEpisodes, goal: 40 })}
-    ${renderAchievementCard({ icon: clock, title: "Постійний глядач", subtitle: "Хвилини перегляду", value: watchMinutes, goal: 365, accent: "blue" })}
-    ${renderAchievementCard({ icon: bookmark, title: "Колекціонер", subtitle: "Тайтли у закладках", value: bookmarks, goal: 10, accent: "cyan" })}
-    ${renderAchievementCard({ icon: levelIcon, title: `Рівень ${level}`, subtitle: "XP та активність", value: level, goal: 10, accent: "purple" })}
+    ${renderAchievementCard({ icon: trophy, title: "Цінитель", subtitle: "Переглянуті епізоди", value: watchedEpisodes, goal: 40, group: "episodes" })}
+    ${renderAchievementCard({ icon: clock, title: "Постійний глядач", subtitle: "Хвилини перегляду", value: watchMinutes, goal: 365, accent: "blue", group: "watch" })}
+    ${renderAchievementCard({ icon: bookmark, title: "Колекціонер", subtitle: "Тайтли у закладках", value: bookmarks, goal: 10, accent: "cyan", group: "bookmarks" })}
+    ${renderAchievementCard({ icon: levelIcon, title: `Рівень ${level}`, subtitle: "XP та активність", value: level, goal: 10, accent: "purple", group: "watch" })}
   </div>`;
 }
 function loadMyStats() {
@@ -154,31 +170,25 @@ function loadMyStats() {
   const bookmarks = Storage.getBookmarks() || [];
   const watchSec = Storage.getWatchTime() || 0;
   const watchMinutes = Math.floor(watchSec / 60);
-  const episodes = history2.length;
-  const watchedEpisodes = history2.filter((item) => Number(item?.progress) >= 88).length;
-  const rankInfo = getUserRankInfo(episodes, watchMinutes);
+  const watchedEpisodes = getWatchedEpisodesCount();
+  const rankInfo = getUserRankInfo(watchedEpisodes, watchMinutes);
   const totalXP = calcTotalXP();
-  const xpLvl = getLevel(totalXP);
   const xpProg = getXPProgress(totalXP);
   const achievementsEl = document.getElementById("rgAchievements");
   if (achievementsEl) achievementsEl.innerHTML = renderAchievements({ watchedEpisodes, watchMinutes, bookmarks: bookmarks.length, level: xpProg.level });
   const avHtml = ratingProfileMediaMarkup(profile, "rg-stats-avatar-media");
   statsEl.innerHTML = `
                 <div class="rg-my-stats">
-                    <div class="rg-stats-top">
+                    <div class="rg-stats-top rg-profile-summary">
                         <div class="rg-stats-avatar">${avHtml}</div>
                         <div>
                             <div class="rg-stats-name">${ratingNameMarkup(profile)}</div>
                             <div class="rg-stats-rank-badge" style="background:var(--accent);color:var(--accent-text);">${rankInfo.icon || ""}${rankInfo.label} \xB7 Lv.${xpProg.level}</div>
                         </div>
                     </div>
-                    <div class="rg-xp-bar-wrap" style="margin:10px 0 4px;">
-                        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px;">
-                            <span>${totalXP} XP</span><span>Lv.${xpProg.level + 1} \u0437\u0430 ${xpProg.needed - xpProg.into} XP</span>
-                        </div>
-                        <div style="height:6px;border-radius:3px;background:var(--border,rgba(128,128,128,.2));overflow:hidden;">
-                            <div style="height:100%;width:${xpProg.pct}%;background:var(--accent);border-radius:3px;transition:width .3s;"></div>
-                        </div>
+                    <div class="rg-xp-bar-wrap">
+                        <div class="rg-xp-labels"><span>${totalXP} XP</span><span>Lv.${xpProg.level + 1} за ${xpProg.needed - xpProg.into} XP</span></div>
+                        <div class="rg-xp-track"><span style="width:${xpProg.pct}%"></span></div>
                     </div>
                     <div class="rg-stats-grid">
                         <div class="rg-stat-cell"><div class="rg-stat-val">${watchedEpisodes}</div><div class="rg-stat-label">\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u043E</div></div>
