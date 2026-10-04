@@ -1014,3 +1014,31 @@
   .rg-achievement-chips { padding-right: 0; }
   .rg-achievement-chip { min-height: 40px; padding-inline: 15px; font-size: 14px; }
 }
+
+/* Global rating uses the same wrapped filter menu as Achievements */
+.rg-global-first .rg-sort-tabs {
+  flex-wrap: wrap;
+  overflow: visible;
+  gap: 10px 12px;
+  padding-bottom: 1.25rem;
+}
+.rg-global-first .rg-sort-tab {
+  min-height: 48px;
+  padding: 8px 24px;
+  border-width: 2px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  letter-spacing: 0;
+}
+.rg-global-first .rg-sort-tab.active {
+  background: rgba(var(--accent-rgb), .13);
+  border-color: var(--border-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+.rg-global-first .rg-sort-tab.active:hover { color: var(--text); }
+@media (max-width: 599px) {
+  .rg-global-first .rg-sort-tabs { gap: 7px; padding-bottom: 1rem; }
+  .rg-global-first .rg-sort-tab { min-height: 42px; padding: 7px 16px; font-size: 14px; }
+}
