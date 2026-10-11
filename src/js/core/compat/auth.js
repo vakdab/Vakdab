@@ -31,7 +31,7 @@ var init_auth = __esm({
         });
         this._isGuest = localStorage.getItem("vakdab_guest") === "1";
         this._googleProvider = new GoogleAuthProvider();
-        onAuthStateChanged(auth, async (user) => {
+        firebasePersistenceReady.then(() => onAuthStateChanged(auth, async (user) => {
           if (user && this._user && this._user.uid !== user.uid) {
             this._welcomeShown = false;
             Storage.clear();
@@ -76,6 +76,12 @@ var init_auth = __esm({
               }
             }
           }
+        })).catch((error) => {
+          console.warn("[VakDab] Auth listener setup:", error);
+          this._authResolved = true;
+          this._resolveAuthReady?.(null);
+          this._resolveAuthReady = null;
+          this._notifyListeners();
         });
       },
       _notifyListeners() {
@@ -330,9 +336,10 @@ var init_auth = __esm({
       },
       async login(email, password) {
         if (!initialized || !auth) {
-          return { success: false, error: "Firebase \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439" };
+          return { success: false, error: "Firebase недоступний" };
         }
         try {
+          await firebasePersistenceReady;
           const cred = await signInWithEmailAndPassword(auth, email, password);
           this._user = cred.user;
           this._authResolved = true;
@@ -346,9 +353,10 @@ var init_auth = __esm({
       },
       async register(email, password, displayName) {
         if (!initialized || !auth) {
-          return { success: false, error: "Firebase \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439" };
+          return { success: false, error: "Firebase недоступний" };
         }
         try {
+          await firebasePersistenceReady;
           const cred = await createUserWithEmailAndPassword(auth, email, password);
           this._user = cred.user;
           if (displayName) {
@@ -373,6 +381,7 @@ var init_auth = __esm({
         const rawInitData = String(initData || globalThis.Telegram?.WebApp?.initData || "").trim();
         if (!rawInitData) return { success: false, error: "\u0412\u0456\u0434\u043A\u0440\u0438\u0439\u0442\u0435 VakDab \u0456\u0437 Telegram Mini App \u0430\u0431\u043E \u0441\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u0439\u0442\u0435\u0441\u044F \u0456\u043D\u0448\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C \u0432\u0445\u043E\u0434\u0443" };
         try {
+          await firebasePersistenceReady;
           const response = await fetch(TELEGRAM_AUTH_ENDPOINT, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -401,9 +410,10 @@ var init_auth = __esm({
       },
       async signInWithGoogle() {
         if (!initialized || !auth || !this._googleProvider) {
-          return { success: false, error: "Firebase \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439" };
+          return { success: false, error: "Firebase недоступний" };
         }
         try {
+          await firebasePersistenceReady;
           const result = await signInWithPopup(auth, this._googleProvider);
           this._user = result.user;
           this._authResolved = true;
