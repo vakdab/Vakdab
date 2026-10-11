@@ -10,7 +10,7 @@ var init_client = __esm({
       firebaseApp = initializeApp(FIREBASE_CONFIG);
       auth = getAuth(firebaseApp);
       setPersistence(auth, browserLocalPersistence).catch((error) => console.warn("[VakDab] Firebase persistence:", error));
-      db = getFirestore(firebaseApp);
+      db = getFirestore(firebaseApp, FIREBASE_CONFIG.firestoreDatabaseId || "ai-studio-vakdab-a56ac132-784f-47f9-ba81-34e827c31516");
       initialized = true;
     } catch (error) {
       console.warn("[VakDab] Firebase init:", error?.message || error);

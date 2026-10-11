@@ -84,11 +84,15 @@ export function buildJS() {
   const preamblePath = path.join(rootDir, 'src/js/core/runtime-preamble.js');
   const preamble = fs.existsSync(preamblePath) ? fs.readFileSync(preamblePath, 'utf8') + '\n\n' : '';
   
-  // Note: js/script.js is the active tested runtime bundle
-  const activeScriptPath = path.join(rootDir, 'js/script.js');
   const rootScriptPath = path.join(rootDir, 'script.js');
-  if (fs.existsSync(activeScriptPath)) {
-    const content = fs.readFileSync(activeScriptPath, 'utf8');
+  const jsScriptPath = path.join(rootDir, 'js/script.js');
+  if (fs.existsSync(rootScriptPath)) {
+    const content = fs.readFileSync(rootScriptPath, 'utf8');
+    ensureDir(jsScriptPath);
+    fs.writeFileSync(jsScriptPath, content, 'utf8');
+    console.log(`[Build] Synced root script.js to js/script.js (${content.length} bytes)`);
+  } else if (fs.existsSync(jsScriptPath)) {
+    const content = fs.readFileSync(jsScriptPath, 'utf8');
     fs.writeFileSync(rootScriptPath, content, 'utf8');
     console.log(`[Build] Synced js/script.js to root script.js (${content.length} bytes)`);
   }

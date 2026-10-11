@@ -22,13 +22,14 @@ var FIREBASE_CONFIG;
 var init_firebase = __esm({
   "src/js/config/firebase.js"() {
     FIREBASE_CONFIG = {
-      apiKey: "AIzaSyA23-0J0dwKN_EKWEbVKTMSxyB-DV5PuxA",
-      authDomain: "vakdab.firebaseapp.com",
-      projectId: "vakdab",
-      storageBucket: "vakdab.firebasestorage.app",
-      messagingSenderId: "202715819838",
-      appId: "1:202715819838:web:89b96c8237a73bec35066f",
-      measurementId: "G-3JLHRQDS0R"
+      apiKey: "AIzaSyAtial_MrEr6PZgA0vzL1RlmmD9sR4i10I",
+      authDomain: "lunalikbot.firebaseapp.com",
+      projectId: "lunalikbot",
+      storageBucket: "lunalikbot.firebasestorage.app",
+      messagingSenderId: "64771326987",
+      appId: "1:64771326987:web:bf1300aed66eb06ddef30e",
+      measurementId: "",
+      firestoreDatabaseId: "ai-studio-vakdab-a56ac132-784f-47f9-ba81-34e827c31516"
     };
   }
 });
@@ -46,7 +47,7 @@ var init_client = __esm({
       firebaseApp = initializeApp(FIREBASE_CONFIG);
       auth = getAuth(firebaseApp);
       setPersistence(auth, browserLocalPersistence).catch((error) => console.warn("[VakDab] Firebase persistence:", error));
-      db = getFirestore(firebaseApp);
+      db = getFirestore(firebaseApp, FIREBASE_CONFIG.firestoreDatabaseId || "ai-studio-vakdab-a56ac132-784f-47f9-ba81-34e827c31516");
       initialized = true;
     } catch (error) {
       console.warn("[VakDab] Firebase init:", error?.message || error);

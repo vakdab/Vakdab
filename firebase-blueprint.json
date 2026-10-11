@@ -1,0 +1,91 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with display name, avatar, bio, and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID" },
+        "displayName": { "type": "string", "maxLength": 100, "description": "User display name" },
+        "photoURL": { "type": "string", "maxLength": 1024, "description": "Avatar URL" },
+        "bio": { "type": "string", "maxLength": 500, "description": "User biography" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "description": "Update timestamp" }
+      },
+      "required": ["uid"]
+    },
+    "CommunityPost": {
+      "title": "Community Post",
+      "description": "Post published by a user in the community feed",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string", "description": "Author UID" },
+        "content": { "type": "string", "maxLength": 2000, "description": "Post text content" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "content"]
+    },
+    "AnimeComment": {
+      "title": "Anime Comment",
+      "description": "Comment left on an anime episode or title",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "animeId": { "type": "string" },
+        "parentId": { "type": "string" },
+        "uid": { "type": "string" },
+        "text": { "type": "string", "maxLength": 500 },
+        "likes": { "type": "number" },
+        "likedBy": { "type": "array" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["animeId", "parentId", "uid", "text"]
+    },
+    "UserFollowEdge": {
+      "title": "User Follow Edge",
+      "description": "Follow relationship between two users",
+      "type": "object",
+      "properties": {
+        "followerUid": { "type": "string" },
+        "followingUid": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["followerUid", "followingUid"]
+    },
+    "AnimeRating": {
+      "title": "Anime Rating",
+      "description": "User rating given to an anime",
+      "type": "object",
+      "properties": {
+        "animeId": { "type": "string" },
+        "userId": { "type": "string" },
+        "rating": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["animeId", "userId", "rating"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile collection"
+    },
+    "/community_posts/{postId}": {
+      "schema": "CommunityPost",
+      "description": "Community posts collection"
+    },
+    "/anime_comments/{commentId}": {
+      "schema": "AnimeComment",
+      "description": "Anime comments collection"
+    },
+    "/user_follow_edges/{edgeId}": {
+      "schema": "UserFollowEdge",
+      "description": "Social follow graph edges"
+    },
+    "/anime_ratings/{ratingId}": {
+      "schema": "AnimeRating",
+      "description": "Anime title ratings"
+    }
+  }
+}
