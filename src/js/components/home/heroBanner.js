@@ -111,6 +111,8 @@ async function buildHeroBanner() {
     heroSeenUrls = /* @__PURE__ */ new Set();
     heroItems = takeHeroBatch();
     heroCurrentIndex = 0;
+    await preloadHeroImage(heroItems[0]?.images?.jpg?.large_image_url || "");
+    if (getCurrentRoute() !== "main") return;
     renderHeroSlide(heroItems[0]);
     buildHeroIndicators();
     initHeroControls();

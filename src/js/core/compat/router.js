@@ -200,16 +200,14 @@ var init_router = __esm({
         }
         if (!Auth._authResolved) {
           container.innerHTML = renderProfileSkeleton();
-          setTimeout(() => {
-            if (!Auth._authResolved && Router.currentRoute === "profile") {
-              Auth._authResolved = true;
-              if (Auth.isAuthenticated() || Auth.isGuest()) {
-                renderProfilePage2();
-              } else {
-                renderAuthPage();
-              }
-            }
-          }, 1500);
+          Auth.waitForResolution(5e3).then(() => {
+            if (Router.currentRoute !== "profile" || !container.classList.contains("active")) return;
+            if (Auth._authResolved && (Auth.isAuthenticated() || Auth.isGuest())) renderProfilePage2();
+            else if (Auth._authResolved) renderAuthPage();
+            // If Firebase is slow/unavailable, show auth after the wait. A later
+            // auth callback still re-renders the profile through auth.js.
+            else renderAuthPage();
+          });
         } else if (Auth.isAuthenticated() || Auth.isGuest()) {
           renderProfilePage2();
         } else {

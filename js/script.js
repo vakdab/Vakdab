@@ -3310,16 +3310,12 @@ var init_router = __esm({
         }
         if (!Auth._authResolved) {
           container.innerHTML = renderProfileSkeleton();
-          setTimeout(() => {
-            if (!Auth._authResolved && Router.currentRoute === "profile") {
-              Auth._authResolved = true;
-              if (Auth.isAuthenticated() || Auth.isGuest()) {
-                renderProfilePage2();
-              } else {
-                renderAuthPage();
-              }
-            }
-          }, 1500);
+          Auth.waitForResolution(5e3).then(() => {
+            if (Router.currentRoute !== "profile" || !container.classList.contains("active")) return;
+            if (Auth._authResolved && (Auth.isAuthenticated() || Auth.isGuest())) renderProfilePage2();
+            else if (Auth._authResolved) renderAuthPage();
+            else renderAuthPage();
+          });
         } else if (Auth.isAuthenticated() || Auth.isGuest()) {
           renderProfilePage2();
         } else {
@@ -16208,6 +16204,8 @@ async function buildHeroBanner() {
     heroSeenUrls = /* @__PURE__ */ new Set();
     heroItems = takeHeroBatch();
     heroCurrentIndex = 0;
+    await preloadHeroImage(heroItems[0]?.images?.jpg?.large_image_url || "");
+    if (getCurrentRoute() !== "main") return;
     renderHeroSlide(heroItems[0]);
     buildHeroIndicators();
     initHeroControls();
