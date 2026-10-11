@@ -2674,14 +2674,10 @@ body:not(.dark-mode) #playerPageModal .player-team-avatar {
   #playerPageModal .hero-img {
     margin-bottom: 60px;
   }
-  #playerPageModal .logo-wrap {
-    right: 16px;
-    bottom: 18px;
-    left: 16px;
-    text-align: center;
-  }
+  #playerPageModal .logo-wrap,
+  #playerPageModal #playerKickerWrap,
   #playerPageModal .kicker {
-    font-size: clamp(20px, 6vw, 32px);
+    display: none !important;
   }
   #playerPageModal .content-top {
     padding-top: 0;

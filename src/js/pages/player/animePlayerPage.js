@@ -144,9 +144,9 @@ async function openPlayerPage2(url, options = {}) {
     moreBtn.textContent = "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u043F\u043E\u0432\u043D\u0456\u0441\u0442\u044E";
   }
   document.getElementById("playerTopbarTitle").textContent = "";
-  document.getElementById("playerVideoEpisodeOverlay")?.replaceChildren();
   document.getElementById("playerVideoSeasonOverlay")?.replaceChildren();
-  document.getElementById("playerKicker").style.display = "";
+  const resetKickerEl = document.getElementById("playerKicker");
+  if (resetKickerEl) resetKickerEl.style.display = window.innerWidth < 900 ? "none" : "";
   const _resetLogoImg = document.getElementById("playerTitleLogo");
   if (_resetLogoImg) {
     _resetLogoImg.style.display = "none";
@@ -207,7 +207,7 @@ async function openPlayerPage2(url, options = {}) {
     const kickerEl = document.getElementById("playerKicker");
     if (kickerEl) {
       kickerEl.textContent = anime.title;
-      kickerEl.style.display = mikaiPosterUrl ? "none" : "";
+      kickerEl.style.display = (mikaiPosterUrl || window.innerWidth < 900) ? "none" : "";
     }
     document.getElementById("playerTopbarTitle").textContent = anime.title;
     document.getElementById("playerBlurBg").style.backgroundImage = `url(${posterUrl})`;

@@ -8,8 +8,24 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3000;
 
+app.use(express.json());
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+app.post('/api/telegram-auth', async (req, res) => {
+  try {
+    const upstreamRes = await fetch('https://vakdab-telegram-auth.animegran8.workers.dev/telegram/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body || {})
+    });
+    const data = await upstreamRes.json().catch(() => ({}));
+    return res.status(upstreamRes.status).json(data);
+  } catch (err) {
+    return res.status(500).json({ error: err.message || 'Telegram auth proxy failed' });
+  }
 });
 
 app.use(express.static(__dirname));

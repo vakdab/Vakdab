@@ -1774,8 +1774,10 @@ var init_auth = __esm({
         this._authReadyPromise = new Promise((resolve) => {
           this._resolveAuthReady = resolve;
         });
-        this._isGuest = localStorage.getItem("vakdab_guest") === "1";
-        this._googleProvider = new GoogleAuthProvider();
+        this._isGuest = false;
+        try {
+          localStorage.removeItem("vakdab_guest");
+        } catch (_) {}
         firebasePersistenceReady.then(() => onAuthStateChanged(auth, async (user) => {
           if (user && this._user && this._user.uid !== user.uid) {
             this._welcomeShown = false;
@@ -1798,7 +1800,7 @@ var init_auth = __esm({
             }
             if (!this._welcomeShown) {
               this._welcomeShown = true;
-              showToast("\u041F\u0440\u0438\u0432\u0456\u0442, " + (user.displayName || user.email || "\u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447"));
+              showToast("Привіт, " + (user.displayName || user.email || "користувач"));
             }
             try {
               await this._loadUserData(user.uid);
@@ -1816,9 +1818,12 @@ var init_auth = __esm({
             if (Router.currentRoute === "profile") {
               const profContainer = document.getElementById("profilePageContainer");
               if (profContainer && profContainer.classList.contains("active")) {
-                if (this.isGuest()) renderProfilePage2();
-                else renderAuthPage();
+                renderAuthPage();
               }
+            }
+            // Auto Telegram login in Telegram Mini App if user hasn't explicitly logged out
+            if (!this._user && !sessionStorage.getItem("vakdab_manual_logout") && globalThis.Telegram?.WebApp?.initData) {
+              this.signInWithTelegram().catch((e) => console.warn("[VakDab] Auto Telegram sign-in attempt:", e));
             }
           }
         })).catch((error) => {
@@ -2122,63 +2127,61 @@ var init_auth = __esm({
         }
       },
       async signInWithTelegram(initData = "") {
-        if (!initialized || !auth) return { success: false, error: "Firebase \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439" };
+        if (!initialized || !auth) return { success: false, error: "Firebase недоступний" };
         const rawInitData = String(initData || globalThis.Telegram?.WebApp?.initData || "").trim();
-        if (!rawInitData) return { success: false, error: "\u0412\u0456\u0434\u043A\u0440\u0438\u0439\u0442\u0435 VakDab \u0456\u0437 Telegram Mini App \u0430\u0431\u043E \u0441\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u0439\u0442\u0435\u0441\u044F \u0456\u043D\u0448\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C \u0432\u0445\u043E\u0434\u0443" };
+        if (!rawInitData) return { success: false, error: "Відкрийте VakDab із Telegram Mini App або скористайтеся входом через Email" };
         try {
           await firebasePersistenceReady;
-          const response = await fetch(TELEGRAM_AUTH_ENDPOINT, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ initData: rawInitData })
-          });
+          let response;
+          try {
+            response = await fetch("/api/telegram-auth", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ initData: rawInitData })
+            });
+            if (!response.ok && response.status === 404) {
+              throw new Error("Proxy route not available");
+            }
+          } catch (_) {
+            response = await fetch(TELEGRAM_AUTH_ENDPOINT, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ initData: rawInitData })
+            });
+          }
           const payload = await response.json().catch(() => ({}));
-          if (!response.ok || !payload.customToken) throw new Error(payload.error || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u0438 Telegram");
+          if (!response.ok || !payload.customToken) throw new Error(payload.error || "Не вдалося перевірити Telegram");
           this._pendingTelegramProfile = payload.telegramUser || null;
           const result = await signInWithCustomToken(auth, payload.customToken);
           this._user = result.user;
           const tg = payload.telegramUser || {};
-          const displayName = [tg.first_name, tg.last_name].filter(Boolean).join(" ") || (tg.username ? `@${tg.username}` : "\u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447");
+          const displayName = [tg.first_name, tg.last_name].filter(Boolean).join(" ") || (tg.username ? `@${tg.username}` : "Користувач");
           const current = Storage.getProfile() || getDefaultProfile();
-          if (!current.nickname || current.nickname === "@user" || current.nickname === "\u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447") current.nickname = normalizeNickname(tg.username || `tg_${tg.id}`, "@user");
-          if (!current.realName || current.realName === "\u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447") current.realName = stripNicknamePrefix(displayName);
+          if (!current.nickname || current.nickname === "@user" || current.nickname === "Користувач") current.nickname = normalizeNickname(tg.username || `tg_${tg.id}`, "@user");
+          if (!current.realName || current.realName === "Користувач") current.realName = stripNicknamePrefix(displayName);
           if (!current.avatar && tg.photo_url) current.avatar = tg.photo_url;
           Storage._setProfile(current);
           this._notifyListeners();
-          showToast("\u0412\u0445\u0456\u0434 \u0447\u0435\u0440\u0435\u0437 Telegram \u0443\u0441\u043F\u0456\u0448\u043D\u0438\u0439");
+          showToast("Вхід через Telegram успішний");
           return { success: true };
         } catch (e) {
           console.warn("Telegram sign-in error:", e);
           this._pendingTelegramProfile = null;
-          return { success: false, error: e.message || "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0432\u0445\u043E\u0434\u0443 \u0447\u0435\u0440\u0435\u0437 Telegram" };
-        }
-      },
-      async signInWithGoogle() {
-        if (!initialized || !auth || !this._googleProvider) {
-          return { success: false, error: "Firebase \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439" };
-        }
-        try {
-          await firebasePersistenceReady;
-          const result = await signInWithPopup(auth, this._googleProvider);
-          this._user = result.user;
-          this._authResolved = true;
-          this._notifyListeners();
-          showToast("\u0412\u0445\u0456\u0434 \u0447\u0435\u0440\u0435\u0437 Google \u0443\u0441\u043F\u0456\u0448\u043D\u0438\u0439");
-          return { success: true };
-        } catch (e) {
-          console.warn("Google sign-in error:", e);
-          return { success: false, error: this.formatAuthError(e, true) };
+          return { success: false, error: e.message || "Помилка входу через Telegram" };
         }
       },
       async logout() {
         if (!initialized || !auth) {
           return { success: false, error: "Firebase not available" };
         }
+        try {
+          sessionStorage.setItem("vakdab_manual_logout", "1");
+        } catch (_) {}
         if (Storage._syncTimer) {
           clearTimeout(Storage._syncTimer);
           Storage._syncTimer = null;
         }
-        showToast("\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F \u0434\u0430\u043D\u0438\u0445 \u0456 \u0432\u0438\u0445\u0456\u0434...");
+        showToast("Збереження даних і вихід...");
         try {
           if (this._lastProfileSync) await this._lastProfileSync;
         } catch (e) {
@@ -2201,32 +2204,38 @@ var init_auth = __esm({
         } catch (e) {
           console.error("Silent error:", e);
         }
-        showToast("\u0412\u0438 \u0432\u0438\u0439\u0448\u043B\u0438 \u0437 \u0430\u043A\u0430\u0443\u043D\u0442\u0443");
+        showToast("Ви вийшли з акаунту");
         Router.showProfile();
         return { success: true };
       },
       handleExit() {
-        if (this.isGuest()) {
-          this._isGuest = false;
-          localStorage.removeItem("vakdab_guest");
-          Storage.clear();
-          this._notifyListeners();
-          showToast("\u0413\u043E\u0441\u0442\u0435\u0432\u0438\u0439 \u0441\u0435\u0430\u043D\u0441 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E");
-          Router.showProfile();
-        } else {
-          this.logout().catch((e) => console.warn("Logout error:", e));
-        }
+        this.logout().catch((e) => console.warn("Logout error:", e));
       },
-      // Чи ввійшов юзер через email/пароль (а не Google/анонімно) — для показу "Змінити пароль"
       hasPasswordProvider() {
         if (!this.isAuthenticated()) return false;
         return (this._user.providerData || []).some((p) => p.providerId === "password");
       },
       providerLabel() {
-        if (this.isGuest() || !this.isAuthenticated()) return "\u0413\u0456\u0441\u0442\u044C";
-        if ((this._user.providerData || []).some((p) => p.providerId === "google.com")) return "Google";
-        if (this.hasPasswordProvider()) return "Email \u0456 \u043F\u0430\u0440\u043E\u043B\u044C";
-        return "\u0410\u043A\u0430\u0443\u043D\u0442";
+        if (!this.isAuthenticated()) return "Гість";
+        if (this._user?.uid?.startsWith("tg_") || this._user?.uid?.startsWith("telegram:") || this._pendingTelegramProfile) return "Telegram";
+        if (this.hasPasswordProvider()) return "Email і пароль";
+        return "Telegram / Акаунт";
+      },
+      async sendPasswordResetForEmail(email) {
+        if (!initialized || !auth) {
+          return { success: false, error: "Firebase недоступний" };
+        }
+        const targetEmail = String(email || "").trim();
+        if (!targetEmail) {
+          return { success: false, error: "Введіть email для скидання пароля" };
+        }
+        try {
+          await sendPasswordResetEmail(auth, targetEmail);
+          return { success: true };
+        } catch (e) {
+          console.warn("Password reset error:", e);
+          return { success: false, error: this.formatAuthError(e) };
+        }
       },
       async sendPasswordReset() {
         if (!initialized || !auth || !this._user?.email) {
@@ -9248,7 +9257,8 @@ async function openPlayerPage2(url, options = {}) {
   document.getElementById("playerTopbarTitle").textContent = "";
   document.getElementById("playerVideoEpisodeOverlay")?.replaceChildren();
   document.getElementById("playerVideoSeasonOverlay")?.replaceChildren();
-  document.getElementById("playerKicker").style.display = "";
+  const resetKickerEl = document.getElementById("playerKicker");
+  if (resetKickerEl) resetKickerEl.style.display = window.innerWidth < 900 ? "none" : "";
   const _resetLogoImg = document.getElementById("playerTitleLogo");
   if (_resetLogoImg) {
     _resetLogoImg.style.display = "none";
@@ -9309,7 +9319,7 @@ async function openPlayerPage2(url, options = {}) {
     const kickerEl = document.getElementById("playerKicker");
     if (kickerEl) {
       kickerEl.textContent = anime.title;
-      kickerEl.style.display = mikaiPosterUrl ? "none" : "";
+      kickerEl.style.display = (mikaiPosterUrl || window.innerWidth < 900) ? "none" : "";
     }
     document.getElementById("playerTopbarTitle").textContent = anime.title;
     document.getElementById("playerBlurBg").style.backgroundImage = `url(${posterUrl})`;
@@ -12027,12 +12037,12 @@ function renderAuthPage() {
   const container = document.getElementById("profilePageContainer");
   if (!container) return;
   const tgUser = globalThis.Telegram?.WebApp?.initDataUnsafe?.user;
-  const tgBtnLabel = tgUser?.first_name ? `\u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0438 \u044F\u043A ${escapeHtml4(tgUser.first_name)} (Telegram)` : "\u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 Telegram";
+  const tgBtnLabel = tgUser?.first_name ? `Увійти як ${escapeHtml4(tgUser.first_name)} (Telegram)` : "Увійти через Telegram";
   container.innerHTML = `
     <div class="auth-card">
       <div class="mark"></div>
-      <h1 id="authTitle">\u0412\u0445\u0456\u0434 \u0434\u043E \u0430\u043A\u0430\u0443\u043D\u0442\u0430</h1>
-      <p class="sub" id="authSub">\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C \u0437\u0430 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u043E\u044E Telegram, Google \u0430\u0431\u043E \u0432\u0430\u0448\u043E\u0457 \u043F\u043E\u0448\u0442\u0438.</p>
+      <h1 id="authTitle">Вхід до акаунта</h1>
+      <p class="sub" id="authSub">Увійдіть за допомогою Telegram або вашої пошти.</p>
 
       <button class="telegram-btn" type="button" id="authTelegramBtn">
         <svg viewBox="0 0 24 24">
@@ -12041,17 +12051,13 @@ function renderAuthPage() {
         ${tgBtnLabel}
       </button>
 
-      <button class="google-btn" type="button" id="authGoogleBtn">
-        <svg viewBox="0 0 48 48">
-          <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.3 29.3 35 24 35c-6.1 0-11-4.9-11-11s4.9-11 11-11c2.8 0 5.3 1 7.3 2.8l5.7-5.7C33.6 6.5 29 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z"/>
-          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 18.9 13 24 13c2.8 0 5.3 1 7.3 2.8l5.7-5.7C33.6 6.5 29 4.5 24 4.5c-7.7 0-14.3 4.3-17.7 10.2z"/>
-          <path fill="#4CAF50" d="M24 43.5c5.1 0 9.7-1.9 13.2-5.1l-6.1-5.2c-2 1.5-4.5 2.3-7.1 2.3-5.3 0-9.6-3.6-11.2-8.4l-6.5 5C9.7 39.1 16.3 43.5 24 43.5z"/>
-          <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.7l6.1 5.2C40.8 36.4 43.5 30.7 43.5 24c0-1.2-.1-2.4-.4-3.5z"/>
-        </svg>
-        \u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 Google
-      </button>
+      <div class="divider">або через email</div>
 
-      <div class="divider">\u0430\u0431\u043E \u0447\u0435\u0440\u0435\u0437 email</div>
+      <div class="switcher" id="authSwitcher">
+        <div class="switcher-thumb" id="authSwitcherThumb"></div>
+        <button type="button" class="active" id="authTabLogin">Вхід</button>
+        <button type="button" id="authTabRegister">Реєстрація</button>
+      </div>
 
       <div class="panel active" id="authPanel-login">
         <form id="authLoginForm" onsubmit="return false;">
@@ -12060,28 +12066,70 @@ function renderAuthPage() {
             <input id="loginEmail" type="email" placeholder="you@example.com" required autocomplete="email">
           </div>
           <div class="field">
-            <label for="loginPass">\u041F\u0430\u0440\u043E\u043B\u044C</label>
-            <input id="loginPass" type="password" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" required autocomplete="current-password">
+            <label for="loginPass">Пароль</label>
+            <input id="loginPass" type="password" placeholder="••••••••" required autocomplete="current-password">
           </div>
           <div class="row-between">
-            <label class="remember"><input type="checkbox" id="loginRemember">\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0442\u0438 \u043C\u0435\u043D\u0435</label>
-            <a href="#" onclick="showToast('\u0421\u043A\u0438\u0434\u0430\u043D\u043D\u044F \u043F\u0430\u0440\u043E\u043B\u044F \u2014 \u0441\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u0439\u0442\u0435\u0441\u044F \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u043C\u0438 \u043F\u0440\u043E\u0444\u0456\u043B\u044E');return false;">\u0417\u0430\u0431\u0443\u043B\u0438 \u043F\u0430\u0440\u043E\u043B\u044C?</a>
+            <label class="remember"><input type="checkbox" id="loginRemember" checked>Запам'ятати мене</label>
+            <a href="#" id="authForgotPassBtn">Забули пароль?</a>
           </div>
           <div class="auth-error" id="authError"></div>
-          <button class="submit-btn" type="submit" id="authLoginSubmit">\u0423\u0432\u0456\u0439\u0442\u0438</button>
+          <button class="submit-btn" type="submit" id="authLoginSubmit">Увійти</button>
         </form>
       </div>
 
-      <button class="guest-btn" type="button" id="authGuestBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 21a8 8 0 0 0-16 0"/>
-          <circle cx="12" cy="8" r="4.5"/>
-        </svg>
-        \u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0438 \u044F\u043A \u0433\u0456\u0441\u0442\u044C
-      </button>
+      <div class="panel" id="authPanel-register" style="display: none;">
+        <form id="authRegisterForm" onsubmit="return false;">
+          <div class="field">
+            <label for="regName">Нікнейм / Ім'я</label>
+            <input id="regName" type="text" placeholder="Ваше ім'я" autocomplete="nickname">
+          </div>
+          <div class="field">
+            <label for="regEmail">Email</label>
+            <input id="regEmail" type="email" placeholder="you@example.com" required autocomplete="email">
+          </div>
+          <div class="field">
+            <label for="regPass">Пароль</label>
+            <input id="regPass" type="password" placeholder="Мінімум 6 символів" required autocomplete="new-password">
+          </div>
+          <div class="auth-error" id="regError"></div>
+          <button class="submit-btn" type="submit" id="authRegisterSubmit">Створити акаунт</button>
+        </form>
+      </div>
     </div>
   `;
-  document.getElementById("authLoginForm").addEventListener("submit", async function(e) {
+
+  // Switcher tab handlers
+  const tabLogin = document.getElementById("authTabLogin");
+  const tabRegister = document.getElementById("authTabRegister");
+  const panelLogin = document.getElementById("authPanel-login");
+  const panelRegister = document.getElementById("authPanel-register");
+  const switcher = document.getElementById("authSwitcher");
+
+  if (tabLogin && tabRegister && panelLogin && panelRegister) {
+    tabLogin.addEventListener("click", () => {
+      tabLogin.classList.add("active");
+      tabRegister.classList.remove("active");
+      switcher?.classList.remove("mode-register");
+      panelLogin.style.display = "";
+      panelLogin.classList.add("active");
+      panelRegister.style.display = "none";
+      panelRegister.classList.remove("active");
+    });
+
+    tabRegister.addEventListener("click", () => {
+      tabRegister.classList.add("active");
+      tabLogin.classList.remove("active");
+      switcher?.classList.add("mode-register");
+      panelRegister.style.display = "";
+      panelRegister.classList.add("active");
+      panelLogin.style.display = "none";
+      panelLogin.classList.remove("active");
+    });
+  }
+
+  // Login form handler
+  document.getElementById("authLoginForm")?.addEventListener("submit", async function(e) {
     e.preventDefault();
     const email = document.getElementById("loginEmail").value.trim();
     const pass = document.getElementById("loginPass").value;
@@ -12089,61 +12137,97 @@ function renderAuthPage() {
     const submitBtn = document.getElementById("authLoginSubmit");
     errorEl.textContent = "";
     if (!email || !pass) {
-      errorEl.textContent = "\u0411\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430, \u0437\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u0443\u0441\u0456 \u043F\u043E\u043B\u044F.";
+      errorEl.textContent = "Будь ласка, заповніть усі поля.";
       return;
     }
     submitBtn.disabled = true;
-    submitBtn.textContent = "\u0412\u0445\u0456\u0434...";
+    submitBtn.textContent = "Вхід...";
     const result = await Auth.login(email, pass);
     submitBtn.disabled = false;
-    submitBtn.textContent = "\u0423\u0432\u0456\u0439\u0442\u0438";
+    submitBtn.textContent = "Увійти";
     if (!result.success) {
-      errorEl.textContent = result.error || "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0432\u0445\u043E\u0434\u0443";
+      errorEl.textContent = result.error || "Помилка входу";
     } else {
       await Auth.waitForResolution();
       renderProfilePage2();
     }
   });
+
+  // Register form handler
+  document.getElementById("authRegisterForm")?.addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const name = document.getElementById("regName").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const pass = document.getElementById("regPass").value;
+    const errorEl = document.getElementById("regError");
+    const submitBtn = document.getElementById("authRegisterSubmit");
+    errorEl.textContent = "";
+    if (!email || !pass) {
+      errorEl.textContent = "Будь ласка, заповніть email та пароль.";
+      return;
+    }
+    if (pass.length < 6) {
+      errorEl.textContent = "Пароль повинен містити щонайменше 6 символів.";
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Створення...";
+    const result = await Auth.register(email, pass, name || "");
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Створити акаунт";
+    if (!result.success) {
+      errorEl.textContent = result.error || "Помилка реєстрації";
+    } else {
+      await Auth.waitForResolution();
+      renderProfilePage2();
+    }
+  });
+
+  // Telegram auth button handler
   const telegramBtn = document.getElementById("authTelegramBtn");
   if (telegramBtn) {
     telegramBtn.addEventListener("click", async function() {
-      const errorEl = document.getElementById("authError");
-      errorEl.textContent = "";
+      const errorEl = document.getElementById("authError") || document.getElementById("regError");
+      if (errorEl) errorEl.textContent = "";
       this.disabled = true;
       const originalHtml = this.innerHTML;
-      this.textContent = "\u0410\u0432\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0456\u044F \u0447\u0435\u0440\u0435\u0437 Telegram...";
+      this.textContent = "Авторизація через Telegram...";
       const result = await Auth.signInWithTelegram();
       this.disabled = false;
       this.innerHTML = originalHtml;
       if (!result.success) {
-        errorEl.textContent = result.error || "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0432\u0445\u043E\u0434\u0443 \u0447\u0435\u0440\u0435\u0437 Telegram";
+        if (errorEl) errorEl.textContent = result.error || "Помилка входу через Telegram";
+        else showToast(result.error || "Помилка входу через Telegram");
       } else {
         await Auth.waitForResolution();
         renderProfilePage2();
       }
     });
   }
-  document.getElementById("authGoogleBtn").addEventListener("click", async function() {
-    const errorEl = document.getElementById("authError");
-    errorEl.textContent = "";
-    this.disabled = true;
-    const originalHtml = this.innerHTML;
-    this.textContent = "\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F...";
-    const result = await Auth.signInWithGoogle();
-    this.disabled = false;
-    this.innerHTML = originalHtml;
-    if (!result.success) {
-      errorEl.textContent = result.error || "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 Google \u0432\u0445\u043E\u0434\u0443";
-    } else {
-      await Auth.waitForResolution();
-      renderProfilePage2();
-    }
-  });
-  document.getElementById("authGuestBtn").addEventListener("click", () => {
-    Auth.setGuest(true);
-    showToast("\u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0443\u0454\u043C\u043E \u044F\u043A \u0433\u0456\u0441\u0442\u044C");
-    Router.showProfile();
-  });
+
+  // Forgot password handler
+  const forgotBtn = document.getElementById("authForgotPassBtn");
+  if (forgotBtn) {
+    forgotBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("loginEmail").value.trim();
+      const errorEl = document.getElementById("authError");
+      if (!email) {
+        if (errorEl) errorEl.textContent = "Введіть email у поле вище, щоб скинути пароль.";
+        else showToast("Введіть ваш email для відновлення пароля");
+        return;
+      }
+      if (errorEl) errorEl.textContent = "";
+      const result = await Auth.sendPasswordResetForEmail(email);
+      if (result.success) {
+        showToast("Лист для скидання пароля надіслано на " + email);
+      } else {
+        if (errorEl) errorEl.textContent = result.error || "Не вдалося надіслати лист";
+        else showToast(result.error || "Не вдалося надіслати лист");
+      }
+    });
+  }
+
   syncLeftdockActive();
 }
 function renderHistoryPanel(history2) {
@@ -21020,8 +21104,56 @@ function bootstrap() {
 // src/js/app.js
 try {
   if (globalThis.Telegram?.WebApp) {
-    globalThis.Telegram.WebApp.ready();
-    globalThis.Telegram.WebApp.expand();
+    const tg = globalThis.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+    document.documentElement.classList.add("telegram-mini-app");
+    document.body.classList.add("telegram-mini-app");
+
+    try {
+      tg.enableClosingConfirmation?.();
+    } catch (_) {}
+
+    try {
+      tg.setHeaderColor?.("#0b0b12");
+      tg.setBackgroundColor?.("#0b0b12");
+    } catch (_) {}
+
+    if (tg.BackButton) {
+      const syncTgBackButton = () => {
+        const hash = (window.location.hash || "").replace(/^#/, "");
+        const isMain = !hash || hash === "main";
+        const isPlayerOpen = Boolean(window.playerPageIsOpen || document.getElementById("playerPageModal")?.classList.contains("active"));
+        if (isPlayerOpen || !isMain) {
+          tg.BackButton.show();
+        } else {
+          tg.BackButton.hide();
+        }
+      };
+
+      tg.BackButton.onClick(() => {
+        if (window.playerPageIsOpen && typeof window.closePlayerPage === "function") {
+          window.closePlayerPage();
+          return;
+        }
+        const sheet = document.getElementById("bottomSheetOverlay");
+        if (sheet?.classList.contains("open") && typeof window.closeBottomSheet === "function") {
+          window.closeBottomSheet();
+          return;
+        }
+        if (window.Router && typeof window.Router.back === "function") {
+          window.Router.back();
+        } else if (window.history.length > 1) {
+          window.history.back();
+        } else if (window.Router && typeof window.Router.goTo === "function") {
+          window.Router.goTo("main");
+        }
+      });
+
+      window.addEventListener("hashchange", syncTgBackButton);
+      window.addEventListener("vakdab:route-change", syncTgBackButton);
+      setTimeout(syncTgBackButton, 300);
+    }
   }
 } catch (_) {
 }

@@ -29,8 +29,10 @@ var init_auth = __esm({
         this._authReadyPromise = new Promise((resolve) => {
           this._resolveAuthReady = resolve;
         });
-        this._isGuest = localStorage.getItem("vakdab_guest") === "1";
-        this._googleProvider = new GoogleAuthProvider();
+        this._isGuest = false;
+        try {
+          localStorage.removeItem("vakdab_guest");
+        } catch (_) {}
         firebasePersistenceReady.then(() => onAuthStateChanged(auth, async (user) => {
           if (user && this._user && this._user.uid !== user.uid) {
             this._welcomeShown = false;
@@ -53,7 +55,7 @@ var init_auth = __esm({
             }
             if (!this._welcomeShown) {
               this._welcomeShown = true;
-              showToast("\u041F\u0440\u0438\u0432\u0456\u0442, " + (user.displayName || user.email || "\u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447"));
+              showToast("Привіт, " + (user.displayName || user.email || "користувач"));
             }
             try {
               await this._loadUserData(user.uid);
@@ -71,9 +73,12 @@ var init_auth = __esm({
             if (Router.currentRoute === "profile") {
               const profContainer = document.getElementById("profilePageContainer");
               if (profContainer && profContainer.classList.contains("active")) {
-                if (this.isGuest()) renderProfilePage2();
-                else renderAuthPage();
+                renderAuthPage();
               }
+            }
+            // Auto Telegram login in Telegram Mini App if user hasn't explicitly logged out
+            if (!this._user && !sessionStorage.getItem("vakdab_manual_logout") && globalThis.Telegram?.WebApp?.initData) {
+              this.signInWithTelegram().catch((e) => console.warn("[VakDab] Auto Telegram sign-in attempt:", e));
             }
           }
         })).catch((error) => {
@@ -377,63 +382,61 @@ var init_auth = __esm({
         }
       },
       async signInWithTelegram(initData = "") {
-        if (!initialized || !auth) return { success: false, error: "Firebase \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439" };
+        if (!initialized || !auth) return { success: false, error: "Firebase недоступний" };
         const rawInitData = String(initData || globalThis.Telegram?.WebApp?.initData || "").trim();
-        if (!rawInitData) return { success: false, error: "\u0412\u0456\u0434\u043A\u0440\u0438\u0439\u0442\u0435 VakDab \u0456\u0437 Telegram Mini App \u0430\u0431\u043E \u0441\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u0439\u0442\u0435\u0441\u044F \u0456\u043D\u0448\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C \u0432\u0445\u043E\u0434\u0443" };
+        if (!rawInitData) return { success: false, error: "Відкрийте VakDab із Telegram Mini App або скористайтеся входом через Email" };
         try {
           await firebasePersistenceReady;
-          const response = await fetch(TELEGRAM_AUTH_ENDPOINT, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ initData: rawInitData })
-          });
+          let response;
+          try {
+            response = await fetch("/api/telegram-auth", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ initData: rawInitData })
+            });
+            if (!response.ok && response.status === 404) {
+              throw new Error("Proxy route not available");
+            }
+          } catch (_) {
+            response = await fetch(TELEGRAM_AUTH_ENDPOINT, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ initData: rawInitData })
+            });
+          }
           const payload = await response.json().catch(() => ({}));
-          if (!response.ok || !payload.customToken) throw new Error(payload.error || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u0438 Telegram");
+          if (!response.ok || !payload.customToken) throw new Error(payload.error || "Не вдалося перевірити Telegram");
           this._pendingTelegramProfile = payload.telegramUser || null;
           const result = await signInWithCustomToken(auth, payload.customToken);
           this._user = result.user;
           const tg = payload.telegramUser || {};
-          const displayName = [tg.first_name, tg.last_name].filter(Boolean).join(" ") || (tg.username ? `@${tg.username}` : "\u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447");
+          const displayName = [tg.first_name, tg.last_name].filter(Boolean).join(" ") || (tg.username ? `@${tg.username}` : "Користувач");
           const current = Storage.getProfile() || getDefaultProfile();
-          if (!current.nickname || current.nickname === "@user" || current.nickname === "\u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447") current.nickname = normalizeNickname(tg.username || `tg_${tg.id}`, "@user");
-          if (!current.realName || current.realName === "\u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447") current.realName = stripNicknamePrefix(displayName);
+          if (!current.nickname || current.nickname === "@user" || current.nickname === "Користувач") current.nickname = normalizeNickname(tg.username || `tg_${tg.id}`, "@user");
+          if (!current.realName || current.realName === "Користувач") current.realName = stripNicknamePrefix(displayName);
           if (!current.avatar && tg.photo_url) current.avatar = tg.photo_url;
           Storage._setProfile(current);
           this._notifyListeners();
-          showToast("\u0412\u0445\u0456\u0434 \u0447\u0435\u0440\u0435\u0437 Telegram \u0443\u0441\u043F\u0456\u0448\u043D\u0438\u0439");
+          showToast("Вхід через Telegram успішний");
           return { success: true };
         } catch (e) {
           console.warn("Telegram sign-in error:", e);
           this._pendingTelegramProfile = null;
-          return { success: false, error: e.message || "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0432\u0445\u043E\u0434\u0443 \u0447\u0435\u0440\u0435\u0437 Telegram" };
-        }
-      },
-      async signInWithGoogle() {
-        if (!initialized || !auth || !this._googleProvider) {
-          return { success: false, error: "Firebase недоступний" };
-        }
-        try {
-          await firebasePersistenceReady;
-          const result = await signInWithPopup(auth, this._googleProvider);
-          this._user = result.user;
-          this._authResolved = true;
-          this._notifyListeners();
-          showToast("\u0412\u0445\u0456\u0434 \u0447\u0435\u0440\u0435\u0437 Google \u0443\u0441\u043F\u0456\u0448\u043D\u0438\u0439");
-          return { success: true };
-        } catch (e) {
-          console.warn("Google sign-in error:", e);
-          return { success: false, error: this.formatAuthError(e, true) };
+          return { success: false, error: e.message || "Помилка входу через Telegram" };
         }
       },
       async logout() {
         if (!initialized || !auth) {
           return { success: false, error: "Firebase not available" };
         }
+        try {
+          sessionStorage.setItem("vakdab_manual_logout", "1");
+        } catch (_) {}
         if (Storage._syncTimer) {
           clearTimeout(Storage._syncTimer);
           Storage._syncTimer = null;
         }
-        showToast("\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F \u0434\u0430\u043D\u0438\u0445 \u0456 \u0432\u0438\u0445\u0456\u0434...");
+        showToast("Збереження даних і вихід...");
         try {
           if (this._lastProfileSync) await this._lastProfileSync;
         } catch (e) {
@@ -456,32 +459,38 @@ var init_auth = __esm({
         } catch (e) {
           console.error("Silent error:", e);
         }
-        showToast("\u0412\u0438 \u0432\u0438\u0439\u0448\u043B\u0438 \u0437 \u0430\u043A\u0430\u0443\u043D\u0442\u0443");
+        showToast("Ви вийшли з акаунту");
         Router.showProfile();
         return { success: true };
       },
       handleExit() {
-        if (this.isGuest()) {
-          this._isGuest = false;
-          localStorage.removeItem("vakdab_guest");
-          Storage.clear();
-          this._notifyListeners();
-          showToast("\u0413\u043E\u0441\u0442\u0435\u0432\u0438\u0439 \u0441\u0435\u0430\u043D\u0441 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E");
-          Router.showProfile();
-        } else {
-          this.logout().catch((e) => console.warn("Logout error:", e));
-        }
+        this.logout().catch((e) => console.warn("Logout error:", e));
       },
-      // Чи ввійшов юзер через email/пароль (а не Google/анонімно) — для показу "Змінити пароль"
       hasPasswordProvider() {
         if (!this.isAuthenticated()) return false;
         return (this._user.providerData || []).some((p) => p.providerId === "password");
       },
       providerLabel() {
-        if (this.isGuest() || !this.isAuthenticated()) return "\u0413\u0456\u0441\u0442\u044C";
-        if ((this._user.providerData || []).some((p) => p.providerId === "google.com")) return "Google";
-        if (this.hasPasswordProvider()) return "Email \u0456 \u043F\u0430\u0440\u043E\u043B\u044C";
-        return "\u0410\u043A\u0430\u0443\u043D\u0442";
+        if (!this.isAuthenticated()) return "Гість";
+        if (this._user?.uid?.startsWith("tg_") || this._user?.uid?.startsWith("telegram:") || this._pendingTelegramProfile) return "Telegram";
+        if (this.hasPasswordProvider()) return "Email і пароль";
+        return "Telegram / Акаунт";
+      },
+      async sendPasswordResetForEmail(email) {
+        if (!initialized || !auth) {
+          return { success: false, error: "Firebase недоступний" };
+        }
+        const targetEmail = String(email || "").trim();
+        if (!targetEmail) {
+          return { success: false, error: "Введіть email для скидання пароля" };
+        }
+        try {
+          await sendPasswordResetEmail(auth, targetEmail);
+          return { success: true };
+        } catch (e) {
+          console.warn("Password reset error:", e);
+          return { success: false, error: this.formatAuthError(e) };
+        }
       },
       async sendPasswordReset() {
         if (!initialized || !auth || !this._user?.email) {

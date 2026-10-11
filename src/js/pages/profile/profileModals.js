@@ -2,12 +2,12 @@ function renderAuthPage() {
   const container = document.getElementById("profilePageContainer");
   if (!container) return;
   const tgUser = globalThis.Telegram?.WebApp?.initDataUnsafe?.user;
-  const tgBtnLabel = tgUser?.first_name ? `\u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0438 \u044F\u043A ${escapeHtml4(tgUser.first_name)} (Telegram)` : "\u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 Telegram";
+  const tgBtnLabel = tgUser?.first_name ? `Увійти як ${escapeHtml4(tgUser.first_name)} (Telegram)` : "Увійти через Telegram";
   container.innerHTML = `
     <div class="auth-card">
       <div class="mark"></div>
-      <h1 id="authTitle">\u0412\u0445\u0456\u0434 \u0434\u043E \u0430\u043A\u0430\u0443\u043D\u0442\u0430</h1>
-      <p class="sub" id="authSub">\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C \u0437\u0430 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u043E\u044E Telegram, Google \u0430\u0431\u043E \u0432\u0430\u0448\u043E\u0457 \u043F\u043E\u0448\u0442\u0438.</p>
+      <h1 id="authTitle">Вхід до акаунта</h1>
+      <p class="sub" id="authSub">Увійдіть за допомогою Telegram або вашої пошти.</p>
 
       <button class="telegram-btn" type="button" id="authTelegramBtn">
         <svg viewBox="0 0 24 24">
@@ -16,17 +16,13 @@ function renderAuthPage() {
         ${tgBtnLabel}
       </button>
 
-      <button class="google-btn" type="button" id="authGoogleBtn">
-        <svg viewBox="0 0 48 48">
-          <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.3 29.3 35 24 35c-6.1 0-11-4.9-11-11s4.9-11 11-11c2.8 0 5.3 1 7.3 2.8l5.7-5.7C33.6 6.5 29 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z"/>
-          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 18.9 13 24 13c2.8 0 5.3 1 7.3 2.8l5.7-5.7C33.6 6.5 29 4.5 24 4.5c-7.7 0-14.3 4.3-17.7 10.2z"/>
-          <path fill="#4CAF50" d="M24 43.5c5.1 0 9.7-1.9 13.2-5.1l-6.1-5.2c-2 1.5-4.5 2.3-7.1 2.3-5.3 0-9.6-3.6-11.2-8.4l-6.5 5C9.7 39.1 16.3 43.5 24 43.5z"/>
-          <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.7l6.1 5.2C40.8 36.4 43.5 30.7 43.5 24c0-1.2-.1-2.4-.4-3.5z"/>
-        </svg>
-        \u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 Google
-      </button>
+      <div class="divider">або через email</div>
 
-      <div class="divider">\u0430\u0431\u043E \u0447\u0435\u0440\u0435\u0437 email</div>
+      <div class="switcher" id="authSwitcher">
+        <div class="switcher-thumb" id="authSwitcherThumb"></div>
+        <button type="button" class="active" id="authTabLogin">Вхід</button>
+        <button type="button" id="authTabRegister">Реєстрація</button>
+      </div>
 
       <div class="panel active" id="authPanel-login">
         <form id="authLoginForm" onsubmit="return false;">
@@ -35,28 +31,70 @@ function renderAuthPage() {
             <input id="loginEmail" type="email" placeholder="you@example.com" required autocomplete="email">
           </div>
           <div class="field">
-            <label for="loginPass">\u041F\u0430\u0440\u043E\u043B\u044C</label>
-            <input id="loginPass" type="password" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" required autocomplete="current-password">
+            <label for="loginPass">Пароль</label>
+            <input id="loginPass" type="password" placeholder="••••••••" required autocomplete="current-password">
           </div>
           <div class="row-between">
-            <label class="remember"><input type="checkbox" id="loginRemember">\u0417\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0442\u0438 \u043C\u0435\u043D\u0435</label>
-            <a href="#" onclick="showToast('\u0421\u043A\u0438\u0434\u0430\u043D\u043D\u044F \u043F\u0430\u0440\u043E\u043B\u044F \u2014 \u0441\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u0439\u0442\u0435\u0441\u044F \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u043C\u0438 \u043F\u0440\u043E\u0444\u0456\u043B\u044E');return false;">\u0417\u0430\u0431\u0443\u043B\u0438 \u043F\u0430\u0440\u043E\u043B\u044C?</a>
+            <label class="remember"><input type="checkbox" id="loginRemember" checked>Запам'ятати мене</label>
+            <a href="#" id="authForgotPassBtn">Забули пароль?</a>
           </div>
           <div class="auth-error" id="authError"></div>
-          <button class="submit-btn" type="submit" id="authLoginSubmit">\u0423\u0432\u0456\u0439\u0442\u0438</button>
+          <button class="submit-btn" type="submit" id="authLoginSubmit">Увійти</button>
         </form>
       </div>
 
-      <button class="guest-btn" type="button" id="authGuestBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 21a8 8 0 0 0-16 0"/>
-          <circle cx="12" cy="8" r="4.5"/>
-        </svg>
-        \u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0438 \u044F\u043A \u0433\u0456\u0441\u0442\u044C
-      </button>
+      <div class="panel" id="authPanel-register" style="display: none;">
+        <form id="authRegisterForm" onsubmit="return false;">
+          <div class="field">
+            <label for="regName">Нікнейм / Ім'я</label>
+            <input id="regName" type="text" placeholder="Ваше ім'я" autocomplete="nickname">
+          </div>
+          <div class="field">
+            <label for="regEmail">Email</label>
+            <input id="regEmail" type="email" placeholder="you@example.com" required autocomplete="email">
+          </div>
+          <div class="field">
+            <label for="regPass">Пароль</label>
+            <input id="regPass" type="password" placeholder="Мінімум 6 символів" required autocomplete="new-password">
+          </div>
+          <div class="auth-error" id="regError"></div>
+          <button class="submit-btn" type="submit" id="authRegisterSubmit">Створити акаунт</button>
+        </form>
+      </div>
     </div>
   `;
-  document.getElementById("authLoginForm").addEventListener("submit", async function(e) {
+
+  // Switcher tab handlers
+  const tabLogin = document.getElementById("authTabLogin");
+  const tabRegister = document.getElementById("authTabRegister");
+  const panelLogin = document.getElementById("authPanel-login");
+  const panelRegister = document.getElementById("authPanel-register");
+  const switcher = document.getElementById("authSwitcher");
+
+  if (tabLogin && tabRegister && panelLogin && panelRegister) {
+    tabLogin.addEventListener("click", () => {
+      tabLogin.classList.add("active");
+      tabRegister.classList.remove("active");
+      switcher?.classList.remove("mode-register");
+      panelLogin.style.display = "";
+      panelLogin.classList.add("active");
+      panelRegister.style.display = "none";
+      panelRegister.classList.remove("active");
+    });
+
+    tabRegister.addEventListener("click", () => {
+      tabRegister.classList.add("active");
+      tabLogin.classList.remove("active");
+      switcher?.classList.add("mode-register");
+      panelRegister.style.display = "";
+      panelRegister.classList.add("active");
+      panelLogin.style.display = "none";
+      panelLogin.classList.remove("active");
+    });
+  }
+
+  // Login form handler
+  document.getElementById("authLoginForm")?.addEventListener("submit", async function(e) {
     e.preventDefault();
     const email = document.getElementById("loginEmail").value.trim();
     const pass = document.getElementById("loginPass").value;
@@ -64,61 +102,97 @@ function renderAuthPage() {
     const submitBtn = document.getElementById("authLoginSubmit");
     errorEl.textContent = "";
     if (!email || !pass) {
-      errorEl.textContent = "\u0411\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430, \u0437\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u0443\u0441\u0456 \u043F\u043E\u043B\u044F.";
+      errorEl.textContent = "Будь ласка, заповніть усі поля.";
       return;
     }
     submitBtn.disabled = true;
-    submitBtn.textContent = "\u0412\u0445\u0456\u0434...";
+    submitBtn.textContent = "Вхід...";
     const result = await Auth.login(email, pass);
     submitBtn.disabled = false;
-    submitBtn.textContent = "\u0423\u0432\u0456\u0439\u0442\u0438";
+    submitBtn.textContent = "Увійти";
     if (!result.success) {
-      errorEl.textContent = result.error || "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0432\u0445\u043E\u0434\u0443";
+      errorEl.textContent = result.error || "Помилка входу";
     } else {
       await Auth.waitForResolution();
       renderProfilePage2();
     }
   });
+
+  // Register form handler
+  document.getElementById("authRegisterForm")?.addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const name = document.getElementById("regName").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const pass = document.getElementById("regPass").value;
+    const errorEl = document.getElementById("regError");
+    const submitBtn = document.getElementById("authRegisterSubmit");
+    errorEl.textContent = "";
+    if (!email || !pass) {
+      errorEl.textContent = "Будь ласка, заповніть email та пароль.";
+      return;
+    }
+    if (pass.length < 6) {
+      errorEl.textContent = "Пароль повинен містити щонайменше 6 символів.";
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Створення...";
+    const result = await Auth.register(email, pass, name || "");
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Створити акаунт";
+    if (!result.success) {
+      errorEl.textContent = result.error || "Помилка реєстрації";
+    } else {
+      await Auth.waitForResolution();
+      renderProfilePage2();
+    }
+  });
+
+  // Telegram auth button handler
   const telegramBtn = document.getElementById("authTelegramBtn");
   if (telegramBtn) {
     telegramBtn.addEventListener("click", async function() {
-      const errorEl = document.getElementById("authError");
-      errorEl.textContent = "";
+      const errorEl = document.getElementById("authError") || document.getElementById("regError");
+      if (errorEl) errorEl.textContent = "";
       this.disabled = true;
       const originalHtml = this.innerHTML;
-      this.textContent = "\u0410\u0432\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0456\u044F \u0447\u0435\u0440\u0435\u0437 Telegram...";
+      this.textContent = "Авторизація через Telegram...";
       const result = await Auth.signInWithTelegram();
       this.disabled = false;
       this.innerHTML = originalHtml;
       if (!result.success) {
-        errorEl.textContent = result.error || "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0432\u0445\u043E\u0434\u0443 \u0447\u0435\u0440\u0435\u0437 Telegram";
+        if (errorEl) errorEl.textContent = result.error || "Помилка входу через Telegram";
+        else showToast(result.error || "Помилка входу через Telegram");
       } else {
         await Auth.waitForResolution();
         renderProfilePage2();
       }
     });
   }
-  document.getElementById("authGoogleBtn").addEventListener("click", async function() {
-    const errorEl = document.getElementById("authError");
-    errorEl.textContent = "";
-    this.disabled = true;
-    const originalHtml = this.innerHTML;
-    this.textContent = "\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F...";
-    const result = await Auth.signInWithGoogle();
-    this.disabled = false;
-    this.innerHTML = originalHtml;
-    if (!result.success) {
-      errorEl.textContent = result.error || "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 Google \u0432\u0445\u043E\u0434\u0443";
-    } else {
-      await Auth.waitForResolution();
-      renderProfilePage2();
-    }
-  });
-  document.getElementById("authGuestBtn").addEventListener("click", () => {
-    Auth.setGuest(true);
-    showToast("\u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0443\u0454\u043C\u043E \u044F\u043A \u0433\u0456\u0441\u0442\u044C");
-    Router.showProfile();
-  });
+
+  // Forgot password handler
+  const forgotBtn = document.getElementById("authForgotPassBtn");
+  if (forgotBtn) {
+    forgotBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("loginEmail").value.trim();
+      const errorEl = document.getElementById("authError");
+      if (!email) {
+        if (errorEl) errorEl.textContent = "Введіть email у поле вище, щоб скинути пароль.";
+        else showToast("Введіть ваш email для відновлення пароля");
+        return;
+      }
+      if (errorEl) errorEl.textContent = "";
+      const result = await Auth.sendPasswordResetForEmail(email);
+      if (result.success) {
+        showToast("Лист для скидання пароля надіслано на " + email);
+      } else {
+        if (errorEl) errorEl.textContent = result.error || "Не вдалося надіслати лист";
+        else showToast(result.error || "Не вдалося надіслати лист");
+      }
+    });
+  }
+
   syncLeftdockActive();
 }
 function renderHistoryPanel(history2) {
