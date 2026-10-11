@@ -9152,6 +9152,7 @@ async function openPlayerPage2(url, options = {}) {
   loadFeature("player").catch((error) => console.warn("[VakDab] player feature preload:", error));
   const modal = document.getElementById("playerPageModal");
   if (!modal) return;
+  const loadId = ++playerPageLoadId;
   if (!playerPageIsOpen) {
     playerPagePreviousBodyOverflow = document.body.style.overflow || "";
     playerPagePreviousActiveElement = document.activeElement;
@@ -9263,7 +9264,7 @@ async function openPlayerPage2(url, options = {}) {
   modal.focus({ preventScroll: true });
   try {
     const anime = await loadHikkaDetail2(url);
-    if (_thisSignal.aborted || modal.style.display === "none") return;
+    if (_thisSignal.aborted || loadId !== playerPageLoadId || modal.style.display === "none") return;
     playerPageAnime = anime;
     playerPageAnimeuaSeasons = {};
     externalSourceCache = {};
@@ -9376,9 +9377,9 @@ async function openPlayerPage2(url, options = {}) {
         }
       }
     }
-    loadAndRenderJikanExtras(anime);
+    if (loadId === playerPageLoadId && !_thisSignal.aborted) loadAndRenderJikanExtras(anime);
   } catch (err) {
-    if (_thisSignal.aborted || modal.style.display === "none") return;
+    if (_thisSignal.aborted || loadId !== playerPageLoadId || modal.style.display === "none") return;
     if (_thisSignal.aborted || err && (err.name === "AbortError" || err._playerAborted || err.message && (err.message.includes("aborted") || err.message.includes("Fetch is aborted")))) return;
     const isNotFound = err.message && (err.message.includes("\u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E") || err.message.includes("404"));
     const isTimeout = err.message && err.message.includes("\u043E\u0447\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F");
@@ -10766,7 +10767,7 @@ function showViewMode(mode) {
   });
   playerPageCurrentView = mode;
 }
-var playerPageAnimeuaSeasons, externalSourceCache, playerPageAnime, playerPagePlayer, _playerLoadController, playerPageCurrentSeason, playerPageCurrentDub, playerPageCurrentQuality, playerPagePlaybackRequest, playerPageCurrentAnimeUrl, playerPageCurrentSource, setPlayerPageAnimeuaSeasons, setPlayerPageAnime, setPlayerPageCurrentSeason, setPlayerPageCurrentDub, setPlayerPageCurrentSource, playerPageCurrentView, playerPageEpisodes, playerPageSources, playerPageCurrentEpisodeNum, playerPageHistoryUpdated, playerPageWatchTimeSynced, playerPageLastProgressSave, playerPageWatchStartTime, playerPageAccumulatedWatchSeconds, playerPageLastVideoTime, playerPageIsPlaying, playerPageIsOpen, playerPagePreviousBodyOverflow, playerPagePreviousActiveElement, playerJikanData, playerCharacterItems, playerCharacterExpanded, playerRelatedItems, playerRelatedExpanded, playerMediaItems, playerMediaExpanded, playerCountdownTimer, QUALITY_OPTIONS, RELATED_RELATION_LABELS_UA, RELATED_TYPE_LABELS_UA, relatedLocalizationCache, RELATED_TITLE_OVERRIDES_UA, normalizeRelatedKey, relatedRelationLabelUa, relatedTypeLabelUa, CAST_CHARACTER_NAMES_UA, bottomSheetMode, cpBtn, playerFsBtn, compactEpisodeSelect, teamSwipeStart;
+var playerPageAnimeuaSeasons, externalSourceCache, playerPageAnime, playerPagePlayer, _playerLoadController, playerPageLoadId, playerPageCurrentSeason, playerPageCurrentDub, playerPageCurrentQuality, playerPagePlaybackRequest, playerPageCurrentAnimeUrl, playerPageCurrentSource, setPlayerPageAnimeuaSeasons, setPlayerPageAnime, setPlayerPageCurrentSeason, setPlayerPageCurrentDub, setPlayerPageCurrentSource, playerPageCurrentView, playerPageEpisodes, playerPageSources, playerPageCurrentEpisodeNum, playerPageHistoryUpdated, playerPageWatchTimeSynced, playerPageLastProgressSave, playerPageWatchStartTime, playerPageAccumulatedWatchSeconds, playerPageLastVideoTime, playerPageIsPlaying, playerPageIsOpen, playerPagePreviousBodyOverflow, playerPagePreviousActiveElement, playerJikanData, playerCharacterItems, playerCharacterExpanded, playerRelatedItems, playerRelatedExpanded, playerMediaItems, playerMediaExpanded, playerCountdownTimer, QUALITY_OPTIONS, RELATED_RELATION_LABELS_UA, RELATED_TYPE_LABELS_UA, relatedLocalizationCache, RELATED_TITLE_OVERRIDES_UA, normalizeRelatedKey, relatedRelationLabelUa, relatedTypeLabelUa, CAST_CHARACTER_NAMES_UA, bottomSheetMode, cpBtn, playerFsBtn, compactEpisodeSelect, teamSwipeStart;
 var init_animePlayerPage = __esm({
   "src/js/pages/player/animePlayerPage.js?v=20260927-senplayer-auto-v1"() {
     init_firebase();
@@ -10789,6 +10790,7 @@ var init_animePlayerPage = __esm({
     playerPageAnime = null;
     playerPagePlayer = null;
     _playerLoadController = null;
+    playerPageLoadId = 0;
     playerPageCurrentSeason = "1";
     playerPageCurrentDub = "";
     playerPageCurrentQuality = "1080p";
@@ -16281,6 +16283,7 @@ async function loadNextHeroBatch() {
     nextBatch = takeHeroBatch();
   }
   if (!nextBatch.length) return;
+  await preloadHeroImage(nextBatch[0]?.images?.jpg?.large_image_url || "");
   heroItems = nextBatch;
   heroCurrentIndex = 0;
   renderHeroSlide(heroItems[0]);
@@ -16477,8 +16480,11 @@ function updateHeroIndicators() {
 async function goToSlide(idx) {
   if (idx < 0 || idx >= heroItems.length) return;
   if (idx === heroCurrentIndex && document.querySelector(".hero-slide")) return;
+  const nextItem = heroItems[idx];
+  await preloadHeroImage(nextItem?.images?.jpg?.large_image_url || "");
+  if (getCurrentRoute() !== "main" || heroItems[idx] !== nextItem) return;
   heroCurrentIndex = idx;
-  renderHeroSlide(heroItems[idx]);
+  renderHeroSlide(nextItem);
   updateHeroIndicators();
   resetHeroTimer();
   if (!heroItems[idx].detailsLoaded) {
@@ -16596,9 +16602,10 @@ function startHeroRotation() {
   const fill = document.getElementById("heroProgressFill");
   let elapsed = 0;
   if (fill) fill.style.width = "0%";
+  const startedAt = performance.now();
   heroProgressInterval = setInterval(() => {
     if (heroIsPaused) return;
-    elapsed += 50;
+    elapsed = performance.now() - startedAt;
     if (fill) fill.style.width = Math.min(100, elapsed / HERO_SLIDE_DURATION * 100) + "%";
   }, 50);
   heroRotationTimer = setTimeout(() => {

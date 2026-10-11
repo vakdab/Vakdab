@@ -782,7 +782,17 @@ iframe {
 }
 
 .hero-progress-bar {
-  display: none !important;
+  display: block !important;
+  z-index: 40 !important;
+  height: 3px !important;
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+
+.hero-progress-fill {
+  display: block !important;
+  height: 100% !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.72) !important;
 }
 
 html,

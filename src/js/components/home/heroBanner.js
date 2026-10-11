@@ -186,6 +186,7 @@ async function loadNextHeroBatch() {
     nextBatch = takeHeroBatch();
   }
   if (!nextBatch.length) return;
+  await preloadHeroImage(nextBatch[0]?.images?.jpg?.large_image_url || "");
   heroItems = nextBatch;
   heroCurrentIndex = 0;
   renderHeroSlide(heroItems[0]);
@@ -382,8 +383,13 @@ function updateHeroIndicators() {
 async function goToSlide(idx) {
   if (idx < 0 || idx >= heroItems.length) return;
   if (idx === heroCurrentIndex && document.querySelector(".hero-slide")) return;
+  const nextItem = heroItems[idx];
+  // Do not replace a working slide with an unloaded/black background. The
+  // preload also lets the browser reuse the decoded image during the fade.
+  await preloadHeroImage(nextItem?.images?.jpg?.large_image_url || "");
+  if (getCurrentRoute() !== "main" || heroItems[idx] !== nextItem) return;
   heroCurrentIndex = idx;
-  renderHeroSlide(heroItems[idx]);
+  renderHeroSlide(nextItem);
   updateHeroIndicators();
   resetHeroTimer();
   if (!heroItems[idx].detailsLoaded) {
@@ -501,9 +507,10 @@ function startHeroRotation() {
   const fill = document.getElementById("heroProgressFill");
   let elapsed = 0;
   if (fill) fill.style.width = "0%";
+  const startedAt = performance.now();
   heroProgressInterval = setInterval(() => {
     if (heroIsPaused) return;
-    elapsed += 50;
+    elapsed = performance.now() - startedAt;
     if (fill) fill.style.width = Math.min(100, elapsed / HERO_SLIDE_DURATION * 100) + "%";
   }, 50);
   heroRotationTimer = setTimeout(() => {
