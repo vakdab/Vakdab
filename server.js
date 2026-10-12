@@ -16,7 +16,7 @@ app.get('/api/health', (req, res) => {
 
 app.post('/api/telegram-auth', async (req, res) => {
   try {
-    const upstreamRes = await fetch('https://vakdab-telegram-auth.animegran8.workers.dev/telegram/auth', {
+    const upstreamRes = await fetch('https://vakdab-auth-api.animegran8.workers.dev/auth/telegram', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req.body || {})

@@ -1,0 +1,13 @@
+name = "vakdab-auth-api"
+main = "auth-worker.js"
+compatibility_date = "2026-10-11"
+workers_dev = true
+
+[[services]]
+binding = "TELEGRAM_VERIFIER"
+service = "vakdab-telegram-auth"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vakdab-auth"
+database_id = "e7fb7412-0d51-411e-b72f-9895e8121651"
