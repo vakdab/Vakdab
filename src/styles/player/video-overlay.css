@@ -870,7 +870,7 @@
   #playerPageModal .lp-settings-wrap {
     min-width: 0;
     flex: 0 1 auto;
-    gap: 3px;
+    gap: 8px;
   }
   #playerPageModal .lp-control-pill {
     min-width: 0;
@@ -929,7 +929,7 @@
     gap: 3px;
   }
   #playerPageModal .lp-settings-wrap {
-    gap: 2px;
+    gap: 8px;
   }
   #playerPageModal .lp-control-pill {
     min-width: 0;
