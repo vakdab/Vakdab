@@ -14,23 +14,11 @@ var __export = (target, all) => {
 };
 
 // src/js/config/firebase.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signInWithCustomToken, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, setPersistence, browserLocalPersistence, signInAnonymously, sendPasswordResetEmail, deleteUser } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot, getDocs as getDocs2, increment } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
+import { initializeApp, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signInWithCustomToken, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, setPersistence, browserLocalPersistence, signInAnonymously, sendPasswordResetEmail, deleteUser, getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, addDoc, collection, query, where, orderBy, limit, onSnapshot, getDocs as getDocs2, increment, documentId, getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "./cloudflare-auth-client.js";
 var FIREBASE_CONFIG;
 var init_firebase = __esm({
   "src/js/config/firebase.js"() {
-    FIREBASE_CONFIG = {
-      apiKey: "AIzaSyAtial_MrEr6PZgA0vzL1RlmmD9sR4i10I",
-      authDomain: "lunalikbot.firebaseapp.com",
-      projectId: "lunalikbot",
-      storageBucket: "lunalikbot.firebasestorage.app",
-      messagingSenderId: "64771326987",
-      appId: "1:64771326987:web:bf1300aed66eb06ddef30e",
-      measurementId: "",
-      firestoreDatabaseId: "ai-studio-vakdab-a56ac132-784f-47f9-ba81-34e827c31516"
-    };
+    FIREBASE_CONFIG = { projectId: "vakdab-cloudflare" };
   }
 });
 
@@ -91,7 +79,7 @@ var init_constants2 = __esm({
     PROXY_URL2 = "https://monoanime.animegran8.workers.dev";
     HIKKA_API = "https://api.hikka.io";
     HIKKA_PROXY_URL = "https://vakdab-hikka-proxy.animegran8.workers.dev";
-    TELEGRAM_AUTH_ENDPOINT = "https://vakdab-telegram-auth.animegran8.workers.dev/telegram/auth";
+    TELEGRAM_AUTH_ENDPOINT = "https://vakdab-auth-api.animegran8.workers.dev/auth/telegram";
     GENRE_MAP2 = { "\u0414\u0440\u0430\u043C\u0430": "drama", "\u0415\u043A\u0448\u043D": "action", "\u0415\u0447\u0447\u0456": "ecchi", "\u0406\u0441\u0435\u043A\u0430\u0439": "isekai", "\u041A\u043E\u043C\u0435\u0434\u0456\u044F": "comedy", "\u041C\u0435\u0445\u0430": "mecha", "\u041C\u0456\u0441\u0442\u0438\u043A\u0430": "mystery", "\u041C\u0443\u0437\u0438\u0447\u043D\u0435": "music", "\u041D\u0430\u0434\u043F\u0440\u0438\u0440\u043E\u0434\u043D\u0435": "supernatural", "\u041D\u0430\u0443\u043A\u043E\u0432\u0430 \u0444\u0430\u043D\u0442\u0430\u0441\u0442\u0438\u043A\u0430": "sci-fi", "\u041F\u043E\u0432\u0441\u044F\u043A\u0434\u0435\u043D\u043D\u0456\u0441\u0442\u044C": "slice-of-life", "\u041F\u0440\u0438\u0433\u043E\u0434\u0438": "adventure", "\u041F\u0441\u0438\u0445\u043E\u043B\u043E\u0433\u0456\u0447\u043D\u0435": "psychological", "\u0420\u043E\u043C\u0430\u043D\u0442\u0438\u043A\u0430": "romance", "\u0421\u043F\u043E\u0440\u0442": "sports", "\u0422\u0440\u0438\u043B\u0435\u0440": "suspense", "\u0424\u0435\u043D\u0442\u0435\u0437\u0456": "fantasy", "\u0425\u043E\u0440\u0440\u043E\u0440": "horror", "\u0427\u0430\u0440\u0456\u0432\u043D\u0438\u0446\u0456": "mahou-shoujo" };
   }
 });
@@ -2079,6 +2067,9 @@ var init_auth = __esm({
         if (code.includes("auth/network-request-failed")) {
           return "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u043C\u0435\u0440\u0435\u0436\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440\u0442\u0435 \u0437\u02BC\u0454\u0434\u043D\u0430\u043D\u043D\u044F \u0437 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u043E\u043C.";
         }
+        if (code.includes("EMAIL_SENDING_NOT_CONFIGURED")) {
+          return "\u0421\u043A\u0438\u0434\u0430\u043D\u043D\u044F \u043F\u0430\u0440\u043E\u043B\u044F \u043F\u043E\u043A\u0438 \u043D\u0435 \u043D\u0430\u043B\u0430\u0448\u0442\u043E\u0432\u0430\u043D\u0435: \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043E Cloudflare Email Service.";
+        }
         if (code.includes("auth/too-many-requests")) {
           return "\u0417\u0430\u0431\u0430\u0433\u0430\u0442\u043E \u043D\u0435\u0432\u0434\u0430\u043B\u0438\u0445 \u0441\u043F\u0440\u043E\u0431. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043F\u0456\u0437\u043D\u0456\u0448\u0435.";
         }
@@ -2132,23 +2123,11 @@ var init_auth = __esm({
         if (!rawInitData) return { success: false, error: "Відкрийте VakDab із Telegram Mini App або скористайтеся входом через Email" };
         try {
           await firebasePersistenceReady;
-          let response;
-          try {
-            response = await fetch("/api/telegram-auth", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ initData: rawInitData })
-            });
-            if (!response.ok && response.status === 404) {
-              throw new Error("Proxy route not available");
-            }
-          } catch (_) {
-            response = await fetch(TELEGRAM_AUTH_ENDPOINT, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ initData: rawInitData })
-            });
-          }
+          const response = await fetch(TELEGRAM_AUTH_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ initData: rawInitData })
+          });
           const payload = await response.json().catch(() => ({}));
           if (!response.ok || !payload.customToken) throw new Error(payload.error || "Не вдалося перевірити Telegram");
           this._pendingTelegramProfile = payload.telegramUser || null;
@@ -6017,6 +5996,10 @@ var init_lampaPlayer = __esm({
                                 <div class="lp-popover lp-episode-menu" id="lpEpisodeMenu" role="menu" aria-hidden="true"></div>
                             </div>
                             <div class="lp-menu-wrap">
+                                <button type="button" class="lp-control-pill lp-dub-pill" id="lpDubBtn" aria-expanded="false" aria-label="\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u043E\u0437\u0432\u0443\u0447\u043A\u0443"><span id="lpDubLabel">\u041E\u0437\u0432\u0443\u0447\u043A\u0430</span><span class="lp-chevron">\u2303</span></button>
+                                <div class="lp-popover" id="lpDubMenu" role="menu" aria-hidden="true"></div>
+                            </div>
+                            <div class="lp-menu-wrap">
                                 <button type="button" class="lp-control-pill lp-quality-pill" id="lpQualityBtn" aria-expanded="false" aria-label="\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u044F\u043A\u0456\u0441\u0442\u044C"><span id="lpQualityLabel">\u0410\u0432\u0442\u043E</span><span class="lp-chevron">\u2303</span></button>
                                 <div class="lp-popover" id="lpQualityMenu" role="menu" aria-hidden="true"></div>
                             </div>
@@ -6030,10 +6013,13 @@ var init_lampaPlayer = __esm({
         this._controls = controls;
         wrap.appendChild(controls);
         const episodeMenu = controls.querySelector("#lpEpisodeMenu");
+        const dubMenu = controls.querySelector("#lpDubMenu");
         const qualityMenu = controls.querySelector("#lpQualityMenu");
         episodeMenu?.classList.add("lp-floating-menu", "lp-floating-episode-menu");
+        dubMenu?.classList.add("lp-floating-menu", "lp-floating-dub-menu");
         qualityMenu?.classList.add("lp-floating-menu", "lp-floating-quality-menu");
         if (episodeMenu) wrap.appendChild(episodeMenu);
+        if (dubMenu) wrap.appendChild(dubMenu);
         if (qualityMenu) wrap.appendChild(qualityMenu);
         const qualityRail = document.createElement("div");
         qualityRail.className = "lp-quality-rail";
@@ -6216,6 +6202,9 @@ var init_lampaPlayer = __esm({
         const episodeBtn = wrap.querySelector("#lpEpisodeBtn");
         const episodeMenu = wrap.querySelector("#lpEpisodeMenu");
         const episodeLabel2 = wrap.querySelector("#lpEpisodeLabel");
+        const dubBtn = wrap.querySelector("#lpDubBtn");
+        const dubMenu = wrap.querySelector("#lpDubMenu");
+        const escapeMenuText = (value) => String(value ?? "").replace(/[&<>\"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char]);
         const renderEpisodeMenu = () => {
           if (!episodeMenu) return;
           const items = Array.isArray(this.options.episodeOptions) ? this.options.episodeOptions : [];
@@ -6240,6 +6229,10 @@ var init_lampaPlayer = __esm({
         episodeBtn?.addEventListener("click", (e) => {
           e.stopPropagation();
           const willOpen = !episodeMenu?.classList.contains("is-open");
+          if (willOpen) {
+            setMenuOpen(qualityMenu, qualityBtn, false);
+            setDubMenuOpen(false);
+          }
           setEpisodeMenuOpen(willOpen);
           if (willOpen) {
             requestAnimationFrame(() => episodeMenu?.querySelector(".is-active")?.scrollIntoView({ block: "nearest" }));
@@ -6254,6 +6247,22 @@ var init_lampaPlayer = __esm({
           setEpisodeMenuOpen(false);
           if (item && typeof this.options.onEpisodeSelect === "function") this.options.onEpisodeSelect(item);
         });
+        const renderDubMenu = () => {
+          if (!dubMenu) return;
+          const items = Array.isArray(this.options.dubOptions) ? this.options.dubOptions : [];
+          const currentDub = String(this.options.currentDub || "");
+          const current = items.find((item) => String(item.value) === currentDub);
+          const label = current?.label || currentDub || "\u041E\u0437\u0432\u0443\u0447\u043A\u0430";
+          if (dubBtn) dubBtn.setAttribute("aria-label", `\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u043E\u0437\u0432\u0443\u0447\u043A\u0443: ${label}`);
+          dubMenu.innerHTML = '<div class="lp-popover-label">\u041E\u0437\u0432\u0443\u0447\u043A\u0430</div>' + (items.length ? items.map((item) => {
+            const value = String(item?.value ?? "");
+            const itemLabel = String(item?.label ?? value);
+            const isActive = value === currentDub;
+            return `<button type="button" data-dub-value="${escapeMenuText(value)}" class="${isActive ? "is-active" : ""}" role="menuitemradio" aria-checked="${isActive}"><span class="lp-dub-option-label">${escapeMenuText(itemLabel)}</span><span class="lp-check" aria-hidden="true">\u2713</span></button>`;
+          }).join("") : '<div class="lp-popover-label">\u041E\u0437\u0432\u0443\u0447\u043A\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>');
+          if (dubBtn) dubBtn.disabled = items.length < 2;
+        };
+        renderDubMenu();
         const qualityBtn = wrap.querySelector("#lpQualityBtn");
         const qualityMenu = wrap.querySelector("#lpQualityMenu");
         const qualityLabel = wrap.querySelector("#lpQualityLabel");
@@ -6267,19 +6276,47 @@ var init_lampaPlayer = __esm({
         };
         const isMenuOpen = (menu) => menu && menu.classList.contains("is-open");
         const syncMenuOverlayState = () => {
-          const open = isMenuOpen(qualityMenu) || episodeMenu?.classList.contains("is-open");
+          const open = isMenuOpen(qualityMenu) || isMenuOpen(dubMenu) || episodeMenu?.classList.contains("is-open");
           this._controls?.classList.toggle("menu-overlay-open", open);
           wrap.classList.toggle("menu-overlay-open", open);
         };
+        const setDubMenuOpen = (open) => {
+          setMenuOpen(dubMenu, dubBtn, open);
+          syncMenuOverlayState();
+        };
+        dubBtn?.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const willOpen = !isMenuOpen(dubMenu);
+          if (willOpen) {
+            setMenuOpen(qualityMenu, qualityBtn, false);
+            setEpisodeMenuOpen(false);
+          }
+          setDubMenuOpen(willOpen);
+          if (willOpen) requestAnimationFrame(() => dubMenu?.querySelector(".is-active")?.scrollIntoView({ block: "nearest" }));
+        });
+        dubMenu?.addEventListener("click", (e) => {
+          const option = e.target.closest("[data-dub-value]");
+          if (!option) return;
+          e.stopPropagation();
+          const item = (this.options.dubOptions || []).find((entry) => String(entry.value) === option.dataset.dubValue);
+          closePlayerMenus();
+          if (item && typeof this.options.onDubSelect === "function") this.options.onDubSelect(item.value);
+        });
         const closePlayerMenus = () => {
           setMenuOpen(qualityMenu, qualityBtn, false);
           setEpisodeMenuOpen(false);
+          setDubMenuOpen(false);
         };
         if (qualityBtn && qualityMenu) qualityBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           const willOpen = !isMenuOpen(qualityMenu);
           this._refreshQualityMenu();
+          if (willOpen) {
+            setEpisodeMenuOpen(false);
+            setDubMenuOpen(false);
+          }
           setMenuOpen(qualityMenu, qualityBtn, willOpen);
+          syncMenuOverlayState();
         });
         const applyQuality = (option) => {
           if (!option) return;
@@ -7503,7 +7540,7 @@ function renderStickerFaceByKey(data, key) {
 async function fetchEveryoneStickers() {
   if (_everyoneStickersCache) return _everyoneStickersCache;
   try {
-    const { collection: collection2, query: query2, limit: limit2, getDocs: getDocs3 } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js");
+    const { collection: collection2, query: query2, limit: limit2, getDocs: getDocs3 } = await import("/cloudflare-auth-client.js");
     const q = query2(collection2(db, "users"), limit2(500));
     const snap = await getDocs3(q);
     let sets = [];
@@ -10269,13 +10306,22 @@ async function playEpisode(file, epNum, options = {}) {
     episode: ep.episode,
     file: ep.file
   }));
+  const currentSeasonDubs = playerPageAnime?.seasons?.[playerPageCurrentSeason] || {};
+  const dubOptions = Object.keys(currentSeasonDubs).sort().map((dub) => {
+    const dubEpisodes = currentSeasonDubs[dub] || [];
+    const isSub = /субтит|sub/i.test(dub) || dubEpisodes.some((ep) => ep?.isSubs) || Boolean(playerPageAnime?.subtitleLogos?.[dub]);
+    return { value: dub, label: formatDubDisplayName(dub, isSub) };
+  });
   playerPagePlayer = new LampaPlayer(videoDiv, {
     poster: playerPageAnime?.images?.jpg?.large_image_url,
     episode: epNum,
     episodeOptions,
+    currentDub: playerPageCurrentDub,
+    dubOptions,
     autoplay,
     onBeforeUserPlay: () => handoffToSenPlayer(finalUrl),
-    onEpisodeSelect: (item) => playEpisode(item.file, item.episode)
+    onEpisodeSelect: (item) => playEpisode(item.file, item.episode),
+    onDubSelect: (dub) => selectDubFromSheet(dub)
   });
   await playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || "", `\u0421\u0435\u0440\u0456\u044F ${epNum}`, { autoplay });
   hidePlayerFramePoster();
@@ -15159,7 +15205,7 @@ function renderStickerVisual2(s, color) {
 async function fetchEveryoneStickers2() {
   if (_everyoneStickersCache2) return _everyoneStickersCache2;
   try {
-    const { collection: collection2, query: query2, limit: limit2, getDocs: getDocs3 } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js");
+    const { collection: collection2, query: query2, limit: limit2, getDocs: getDocs3 } = await import("/cloudflare-auth-client.js");
     const q = query2(collection2(db, "users"), limit2(500));
     const snap = await getDocs3(q);
     let sets = [];
@@ -17335,7 +17381,7 @@ var FIRESTORE_VERSION;
 var init_publicProfile = __esm({
   "src/js/services/firebase/publicProfile.js?v=20260905-public-profile-v1"() {
     init_client();
-    FIRESTORE_VERSION = "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+    FIRESTORE_VERSION = "/cloudflare-auth-client.js";
   }
 });
 
@@ -17982,7 +18028,7 @@ async function loadLeaderboard() {
     }
   }
   try {
-    const { collection: collection2, query: query2, limit: limit2, getDocs: getDocs3, onSnapshot: onSnapshot2 } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js");
+    const { collection: collection2, query: query2, limit: limit2, getDocs: getDocs3, onSnapshot: onSnapshot2 } = await import("/cloudflare-auth-client.js");
     const q = query2(collection2(db, "users"), limit2(500));
     const tp = new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 1e4));
     const snap = await Promise.race([getDocs3(q), tp]);

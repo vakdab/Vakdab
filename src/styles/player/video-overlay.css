@@ -523,6 +523,12 @@
 #playerPageModal .lp-popover button span {
   flex: 1;
 }
+#playerPageModal .lp-popover button .lp-dub-option-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 #playerPageModal .lp-popover button .lp-check {
   color: #fff;
   opacity: 0;
@@ -779,6 +785,10 @@
   left: 12px;
   right: auto;
 }
+#playerPageModal .lampa-player-container .lp-floating-dub-menu {
+  left: 12px;
+  right: auto;
+}
 #playerPageModal .lampa-player-container .lp-floating-quality-menu {
   right: 12px;
   left: auto;
@@ -875,6 +885,9 @@
     max-height: min(58%, 240px);
   }
   #playerPageModal .lampa-player-container .lp-floating-episode-menu {
+    left: 10px;
+  }
+  #playerPageModal .lampa-player-container .lp-floating-dub-menu {
     left: 10px;
   }
   #playerPageModal .lampa-player-container .lp-floating-quality-menu {

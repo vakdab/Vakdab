@@ -1157,13 +1157,22 @@ async function playEpisode(file, epNum, options = {}) {
     episode: ep.episode,
     file: ep.file
   }));
+  const currentSeasonDubs = playerPageAnime?.seasons?.[playerPageCurrentSeason] || {};
+  const dubOptions = Object.keys(currentSeasonDubs).sort().map((dub) => {
+    const dubEpisodes = currentSeasonDubs[dub] || [];
+    const isSub = /субтит|sub/i.test(dub) || dubEpisodes.some((ep) => ep?.isSubs) || Boolean(playerPageAnime?.subtitleLogos?.[dub]);
+    return { value: dub, label: formatDubDisplayName(dub, isSub) };
+  });
   playerPagePlayer = new LampaPlayer(videoDiv, {
     poster: playerPageAnime?.images?.jpg?.large_image_url,
     episode: epNum,
     episodeOptions,
+    currentDub: playerPageCurrentDub,
+    dubOptions,
     autoplay,
     onBeforeUserPlay: () => handoffToSenPlayer(finalUrl),
-    onEpisodeSelect: (item) => playEpisode(item.file, item.episode)
+    onEpisodeSelect: (item) => playEpisode(item.file, item.episode),
+    onDubSelect: (dub) => selectDubFromSheet(dub)
   });
   await playerPagePlayer.loadSource(finalUrl, playerPageAnime?.title || "", `\u0421\u0435\u0440\u0456\u044F ${epNum}`, { autoplay });
   hidePlayerFramePoster();

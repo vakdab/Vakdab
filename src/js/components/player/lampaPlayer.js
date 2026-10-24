@@ -236,6 +236,10 @@ var init_lampaPlayer = __esm({
                                 <div class="lp-popover lp-episode-menu" id="lpEpisodeMenu" role="menu" aria-hidden="true"></div>
                             </div>
                             <div class="lp-menu-wrap">
+                                <button type="button" class="lp-control-pill lp-dub-pill" id="lpDubBtn" aria-expanded="false" aria-label="\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u043E\u0437\u0432\u0443\u0447\u043A\u0443"><span id="lpDubLabel">\u041E\u0437\u0432\u0443\u0447\u043A\u0430</span><span class="lp-chevron">\u2303</span></button>
+                                <div class="lp-popover" id="lpDubMenu" role="menu" aria-hidden="true"></div>
+                            </div>
+                            <div class="lp-menu-wrap">
                                 <button type="button" class="lp-control-pill lp-quality-pill" id="lpQualityBtn" aria-expanded="false" aria-label="\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u044F\u043A\u0456\u0441\u0442\u044C"><span id="lpQualityLabel">\u0410\u0432\u0442\u043E</span><span class="lp-chevron">\u2303</span></button>
                                 <div class="lp-popover" id="lpQualityMenu" role="menu" aria-hidden="true"></div>
                             </div>
@@ -249,10 +253,13 @@ var init_lampaPlayer = __esm({
         this._controls = controls;
         wrap.appendChild(controls);
         const episodeMenu = controls.querySelector("#lpEpisodeMenu");
+        const dubMenu = controls.querySelector("#lpDubMenu");
         const qualityMenu = controls.querySelector("#lpQualityMenu");
         episodeMenu?.classList.add("lp-floating-menu", "lp-floating-episode-menu");
+        dubMenu?.classList.add("lp-floating-menu", "lp-floating-dub-menu");
         qualityMenu?.classList.add("lp-floating-menu", "lp-floating-quality-menu");
         if (episodeMenu) wrap.appendChild(episodeMenu);
+        if (dubMenu) wrap.appendChild(dubMenu);
         if (qualityMenu) wrap.appendChild(qualityMenu);
         const qualityRail = document.createElement("div");
         qualityRail.className = "lp-quality-rail";
@@ -435,6 +442,9 @@ var init_lampaPlayer = __esm({
         const episodeBtn = wrap.querySelector("#lpEpisodeBtn");
         const episodeMenu = wrap.querySelector("#lpEpisodeMenu");
         const episodeLabel2 = wrap.querySelector("#lpEpisodeLabel");
+        const dubBtn = wrap.querySelector("#lpDubBtn");
+        const dubMenu = wrap.querySelector("#lpDubMenu");
+        const escapeMenuText = (value) => String(value ?? "").replace(/[&<>\"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char]);
         const renderEpisodeMenu = () => {
           if (!episodeMenu) return;
           const items = Array.isArray(this.options.episodeOptions) ? this.options.episodeOptions : [];
@@ -459,6 +469,10 @@ var init_lampaPlayer = __esm({
         episodeBtn?.addEventListener("click", (e) => {
           e.stopPropagation();
           const willOpen = !episodeMenu?.classList.contains("is-open");
+          if (willOpen) {
+            setMenuOpen(qualityMenu, qualityBtn, false);
+            setDubMenuOpen(false);
+          }
           setEpisodeMenuOpen(willOpen);
           if (willOpen) {
             requestAnimationFrame(() => episodeMenu?.querySelector(".is-active")?.scrollIntoView({ block: "nearest" }));
@@ -473,6 +487,22 @@ var init_lampaPlayer = __esm({
           setEpisodeMenuOpen(false);
           if (item && typeof this.options.onEpisodeSelect === "function") this.options.onEpisodeSelect(item);
         });
+        const renderDubMenu = () => {
+          if (!dubMenu) return;
+          const items = Array.isArray(this.options.dubOptions) ? this.options.dubOptions : [];
+          const currentDub = String(this.options.currentDub || "");
+          const current = items.find((item) => String(item.value) === currentDub);
+          const label = current?.label || currentDub || "\u041E\u0437\u0432\u0443\u0447\u043A\u0430";
+          if (dubBtn) dubBtn.setAttribute("aria-label", `\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u043E\u0437\u0432\u0443\u0447\u043A\u0443: ${label}`);
+          dubMenu.innerHTML = '<div class="lp-popover-label">\u041E\u0437\u0432\u0443\u0447\u043A\u0430</div>' + (items.length ? items.map((item) => {
+            const value = String(item?.value ?? "");
+            const itemLabel = String(item?.label ?? value);
+            const isActive = value === currentDub;
+            return `<button type="button" data-dub-value="${escapeMenuText(value)}" class="${isActive ? "is-active" : ""}" role="menuitemradio" aria-checked="${isActive}"><span class="lp-dub-option-label">${escapeMenuText(itemLabel)}</span><span class="lp-check" aria-hidden="true">\u2713</span></button>`;
+          }).join("") : '<div class="lp-popover-label">\u041E\u0437\u0432\u0443\u0447\u043A\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>');
+          if (dubBtn) dubBtn.disabled = items.length < 2;
+        };
+        renderDubMenu();
         const qualityBtn = wrap.querySelector("#lpQualityBtn");
         const qualityMenu = wrap.querySelector("#lpQualityMenu");
         const qualityLabel = wrap.querySelector("#lpQualityLabel");
@@ -486,19 +516,47 @@ var init_lampaPlayer = __esm({
         };
         const isMenuOpen = (menu) => menu && menu.classList.contains("is-open");
         const syncMenuOverlayState = () => {
-          const open = isMenuOpen(qualityMenu) || episodeMenu?.classList.contains("is-open");
+          const open = isMenuOpen(qualityMenu) || isMenuOpen(dubMenu) || episodeMenu?.classList.contains("is-open");
           this._controls?.classList.toggle("menu-overlay-open", open);
           wrap.classList.toggle("menu-overlay-open", open);
         };
+        const setDubMenuOpen = (open) => {
+          setMenuOpen(dubMenu, dubBtn, open);
+          syncMenuOverlayState();
+        };
+        dubBtn?.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const willOpen = !isMenuOpen(dubMenu);
+          if (willOpen) {
+            setMenuOpen(qualityMenu, qualityBtn, false);
+            setEpisodeMenuOpen(false);
+          }
+          setDubMenuOpen(willOpen);
+          if (willOpen) requestAnimationFrame(() => dubMenu?.querySelector(".is-active")?.scrollIntoView({ block: "nearest" }));
+        });
+        dubMenu?.addEventListener("click", (e) => {
+          const option = e.target.closest("[data-dub-value]");
+          if (!option) return;
+          e.stopPropagation();
+          const item = (this.options.dubOptions || []).find((entry) => String(entry.value) === option.dataset.dubValue);
+          closePlayerMenus();
+          if (item && typeof this.options.onDubSelect === "function") this.options.onDubSelect(item.value);
+        });
         const closePlayerMenus = () => {
           setMenuOpen(qualityMenu, qualityBtn, false);
           setEpisodeMenuOpen(false);
+          setDubMenuOpen(false);
         };
         if (qualityBtn && qualityMenu) qualityBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           const willOpen = !isMenuOpen(qualityMenu);
           this._refreshQualityMenu();
+          if (willOpen) {
+            setEpisodeMenuOpen(false);
+            setDubMenuOpen(false);
+          }
           setMenuOpen(qualityMenu, qualityBtn, willOpen);
+          syncMenuOverlayState();
         });
         const applyQuality = (option) => {
           if (!option) return;
