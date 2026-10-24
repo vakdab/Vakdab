@@ -410,22 +410,27 @@
 }
 #playerPageModal .lp-settings-wrap {
   display: flex;
+  min-width: 0;
+  flex: 0 1 auto;
   align-items: center;
   gap: 6px;
 }
 #playerPageModal .lp-menu-wrap {
+  min-width: 0;
   position: relative;
 }
 #playerPageModal .lp-control-pill {
   display: inline-flex;
+  max-width: 108px;
+  flex: 0 1 auto;
   min-width: 42px;
-  height: 28px;
+  height: 32px;
   align-items: center;
   justify-content: center;
   gap: 5px;
-  padding: 0 8px;
+  padding: 0 11px;
   border: 1px solid rgba(255, 255, 255, .28);
-  border-radius: 2px;
+  border-radius: 999px;
   background: rgba(0, 0, 0, .5);
   color: #fff;
   font-size: 11px;
@@ -450,11 +455,22 @@
 }
 #playerPageModal .lp-quality-pill {
   min-width: 52px;
+  max-width: 82px;
+}
+#playerPageModal .lp-dub-pill {
+  max-width: 104px;
+}
+#playerPageModal .lp-control-pill > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 #playerPageModal .lp-pill-label {
   white-space: nowrap;
 }
 #playerPageModal .lp-chevron {
+  flex: 0 0 auto;
   color: #fff;
   opacity: .55;
   transition: transform .25s cubic-bezier(.4, 0, .2, 1), opacity .2s ease;
@@ -840,7 +856,8 @@
     padding: 6px 8px 8px !important;
   }
   #playerPageModal .lp-bottom-row {
-    gap: 3px;
+    min-width: 0;
+    gap: 4px;
   }
   #playerPageModal .lp-btn,
   #playerPageModal .lp-main-btn {
@@ -851,16 +868,26 @@
     font-size: 10px;
   }
   #playerPageModal .lp-settings-wrap {
+    min-width: 0;
+    flex: 0 1 auto;
     gap: 3px;
   }
   #playerPageModal .lp-control-pill {
-    min-width: 36px;
-    height: 26px;
-    padding-inline: 6px;
+    min-width: 0;
+    max-width: 84px;
+    height: 30px;
+    padding-inline: 8px;
     font-size: 10px;
   }
   #playerPageModal .lp-quality-pill {
-    min-width: 42px;
+    min-width: 0;
+    max-width: 68px;
+  }
+  #playerPageModal .lp-dub-pill {
+    max-width: 76px;
+  }
+  #playerPageModal .lp-volume-group {
+    flex: 0 0 28px;
   }
   #playerPageModal .lp-popover {
     min-width: 96px;
@@ -899,17 +926,26 @@
     min-height: 160px;
   }
   #playerPageModal .lp-bottom-row {
-    gap: 2px;
+    gap: 3px;
   }
   #playerPageModal .lp-settings-wrap {
     gap: 2px;
   }
   #playerPageModal .lp-control-pill {
-    min-width: 34px;
-    padding: 0 6px;
+    min-width: 0;
+    max-width: 72px;
+    height: 28px;
+    padding-inline: 6px;
+  }
+  #playerPageModal .lp-dub-pill {
+    max-width: 66px;
+  }
+  #playerPageModal .lp-quality-pill {
+    max-width: 60px;
   }
   #playerPageModal .lp-time {
-    font-size: 11px;
+    max-width: 62px;
+    font-size: 9px;
     font-weight: 800;
     color: #fff;
   }
