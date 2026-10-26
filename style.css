@@ -14845,7 +14845,7 @@ body:not(.dark-mode) #playerPageModal .player-team-avatar {
   pointer-events: none !important;
   transform: translateY(12px) scale(.985) !important;
 }
-#playerPageModal .lampa-player-container .lp-floating-menu {
+#playerPageModal .lp-floating-menu {
   position: absolute;
   z-index: 90;
   top: 56px;
@@ -14873,7 +14873,7 @@ body:not(.dark-mode) #playerPageModal .player-team-avatar {
   right: 12px;
   left: auto;
 }
-#playerPageModal .lampa-player-container .lp-floating-menu button {
+#playerPageModal .lp-floating-menu button {
   min-height: 34px;
 }
 #playerPageModal #playerFormatRow,
@@ -14970,7 +14970,7 @@ body:not(.dark-mode) #playerPageModal .player-team-avatar {
     padding-inline: 5px;
     font-size: 9px;
   }
-  #playerPageModal .lampa-player-container .lp-floating-menu {
+  #playerPageModal .lp-floating-menu {
     top: 48px;
     width: min(210px, calc(100% - 20px));
     max-height: min(58%, 240px);
@@ -15115,8 +15115,9 @@ body:not(.dark-mode) #playerPageModal .player-team-avatar {
   bottom: auto;
   left: 0;
   z-index: 100;
-  width: min(270px, calc(100vw - 40px));
+  width: min(220px, calc(100vw - 24px));
   max-height: min(52vh, 260px);
+  transform-origin: top left;
 }
 #playerPageModal .lp-dub-current-logo,
 #playerPageModal .lp-dub-current-initials {
@@ -15153,6 +15154,9 @@ body:not(.dark-mode) #playerPageModal .player-team-avatar {
   }
   #playerPageModal .video-overlay-topbar {
     align-items: flex-start;
+  }
+  #playerPageModal .video-overlay-left .lp-dub-floating-select .lp-floating-dub-menu {
+    width: min(210px, calc(100vw - 20px));
   }
 }
 

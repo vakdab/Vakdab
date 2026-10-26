@@ -494,7 +494,7 @@ var init_lampaPlayer = __esm({
           e.stopPropagation();
           const item = (this.options.episodeOptions || []).find((entry) => String(entry.episode) === option.dataset.episodeValue);
           updateEpisodeLabel(item?.episode);
-          setEpisodeMenuOpen(false);
+          closePlayerMenus();
           if (item && typeof this.options.onEpisodeSelect === "function") this.options.onEpisodeSelect(item);
         });
         const renderDubMenu = () => {
