@@ -1037,3 +1037,64 @@
   background: #e6e6e6 !important;
   font-weight: 700;
 }
+
+/* Branded dub selector in the marked area above the seek bar */
+#playerPageModal .lp-controls .lp-dub-floating-select {
+  position: absolute;
+  top: -106px;
+  left: 16px;
+  z-index: 92;
+  width: min(270px, calc(100% - 32px));
+}
+#playerPageModal .lp-controls .lp-dub-floating-select .lp-dub-pill {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  min-height: 42px;
+  justify-content: flex-start;
+  gap: 9px;
+  padding: 0 13px;
+  border-color: rgba(255,255,255,.36);
+  background: rgba(8,8,8,.82);
+  text-align: left;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+#playerPageModal .lp-dub-current-logo,
+#playerPageModal .lp-dub-current-initials {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+#playerPageModal .lp-dub-current-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.18);
+  font-size: 9px;
+  font-weight: 800;
+}
+#playerPageModal .lp-dub-current-initials[hidden],
+#playerPageModal .lp-dub-current-logo[hidden] { display: none; }
+#playerPageModal .lp-controls .lp-dub-floating-select .lp-dub-pill #lpDubLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+@media (max-width: 620px) {
+  #playerPageModal .lp-controls .lp-dub-floating-select {
+    top: -94px;
+    left: 10px;
+    width: min(250px, calc(100% - 20px));
+  }
+  #playerPageModal .lp-controls .lp-dub-floating-select .lp-dub-pill {
+    min-height: 38px;
+  }
+}

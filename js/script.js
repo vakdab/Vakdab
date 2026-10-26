@@ -5983,6 +5983,10 @@ var init_lampaPlayer = __esm({
         const controls = document.createElement("div");
         controls.className = "lp-controls";
         controls.innerHTML = `
+                            <div class="lp-menu-wrap lp-dub-floating-select">
+                                <button type="button" class="lp-control-pill lp-dub-pill" id="lpDubBtn" aria-expanded="false" aria-label="\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u043E\u0437\u0432\u0443\u0447\u043A\u0443"><img id="lpDubLogo" class="lp-dub-current-logo" alt="" hidden><span id="lpDubInitials" class="lp-dub-current-initials">\u041E\u0417</span><span id="lpDubLabel">\u041E\u0437\u0432\u0443\u0447\u043A\u0430</span><span class="lp-chevron">\u2303</span></button>
+                                <div class="lp-popover" id="lpDubMenu" role="menu" aria-hidden="true"></div>
+                            </div>
                     <div class="lp-progress-wrap" id="lpProgress">
                         <div class="lp-progress-fill" id="lpProgressFill" style="width:0%"></div>
                     </div>
@@ -5994,10 +5998,6 @@ var init_lampaPlayer = __esm({
                             <div class="lp-menu-wrap">
                                 <button type="button" class="lp-control-pill" id="lpEpisodeBtn" aria-expanded="false" aria-label="\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u0441\u0435\u0440\u0456\u044E"><span id="lpEpisodeLabel">\u0421\u0435\u0440\u0456\u044F</span><span class="lp-chevron">\u2303</span></button>
                                 <div class="lp-popover lp-episode-menu" id="lpEpisodeMenu" role="menu" aria-hidden="true"></div>
-                            </div>
-                            <div class="lp-menu-wrap">
-                                <button type="button" class="lp-control-pill lp-dub-pill" id="lpDubBtn" aria-expanded="false" aria-label="\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u043E\u0437\u0432\u0443\u0447\u043A\u0443"><span id="lpDubLabel">\u041E\u0437\u0432\u0443\u0447\u043A\u0430</span><span class="lp-chevron">\u2303</span></button>
-                                <div class="lp-popover" id="lpDubMenu" role="menu" aria-hidden="true"></div>
                             </div>
                             <div class="lp-menu-wrap">
                                 <button type="button" class="lp-control-pill lp-quality-pill" id="lpQualityBtn" aria-expanded="false" aria-label="\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u044F\u043A\u0456\u0441\u0442\u044C"><span id="lpQualityLabel">\u0410\u0432\u0442\u043E</span><span class="lp-chevron">\u2303</span></button>
@@ -6204,6 +6204,8 @@ var init_lampaPlayer = __esm({
         const episodeLabel2 = wrap.querySelector("#lpEpisodeLabel");
         const dubBtn = wrap.querySelector("#lpDubBtn");
         const dubMenu = wrap.querySelector("#lpDubMenu");
+        const dubLogo = wrap.querySelector("#lpDubLogo");
+        const dubInitials = wrap.querySelector("#lpDubInitials");
         const escapeMenuText = (value) => String(value ?? "").replace(/[&<>\"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char]);
         const renderEpisodeMenu = () => {
           if (!episodeMenu) return;
@@ -6254,6 +6256,9 @@ var init_lampaPlayer = __esm({
           const current = items.find((item) => String(item.value) === currentDub);
           const label = current?.label || currentDub || "\u041E\u0437\u0432\u0443\u0447\u043A\u0430";
           if (dubBtn) dubBtn.setAttribute("aria-label", `\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u043E\u0437\u0432\u0443\u0447\u043A\u0443: ${label}`);
+          const logo = String(current?.logo || "");
+          if (dubLogo) { dubLogo.src = logo; dubLogo.hidden = !logo; dubLogo.onerror = () => { dubLogo.hidden = true; if (dubInitials) dubInitials.hidden = false; }; }
+          if (dubInitials) { dubInitials.textContent = label.trim().split(/\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase() || "\u041E\u0417"; dubInitials.hidden = Boolean(logo); }
           dubMenu.innerHTML = '<div class="lp-popover-label">\u041E\u0437\u0432\u0443\u0447\u043A\u0430</div>' + (items.length ? items.map((item) => {
             const value = String(item?.value ?? "");
             const itemLabel = String(item?.label ?? value);
