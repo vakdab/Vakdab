@@ -261,7 +261,13 @@ var init_lampaPlayer = __esm({
         if (episodeMenu) wrap.appendChild(episodeMenu);
         const videoOverlayLeft = document.getElementById("playerTopbarTitle")?.parentElement;
         const dubSelector = controls.querySelector(".lp-dub-floating-select");
-        if (dubSelector && videoOverlayLeft) videoOverlayLeft.appendChild(dubSelector);
+        if (dubSelector && videoOverlayLeft) {
+          videoOverlayLeft.querySelectorAll(".lp-dub-floating-select").forEach((previous) => {
+            if (previous !== dubSelector) previous.remove();
+          });
+          this._dubSelector = dubSelector;
+          videoOverlayLeft.appendChild(dubSelector);
+        }
         if (qualityMenu) wrap.appendChild(qualityMenu);
         const qualityRail = document.createElement("div");
         qualityRail.className = "lp-quality-rail";
@@ -1109,6 +1115,8 @@ var init_lampaPlayer = __esm({
       destroy() {
         this._fullscreenPlayer?.close();
         this._fullscreenPlayer = null;
+        this._dubSelector?.remove();
+        this._dubSelector = null;
         clearTimeout(this._spinnerHideTimer);
         clearTimeout(this._controlsTimer);
         clearTimeout(this._playbackErrorTimer);
