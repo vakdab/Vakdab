@@ -15156,6 +15156,23 @@ body:not(.dark-mode) #playerPageModal .player-team-avatar {
   }
 }
 
+/* Keep the relocated selector interactive when video controls auto-hide */
+#playerPageModal .video-overlay-left .lp-dub-floating-select,
+#playerPageModal .video-overlay-left .lp-dub-floating-select .lp-dub-pill,
+#playerPageModal .video-overlay-left .lp-dub-floating-select .lp-floating-dub-menu,
+#playerPageModal .video-overlay-left .lp-dub-floating-select .lp-floating-dub-menu button {
+  pointer-events: auto;
+}
+#playerPageModal .video-overlay-left .lp-dub-floating-select .lp-dub-pill {
+  min-height: 34px;
+}
+#playerPageModal .lp-dub-current-logo,
+#playerPageModal .lp-dub-current-initials {
+  flex-basis: 22px;
+  width: 22px;
+  height: 22px;
+}
+
 
 /* src/styles/pages/design-polish.css */
 :root {
