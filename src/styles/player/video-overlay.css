@@ -1090,9 +1090,9 @@
 }
 @media (max-width: 620px) {
   #playerPageModal .lp-controls .lp-dub-floating-select {
-    top: -94px;
+    top: -84px;
     left: 10px;
-    width: min(250px, calc(100% - 20px));
+    width: min(220px, calc(100% - 20px));
   }
   #playerPageModal .lp-controls .lp-dub-floating-select .lp-dub-pill {
     min-height: 38px;

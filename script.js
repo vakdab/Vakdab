@@ -6256,6 +6256,8 @@ var init_lampaPlayer = __esm({
           const current = items.find((item) => String(item.value) === currentDub);
           const label = current?.label || currentDub || "\u041E\u0437\u0432\u0443\u0447\u043A\u0430";
           if (dubBtn) dubBtn.setAttribute("aria-label", `\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u043E\u0437\u0432\u0443\u0447\u043A\u0443: ${label}`);
+          const dubLabel = wrap.querySelector("#lpDubLabel");
+          if (dubLabel) dubLabel.textContent = label;
           const logo = String(current?.logo || "");
           if (dubLogo) { dubLogo.src = logo; dubLogo.hidden = !logo; dubLogo.onerror = () => { dubLogo.hidden = true; if (dubInitials) dubInitials.hidden = false; }; }
           if (dubInitials) { dubInitials.textContent = label.trim().split(/\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase() || "\u041E\u0417"; dubInitials.hidden = Boolean(logo); }
