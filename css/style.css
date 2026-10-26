@@ -15178,6 +15178,15 @@ body:not(.dark-mode) #playerPageModal .player-team-avatar {
 }
 
 
+/* Hide the relocated dub trigger while any picker menu is open. Keep its space
+   so the open dropdown stays anchored in the same position. */
+#playerPageModal .video-overlay-left .lp-dub-floating-select.is-menu-context-open > .lp-dub-pill {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+
 /* src/styles/pages/design-polish.css */
 :root {
   --vp-surface-raised: color-mix(in srgb, var(--surface) 96%, var(--accent) 4%);

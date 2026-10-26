@@ -1129,3 +1129,12 @@
   width: 22px;
   height: 22px;
 }
+
+
+/* Hide the relocated dub trigger while any picker menu is open. Keep its space
+   so the open dropdown stays anchored in the same position. */
+#playerPageModal .video-overlay-left .lp-dub-floating-select.is-menu-context-open > .lp-dub-pill {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
