@@ -6297,6 +6297,7 @@ var init_lampaPlayer = __esm({
           const open = isMenuOpen(qualityMenu) || isMenuOpen(dubMenu) || episodeMenu?.classList.contains("is-open");
           this._controls?.classList.toggle("menu-overlay-open", open);
           wrap.classList.toggle("menu-overlay-open", open);
+          this._dubSelector?.classList.toggle("is-menu-context-open", open);
         };
         const setDubMenuOpen = (open) => {
           setMenuOpen(dubMenu, dubBtn, open);
