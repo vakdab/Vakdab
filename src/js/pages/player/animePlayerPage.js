@@ -1161,7 +1161,8 @@ async function playEpisode(file, epNum, options = {}) {
   const dubOptions = Object.keys(currentSeasonDubs).sort().map((dub) => {
     const dubEpisodes = currentSeasonDubs[dub] || [];
     const isSub = /субтит|sub/i.test(dub) || dubEpisodes.some((ep) => ep?.isSubs) || Boolean(playerPageAnime?.subtitleLogos?.[dub]);
-    return { value: dub, label: formatDubDisplayName(dub, isSub) };
+    const logo = playerPageAnime?.dubLogos?.[dub] || playerPageAnime?.subtitleLogos?.[dub] || dubEpisodes.find((ep) => ep?.teamLogo)?.teamLogo || "";
+    return { value: dub, label: formatDubDisplayName(dub, isSub), logo };
   });
   playerPagePlayer = new LampaPlayer(videoDiv, {
     poster: playerPageAnime?.images?.jpg?.large_image_url,

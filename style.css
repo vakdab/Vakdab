@@ -14586,6 +14586,23 @@ body:not(.dark-mode) #playerPageModal .player-team-avatar {
 #playerPageModal .lp-popover button span {
   flex: 1;
 }
+#playerPageModal .lp-popover button .lp-dub-option-logo,
+#playerPageModal .lp-popover button .lp-dub-option-fallback {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+#playerPageModal .lp-popover button .lp-dub-option-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, .16);
+  font-size: 9px;
+  font-weight: 800;
+}
+#playerPageModal .lp-popover button .lp-dub-option-fallback[hidden] { display: none; }
 #playerPageModal .lp-popover button .lp-dub-option-label {
   min-width: 0;
   overflow: hidden;
