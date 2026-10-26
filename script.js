@@ -6257,8 +6257,11 @@ var init_lampaPlayer = __esm({
           dubMenu.innerHTML = '<div class="lp-popover-label">\u041E\u0437\u0432\u0443\u0447\u043A\u0430</div>' + (items.length ? items.map((item) => {
             const value = String(item?.value ?? "");
             const itemLabel = String(item?.label ?? value);
+            const logo = String(item?.logo ?? "");
+            const initials = escapeMenuText(itemLabel.trim().split(/\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase() || "ОЗ");
+            const logoMarkup = logo ? `<img class="lp-dub-option-logo" src="${escapeMenuText(logo)}" alt="" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="lp-dub-option-fallback" hidden>${initials}</span>` : `<span class="lp-dub-option-fallback">${initials}</span>`;
             const isActive = value === currentDub;
-            return `<button type="button" data-dub-value="${escapeMenuText(value)}" class="${isActive ? "is-active" : ""}" role="menuitemradio" aria-checked="${isActive}"><span class="lp-dub-option-label">${escapeMenuText(itemLabel)}</span><span class="lp-check" aria-hidden="true">\u2713</span></button>`;
+            return `<button type="button" data-dub-value="${escapeMenuText(value)}" class="${isActive ? "is-active" : ""}" role="menuitemradio" aria-checked="${isActive}">${logoMarkup}<span class="lp-dub-option-label">${escapeMenuText(itemLabel)}</span><span class="lp-check" aria-hidden="true">\u2713</span></button>`;
           }).join("") : '<div class="lp-popover-label">\u041E\u0437\u0432\u0443\u0447\u043A\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>');
           if (dubBtn) dubBtn.disabled = items.length < 2;
         };
@@ -10310,7 +10313,8 @@ async function playEpisode(file, epNum, options = {}) {
   const dubOptions = Object.keys(currentSeasonDubs).sort().map((dub) => {
     const dubEpisodes = currentSeasonDubs[dub] || [];
     const isSub = /субтит|sub/i.test(dub) || dubEpisodes.some((ep) => ep?.isSubs) || Boolean(playerPageAnime?.subtitleLogos?.[dub]);
-    return { value: dub, label: formatDubDisplayName(dub, isSub) };
+    const logo = playerPageAnime?.dubLogos?.[dub] || playerPageAnime?.subtitleLogos?.[dub] || dubEpisodes.find((ep) => ep?.teamLogo)?.teamLogo || "";
+    return { value: dub, label: formatDubDisplayName(dub, isSub), logo };
   });
   playerPagePlayer = new LampaPlayer(videoDiv, {
     poster: playerPageAnime?.images?.jpg?.large_image_url,
