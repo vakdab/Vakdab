@@ -259,7 +259,9 @@ var init_lampaPlayer = __esm({
         dubMenu?.classList.add("lp-floating-menu", "lp-floating-dub-menu");
         qualityMenu?.classList.add("lp-floating-menu", "lp-floating-quality-menu");
         if (episodeMenu) wrap.appendChild(episodeMenu);
-        if (dubMenu) wrap.appendChild(dubMenu);
+        const videoOverlayLeft = document.getElementById("playerTopbarTitle")?.parentElement;
+        const dubSelector = controls.querySelector(".lp-dub-floating-select");
+        if (dubSelector && videoOverlayLeft) videoOverlayLeft.appendChild(dubSelector);
         if (qualityMenu) wrap.appendChild(qualityMenu);
         const qualityRail = document.createElement("div");
         qualityRail.className = "lp-quality-rail";
@@ -442,10 +444,10 @@ var init_lampaPlayer = __esm({
         const episodeBtn = wrap.querySelector("#lpEpisodeBtn");
         const episodeMenu = wrap.querySelector("#lpEpisodeMenu");
         const episodeLabel2 = wrap.querySelector("#lpEpisodeLabel");
-        const dubBtn = wrap.querySelector("#lpDubBtn");
-        const dubMenu = wrap.querySelector("#lpDubMenu");
-        const dubLogo = wrap.querySelector("#lpDubLogo");
-        const dubInitials = wrap.querySelector("#lpDubInitials");
+        const dubBtn = document.getElementById("lpDubBtn");
+        const dubMenu = document.getElementById("lpDubMenu");
+        const dubLogo = document.getElementById("lpDubLogo");
+        const dubInitials = document.getElementById("lpDubInitials");
         const escapeMenuText = (value) => String(value ?? "").replace(/[&<>\"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char]);
         const renderEpisodeMenu = () => {
           if (!episodeMenu) return;
@@ -496,7 +498,7 @@ var init_lampaPlayer = __esm({
           const current = items.find((item) => String(item.value) === currentDub);
           const label = current?.label || currentDub || "\u041E\u0437\u0432\u0443\u0447\u043A\u0430";
           if (dubBtn) dubBtn.setAttribute("aria-label", `\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u043E\u0437\u0432\u0443\u0447\u043A\u0443: ${label}`);
-          const dubLabel = wrap.querySelector("#lpDubLabel");
+          const dubLabel = document.getElementById("lpDubLabel");
           if (dubLabel) dubLabel.textContent = label;
           const logo = String(current?.logo || "");
           if (dubLogo) { dubLogo.src = logo; dubLogo.hidden = !logo; dubLogo.onerror = () => { dubLogo.hidden = true; if (dubInitials) dubInitials.hidden = false; }; }

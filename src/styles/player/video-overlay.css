@@ -1038,19 +1038,20 @@
   font-weight: 700;
 }
 
-/* Branded dub selector in the marked area above the seek bar */
-#playerPageModal .lp-controls .lp-dub-floating-select {
-  position: absolute;
-  top: -106px;
-  left: 16px;
+/* Branded dub selector beside the title in the video top overlay */
+#playerPageModal .video-overlay-left .lp-dub-floating-select {
+  position: relative;
+  top: auto;
+  left: auto;
   z-index: 92;
-  width: min(270px, calc(100% - 32px));
+  width: min(250px, 100%);
+  margin-top: 4px;
 }
-#playerPageModal .lp-controls .lp-dub-floating-select .lp-dub-pill {
+#playerPageModal .video-overlay-left .lp-dub-floating-select .lp-dub-pill {
   display: flex;
   width: 100%;
   max-width: none;
-  min-height: 42px;
+  min-height: 38px;
   justify-content: flex-start;
   gap: 9px;
   padding: 0 13px;
@@ -1059,6 +1060,16 @@
   text-align: left;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+}
+#playerPageModal .video-overlay-left .lp-dub-floating-select .lp-floating-dub-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: auto;
+  bottom: auto;
+  left: 0;
+  z-index: 100;
+  width: min(270px, calc(100vw - 40px));
+  max-height: min(52vh, 260px);
 }
 #playerPageModal .lp-dub-current-logo,
 #playerPageModal .lp-dub-current-initials {
@@ -1078,7 +1089,7 @@
 }
 #playerPageModal .lp-dub-current-initials[hidden],
 #playerPageModal .lp-dub-current-logo[hidden] { display: none; }
-#playerPageModal .lp-controls .lp-dub-floating-select .lp-dub-pill #lpDubLabel {
+#playerPageModal .video-overlay-left .lp-dub-floating-select .lp-dub-pill #lpDubLabel {
   flex: 1 1 auto;
   min-width: 0;
   max-width: none;
@@ -1089,12 +1100,11 @@
   font-size: 13px;
 }
 @media (max-width: 620px) {
-  #playerPageModal .lp-controls .lp-dub-floating-select {
-    top: -84px;
-    left: 10px;
-    width: min(220px, calc(100% - 20px));
+  #playerPageModal .video-overlay-left .lp-dub-floating-select {
+    width: min(220px, 100%);
+    margin-top: 4px;
   }
-  #playerPageModal .lp-controls .lp-dub-floating-select .lp-dub-pill {
-    min-height: 38px;
+  #playerPageModal .video-overlay-topbar {
+    align-items: flex-start;
   }
 }
