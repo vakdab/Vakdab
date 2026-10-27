@@ -15186,6 +15186,51 @@ body:not(.dark-mode) #playerPageModal .player-team-avatar {
   pointer-events: none;
 }
 
+/* Mobile picker overhaul: keep episode and dub menus in a predictable,
+   thumb-friendly sheet instead of letting them collide with the video chrome. */
+@media (max-width: 620px) {
+  #playerPageModal .lp-floating-menu {
+    position: fixed !important;
+    top: auto !important;
+    right: 12px !important;
+    bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    left: 12px !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: min(56dvh, 420px) !important;
+    padding: 8px !important;
+    border-radius: 18px !important;
+    transform-origin: bottom center !important;
+    z-index: 1000 !important;
+  }
+  #playerPageModal .lp-floating-menu button {
+    min-height: 46px;
+    padding-inline: 12px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+  #playerPageModal .lp-floating-menu .lp-popover-label {
+    padding: 7px 10px 6px;
+    font-size: 10px;
+  }
+  #playerPageModal .lp-floating-menu .lp-dub-option-logo,
+  #playerPageModal .lp-floating-menu .lp-dub-option-fallback {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+  #playerPageModal .lampa-player-container .lp-controls.menu-overlay-open {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: none !important;
+  }
+  #playerPageModal .video-overlay-left .lp-dub-floating-select.is-menu-context-open > .lp-dub-pill {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 
 /* src/styles/pages/design-polish.css */
 :root {
