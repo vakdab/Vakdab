@@ -1139,8 +1139,7 @@
   pointer-events: none;
 }
 
-/* Mobile picker overhaul: keep episode and dub menus in a predictable,
-   thumb-friendly sheet instead of letting them collide with the video chrome. */
+/* Compact mobile picker cards: size to content and scroll only for long lists. */
 @media (max-width: 620px) {
   #playerPageModal .lp-floating-menu {
     position: fixed !important;
@@ -1148,9 +1147,10 @@
     right: 12px !important;
     bottom: max(12px, env(safe-area-inset-bottom)) !important;
     left: 12px !important;
-    width: auto !important;
-    max-width: none !important;
-    max-height: min(56dvh, 420px) !important;
+    width: min(86vw, 340px) !important;
+    max-width: min(86vw, 340px) !important;
+    max-height: min(42dvh, 320px) !important;
+    margin-inline: auto !important;
     padding: 8px !important;
     border-radius: 18px !important;
     transform-origin: bottom center !important;
