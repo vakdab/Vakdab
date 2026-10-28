@@ -15186,241 +15186,48 @@ body:not(.dark-mode) #playerPageModal .player-team-avatar {
   pointer-events: none;
 }
 
-/* Polished light picker cards, restored from the earlier player design. */
-#playerPageModal .lp-floating-menu.lp-popover {
-  color: #161616 !important;
-  background: #fff !important;
-  border: 1px solid #e3e3e3 !important;
-  border-radius: 16px !important;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, .28) !important;
-  padding: 6px !important;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, .25) transparent;
-  transform-origin: top left;
-  transform: translateY(-6px) scale(.97);
-}
-#playerPageModal .lp-floating-menu.lp-popover.is-open {
-  transform: translateY(0) scale(1);
-}
-#playerPageModal .lampa-player-container .lp-floating-quality-menu.lp-popover {
-  transform-origin: top right;
-}
-#playerPageModal .lp-floating-menu.lp-popover::-webkit-scrollbar { width: 6px; }
-#playerPageModal .lp-floating-menu.lp-popover::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, .22);
-  border-radius: 6px;
-}
-#playerPageModal .lp-floating-menu .lp-popover-label {
-  position: sticky;
-  top: -6px;
-  z-index: 1;
-  margin: -6px -6px 4px;
-  padding: 10px 14px 8px;
-  background: #fff;
-  color: #757575 !important;
-  font-size: 10px;
-  letter-spacing: .09em;
-}
-#playerPageModal .lp-floating-menu.lp-popover button {
-  min-height: 42px;
-  gap: 10px;
-  padding: 0 12px;
-  border-radius: 11px;
-  color: #242424 !important;
-  background: transparent !important;
-  font-size: 13.5px;
-  font-weight: 600;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-#playerPageModal .lp-floating-menu.lp-popover button + button { margin-top: 2px; }
-#playerPageModal .lp-floating-menu.lp-popover button:hover,
-#playerPageModal .lp-floating-menu.lp-popover button:focus-visible {
-  color: #111 !important;
-  background: #f2f2f2 !important;
-  outline: none;
-}
-#playerPageModal .lp-floating-menu.lp-popover button:active {
-  background: #e8e8e8 !important;
-  transform: scale(.985);
-}
-#playerPageModal .lp-floating-menu.lp-popover button.is-active {
-  color: #111 !important;
-  background: #ececec !important;
-  box-shadow: inset 0 0 0 1px #d6d6d6;
-}
-#playerPageModal .lp-floating-menu.lp-popover button .lp-check {
-  flex: 0 0 auto;
-  color: #111 !important;
-  font-size: 14px;
-}
-#playerPageModal .lp-floating-menu .lp-dub-option-logo,
-#playerPageModal .lp-floating-menu .lp-dub-option-fallback {
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
-  box-shadow: 0 0 0 1px #dcdcdc;
-}
-#playerPageModal .lp-floating-menu .lp-dub-option-fallback {
-  background: #eee;
-  color: #333;
-}
-#playerPageModal .video-overlay-left .lp-dub-floating-select .lp-dub-pill {
-  color: #202020 !important;
-  background: #fff !important;
-  border-color: #d0d0d0 !important;
-}
-#playerPageModal .video-overlay-left .lp-dub-floating-select .lp-dub-pill .lp-chevron {
-  color: #666 !important;
-}
-#playerPageModal .video-overlay-left .lp-dub-floating-select .lp-dub-current-initials {
-  background: #eee;
-  color: #333;
-}
-#playerPageModal .video-overlay-left .lp-dub-floating-select .lp-floating-dub-menu {
-  top: calc(100% + 8px);
-}
-#playerPageModal .lampa-player-container:not(.menu-overlay-open):not(.controls-hidden) .lp-controls:not(.hidden) {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-#playerPageModal .video-overlay-left .lp-dub-floating-select:not(.is-menu-context-open) > .lp-dub-pill {
-  visibility: visible;
-  opacity: 1;
-  pointer-events: auto;
-}
-
+/* Mobile picker overhaul: keep episode and dub menus in a predictable,
+   thumb-friendly sheet instead of letting them collide with the video chrome. */
 @media (max-width: 620px) {
   #playerPageModal .lp-floating-menu {
-    position: absolute !important;
-    width: min(260px, calc(100vw - 24px)) !important;
-    min-width: 0 !important;
-    max-width: min(260px, calc(100vw - 24px)) !important;
-    max-height: min(58dvh, 340px) !important;
-    box-sizing: border-box !important;
+    position: fixed !important;
+    top: auto !important;
+    right: 12px !important;
+    bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    left: 12px !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: min(56dvh, 420px) !important;
+    padding: 8px !important;
+    border-radius: 18px !important;
+    transform-origin: bottom center !important;
+    z-index: 1000 !important;
   }
-  #playerPageModal .video-overlay-left .lp-dub-floating-select .lp-floating-dub-menu {
-    width: min(260px, calc(100vw - 24px)) !important;
-    max-width: min(260px, calc(100vw - 24px)) !important;
-  }
-  #playerPageModal .lp-floating-menu.lp-popover button {
+  #playerPageModal .lp-floating-menu button {
     min-height: 46px;
+    padding-inline: 12px;
+    border-radius: 10px;
     font-size: 14px;
   }
-  #playerPageModal .lampa-player-container .lp-floating-episode-menu {
-    left: max(10px, env(safe-area-inset-left));
+  #playerPageModal .lp-floating-menu .lp-popover-label {
+    padding: 7px 10px 6px;
+    font-size: 10px;
   }
-  #playerPageModal .lampa-player-container .lp-floating-quality-menu {
-    right: max(10px, env(safe-area-inset-right));
+  #playerPageModal .lp-floating-menu .lp-dub-option-logo,
+  #playerPageModal .lp-floating-menu .lp-dub-option-fallback {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
   }
-}
-@media (prefers-reduced-motion: reduce) {
-  #playerPageModal .lp-floating-menu.lp-popover { transition: none; }
-}
-
-/* Keep the player controls anchored to the bottom edge when picker states end. */
-#playerPageModal .lampa-player-container .lp-controls {
-  margin: 0 8px 8px;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: auto;
-  min-height: 0;
-  padding: 8px 10px 10px;
-  border: 1px solid rgba(0, 0, 0, .08);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, .94);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .22);
-  backdrop-filter: blur(18px) saturate(150%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
-  color: #161616;
-}
-#playerPageModal .lampa-player-container .lp-progress-wrap {
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, .14);
-}
-#playerPageModal .lampa-player-container .lp-progress-fill {
-  background: #161616;
-}
-#playerPageModal .lampa-player-container .lp-time {
-  color: #2a2a2a;
-  font-weight: 600;
-  text-shadow: none;
-}
-#playerPageModal .lampa-player-container .lp-btn {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
-  min-height: 38px;
-  border: 1px solid #dcdcdc;
-  border-radius: 12px;
-  background: #fff;
-  color: #161616;
-}
-#playerPageModal .lampa-player-container .lp-btn:hover,
-#playerPageModal .lampa-player-container .lp-btn:focus-visible {
-  border-color: #bdbdbd;
-  background: #f2f2f2;
-}
-#playerPageModal .lampa-player-container .lp-btn:active {
-  background: #e8e8e8;
-}
-#playerPageModal .lampa-player-container .lp-main-btn {
-  background: #161616;
-  border-color: #161616;
-  color: #fff;
-}
-#playerPageModal .lampa-player-container .lp-main-btn:hover,
-#playerPageModal .lampa-player-container .lp-main-btn:focus-visible {
-  background: #2c2c2c;
-  border-color: #2c2c2c;
-}
-#playerPageModal .lampa-player-container .lp-volume {
-  accent-color: #161616;
-}
-#playerPageModal .lp-control-pill,
-#playerPageModal .lp-control-pill:hover,
-#playerPageModal .lp-control-pill:focus-visible,
-#playerPageModal .lp-control-pill.is-open {
-  color: #161616 !important;
-  background: #fff !important;
-  border-color: #d0d0d0 !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
-}
-#playerPageModal .lp-control-pill:hover,
-#playerPageModal .lp-control-pill.is-open {
-  background: #f2f2f2 !important;
-  border-color: #b9b9b9 !important;
-}
-#playerPageModal .lp-control-pill .lp-chevron {
-  color: #666 !important;
-  opacity: 1;
-}
-#playerPageModal .lampa-player-container .lp-quality-rail button {
-  background: #fff;
-  color: #161616;
-  border-color: #d0d0d0;
-}
-#playerPageModal .lampa-player-container .lp-quality-rail button.is-active {
-  background: #161616;
-  color: #fff;
-  border-color: #161616;
-}
-@media (max-width: 620px) {
-  #playerPageModal .lampa-player-container:not(:fullscreen) .lp-controls {
-    margin: 0 6px 6px;
-    padding: 6px 8px 8px !important;
-    border-radius: 16px;
+  #playerPageModal .lampa-player-container .lp-controls.menu-overlay-open {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: none !important;
   }
-  #playerPageModal .lampa-player-container .lp-btn {
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-    min-height: 34px;
+  #playerPageModal .video-overlay-left .lp-dub-floating-select.is-menu-context-open > .lp-dub-pill {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 
