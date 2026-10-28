@@ -15224,11 +15224,6 @@ body:not(.dark-mode) #playerPageModal .player-team-avatar {
     pointer-events: auto !important;
     transform: none !important;
   }
-  #playerPageModal .video-overlay-left .lp-dub-floating-select.is-menu-context-open > .lp-dub-pill {
-    visibility: visible;
-    opacity: 1;
-    pointer-events: auto;
-  }
 }
 
 
