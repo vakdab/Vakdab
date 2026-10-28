@@ -1248,8 +1248,16 @@
 
 @media (max-width: 620px) {
   #playerPageModal .lp-floating-menu {
-    width: min(260px, calc(100vw - 24px));
-    max-height: min(58dvh, 340px);
+    position: absolute !important;
+    width: min(260px, calc(100vw - 24px)) !important;
+    min-width: 0 !important;
+    max-width: min(260px, calc(100vw - 24px)) !important;
+    max-height: min(58dvh, 340px) !important;
+    box-sizing: border-box !important;
+  }
+  #playerPageModal .video-overlay-left .lp-dub-floating-select .lp-floating-dub-menu {
+    width: min(260px, calc(100vw - 24px)) !important;
+    max-width: min(260px, calc(100vw - 24px)) !important;
   }
   #playerPageModal .lp-floating-menu.lp-popover button {
     min-height: 46px;
@@ -1264,4 +1272,107 @@
 }
 @media (prefers-reduced-motion: reduce) {
   #playerPageModal .lp-floating-menu.lp-popover { transition: none; }
+}
+
+/* Keep the player controls anchored to the bottom edge when picker states end. */
+#playerPageModal .lampa-player-container .lp-controls {
+  margin: 0 8px 8px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  min-height: 0;
+  padding: 8px 10px 10px;
+  border: 1px solid rgba(0, 0, 0, .08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .22);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  color: #161616;
+}
+#playerPageModal .lampa-player-container .lp-progress-wrap {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .14);
+}
+#playerPageModal .lampa-player-container .lp-progress-fill {
+  background: #161616;
+}
+#playerPageModal .lampa-player-container .lp-time {
+  color: #2a2a2a;
+  font-weight: 600;
+  text-shadow: none;
+}
+#playerPageModal .lampa-player-container .lp-btn {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  border: 1px solid #dcdcdc;
+  border-radius: 12px;
+  background: #fff;
+  color: #161616;
+}
+#playerPageModal .lampa-player-container .lp-btn:hover,
+#playerPageModal .lampa-player-container .lp-btn:focus-visible {
+  border-color: #bdbdbd;
+  background: #f2f2f2;
+}
+#playerPageModal .lampa-player-container .lp-btn:active {
+  background: #e8e8e8;
+}
+#playerPageModal .lampa-player-container .lp-main-btn {
+  background: #161616;
+  border-color: #161616;
+  color: #fff;
+}
+#playerPageModal .lampa-player-container .lp-main-btn:hover,
+#playerPageModal .lampa-player-container .lp-main-btn:focus-visible {
+  background: #2c2c2c;
+  border-color: #2c2c2c;
+}
+#playerPageModal .lampa-player-container .lp-volume {
+  accent-color: #161616;
+}
+#playerPageModal .lp-control-pill,
+#playerPageModal .lp-control-pill:hover,
+#playerPageModal .lp-control-pill:focus-visible,
+#playerPageModal .lp-control-pill.is-open {
+  color: #161616 !important;
+  background: #fff !important;
+  border-color: #d0d0d0 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+}
+#playerPageModal .lp-control-pill:hover,
+#playerPageModal .lp-control-pill.is-open {
+  background: #f2f2f2 !important;
+  border-color: #b9b9b9 !important;
+}
+#playerPageModal .lp-control-pill .lp-chevron {
+  color: #666 !important;
+  opacity: 1;
+}
+#playerPageModal .lampa-player-container .lp-quality-rail button {
+  background: #fff;
+  color: #161616;
+  border-color: #d0d0d0;
+}
+#playerPageModal .lampa-player-container .lp-quality-rail button.is-active {
+  background: #161616;
+  color: #fff;
+  border-color: #161616;
+}
+@media (max-width: 620px) {
+  #playerPageModal .lampa-player-container:not(:fullscreen) .lp-controls {
+    margin: 0 6px 6px;
+    padding: 6px 8px 8px !important;
+    border-radius: 16px;
+  }
+  #playerPageModal .lampa-player-container .lp-btn {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+  }
 }
