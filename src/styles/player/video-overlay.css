@@ -1139,7 +1139,7 @@
   pointer-events: none;
 }
 
-/* Compact, left-aligned mobile picker card; grow with content, not the player. */
+/* Fixed compact left picker with its own touch-scrollable list. */
 @media (max-width: 620px) {
   #playerPageModal .lp-floating-menu {
     position: fixed !important;
@@ -1151,6 +1151,12 @@
     max-width: min(230px, calc(100vw - 32px)) !important;
     height: auto !important;
     max-height: min(42dvh, 340px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    scroll-padding-bottom: 8px;
     padding: 8px !important;
     border-radius: 18px !important;
     transform-origin: bottom left !important;
