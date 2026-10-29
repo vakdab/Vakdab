@@ -1139,21 +1139,21 @@
   pointer-events: none;
 }
 
-/* Mobile picker overhaul: keep episode and dub menus in a predictable,
-   thumb-friendly sheet instead of letting them collide with the video chrome. */
+/* Compact, left-aligned mobile picker card; grow with content, not the player. */
 @media (max-width: 620px) {
   #playerPageModal .lp-floating-menu {
     position: fixed !important;
     top: auto !important;
-    right: 12px !important;
+    right: auto !important;
     bottom: max(12px, env(safe-area-inset-bottom)) !important;
     left: 12px !important;
-    width: auto !important;
-    max-width: none !important;
-    max-height: min(56dvh, 420px) !important;
+    width: min(230px, calc(100vw - 32px)) !important;
+    max-width: min(230px, calc(100vw - 32px)) !important;
+    height: auto !important;
+    max-height: min(42dvh, 340px) !important;
     padding: 8px !important;
     border-radius: 18px !important;
-    transform-origin: bottom center !important;
+    transform-origin: bottom left !important;
     z-index: 1000 !important;
   }
   #playerPageModal .lp-floating-menu button {
